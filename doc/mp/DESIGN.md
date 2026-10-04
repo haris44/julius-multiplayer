@@ -13,9 +13,9 @@
    circulent sur le réseau. La simulation est une fonction pure de l'état initial, des règles et des commandes.
 3. **Une cité = le code original, exécuté dans le contexte de cette cité.** On ne réécrit pas la logique interne :
    on la fait tourner une fois par cité (exigence E7).
-4. **Isolement par construction.** Chaque cité a son état, ses identifiants, son générateur aléatoire et son
-   territoire. Les cités n'interagissent que par des mécanismes multijoueur explicites : commerce, guerre et
-   voisinage (désirabilité).
+4. **Isolement économique.** Chaque cité a son état, ses identifiants et son générateur aléatoire. Même branchées
+   par la route, les cités n'agissent l'une sur l'autre que par des mécanismes multijoueur explicites : commerce,
+   guerre et voisinage (désirabilité).
 5. **Petits pas vérifiés.** Chaque étape garde `ctest` vert et ajoute son propre test (voir [TESTING.md](TESTING.md)).
 
 ## 1. Vue d'ensemble
@@ -26,12 +26,12 @@
 │                                                                                                  │
 │ MONDE (partagé)                          CITÉ p  (p = 0..3, une par joueur)                      │
 │  · grilles de la carte (taille variable)  · city_data (actuel singleton, une instance par cité)  │
-│  · grille de territoires                  · city_extra : les états `static` « par cité »         │
+│  · grille de propriété des infrastructures · city_extra : les états `static` « par cité »         │
 │  · calendrier (tick, jour, mois, année)   · générateur aléatoire de la cité                       │
 │  · empire (définition), prix             · tranche d'ids : bâtiments, figures, formations,       │
 │  · générateur aléatoire du monde            chemins, stockages                                    │
 │  · entités neutres (tranche « monde ») :  · messages, compteurs, routes commerciales             │
-│    indigènes, animaux, envahisseurs PvE   · point d'arrivée (entrée/sortie), territoire          │
+│    indigènes, animaux, envahisseurs PvE   · point d'arrivée, autorisations d'exploiter          │
 └──────────────────────────────────────────────────────────────────────────────────────────────────┘
 ┌──────── Local (propre à chaque PC, hors simulation, hors somme de contrôle) ────────┐
 │ caméra, orientation de la vue, fenêtres, aperçu de construction, popups, sons…      │
@@ -105,19 +105,32 @@ bâtiments), M (carte), W (monde). Ordre d'un tick :
 
 Avec une seule cité, cet ordre se réduit exactement à l'ordre d'origine.
 
-### 3.4 Territoires (décision D-006)
+### 3.4 Propriété et construction partout (D-018)
 
-- Une grille `territory` (propriétaire par tuile : joueur 0..3 ou neutre) est fixée par la carte. Par défaut, on
-  découpe la carte en cellules de Voronoï autour des points d'arrivée, séparées par une **bande neutre**
-  inconstructible.
-- On ne construit que **sur son territoire**. Routes, murs et aqueducs ne pouvant pas se toucher entre joueurs,
-  les walkers, la main-d'œuvre, l'eau et les services restent naturellement dans leur cité, sans modifier
-  leur code. Cela couvre aussi les « recherches de cible » listées dans code-map/03 §6.2.
-- Restent à traiter explicitement : la portée des réservoirs (filtrer par territoire), les préfets (ne
-  combattent que les incendies chez eux), la désirabilité (elle **traverse** la frontière : c'est un effet de
-  voisinage voulu), le combat et le commerce (mécanismes multijoueur).
-- La règle de la « route de Rome » (`building_maintenance_check_rome_access`) se calcule par cité, à partir de
-  son **point d'arrivée**. Un adversaire ne peut pas construire sur votre territoire pour vous couper la route.
+- **Construction libre** sur toute case libre de la carte. Ce que l'on pose appartient à celui qui le pose :
+  - bâtiments, figures et formations : propriétaire déduit de la tranche d'ids (§3.2) ;
+  - infrastructures de terrain (routes, murs, aqueducs, jardins, places, ponts), qui ne sont pas des bâtiments :
+    nouvelle grille `owner` (u8 par case, 0xFF = personne), sauvegardée dans `.mpsav`.
+- On ne démolit que ce qui nous appartient. Détruire chez l'autre passe par la guerre (§7).
+- **Branchements** : les routes de plusieurs joueurs forment un même réseau. Les personnages y circulent librement,
+  mais **n'agissent que sur les bâtiments de leur propriétaire** :
+  - services : la couverture n'est appliquée qu'aux maisons du propriétaire (`figure/service.c`) ;
+  - main-d'œuvre : les recruteurs ne comptent que les maisons du propriétaire ;
+  - marchés, charrettes, entrepôts, greniers, ateliers, migrants, pompiers : chaque recherche de cible filtre par
+    propriétaire (liste : code-map/03 §6.2 et code-map/02 §4.2).
+
+  Seuls les caravanes (§6) et les soldats (§7) agissent chez les autres.
+- **Eau** : un réservoir n'est alimenté que par les aqueducs de son propriétaire, et ne dessert que ses fontaines
+  et ses maisons.
+- **Désirabilité** : elle traverse les cités. Un beau quartier voisin profite à vos maisons, un atelier voisin leur
+  nuit.
+- **Route de Rome** (`building_maintenance_check_rome_access`) : calculée pour chaque cité depuis son point
+  d'arrivée (§5.2), sur tout le réseau routier. La démolition automatique en cas de blocage ne touche que les murs,
+  aqueducs et bâtiments du joueur bloqué.
+- Fidélité : une cité **non branchée** se comporte exactement comme l'original (test « jumeaux », M3.7). Branchée,
+  ses personnages peuvent errer chez le voisin : c'est l'effet voulu du branchement. Un test vérifie que rien ne
+  traverse en dehors des déplacements : aucune couverture, aucun ouvrier, aucune marchandise ni aucun incendie
+  éteint chez l'autre.
 
 ### 3.5 Grille de taille variable (exigence E6)
 
@@ -233,7 +246,8 @@ de sortie de sa cité :
 - les immigrants et les caravanes des villes de l'empire y arrivent ;
 - la règle de la « route de Rome » s'y rapporte.
 
-Il est situé dans son territoire. L'arrivée par la rivière, pour les navires, reste commune à la carte.
+Il porte aussi les **autorisations d'exploiter** du joueur (§6.2). L'arrivée par la rivière, pour les navires,
+reste commune à la carte.
 
 ### 5.3 Entités neutres
 
@@ -248,16 +262,35 @@ Les conditions de fin se choisissent dans le salon :
 - **conquête** : est éliminé le joueur qui a perdu son sénat ou toute sa population ;
 - **score à durée limitée** : le score combine population, culture, prospérité et paix.
 
-## 6. Commerce entre joueurs (exigence E3) — principes, détails au jalon M8
+## 6. Commerce et autorisations (exigences E3 et E12) — principes, détails au jalon M8
+
+### 6.1 Routes commerciales (D-019)
 
 - Le commerce avec les villes de l'empire est conservé, avec un état de route **par joueur** : ouverture,
-  quotas, marchands. Les prix sont communs au monde.
-- Commerce entre joueurs par **caravanes physiques**, à la AoE2 : une route s'ouvre entre deux cités. Les
-  caravanes chargent les exportations d'une cité, traversent la carte jusqu'aux entrepôts de l'autre et
-  rapportent ses exportations. Elles réutilisent la logique des caravanes d'origine et peuvent être
-  **interceptées** à la guerre.
-- L'exportateur encaisse le prix de vente, l'importateur paie le prix d'achat : l'écart est perdu, comme dans
-  l'original. Les quotas s'appliquent par route.
+  quotas, marchands. Les prix sont communs au monde. Les marchands de l'empire arrivent au point d'arrivée de la
+  cité.
+- Commerce entre joueurs : il faut qu'une **route construite** relie les deux cités. Elle peut traverser la carte
+  et emprunter les routes d'autres joueurs. La route commerciale s'ouvre par une commande acceptée des deux côtés.
+- Les **caravanes** partent de la cité exportatrice, ne marchent que **sur les routes**, achètent et vendent dans
+  les entrepôts de l'autre cité selon ses réglages d'import et d'export, puis reviennent. Elles réutilisent la
+  logique de `figure_trade_caravan_action` (code-map/04 §1.4).
+- **Interception** : une caravane est un civil, attaquable par les soldats ennemis, et sa cargaison est perdue. Si
+  la route est coupée ou murée, plus de caravane.
+- Argent : l'exportateur encaisse le prix de vente, l'importateur paie le prix d'achat. Les quotas s'appliquent par
+  route et par an.
+
+### 6.2 Autorisations d'exploiter (D-020)
+
+- Chaque point d'arrivée porte une liste d'**autorisations** : matières premières que le joueur a le droit
+  d'extraire ou de cultiver (blé, légumes, fruits, olives, vigne, viande, argile, bois, fer, marbre).
+- La règle d'origine (`empire_can_produce_resource`, menu de construction) est évaluée dans le contexte de la
+  cité. Un atelier est donc aussi constructible si une route commerciale ouverte, avec l'empire ou un joueur,
+  fournit sa matière première.
+- Autorisations **complémentaires** entre joueurs, avec des gisements présents sur le terrain de chacun.
+- **Armes** : stratégiques, car les casernes en consomment pour chaque soldat. Seule une partie des joueurs peut
+  extraire le fer et forger, les autres doivent acheter ou conquérir. L'empire en vend peu.
+- Équilibrage (M10) : on mesure par des parties simulées sans tête le temps nécessaire à chaque joueur pour
+  aligner une légion, et on règle prix, quotas, gisements et fonds de départ.
 
 ## 7. Guerre entre joueurs (exigence E4) — principes, détails au jalon M9
 
@@ -274,12 +307,11 @@ Les conditions de fin se choisissent dans le salon :
 
 - Nouveau format de carte versionné :
   - taille jusqu'au plafond ;
-  - 2 à 4 points d'arrivée ;
-  - territoires ;
+  - 2 à 4 points d'arrivée, chacun avec ses autorisations d'exploiter ;
   - rivière, indigènes, points de troupeaux et de pêche.
 - Trois sources de cartes :
-  1. un **générateur de cartes aléatoires**, à la AoE2 (terre, eau, forêts, roches, gisements, positions
-     équilibrées), qui sert aussi aux tests ;
+  1. un **générateur de cartes aléatoires**, à la AoE2 (terre, eau, forêts, roches, gisements, positions et
+     autorisations équilibrées), qui sert aussi aux tests ;
   2. l'éditeur étendu (grandes tailles, points d'arrivée) ;
   3. un outil de **composition**, qui place des cartes ou sauvegardes classiques côte à côte dans un grand monde.
      Il sert d'abord aux tests d'isolement, puis peut servir à fabriquer des cartes.
@@ -298,7 +330,7 @@ Les conditions de fin se choisissent dans le salon :
 - Le salon de jeu permet d'héberger ou de rejoindre une partie, de choisir les joueurs et leurs couleurs, la carte
   et les règles, et d'indiquer qu'on est prêt.
 - Chaque joueur a sa couleur, visible :
-  - à la frontière des territoires (calque) ;
+  - sur un calque « propriétaires » (qui possède quoi) ;
   - sur la minicarte ;
   - sur une marque portée par les bâtiments et les soldats des autres joueurs.
 - Un tableau des scores résume population, notes et trésor.
@@ -311,7 +343,7 @@ Les conditions de fin se choisissent dans le salon :
 |---------|--------|
 | `.sav` / `.map` classiques | inchangés (0x66), pour les tests et le mode classique |
 | `.mpsav` (sauvegarde multijoueur) | en-tête (signature, version), règles, joueurs, monde (grilles au pas de la carte, calendrier, générateur du monde, empire, entités neutres), puis une section par cité (`city_data` avec champs élargis, `city_extra`, générateur complet, tranches) ; compression par parties, avec erreur explicite si une partie est trop grosse |
-| `.mpmap` (carte multijoueur) | en-tête, taille, grilles, points d'arrivée, territoires, données de scénario « monde » |
+| `.mpmap` (carte multijoueur) | en-tête, taille, grilles, points d'arrivée avec leurs autorisations, données de scénario « monde » |
 | `.mprec` (enregistrement) | sauvegarde de départ + journal `(tick, joueur, séquence, commande)` : rejeu et débogage |
 
 ## 11. Organisation du code
@@ -322,7 +354,7 @@ Les conditions de fin se choisissent dans le salon :
   - commandes (`command*`) ;
   - somme de contrôle (`checksum`) ;
   - sauvegarde multijoueur (`savegame`) ;
-  - territoires (`territory`) ;
+  - propriété des infrastructures (`owner`) et autorisations (`permits`) ;
   - lockstep (`lockstep`) ;
   - salon (`lobby`) ;
   - générateur de cartes (`mapgen`).

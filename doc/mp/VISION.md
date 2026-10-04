@@ -24,7 +24,7 @@
 |----|----------|
 | E1 | Multijoueur **réseau local uniquement** (LAN), chacun sur sa machine, **2 à 4 joueurs**. |
 | E2 | Une **carte partagée** ; chaque joueur démarre à un **endroit différent** et développe **sa propre cité**. |
-| E3 | **Commerce** adapté au multijoueur. |
+| E3 | **Commerce** adapté au multijoueur : il passe par des **routes construites par les joueurs**, qui traversent la carte, et les caravanes peuvent être **interceptées**. |
 | E4 | **Guerre** adaptée au multijoueur. |
 | E5 | Les **limites** sont **par joueur** et non plus par carte. |
 | E6 | **Cartes plus grandes** (largeur et hauteur), en exploitant la puissance des machines actuelles. |
@@ -32,6 +32,8 @@
 | E8 | **Suppression complète des interventions de César**. |
 | E9 | **Suppression de la campagne** : uniquement du **jeu libre, en multijoueur**. |
 | E10 | Développement **autonome et structuré** par Claude, avec des **tests exécutables par Claude** (le jeu doit pouvoir être testé sans humain). |
+| E11 | On **construit partout**, comme dans AoE2, et les cités peuvent se **brancher** les unes sur les autres (routes, etc.). |
+| E12 | **Autorisations d'exploiter** les ressources, comme dans le jeu de base : chaque joueur démarre avec des autorisations **différentes selon son point d'arrivée**, pour forcer le commerce. Un **équilibrage** est à faire, en particulier sur les **armes**, ressource essentielle. |
 
 ## Interprétations retenues (hypothèses à confirmer par Alexandre)
 
@@ -49,7 +51,7 @@ Claude a tranché ces points pour pouvoir avancer. Chacun peut être remis en ca
 | H8 | Les villes de l'empire (non-joueurs) restent des partenaires commerciaux ; s'y ajoute le **commerce entre joueurs**. | — |
 | H9 | LAN = un joueur **héberge**, les autres rejoignent par découverte automatique ou adresse IP. Pas d'Internet, pas de serveur dédié. | — |
 | H10 | Parties **mixtes Mac / PC** : la simulation doit être déterministe sur toutes les plateformes. | — |
-| H11 | Chaque joueur a un **territoire** autour de son point d'arrivée et ne construit que dessus. Une bande neutre sépare les territoires, ce qui empêche les cités de se « brancher » l'une sur l'autre (DECISIONS D-006). | Construction libre partout, comme dans AoE2 : beaucoup plus de travail d'isolement. |
+| H11 | Quand deux cités sont branchées, les **personnages circulent** sur toutes les routes, mais chacun ne **sert que sa propre cité** : services, main-d'œuvre, marchés, livraisons et pompiers. Seuls le commerce et la guerre agissent chez l'autre. L'eau ne passe pas d'un réseau à l'autre, la désirabilité si (D-018). | Laisser certains services profiter au voisin (préfets, eau…). |
 | H12 | En multijoueur, le temps ne s'arrête pas quand un joueur ouvre une fenêtre, et l'annulation n'existe plus (D-010). | — |
 
 ## Hors périmètre (pour l'instant)

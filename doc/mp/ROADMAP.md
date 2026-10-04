@@ -73,11 +73,18 @@ Prérequis à tout le reste : savoir prouver que deux simulations sont identique
 - [ ] **M4.1** Neutralisation de César en multijoueur (liste : code-map/04 §3). *Critères* : en multijoueur, une
   sauvegarde avec demande ou invasion de César ne déclenche rien ; parité verte.
 - [ ] **M4.2** Point d'arrivée par joueur : entrée et sortie, « route de Rome » calculée par cité.
-- [ ] **M4.3** Territoires : grille, construction limitée au territoire, bande neutre, eau filtrée (D-006).
+- [ ] **M4.3** Construction partout et propriété (D-018) : grille `owner` des infrastructures, démolition limitée
+  à ce qui vous appartient, recherches de cible filtrées par propriétaire, eau par propriétaire.
+  *Critère* : test « voisins branchés » (deux cités reliées par une route ; aucune couverture, aucun ouvrier,
+  aucune marchandise, aucune eau ni aucun pompier ne passe chez l'autre ; chaque cité non branchée reste identique
+  à l'original).
 - [ ] **M4.4** Démarrage d'une partie multijoueur depuis une carte, de 1 à 4 joueurs, par un chemin déterministe.
   La partie libre solo est jouable (menu provisoire). *Critère* : scénario d'automatisation avec captures.
 - [ ] **M4.5** Entités neutres (indigènes, animaux, menaces IA) et leurs options.
 - [ ] **M4.6** Fin de partie multijoueur : sans fin, conquête, score.
+- [ ] **M4.7** Autorisations d'exploiter par point d'arrivée (D-020) : la règle d'origine est évaluée par cité,
+  le menu de construction suit. *Critère* : une cité sans autorisation de fer ne peut ni bâtir de mine ni forger
+  sans route qui fournit du fer.
 
 ## M5 — Réseau local → premier prototype jouable en LAN
 - [ ] **M5.1** Couche sockets (TCP non bloquant, POSIX et Winsock). *Critère* : tests en boucle locale.
@@ -93,9 +100,10 @@ Prérequis à tout le reste : savoir prouver que deux simulations sont identique
 - [ ] **M5.7** Première vraie partie en LAN avec Alexandre (Mac et PC) et retour d'expérience.
 
 ## M6 — Grandes cartes
-- [ ] **M6.1** Format `.mpmap` : taille, points d'arrivée, territoires.
-- [ ] **M6.2** Générateur de cartes aléatoires : relief, eau, forêts, roches, gisements, positions équilibrées.
-- [ ] **M6.3** Éditeur : grandes tailles, points d'arrivée, territoires.
+- [ ] **M6.1** Format `.mpmap` : taille, points d'arrivée et leurs autorisations.
+- [ ] **M6.2** Générateur de cartes aléatoires : relief, eau, forêts, roches, gisements, positions et autorisations
+  complémentaires équilibrées (fer et armes rares).
+- [ ] **M6.3** Éditeur : grandes tailles, points d'arrivée, autorisations.
 - [ ] **M6.4** Rendu, minicarte et captures sur grandes cartes ; mesure et optimisation du routage.
 
 ## M7 — Interface multijoueur
@@ -106,9 +114,12 @@ Prérequis à tout le reste : savoir prouver que deux simulations sont identique
 - [ ] **M7.5** Discussion entre joueurs (optionnelle).
 
 ## M8 — Commerce entre joueurs
-- [ ] **M8.1** Conception détaillée (D-012) ; routes commerciales par joueur avec les villes de l'empire.
-- [ ] **M8.2** Routes entre joueurs et caravanes physiques.
-- [ ] **M8.3** Tests : rejeux, isolement hors commerce, scénarios visuels.
+- [ ] **M8.1** Conception détaillée (D-019) ; routes commerciales par joueur avec les villes de l'empire.
+- [ ] **M8.2** Ouverture d'une route entre deux joueurs (accord des deux, chemin routier entre entrepôts).
+- [ ] **M8.3** Caravanes entre joueurs, uniquement sur les routes, avec achat et vente selon les réglages, quotas
+  et argent.
+- [ ] **M8.4** Interception : caravanes attaquables, cargaison perdue, route coupée.
+- [ ] **M8.5** Tests : rejeux, cargaisons et argent conservés, interception, scénarios visuels.
 
 ## M9 — Guerre entre joueurs
 - [ ] **M9.1** Hostilité par propriétaire. En classique, elle reproduit exactement la matrice actuelle.
@@ -118,5 +129,6 @@ Prérequis à tout le reste : savoir prouver que deux simulations sont identique
 - [ ] **M9.4** Tests : scénarios de combat rejoués, captures.
 
 ## M10 — Finitions
-- [ ] Équilibrage (fonds de départ, rythme), performance, paquets d'installation (app macOS, exécutable Windows),
+- [ ] Équilibrage par parties simulées sans tête : autorisations, prix et rareté des **armes**, quotas, fonds de
+  départ, rythme. Performance, paquets d'installation (app macOS, exécutable Windows),
   documentation pour les joueurs.

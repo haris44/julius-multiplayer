@@ -47,7 +47,7 @@
   des emplacements mêleraient les cités, ce qui rend impossible le test d'isolement exact.
 
 ### D-006 — Territoires fixes séparés par une bande neutre
-- 2026-10-04 · **à valider** (hypothèse H11)
+- 2026-10-04 · **remplacée par D-018** (Alexandre veut construire partout, avec branchements)
 - Chaque joueur ne construit que sur son territoire. Par défaut, ce sont des cellules de Voronoï autour des points
   d'arrivée.
 - Raisons :
@@ -89,7 +89,7 @@
   seulement. Le multijoueur a son propre format versionné, qui contient aussi tout l'état caché.
 
 ### D-012 — Commerce entre joueurs par caravanes physiques
-- 2026-10-04 · **à valider**
+- 2026-10-04 · **adoptée**, précisée par D-019 (validée par Alexandre)
 - Les caravanes traversent la carte entre les entrepôts des deux cités et peuvent être interceptées. C'est fidèle
   à l'esprit des caravanes de Caesar III et à AoE2.
 - Alternative possible : un échange instantané, où chaque joueur est vu comme une ville commerçante virtuelle.
@@ -122,3 +122,56 @@
 - Ce sont des relations avec César et Rome. Les supprimer rend l'économie un peu plus facile ; on pourra
   compenser en réglant les fonds de départ. Les salaires de Rome, qui servent de référence économique, sont
   conservés.
+
+### D-018 — Construction partout, branchements possibles, économie propre à chaque cité
+- 2026-10-04 · **adoptée** (décision d'Alexandre) ; la règle « chacun ne sert que sa cité » est **à valider** (H11)
+- On construit n'importe où sur une case libre, comme dans AoE2. Les routes, aqueducs et murs de deux joueurs
+  peuvent se toucher et se brancher.
+- Propriété :
+  - les bâtiments, figures et formations appartiennent au joueur de leur tranche d'ids (D-005) ;
+  - une nouvelle grille `owner` donne le propriétaire des infrastructures posées sur le terrain (routes, murs,
+    aqueducs, jardins, places, ponts) ;
+  - on ne démolit que ce qui vous appartient. Détruire chez l'autre relève de la guerre.
+- Les personnages marchent sur **toutes** les routes, mais n'agissent que sur les bâtiments **de leur
+  propriétaire** : couverture des services, recrutement, marchés, charrettes, migrants, pompiers. Les seules
+  exceptions sont les mécanismes multijoueur (caravanes de commerce, soldats).
+- Conséquences :
+  - environ 60 recherches de cible à filtrer par propriétaire (code-map/03 §6.2, code-map/02 §4.2), en plus du
+    réseau routier ;
+  - l'eau se calcule par réseau **et** par propriétaire ;
+  - la désirabilité traverse les cités : c'est un effet de voisinage voulu ;
+  - la « route de Rome » est calculée pour chaque cité depuis son point d'arrivée. La démolition automatique ne
+    touche plus que les murs, aqueducs et bâtiments du joueur concerné. Être emmuré par un voisin devient un acte
+    de guerre.
+- Effet assumé : branchée, une cité n'est plus strictement identique à l'original, car ses personnages peuvent
+  partir errer chez le voisin. **Non branchée, elle l'est** : c'est ce que vérifie le test d'isolement « jumeaux ».
+
+### D-019 — Commerce entre joueurs sur des routes construites, interceptable
+- 2026-10-04 · **adoptée** (décision d'Alexandre) ; détails à fixer au jalon M8
+- Deux joueurs ne commercent que si une **route construite** relie leurs cités. Cette route peut traverser toute
+  la carte et emprunter les routes d'autres joueurs.
+- Ouvrir une route commerciale entre deux joueurs se fait par une commande. Elle exige l'accord des deux joueurs et
+  un chemin routier entre leurs entrepôts.
+- Les caravanes partent d'une cité, suivent **uniquement les routes**, achètent et vendent dans les entrepôts de
+  l'autre selon ses réglages d'import et d'export, puis reviennent. Elles réutilisent la logique des caravanes
+  d'origine.
+- **Interception** : les caravanes sont des civils, attaquables par les soldats ennemis, et leur cargaison est
+  perdue. Couper ou contrôler la route est un levier militaire.
+- Argent : l'exportateur encaisse le prix de vente, l'importateur paie le prix d'achat (prix communs au monde),
+  avec des quotas par route.
+
+### D-020 — Autorisations d'exploiter différentes selon le point d'arrivée
+- 2026-10-04 · **adoptée** (décision d'Alexandre) ; l'équilibrage est à faire (M10)
+- Dans le jeu de base, une industrie n'est constructible que si la ville « à nous » de la carte de l'empire produit
+  la matière première, ou si une route ouverte la fournit (`empire_can_produce_resource`, code-map/04 §1.1).
+- En multijoueur, chaque **point d'arrivée** porte son propre jeu d'autorisations, défini dans la carte ou par le
+  générateur. La règle d'origine est évaluée **dans le contexte de chaque cité** : on peut aussi construire
+  l'atelier d'une matière qu'on ne produit pas si une route commerciale ouverte la fournit (empire ou joueur).
+- Les autorisations sont **complémentaires** entre joueurs, pour forcer le commerce. Le terrain doit contenir les
+  gisements correspondants : fer, argile, bois, marbre, terres fertiles.
+- **Armes** : ressource stratégique, car les casernes en consomment pour former les soldats. Seuls certains points
+  d'arrivée ont le droit d'extraire le fer et de forger. Les autres doivent les acheter (à un joueur ou à
+  l'empire) ou les prendre. Les villes de l'empire n'en vendront qu'avec parcimonie (réglage).
+- Points d'équilibrage à mesurer en M10 : nombre de joueurs avec fer ou armes, prix des armes, quotas, fonds de
+  départ. On évaluera avec des parties simulées sans tête.
+

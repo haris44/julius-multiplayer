@@ -65,8 +65,10 @@
 famille par famille (inventaire : code-map/05 §4).
 
 **Points ouverts pour Alexandre** (décisions « à valider »)
-- D-006 : des territoires fixes par joueur plutôt que la construction libre partout.
-- D-012 : commerce entre joueurs par caravanes physiques.
+- ~~D-006 territoires~~ : tranché par Alexandre → construction partout avec branchements (D-018). Reste à valider
+  H11 : branchées, les cités ne se rendent pas service (services, main-d'œuvre, eau, pompiers).
+- ~~D-012~~ : tranché → commerce sur routes construites, interceptable (D-019) ; autorisations d'exploiter par point
+  d'arrivée, armes rares (D-020).
 - D-017 : suppression du tribut, du salaire et du prêt de secours.
 - H12 : pas de pause quand on ouvre une fenêtre en multijoueur, pas d'annulation.
 - M5.6 : l'intégration continue multiplateforme demandera de publier le fork sur GitHub.

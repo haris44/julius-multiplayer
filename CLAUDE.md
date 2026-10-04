@@ -40,7 +40,7 @@ Syntaxe des scripts d'automatisation et pièges : `doc/mp/TESTING.md` §3.
 
 ## Où trouver quoi
 - `doc/mp/VISION.md` : exigences (E1 à E10) et hypothèses (H*). Ne changent que sur décision d'Alexandre.
-- `doc/mp/DESIGN.md` : architecture (lockstep, contexte de cité, tranches d'ids, territoires, grille variable,
+- `doc/mp/DESIGN.md` : architecture (lockstep, contexte de cité, tranches d'ids, propriété, autorisations, grille variable,
   formats).
 - `doc/mp/DECISIONS.md` : décisions numérotées (D-xxx) avec leur statut. Toute décision structurante y entre.
 - `doc/mp/ROADMAP.md` : jalons M0 à M10 et tâches cochables avec critères de réussite.
