@@ -596,6 +596,9 @@ set(EDITOR_FILES
     ${PROJECT_SOURCE_DIR}/src/editor/tool.c
     ${PROJECT_SOURCE_DIR}/src/editor/tool_restriction.c
 )
+set(MP_FILES
+    ${PROJECT_SOURCE_DIR}/src/mp/checksum.c
+)
 set(TRANSLATION_FILES
     ${PROJECT_SOURCE_DIR}/src/translation/czech.c
     ${PROJECT_SOURCE_DIR}/src/translation/english.c
@@ -652,6 +655,7 @@ set(SOURCE_FILES
     ${WIDGET_FILES}
     ${WINDOW_FILES}
     ${EDITOR_FILES}
+    ${MP_FILES}
     ${TRANSLATION_FILES}
     ${TINYFD_FILES}
     ${PROJECT_SOURCE_DIR}/res/julius.rc

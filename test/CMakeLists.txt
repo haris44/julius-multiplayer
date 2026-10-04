@@ -65,6 +65,32 @@ add_executable(autopilot
     ${EDITOR_FILES}
 )
 
+# Headless simulation tool: checksums, traces, idempotence (doc/mp/TESTING.md)
+add_executable(simtool
+    sim/simtool.c
+    sim/log_quiet.c
+    stub/image.c
+    stub/input.c
+    stub/lang.c
+    stub/model.c
+    stub/sound_device.c
+    stub/ui.c
+    stub/video.c
+    ${PROJECT_SOURCE_DIR}/src/platform/file_manager.c
+    ${TEST_CORE_FILES}
+    ${TEST_BUILDING_FILES}
+    ${CITY_FILES}
+    ${EMPIRE_FILES}
+    ${FIGURE_FILES}
+    ${FIGURETYPE_FILES}
+    ${GAME_FILES}
+    ${MAP_FILES}
+    ${SCENARIO_FILES}
+    ${SOUND_FILES}
+    ${EDITOR_FILES}
+    ${MP_FILES}
+)
+
 file(COPY data/c3.emp DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 file(COPY data/c32.emp DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
@@ -130,3 +156,8 @@ add_integration_test(sav_native1 brugle-lugdunum-native.sav brugle-lugdunum-nati
 add_integration_test(sav_native2 cicero-lugdunum-trade.sav cicero-lugdunum-trade-after.sav 926)
 
 add_integration_test(sav_palace1 brugle-palacepeaks.sav brugle-palacepeaks-2.sav 2562)
+
+# Simulation tool tests (doc/mp/TESTING.md §4)
+add_test(NAME sim_trace_deterministic
+    COMMAND ${CMAKE_COMMAND} -DSIMTOOL=$<TARGET_FILE:simtool> -DSAVE=brugle-massilia-start.sav -DTICKS=600 -DSTEP=20
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/sim/compare_runs.cmake)
