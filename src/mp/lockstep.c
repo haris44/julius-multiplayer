@@ -12,6 +12,7 @@
 #include "mp/command.h"
 #include "mp/compose.h"
 #include "mp/discovery.h"
+#include "mp/mapgen.h"
 #include "mp/permissions.h"
 #include "mp/savegame.h"
 #include "mp/session.h"
@@ -74,6 +75,8 @@ static struct {
     int tick_limit;            // tests: no tick runs from this absolute tick on (0: no limit)
     int accepted[MP_LOCKSTEP_MAX_PLAYERS]; // host: the client said hello with the same protocol and game data
     int manual_start;          // host: the game starts when the host asks (lobby), not as soon as all are there
+    int generate_map;          // host: a generated map (mp/mapgen) using the chosen map as template
+    unsigned int map_seed;
     int start_requested;
     int base_tick;
     int last_known_turn;   // commands of all turns up to this one are known
@@ -300,14 +303,29 @@ static int is_scenario(const char *filename)
     return length > 4 && (strcmp(filename + length - 4, ".map") == 0 || strcmp(filename + length - 4, ".MAP") == 0);
 }
 
+// .mpsav: a multiplayer game going on; .mpmap: a multiplayer map, the same format at the start of a game
 static int is_multiplayer_save(const char *filename)
 {
     size_t length = strlen(filename);
-    return length > 6 && strcmp(filename + length - 6, ".mpsav") == 0;
+    return (length > 6 && strcmp(filename + length - 6, ".mpsav") == 0) ||
+        (length > 6 && strcmp(filename + length - 6, ".mpmap") == 0);
+}
+
+static int host_generate_map(void)
+{
+    if (!mp_mapgen_create(data.saved_game, data.num_players, mp_mapgen_default_size(data.num_players),
+            data.map_seed)) {
+        return 0;
+    }
+    snprintf(data.saved_game, sizeof(data.saved_game), "mp-session-%d-p0.mpsav", data.port);
+    return mp_savegame_write(data.saved_game) && mp_savegame_read(data.saved_game);
 }
 
 static int host_compose_cities(void)
 {
+    if (data.generate_map) {
+        return host_generate_map();
+    }
     if (is_multiplayer_save(data.saved_game)) {
         // a multiplayer game goes on: its cities are already there
         return mp_savegame_read(data.saved_game) && player_context_num_players() == data.num_players;
@@ -603,6 +621,12 @@ static void reset(void)
 void mp_lockstep_test_alter_game_data(void)
 {
     altered_fingerprint = game_data_fingerprint() ^ 0x5a5a5a5a5a5a5a5aULL;
+}
+
+void mp_lockstep_set_generated_map(int generate, unsigned int seed)
+{
+    data.generate_map = generate;
+    data.map_seed = seed;
 }
 
 void mp_lockstep_set_manual_start(int manual)

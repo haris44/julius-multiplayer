@@ -43,6 +43,8 @@
 #include "map/owner.h"
 #include "mp/endgame.h"
 #include "mp/permissions.h"
+#include "mp/mapgen.h"
+#include "city/map.h"
 #include "mp/checksum.h"
 #include "game/time.h"
 #include "game/player_context.h"
@@ -99,6 +101,8 @@ static int usage(void)
     printf("                                         (DX, DY), runs TICKS exactly as on its original grid\n");
     printf("  simtool twins SAVE TICKS               the city with a twin city below it on a large map runs\n");
     printf("                                         exactly as alone, and the twin gets the same statistics\n");
+    printf("  simtool mapgen TEMPLATE PLAYERS SEED TICKS  generated map: every player settles at its arrival\n");
+    printf("                                         point and gets immigrants\n");
     printf("  simtool mpsave SAVE CITIES TICKS OUT   writes OUT, a multiplayer saved game of CITIES copies of\n");
     printf("                                         SAVE after TICKS ticks\n");
     printf("  simtool intruders SAVE TICKS           the walkers of a twin city moved into the first city act on\n");
@@ -502,9 +506,10 @@ static int command_mpnode(int argc, char **argv)
 {
     // argv: mpnode host PORT PLAYERS SAVE TICKS [cities] | mpnode join ADDRESS PORT TICKS
     int is_host = argc >= 7 && strcmp(argv[2], "host") == 0;
-    int cities = 0;
+    int cities = 0, generate = 0;
     for (int i = 7; i < argc; i++) {
         cities |= strcmp(argv[i], "cities") == 0;
+        generate |= strcmp(argv[i], "generate") == 0;
     }
     int is_join = argc >= 6 && strcmp(argv[2], "join") == 0;
     if (!is_host && !is_join) {
@@ -524,8 +529,11 @@ static int command_mpnode(int argc, char **argv)
     int leaver = is_join && argc >= 7 && strcmp(argv[6], "leave") == 0;
     time_t pause_start = 0;
     int paused_seen = 0, ticks_while_paused = 0, tick_at_pause = -1;
-    int ok = is_host ? mp_lockstep_host(atoi(argv[3]), atoi(argv[4]), argv[5], cities)
+    int ok = is_host ? mp_lockstep_host(atoi(argv[3]), atoi(argv[4]), argv[5], cities || generate)
                      : mp_lockstep_join(argv[3], atoi(argv[4]));
+    if (ok && generate) {
+        mp_lockstep_set_generated_map(1, 5);
+    }
     if (!ok) {
         printf("FAILED: %s\n", mp_lockstep_status());
         return 1;
@@ -1261,6 +1269,82 @@ static int command_mpsave(const char *file, int num_cities, int ticks, const cha
     return ok ? 0 : 1;
 }
 
+// Generated maps (M6.2): every player gets an arrival point and land to settle; immigrants come to each
+// city once its player has built a road and housing. The same seed gives the same map.
+static void settle_city(int player_id, int size)
+{
+    int cx, cy;
+    mp_mapgen_city_center(player_id, &cx, &cy);
+    player_context_switch(player_id);
+    const map_tile *entry = city_map_entry_point();
+    int ex = entry->x, ey = entry->y;
+    player_context_switch(0);
+    mp_command road = { .type = MP_COMMAND_BUILD, .player_id = player_id, .args = { BUILDING_ROAD, 0, ex, ey, cx, cy, 0, 0 } };
+    mp_command_execute(&road);
+    mp_command road2 = { .type = MP_COMMAND_BUILD, .player_id = player_id, .args = { BUILDING_ROAD, 0, cx - 6, cy, cx + 6, cy, 0, 0 } };
+    mp_command_execute(&road2);
+    mp_command houses = { .type = MP_COMMAND_BUILD, .player_id = player_id,
+        .args = { BUILDING_HOUSE_VACANT_LOT, 0, cx - 5, cy + 1, cx + 5, cy + 2, 0, 0 } };
+    mp_command_execute(&houses);
+    mp_command houses2 = { .type = MP_COMMAND_BUILD, .player_id = player_id,
+        .args = { BUILDING_HOUSE_VACANT_LOT, 0, cx - 5, cy - 2, cx + 5, cy - 1, 0, 0 } };
+    mp_command_execute(&houses2);
+}
+
+static int command_mapgen(const char *file, int num_players, int seed, int ticks)
+{
+    int size = mp_mapgen_default_size(num_players);
+    if (!mp_mapgen_create(file, num_players, size, seed)) {
+        printf("Unable to generate the map\n");
+        return 2;
+    }
+    if (getenv("MAPGEN_OUTPUT")) {
+        // a multiplayer map (.mpmap): the starting game of the generated map
+        if (!mp_savegame_write(getenv("MAPGEN_OUTPUT"))) {
+            return 1;
+        }
+        printf("%s written\n", getenv("MAPGEN_OUTPUT"));
+    }
+    if (getenv("MAPGEN_ASCII")) {
+        for (int y = 0; y < size; y += 4) {
+            for (int x = 0; x < size; x += 2) {
+                int t = map_terrain_get(map_grid_offset(x, y));
+                putchar(t & TERRAIN_WATER ? '~' : t & TERRAIN_TREE ? 'T' : t & TERRAIN_ROCK ? '^' : t & TERRAIN_MEADOW ? ',' : '.');
+            }
+            putchar('\n');
+        }
+    }
+    uint64_t first = mp_checksum_state();
+    player_context_switch(0);
+    player_context_set_num_players(1);
+    if (!mp_mapgen_create(file, num_players, size, seed) || mp_checksum_state() != first) {
+        printf("DIFFERENT: the same seed gave another map\n");
+        return 1;
+    }
+    for (int p = 0; p < num_players; p++) {
+        settle_city(p, size);
+    }
+    map_road_network_update_grid();
+    for (int p = 0; p < num_players; p++) {
+        player_context_switch(p);
+        map_road_network_update_largest();
+    }
+    player_context_switch(0);
+    run_trace(ticks, ticks, 0, 0);
+    int failures = 0;
+    for (int p = 0; p < num_players; p++) {
+        player_context_switch(p);
+        int cx, cy;
+        mp_mapgen_city_center(p, &cx, &cy);
+        printf("city %d at (%d, %d): population %d, treasury %d\n", p, cx, cy, city_population(), city_finance_treasury());
+        failures += city_population() <= 0;
+    }
+    player_context_switch(0);
+    player_context_set_num_players(1);
+    printf("%s\n", failures ? "FAILED: a city got no immigrant" : "Every city got immigrants");
+    return failures ? 1 : 0;
+}
+
 // Diagnosis: one figure of city 0, tick by tick, on a map of CITIES composed cities
 static int command_figtrace(const char *file, int num_cities, int id, int from, int to)
 {
@@ -1647,6 +1731,8 @@ int main(int argc, char **argv)
         result = command_twinfigures(file, ticks);
     } else if (strcmp(command, "twinstats") == 0 && argc > 3) {
         result = command_twinstats(file, ticks);
+    } else if (strcmp(command, "mapgen") == 0 && argc > 5) {
+        result = command_mapgen(file, atoi(argv[3]), atoi(argv[4]), atoi(argv[5]));
     } else if (strcmp(command, "mpsave") == 0 && argc > 5) {
         result = command_mpsave(file, atoi(argv[3]), atoi(argv[4]), argv[5]);
     } else if (strcmp(command, "permissions") == 0 && argc > 3) {

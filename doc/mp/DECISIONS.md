@@ -303,3 +303,16 @@
   machines et un écran donne le classement ; en cas d'égalité, le joueur de plus petit numéro l'emporte. La
   conquête viendra avec la guerre (M9).
 
+### D-030 — Cartes multijoueur : générées, et le format `.mpmap`
+- 2026-10-04 · **adoptée, provisoire** (M6) · *à valider* par Alexandre (taille, disposition, ressources)
+- Le salon propose deux sortes de cartes : une copie de la carte choisie par joueur (D-025), ou une **grande carte
+  générée** (`mp/mapgen`) : 200 cases de côté à 2 joueurs, 260 au-delà. Lacs, forêts, rochers et prés sortent d'un
+  bruit déterministe (même graine, même carte). La carte choisie ne donne que le climat, l'empire, l'année et les
+  fonds.
+- Un point d'arrivée par joueur, au milieu d'un bord (gauche, droite, haut, bas). Autour de chaque cité, de la
+  terre dégagée, une forêt, des rochers, un étang et des prés : chacun peut tout bâtir, et c'est l'autorisation
+  (D-020) qui décide ce qu'il exploite. Les invasions IA arrivent par les bords.
+- Le format **`.mpmap`** est une partie de départ au format `.mpsav` : taille, terrain, points d'arrivée et
+  autorisations y sont. Le salon les liste ; le nombre de joueurs est celui de la carte. Pas d'éditeur pour
+  l'instant : le générateur et `simtool mapgen` (variable `MAPGEN_OUTPUT`) les produisent.
+

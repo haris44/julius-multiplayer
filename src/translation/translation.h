@@ -141,6 +141,9 @@ typedef enum {
     TR_MP_DIFFICULTY_4,
     TR_MP_GODS,
     TR_MP_START,
+    TR_MP_MAP_KIND,
+    TR_MP_MAP_COPIES,
+    TR_MP_MAP_GENERATED,
     TRANSLATION_MAX_KEY,
 } translation_key;
 

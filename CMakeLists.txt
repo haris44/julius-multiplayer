@@ -614,6 +614,7 @@ set(MP_FILES
     ${PROJECT_SOURCE_DIR}/src/mp/endgame.c
     ${PROJECT_SOURCE_DIR}/src/mp/permissions.c
     ${PROJECT_SOURCE_DIR}/src/mp/lockstep.c
+    ${PROJECT_SOURCE_DIR}/src/mp/mapgen.c
     ${PROJECT_SOURCE_DIR}/src/mp/savegame.c
     ${PROJECT_SOURCE_DIR}/src/platform/net.c
     ${PROJECT_SOURCE_DIR}/src/mp/session.c

@@ -139,6 +139,8 @@ int platform_parse_arguments(int argc, char **argv, julius_args *output_args)
             }
         } else if (SDL_strcmp(argv[i], "--mp-score-years") == 0 && i + 1 < argc) {
             output_args->mp_score_years = SDL_atoi(argv[++i]);
+        } else if (SDL_strcmp(argv[i], "--mp-generate") == 0) {
+            output_args->mp_generate = 1;
         } else if (SDL_strcmp(argv[i], "--mp-shared-city") == 0) {
             output_args->mp_shared_city = 1;
         } else if (SDL_strcmp(argv[i], "--mp-join") == 0 && i + 1 < argc) {
@@ -183,7 +185,8 @@ int platform_parse_arguments(int argc, char **argv, julius_args *output_args)
         print_log("--mp-host SAVE [--mp-players N] [--mp-port PORT] [--mp-shared-city]");
         print_log("          Hosts a local network game for N players (default 2): every player gets a copy of the");
         print_log("          city of the saved game SAVE, or with --mp-shared-city all players build in that city;");
-        print_log("          --mp-score-years N ends the game by score after N years");
+        print_log("          --mp-score-years N ends the game by score after N years;");
+        print_log("          --mp-generate plays on a large generated map, SAVE giving climate, empire and funds");
         print_log("--mp-join ADDRESS[:PORT]");
         print_log("          Joins a local network game");
         print_log("--automation FILE");

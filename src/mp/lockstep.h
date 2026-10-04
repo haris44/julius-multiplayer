@@ -46,6 +46,11 @@ void mp_lockstep_set_rules(const game_rules_settings *rules);
 void mp_lockstep_set_manual_start(int manual);
 
 /**
+ * Host: the game takes place on a generated map (mp/mapgen), the chosen map giving climate, empire and funds
+ */
+void mp_lockstep_set_generated_map(int generate, unsigned int seed);
+
+/**
  * Tests: this computer pretends to have other game data than the host, which must refuse it
  */
 void mp_lockstep_test_alter_game_data(void);

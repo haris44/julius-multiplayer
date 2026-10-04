@@ -13,6 +13,7 @@ typedef struct {
     int mp_players;             /**< --mp-players N: number of players of the hosted game */
     int mp_shared_city;         /**< --mp-shared-city: all players build in the same city */
     int mp_score_years;         /**< --mp-score-years N: the game ends by score after N years */
+    int mp_generate;            /**< --mp-generate: a large generated map, SAVE giving climate and empire */
     const char *mp_join;        /**< --mp-join ADDRESS[:PORT]: joins a network game */
     int mp_port;                /**< --mp-port PORT */
 } julius_args;

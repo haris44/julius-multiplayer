@@ -175,11 +175,19 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
   `mp_lan_other_game_data_refused`.
 
 ## M6 — Grandes cartes
-- [ ] **M6.1** Format `.mpmap` : taille, points d'arrivée et leurs autorisations.
-- [ ] **M6.2** Générateur de cartes aléatoires : relief, eau, forêts, roches, gisements, positions et autorisations
+- [x] **M6.1** Format `.mpmap` : taille, points d'arrivée et leurs autorisations.
+  *Fait* (D-030) : une partie de départ au format `.mpsav`, listée par le salon.
+- [x] **M6.2** Générateur de cartes aléatoires : relief, eau, forêts, roches, gisements, positions et autorisations
   complémentaires équilibrées (fer et armes rares).
+  *Fait* (D-030) : `mp/mapgen`, option « grande carte générée » du salon et `--mp-generate`. Pas encore de relief.
+  Tests : chaque joueur s'installe et reçoit des immigrants (2 et 4 joueurs), partie réseau sur carte générée,
+  `tools/mp-lobby-test.sh generated`.
 - [ ] **M6.3** Éditeur : grandes tailles, points d'arrivée, autorisations.
-- [ ] **M6.4** Rendu, minicarte et captures sur grandes cartes ; mesure et optimisation du routage.
+  *Reporté* : le générateur couvre le besoin pour l'instant ; à reprendre si Alexandre veut dessiner ses cartes.
+- [x] **M6.4** Rendu, minicarte et captures sur grandes cartes ; mesure et optimisation du routage.
+  *Fait* : rendu et minicarte vérifiés par captures sur des cartes de 200 et 260 cases. Mesure : 4 grandes cités sur
+  la grille de 512 coûtent environ 0,4 ms par tick (22 ms disponibles à vitesse normale), aucune optimisation
+  nécessaire.
 
 ## M7 — Interface multijoueur
 - [ ] **M7.1** Menu principal sans campagne ; écrans du salon.

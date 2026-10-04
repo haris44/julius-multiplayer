@@ -4,13 +4,18 @@
 # Without 'desync': every player must end with the same checksum and the host must verify every turn.
 # With 'desync': the last client changes its own state; host and client must detect it.
 # With 'cities': every player has its own copy of the city (separate cities) instead of a shared city.
+# With 'generate': every player starts an empty city on a large generated map (SAVE gives climate and empire).
 # With 'pause': the last client pauses the game at half time and resumes it; everyone must see the pause.
 # With 'leave': the last client leaves at half time; the others must finish the game together.
 # With 'baddata': 2 players, the client pretends to have other game data; the host must refuse it.
 SIMTOOL=$1; PORT=$2; PLAYERS=$3; SAVE=$4; TICKS=$5; MODE=$6
 CITIES=""
-for arg in "$@"; do [ "$arg" = "cities" ] && CITIES="cities"; done
+for arg in "$@"; do
+    [ "$arg" = "cities" ] && CITIES="cities"
+    [ "$arg" = "generate" ] && CITIES="generate"
+done
 [ "$MODE" = "cities" ] && MODE=""
+[ "$MODE" = "generate" ] && MODE=""
 DIR=$(mktemp -d)
 HOST_ARGS=""
 [ "$MODE" = "desync" ] && HOST_ARGS="expect-desync"

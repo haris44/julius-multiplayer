@@ -148,6 +148,9 @@ static translation_string all_strings[] = {
     {TR_MP_DIFFICULTY_4, "very hard"},
     {TR_MP_GODS, "Gods: "},
     {TR_MP_START, "Start the game"},
+    {TR_MP_MAP_KIND, "Map: "},
+    {TR_MP_MAP_COPIES, "a copy of the map per player"},
+    {TR_MP_MAP_GENERATED, "large generated map"},
 };
 
 void translation_english(const translation_string **strings, int *num_strings)

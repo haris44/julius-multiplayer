@@ -1,7 +1,10 @@
 #include "mp_lobby.h"
 
 #include "building/menu.h"
+#include "building/building.h"
+#include "city/map.h"
 #include "city/view.h"
+#include "core/time.h"
 #include "core/dir.h"
 #include "core/encoding.h"
 #include "core/string.h"
@@ -16,6 +19,7 @@
 #include "graphics/text.h"
 #include "graphics/window.h"
 #include "input/input.h"
+#include "map/data.h"
 #include "map/grid.h"
 #include "mp/compose.h"
 #include "mp/discovery.h"
@@ -50,6 +54,7 @@ static void button_end(int param1, int param2);
 static void button_invasions(int param1, int param2);
 static void button_difficulty(int param1, int param2);
 static void button_gods(int param1, int param2);
+static void button_map_kind(int param1, int param2);
 
 static generic_button file_buttons[] = {
     {24, 104, 264, 16, button_select_file, button_none, 0, 0},
@@ -73,7 +78,8 @@ static generic_button file_buttons[] = {
 #define BUTTON_INVASIONS 6
 #define BUTTON_DIFFICULTY 7
 #define BUTTON_GODS 8
-#define NUM_ACTION_BUTTONS 9
+#define BUTTON_MAP_KIND 9
+#define NUM_ACTION_BUTTONS 10
 static generic_button action_buttons[] = {
     {176, 280, 24, 20, button_players, button_none, -1, 0},
     {208, 280, 24, 20, button_players, button_none, 1, 0},
@@ -84,6 +90,7 @@ static generic_button action_buttons[] = {
     {16, 348, 296, 20, button_invasions, button_none, 0, 0},
     {16, 304, 188, 20, button_difficulty, button_none, 0, 0},
     {208, 304, 104, 20, button_gods, button_none, 0, 0},
+    {16, 370, 296, 20, button_map_kind, button_none, 0, 0},
 };
 
 // end of the game: none, or by score after these years
@@ -110,6 +117,7 @@ static struct {
     int ai_invasions;
     int difficulty;
     int gods;
+    int generated_map;
     int rules_initialized;
     uint8_t address[ADDRESS_LENGTH];
     char local_address[16];
@@ -137,6 +145,7 @@ static void init(void)
     data.num_files = 0;
     add_files("map");
     add_files("sav");
+    add_files("mpmap");
     add_files("mpsav");
     if (data.selected_file >= data.num_files) {
         data.selected_file = 0;
@@ -264,7 +273,9 @@ static void draw_foreground(void)
     int hosting = mp_lockstep_get_state() == MP_LOCKSTEP_WAITING_FOR_PLAYERS && mp_lockstep_is_host();
     draw_button(&action_buttons[BUTTON_HOST], translation_for(hosting ? TR_MP_START : TR_MP_HOST_BUTTON),
         data.focus_action == BUTTON_HOST + 1);
-    text_draw(translation_for(TR_MP_SEPARATE_CITIES), 16, 374, FONT_SMALL_PLAIN, 0);
+    font_t map_font = data.focus_action == BUTTON_MAP_KIND + 1 ? FONT_NORMAL_WHITE : FONT_NORMAL_BLACK;
+    width = text_draw(translation_for(TR_MP_MAP_KIND), 16, 374, map_font, 0);
+    text_draw(translation_for(data.generated_map ? TR_MP_MAP_GENERATED : TR_MP_MAP_COPIES), 16 + width, 374, map_font, 0);
 
     // joining
     text_draw(translation_for(TR_MP_JOIN_TITLE), 336, 56, FONT_NORMAL_BLACK, 0);
@@ -349,6 +360,11 @@ static void button_gods(int param1, int param2)
     data.gods = !data.gods;
 }
 
+static void button_map_kind(int param1, int param2)
+{
+    data.generated_map = !data.generated_map;
+}
+
 static void button_host(int param1, int param2)
 {
     if (mp_lockstep_get_state() == MP_LOCKSTEP_WAITING_FOR_PLAYERS && mp_lockstep_is_host()) {
@@ -371,6 +387,8 @@ static void button_host(int param1, int param2)
     mp_lockstep_set_started_callback(window_mp_lobby_show_started_game);
     if (mp_lockstep_host(MP_LOCKSTEP_DEFAULT_PORT, data.num_players, data.files[data.selected_file], 1)) {
         mp_lockstep_set_manual_start(1);
+        // any seed will do: the host generates the map and sends it
+        mp_lockstep_set_generated_map(data.generated_map, (unsigned int) time_get_millis());
     }
 }
 
@@ -414,11 +432,28 @@ void window_mp_lobby_show_started_game(void)
     input_box_stop(&address_input);
     building_menu_update(); // the buildings this city may build (interface state, rebuilt on loading)
     mp_endgame_set_over_callback(window_mp_results_show);
-    // separate cities: the view starts on the city of this player
+    // the view starts on the city of this player: its buildings, or its arrival point
     if (player_context_num_players() > 1) {
-        int x, y, size;
-        mp_compose_city_area(mp_session_local_player_id(), MP_COMPOSE_CITY_GAP, &x, &y, &size);
-        city_view_go_to_grid_offset(map_grid_offset(x + size / 2, y + size / 2));
+        int count = 0, x = 0, y = 0;
+        for (int i = BUILDING_FIRST; i < BUILDING_END; i++) {
+            building *b = building_get(i);
+            if (b->state == BUILDING_STATE_IN_USE) {
+                x += b->x;
+                y += b->y;
+                count++;
+            }
+        }
+        if (count) {
+            city_view_go_to_grid_offset(map_grid_offset(x / count, y / count));
+        } else {
+            // the arrival point is on the edge of the map: look a little inside
+            const map_tile *entry = city_map_entry_point();
+            int dx = map_data.width / 2 - entry->x;
+            int dy = map_data.height / 2 - entry->y;
+            dx = dx > 40 ? 40 : dx < -40 ? -40 : dx;
+            dy = dy > 40 ? 40 : dy < -40 ? -40 : dy;
+            city_view_go_to_grid_offset(map_grid_offset(entry->x + dx, entry->y + dy));
+        }
     }
     window_city_show();
 }

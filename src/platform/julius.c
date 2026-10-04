@@ -692,6 +692,8 @@ static void start_network_game(const julius_args *args, const char *host_save)
         mp_lockstep_set_rules(&rules);
         if (!mp_lockstep_host(port, args->mp_players, host_save, !args->mp_shared_city)) {
             SDL_Log("Unable to host the network game: %s", mp_lockstep_status());
+        } else if (args->mp_generate) {
+            mp_lockstep_set_generated_map(1, (unsigned int) SDL_GetTicks());
         }
     } else {
         char address[256];

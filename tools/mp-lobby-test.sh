@@ -1,15 +1,17 @@
 #!/usr/bin/env bash
 # Two instances of the real game (no window) that start a network game through the lobby only:
 # the host picks a map and hosts, the client finds the game on the network and joins it.
-# Usage: tools/mp-lobby-test.sh
+# Usage: tools/mp-lobby-test.sh [generated]   ('generated': the host picks a large generated map)
 set -uo pipefail
+SUFFIX=""
+[ "${1:-}" = "generated" ] && SUFFIX="-generated"
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 cd "$ROOT"
 mkdir -p build/automation
-tools/run-automation.sh test/automation/mp-lobby-host.txt 180 > build/automation/mp-lobby-host.log 2>&1 &
+tools/run-automation.sh test/automation/mp-lobby-host$SUFFIX.txt 180 > build/automation/mp-lobby-host.log 2>&1 &
 HOST=$!
 sleep 2
-tools/run-automation.sh test/automation/mp-lobby-client.txt 180 > build/automation/mp-lobby-client.log 2>&1
+tools/run-automation.sh test/automation/mp-lobby-client$SUFFIX.txt 180 > build/automation/mp-lobby-client.log 2>&1
 CLIENT_STATUS=$?
 wait $HOST
 HOST_STATUS=$?
