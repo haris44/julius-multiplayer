@@ -29,6 +29,32 @@ intérieur reste celui de l'original** (exigence E7). Règles :
 - Un test rouge = régression à corriger, **jamais** un test à modifier ou à désactiver.
 - Durée : ~1,3 s. On les lance tout le temps.
 
+## 2 bis. Simulation sans tête : `simtool` (sommes de contrôle)
+
+`build/test/simtool` contient la même simulation que l'autopilot, sans graphismes, et sait calculer la **somme de
+contrôle** de l'état (`src/mp/checksum.c`, DESIGN §3.8). On le lance depuis `build/test`, où sont copiées les
+sauvegardes de `test/data` :
+
+```sh
+cd build/test
+./simtool checksum tower.sav                 # somme de contrôle de la sauvegarde chargée
+./simtool trace tower.sav 2000 50            # "tick somme" tous les 50 ticks
+./simtool pieces tower.sav 100               # somme par partie de la sauvegarde après 100 ticks
+./simtool idempotence tower.sav 1500 25      # charge et joue deux fois : échoue si les traces diffèrent
+./simtool diffpieces tower.sav 1500 10       # joue 1500 ticks, recharge, joue 10 ticks, liste les parties
+                                             # qui diffèrent et écrit diffpieces-{first,second}.sav
+./compare diffpieces-first.sav diffpieces-second.sav   # puis le détail champ par champ
+```
+
+Méthode pour trouver un état caché : `idempotence` donne le premier tick divergent, `diffpieces` la partie de la
+sauvegarde concernée, et `compare` l'enregistrement et l'octet. On remonte ensuite au code qui écrit ce champ.
+
+Tests ctest associés :
+- `sim_trace_deterministic` : deux processus produisent la même trace ;
+- `sim_idempotence_*` : 17 sauvegardes rechargées dans le même processus se comportent pareil.
+
+Toute la suite de tests tourne en environ 3 s.
+
 ## 3. Pilotage du vrai jeu : `--automation` (captures d'écran)
 
 Le jeu tourne **sans fenêtre** (pilotes SDL `dummy`) en suivant un script, avec une horloge virtuelle

@@ -105,7 +105,9 @@
 - Un seul chemin de code. Utile pour s'entraîner, et surtout pour tester sans réseau.
 
 ### D-015 — Remise à zéro de l'état caché à chaque démarrage ou chargement
-- 2026-10-04 · **adoptée** (à confirmer par les tests au jalon M1)
+- 2026-10-04 · **adoptée**. Confirmée en M1.3 : 17 sauvegardes sur 17 sont identiques au rechargement sur
+  6 000 ticks, et la parité reste verte. Il fallait remettre à zéro **avant** la lecture du fichier : certains
+  modules (les compteurs de bâtiments) ne sauvegardent qu'une partie de leur état.
 - Sept sauvegardes sur neuf divergent quand on les recharge dans le même processus, à cause de variables non
   sauvegardées. Les remettre à l'état d'un processus neuf rend les chargements reproductibles, sans casser la
   parité (code-map/01 §3.6).

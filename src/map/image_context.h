@@ -1,6 +1,8 @@
 #ifndef MAP_IMAGE_CONTEXT_H
 #define MAP_IMAGE_CONTEXT_H
 
+#include "core/buffer.h"
+
 typedef struct {
     int is_valid;
     int group_offset;
@@ -9,6 +11,18 @@ typedef struct {
 } terrain_image;
 
 void map_image_context_init(void);
+
+/**
+ * Saves the rotation state of image variants, which classic saved games do not store
+ * @param buf Buffer
+ */
+void map_image_context_save_state(buffer *buf);
+
+/**
+ * Loads the rotation state of image variants
+ * @param buf Buffer
+ */
+void map_image_context_load_state(buffer *buf);
 void map_image_context_reset_water(void);
 void map_image_context_reset_elevation(void);
 

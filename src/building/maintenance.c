@@ -34,6 +34,21 @@ void building_maintenance_update_fire_direction(void)
     fire_spread_direction = random_byte() & 7;
 }
 
+void building_maintenance_reset_extra_state(void)
+{
+    fire_spread_direction = 0;
+}
+
+void building_maintenance_save_extra_state(buffer *buf)
+{
+    buffer_write_i32(buf, fire_spread_direction);
+}
+
+void building_maintenance_load_extra_state(buffer *buf)
+{
+    fire_spread_direction = buffer_read_i32(buf);
+}
+
 void building_maintenance_update_burning_ruins(void)
 {
     scenario_climate climate = scenario_property_climate();

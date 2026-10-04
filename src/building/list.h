@@ -67,4 +67,11 @@ void building_list_save_state(buffer *small, buffer *large, buffer *burning, buf
 
 void building_list_load_state(buffer *small, buffer *large, buffer *burning, buffer *burning_totals);
 
+/**
+ * Sizes of the small and large lists, which classic saved games do not store
+ */
+void building_list_reset_extra_state(void);
+void building_list_save_extra_state(buffer *buf);
+void building_list_load_extra_state(buffer *buf);
+
 #endif // BUILDING_LIST_H

@@ -161,3 +161,11 @@ add_integration_test(sav_palace1 brugle-palacepeaks.sav brugle-palacepeaks-2.sav
 add_test(NAME sim_trace_deterministic
     COMMAND ${CMAKE_COMMAND} -DSIMTOOL=$<TARGET_FILE:simtool> -DSAVE=brugle-massilia-start.sav -DTICKS=600 -DSTEP=20
         -P ${CMAKE_CURRENT_SOURCE_DIR}/sim/compare_runs.cmake)
+
+# The same saved game loaded twice in one process must behave the same: no hidden state may leak
+# from a previous game (M1.3, game/extra_state.c)
+foreach(save tower request_start kknight inv0 db-fort1 db-fort2 routing-full curses mars-wrath earthquake
+        edge-start brugle-massilia-start valentia57 brugle-lugdunum brugle-lugdunum-native
+        cicero-lugdunum-trade brugle-palacepeaks)
+    add_test(NAME sim_idempotence_${save} COMMAND simtool idempotence ${save}.sav 1500 25)
+endforeach()

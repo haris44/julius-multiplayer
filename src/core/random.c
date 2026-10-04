@@ -85,3 +85,33 @@ void random_save_state(buffer *buf)
     buffer_write_u32(buf, data.iv1);
     buffer_write_u32(buf, data.iv2);
 }
+
+void random_reset(void)
+{
+    random_init();
+    random_generate_pool();
+}
+
+void random_save_extra_state(buffer *buf)
+{
+    buffer_write_i8(buf, data.random1_7bit);
+    buffer_write_i16(buf, data.random1_15bit);
+    buffer_write_i8(buf, data.random2_7bit);
+    buffer_write_i16(buf, data.random2_15bit);
+    buffer_write_i32(buf, data.pool_index);
+    for (int i = 0; i < MAX_RANDOM; i++) {
+        buffer_write_i32(buf, data.pool[i]);
+    }
+}
+
+void random_load_extra_state(buffer *buf)
+{
+    data.random1_7bit = buffer_read_i8(buf);
+    data.random1_15bit = buffer_read_i16(buf);
+    data.random2_7bit = buffer_read_i8(buf);
+    data.random2_15bit = buffer_read_i16(buf);
+    data.pool_index = buffer_read_i32(buf);
+    for (int i = 0; i < MAX_RANDOM; i++) {
+        data.pool[i] = buffer_read_i32(buf);
+    }
+}

@@ -304,6 +304,24 @@ void map_image_context_init(void)
     }
 }
 
+void map_image_context_save_state(buffer *buf)
+{
+    for (int i = 0; i < CONTEXT_MAX_ITEMS; i++) {
+        for (int j = 0; j < context_pointers[i].size; j++) {
+            buffer_write_u8(buf, context_pointers[i].context[j].current_item_offset);
+        }
+    }
+}
+
+void map_image_context_load_state(buffer *buf)
+{
+    for (int i = 0; i < CONTEXT_MAX_ITEMS; i++) {
+        for (int j = 0; j < context_pointers[i].size; j++) {
+            context_pointers[i].context[j].current_item_offset = buffer_read_u8(buf);
+        }
+    }
+}
+
 void map_image_context_reset_water(void)
 {
     clear_current_offset(context_pointers[CONTEXT_WATER].context, context_pointers[CONTEXT_WATER].size);

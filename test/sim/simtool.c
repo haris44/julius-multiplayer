@@ -23,6 +23,8 @@ static int usage(void)
     printf("  simtool pieces SAVE [TICKS]            checksum of every saved game piece after TICKS\n");
     printf("  simtool idempotence SAVE TICKS [STEP]  loads and runs SAVE twice in one process,\n");
     printf("                                         fails if the two traces differ\n");
+    printf("  simtool diffpieces SAVE TICKS [CHECK]  runs SAVE for TICKS, reloads it and runs CHECK ticks\n");
+    printf("                                         (default TICKS), lists the pieces that differ at CHECK\n");
     return 2;
 }
 
@@ -108,6 +110,60 @@ static int command_pieces(const char *file, int ticks)
     return 0;
 }
 
+#define MAX_PIECES 128
+
+typedef struct {
+    int count;
+    const char *names[MAX_PIECES];
+    uint64_t checksums[MAX_PIECES];
+} piece_list;
+
+static void record_piece(const char *name, uint64_t checksum, void *userdata)
+{
+    piece_list *list = userdata;
+    if (list->count < MAX_PIECES) {
+        list->names[list->count] = name;
+        list->checksums[list->count] = checksum;
+        list->count++;
+    }
+}
+
+static int command_diffpieces(const char *file, int ticks, int check_tick)
+{
+    static piece_list first;
+    static piece_list second;
+    if (check_tick <= 0 || check_tick > ticks) {
+        check_tick = ticks;
+    }
+    if (!load(file)) {
+        return 2;
+    }
+    run_trace(check_tick, check_tick, 0, 0);
+    mp_checksum_state_pieces(record_piece, &first);
+    game_file_write_saved_game("diffpieces-first.sav");
+    if (ticks > check_tick) {
+        run_trace(ticks - check_tick, ticks, 0, 0);
+    }
+    if (!load(file)) {
+        return 2;
+    }
+    run_trace(check_tick, check_tick, 0, 0);
+    mp_checksum_state_pieces(record_piece, &second);
+    game_file_write_saved_game("diffpieces-second.sav");
+    int differences = 0;
+    for (int i = 0; i < first.count && i < second.count; i++) {
+        if (first.checksums[i] != second.checksums[i]) {
+            printf("differs: %s\n", first.names[i]);
+            differences++;
+        }
+    }
+    printf("%d piece(s) differ at tick %d of the second run\n", differences, check_tick);
+    if (differences) {
+        printf("States written to diffpieces-first.sav and diffpieces-second.sav (see the compare tool)\n");
+    }
+    return differences ? 1 : 0;
+}
+
 static int command_idempotence(const char *file, int ticks, int step)
 {
     static uint64_t first[MAX_SAMPLES];
@@ -162,6 +218,8 @@ int main(int argc, char **argv)
         result = command_pieces(file, ticks);
     } else if (strcmp(command, "idempotence") == 0 && argc > 3) {
         result = command_idempotence(file, ticks, step);
+    } else if (strcmp(command, "diffpieces") == 0 && argc > 3) {
+        result = command_diffpieces(file, ticks, step == 1 && argc <= 4 ? ticks : step);
     } else {
         result = usage();
     }

@@ -1,6 +1,8 @@
 #ifndef MAP_POINT_H
 #define MAP_POINT_H
 
+#include "core/buffer.h"
+
 typedef struct {
     int x;
     int y;
@@ -25,5 +27,22 @@ typedef struct {
 void map_point_store_result(int x, int y, map_point *point);
 
 void map_point_get_last_result(map_point *point);
+
+/**
+ * Forgets the last stored result, as in a newly started process
+ */
+void map_point_reset_last_result(void);
+
+/**
+ * Saves the last stored result, which classic saved games do not store
+ * @param buf Buffer
+ */
+void map_point_save_state(buffer *buf);
+
+/**
+ * Loads the last stored result
+ * @param buf Buffer
+ */
+void map_point_load_state(buffer *buf);
 
 #endif // MAP_POINT_H

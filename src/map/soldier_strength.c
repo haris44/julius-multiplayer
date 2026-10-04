@@ -30,6 +30,16 @@ void map_soldier_strength_add(int x, int y, int radius, int amount)
     }
 }
 
+void map_soldier_strength_save_state(buffer *buf)
+{
+    map_grid_save_state_u8(strength.items, buf);
+}
+
+void map_soldier_strength_load_state(buffer *buf)
+{
+    map_grid_load_state_u8(strength.items, buf);
+}
+
 int map_soldier_strength_get(int grid_offset)
 {
     return strength.items[grid_offset];

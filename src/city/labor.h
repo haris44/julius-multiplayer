@@ -1,6 +1,8 @@
 #ifndef CITY_LABOR_H
 #define CITY_LABOR_H
 
+#include "core/buffer.h"
+
 typedef struct {
     int workers_needed;
     int workers_allocated;
@@ -34,5 +36,12 @@ void city_labor_update(void);
 void city_labor_set_priority(int category, int new_priority);
 
 int city_labor_max_selectable_priority(int category);
+
+/**
+ * Round-robin cursor of the water workers allocation, which classic saved games do not store
+ */
+void city_labor_reset_extra_state(void);
+void city_labor_save_extra_state(buffer *buf);
+void city_labor_load_extra_state(buffer *buf);
 
 #endif // CITY_LABOR_H

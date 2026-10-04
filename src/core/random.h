@@ -62,4 +62,21 @@ void random_save_state(buffer *buf);
  */
 void random_load_state(buffer *buf);
 
+/**
+ * Puts the generator in the state it has in a newly started process, before a game is loaded
+ */
+void random_reset(void);
+
+/**
+ * Saves the generator state that classic saved games do not store: current values and pool
+ * @param buf Buffer
+ */
+void random_save_extra_state(buffer *buf);
+
+/**
+ * Loads the generator state saved by random_save_extra_state
+ * @param buf Buffer
+ */
+void random_load_extra_state(buffer *buf);
+
 #endif // CORE_RANDOM_H

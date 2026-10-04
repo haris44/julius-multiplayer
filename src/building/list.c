@@ -110,6 +110,24 @@ void building_list_save_state(buffer *small, buffer *large, buffer *burning, buf
     buffer_write_i32(burning_totals, data.burning.size);
 }
 
+void building_list_reset_extra_state(void)
+{
+    data.small.size = 0;
+    data.large.size = 0;
+}
+
+void building_list_save_extra_state(buffer *buf)
+{
+    buffer_write_i32(buf, data.small.size);
+    buffer_write_i32(buf, data.large.size);
+}
+
+void building_list_load_extra_state(buffer *buf)
+{
+    data.small.size = buffer_read_i32(buf);
+    data.large.size = buffer_read_i32(buf);
+}
+
 void building_list_load_state(buffer *small, buffer *large, buffer *burning, buffer *burning_totals)
 {
     for (int i = 0; i < MAX_SMALL; i++) {

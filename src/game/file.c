@@ -30,6 +30,7 @@
 #include "figuretype/water.h"
 #include "game/animation.h"
 #include "game/difficulty.h"
+#include "game/extra_state.h"
 #include "game/file_io.h"
 #include "game/settings.h"
 #include "game/state.h"
@@ -279,6 +280,8 @@ static int start_scenario(const uint8_t *scenario_name, const char *scenario_fil
 {
     int mission = scenario_campaign_mission();
     int rank = scenario_campaign_rank();
+    // Start from the same state as a new process, whatever was played before
+    game_extra_state_reset();
     map_bookmarks_clear();
     if (scenario_is_custom()) {
         if (!load_custom_scenario(scenario_name, scenario_file)) {
@@ -349,6 +352,8 @@ int game_file_load_scenario_data(const char *scenario_file)
 
 int game_file_load_saved_game(const char *filename)
 {
+    // Behave exactly as when the saved game is loaded in a new process
+    game_extra_state_reset();
     if (!game_file_io_read_saved_game(filename, 0)) {
         return 0;
     }

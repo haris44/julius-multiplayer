@@ -230,6 +230,35 @@ int building_count_industry_total(resource_type resource)
     return data.industry[resource].total;
 }
 
+void building_count_reset_extra_state(void)
+{
+    clear_counters();
+}
+
+void building_count_save_extra_state(buffer *buf)
+{
+    for (int i = 0; i < BUILDING_TYPE_MAX; i++) {
+        buffer_write_i32(buf, data.buildings[i].active);
+        buffer_write_i32(buf, data.buildings[i].total);
+    }
+    for (int i = 0; i < RESOURCE_MAX; i++) {
+        buffer_write_i32(buf, data.industry[i].active);
+        buffer_write_i32(buf, data.industry[i].total);
+    }
+}
+
+void building_count_load_extra_state(buffer *buf)
+{
+    for (int i = 0; i < BUILDING_TYPE_MAX; i++) {
+        data.buildings[i].active = buffer_read_i32(buf);
+        data.buildings[i].total = buffer_read_i32(buf);
+    }
+    for (int i = 0; i < RESOURCE_MAX; i++) {
+        data.industry[i].active = buffer_read_i32(buf);
+        data.industry[i].total = buffer_read_i32(buf);
+    }
+}
+
 void building_count_save_state(buffer *industry, buffer *culture1, buffer *culture2,
                                 buffer *culture3, buffer *military, buffer *support)
 {

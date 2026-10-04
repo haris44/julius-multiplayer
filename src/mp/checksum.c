@@ -3,8 +3,10 @@
 #include "building/building.h"
 #include "building/building_state.h"
 #include "core/buffer.h"
+#include "game/extra_state.h"
 #include "game/file_io.h"
 
+#include <stdlib.h>
 #include <string.h>
 
 #define FNV_OFFSET_BASIS 0xcbf29ce484222325ULL
@@ -137,10 +139,29 @@ static void visit_piece(const char *name, const unsigned char *data, int size, v
     }
 }
 
+// State that classic saved games do not store, hashed as an extra piece
+static void visit_extra_state(checksum_context *ctx)
+{
+    static uint8_t *data;
+    static int size;
+    if (!data) {
+        size = game_extra_state_size();
+        data = malloc(size);
+        if (!data) {
+            return;
+        }
+    }
+    buffer buf;
+    buffer_init(&buf, data, size);
+    game_extra_state_save(&buf);
+    visit_piece("extra_state", data, size, ctx);
+}
+
 uint64_t mp_checksum_state_pieces(mp_checksum_piece_callback callback, void *userdata)
 {
     checksum_context ctx = { FNV_OFFSET_BASIS, callback, userdata, find_overlay_flag_offset() };
     game_file_io_visit_saved_game(visit_piece, &ctx);
+    visit_extra_state(&ctx);
     return ctx.total;
 }
 

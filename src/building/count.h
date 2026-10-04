@@ -67,4 +67,11 @@ void building_count_save_state(
 void building_count_load_state(
     buffer *industry, buffer *culture1, buffer *culture2, buffer *culture3, buffer *military, buffer *support);
 
+/**
+ * All counters, including the building types that classic saved games do not store
+ */
+void building_count_reset_extra_state(void);
+void building_count_save_extra_state(buffer *buf);
+void building_count_load_extra_state(buffer *buf);
+
 #endif // BUILDING_COUNT_H

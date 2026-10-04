@@ -307,9 +307,26 @@ static void set_building_worker_weight(void)
     }
 }
 
+// Round-robin cursor of allocate_workers_to_water, not stored in classic saved games
+static int water_start_building_id = 1;
+
+void city_labor_reset_extra_state(void)
+{
+    water_start_building_id = 1;
+}
+
+void city_labor_save_extra_state(buffer *buf)
+{
+    buffer_write_i32(buf, water_start_building_id);
+}
+
+void city_labor_load_extra_state(buffer *buf)
+{
+    water_start_building_id = buffer_read_i32(buf);
+}
+
 static void allocate_workers_to_water(void)
 {
-    static int start_building_id = 1;
     labor_category_data *water_cat = &city_data.labor.categories[LABOR_CATEGORY_WATER];
 
     int percentage_not_filled = 100 - calc_percentage(water_cat->workers_allocated, water_cat->workers_needed);
@@ -322,8 +339,8 @@ static void allocate_workers_to_water(void)
     } else {
         workers_per_building = water_cat->workers_allocated / (water_cat->buildings - buildings_to_skip);
     }
-    int building_id = start_building_id;
-    start_building_id = 0;
+    int building_id = water_start_building_id;
+    water_start_building_id = 0;
     for (int guard = 1; guard < MAX_BUILDINGS; guard++, building_id++) {
         if (building_id >= MAX_BUILDINGS) {
             building_id = 1;
@@ -337,10 +354,10 @@ static void allocate_workers_to_water(void)
             if (percentage_not_filled > 0) {
                 if (buildings_to_skip) {
                     --buildings_to_skip;
-                } else if (start_building_id) {
+                } else if (water_start_building_id) {
                     b->num_workers = workers_per_building;
                 } else {
-                    start_building_id = building_id;
+                    water_start_building_id = building_id;
                     b->num_workers = workers_per_building;
                 }
             } else {
@@ -348,9 +365,9 @@ static void allocate_workers_to_water(void)
             }
         }
     }
-    if (!start_building_id) {
+    if (!water_start_building_id) {
         // no buildings assigned or full employment
-        start_building_id = 1;
+        water_start_building_id = 1;
     }
 }
 
