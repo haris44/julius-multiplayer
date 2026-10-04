@@ -16,6 +16,7 @@
 #include "figure/route.h"
 #include "figure/trader.h"
 #include "map/road_access.h"
+#include "map/grid.h"
 
 static int try_import_resource(int building_id, int resource, int city_id)
 {
@@ -234,8 +235,8 @@ static int deliver_import_resource(figure *f, building *dock)
     f->destination_building_id = warehouse_id;
     f->wait_ticks = 0;
     f->action_state = FIGURE_ACTION_133_DOCKER_IMPORT_QUEUE;
-    f->destination_x = tile.x;
-    f->destination_y = tile.y;
+    f->destination_x = GRID_COORD(tile.x);
+    f->destination_y = GRID_COORD(tile.y);
     f->resource_id = resource;
     return 1;
 }
@@ -263,8 +264,8 @@ static int fetch_export_resource(figure *f, building *dock)
     f->destination_building_id = warehouse_id;
     f->action_state = FIGURE_ACTION_136_DOCKER_EXPORT_GOING_TO_WAREHOUSE;
     f->wait_ticks = 0;
-    f->destination_x = tile.x;
-    f->destination_y = tile.y;
+    f->destination_x = GRID_COORD(tile.x);
+    f->destination_y = GRID_COORD(tile.y);
     f->resource_id = resource;
     return 1;
 }
@@ -442,14 +443,14 @@ void figure_docker_action(figure *f)
                     trader_record_sold_resource(trader_id, f->resource_id);
                     f->action_state = FIGURE_ACTION_138_DOCKER_IMPORT_RETURNING;
                     f->wait_ticks = 0;
-                    f->destination_x = f->source_x;
-                    f->destination_y = f->source_y;
+                    f->destination_x = GRID_COORD(f->source_x);
+                    f->destination_y = GRID_COORD(f->source_y);
                     f->resource_id = 0;
                     fetch_export_resource(f, b);
                 } else {
                     f->action_state = FIGURE_ACTION_138_DOCKER_IMPORT_RETURNING;
-                    f->destination_x = f->source_x;
-                    f->destination_y = f->source_y;
+                    f->destination_x = GRID_COORD(f->source_x);
+                    f->destination_y = GRID_COORD(f->source_y);
                 }
                 f->wait_ticks = 0;
             }
@@ -466,8 +467,8 @@ void figure_docker_action(figure *f)
                     trade_city_id = 0;
                 }
                 f->action_state = FIGURE_ACTION_138_DOCKER_IMPORT_RETURNING;
-                f->destination_x = f->source_x;
-                f->destination_y = f->source_y;
+                f->destination_x = GRID_COORD(f->source_x);
+                f->destination_y = GRID_COORD(f->source_y);
                 f->wait_ticks = 0;
                 if (try_export_resource(f->destination_building_id, f->resource_id, trade_city_id)) {
                     int trader_id = figure_get(b->data.dock.trade_ship_id)->trader_id;

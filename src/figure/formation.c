@@ -85,8 +85,8 @@ static int formation_create(int figure_type, int layout, int orientation, int x,
     }
     formation *f = &formations[formation_id];
     f->faction_id = 0;
-    f->x = x;
-    f->y = y;
+    f->x = GRID_COORD(x);
+    f->y = GRID_COORD(y);
     f->in_use = 1;
     f->is_legion = 0;
     f->figure_type = figure_type;
@@ -705,10 +705,10 @@ void formations_load_state(buffer *buf, buffer *totals)
         f->y_home = buffer_read_u8(buf);
         f->standard_x = buffer_read_u8(buf);
         f->standard_y = buffer_read_u8(buf);
-        f->x = buffer_read_u8(buf);
-        f->y = buffer_read_u8(buf);
-        f->destination_x = buffer_read_u8(buf);
-        f->destination_y = buffer_read_u8(buf);
+        f->x = GRID_COORD(buffer_read_u8(buf));
+        f->y = GRID_COORD(buffer_read_u8(buf));
+        f->destination_x = GRID_COORD(buffer_read_u8(buf));
+        f->destination_y = GRID_COORD(buffer_read_u8(buf));
         f->destination_building_id = buffer_read_i16(buf);
         f->standard_figure_id = buffer_read_i16(buf);
         f->is_legion = buffer_read_u8(buf);

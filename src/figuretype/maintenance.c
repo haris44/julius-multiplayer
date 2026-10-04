@@ -14,6 +14,7 @@
 #include "map/building.h"
 #include "map/road_access.h"
 #include "sound/effect.h"
+#include "map/grid.h"
 
 void figure_engineer_action(figure *f)
 {
@@ -70,8 +71,8 @@ void figure_engineer_action(figure *f)
                 int x_road, y_road;
                 if (map_closest_road_within_radius(b->x, b->y, b->size, 2, &x_road, &y_road)) {
                     f->action_state = FIGURE_ACTION_63_ENGINEER_RETURNING;
-                    f->destination_x = x_road;
-                    f->destination_y = y_road;
+                    f->destination_x = GRID_COORD(x_road);
+                    f->destination_y = GRID_COORD(y_road);
                 } else {
                     f->state = FIGURE_STATE_DEAD;
                 }
@@ -149,8 +150,8 @@ static int fight_enemy(figure *f)
         figure *enemy = figure_get(enemy_id);
         f->wait_ticks_next_target = 0;
         f->action_state = FIGURE_ACTION_76_PREFECT_GOING_TO_ENEMY;
-        f->destination_x = enemy->x;
-        f->destination_y = enemy->y;
+        f->destination_x = GRID_COORD(enemy->x);
+        f->destination_y = GRID_COORD(enemy->y);
         f->target_figure_id = enemy_id;
         enemy->targeted_by_figure_id = f->id;
         f->target_figure_created_sequence = enemy->created_sequence;
@@ -186,8 +187,8 @@ static int fight_fire(figure *f)
         building *ruin = building_get(ruin_id);
         f->wait_ticks_missile = 0;
         f->action_state = FIGURE_ACTION_74_PREFECT_GOING_TO_FIRE;
-        f->destination_x = ruin->road_access_x;
-        f->destination_y = ruin->road_access_y;
+        f->destination_x = GRID_COORD(ruin->road_access_x);
+        f->destination_y = GRID_COORD(ruin->road_access_y);
         f->destination_building_id = ruin_id;
         figure_route_remove(f);
         ruin->figure_id4 = f->id;
@@ -218,8 +219,8 @@ static void extinguish_fire(figure *f)
             int x_road, y_road;
             if (map_closest_road_within_radius(b->x, b->y, b->size, 2, &x_road, &y_road)) {
                 f->action_state = FIGURE_ACTION_73_PREFECT_RETURNING;
-                f->destination_x = x_road;
-                f->destination_y = y_road;
+                f->destination_x = GRID_COORD(x_road);
+                f->destination_y = GRID_COORD(y_road);
                 figure_route_remove(f);
             } else {
                 f->state = FIGURE_STATE_DEAD;
@@ -299,8 +300,8 @@ void figure_prefect_action(figure *f)
                 int x_road, y_road;
                 if (map_closest_road_within_radius(b->x, b->y, b->size, 2, &x_road, &y_road)) {
                     f->action_state = FIGURE_ACTION_73_PREFECT_RETURNING;
-                    f->destination_x = x_road;
-                    f->destination_y = y_road;
+                    f->destination_x = GRID_COORD(x_road);
+                    f->destination_y = GRID_COORD(y_road);
                     figure_route_remove(f);
                 } else {
                     f->state = FIGURE_STATE_DEAD;
@@ -339,8 +340,8 @@ void figure_prefect_action(figure *f)
                 int x_road, y_road;
                 if (map_closest_road_within_radius(b->x, b->y, b->size, 2, &x_road, &y_road)) {
                     f->action_state = FIGURE_ACTION_73_PREFECT_RETURNING;
-                    f->destination_x = x_road;
-                    f->destination_y = y_road;
+                    f->destination_x = GRID_COORD(x_road);
+                    f->destination_y = GRID_COORD(y_road);
                     figure_route_remove(f);
                     f->roam_length = 0;
                 } else {
@@ -350,8 +351,8 @@ void figure_prefect_action(figure *f)
             figure_movement_move_ticks(f, 1);
             if (f->direction == DIR_FIGURE_AT_DESTINATION) {
                 figure *target = figure_get(f->target_figure_id);
-                f->destination_x = target->x;
-                f->destination_y = target->y;
+                f->destination_x = GRID_COORD(target->x);
+                f->destination_y = GRID_COORD(target->y);
                 figure_route_remove(f);
             } else if (f->direction == DIR_FIGURE_REROUTE || f->direction == DIR_FIGURE_LOST) {
                 f->state = FIGURE_STATE_DEAD;

@@ -158,8 +158,8 @@ building *building_create(building_type type, int x, int y)
         b->data.granary.resource_stored[RESOURCE_NONE] = 2400;
     }
 
-    b->x = x;
-    b->y = y;
+    b->x = GRID_COORD(x);
+    b->y = GRID_COORD(y);
     b->grid_offset = map_grid_offset(x, y);
     b->house_figure_generation_delay = map_random_get(b->grid_offset) & 0x7f;
     b->figure_roam_direction = b->house_figure_generation_delay & 6;

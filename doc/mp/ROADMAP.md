@@ -77,9 +77,9 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
   constructions se synchronisent bien.
 
 ## M3 — Moteur multi-cités
-- [ ] **M3.1** Types élargis en mémoire (coordonnées 16 bits, offsets 32 bits). Le format classique est réécrit à
+- [x] **M3.1** Types élargis en mémoire (coordonnées 16 bits, offsets 32 bits). Le format classique est réécrit à
   l'identique. *Critère* : parité.
-- [ ] **M3.2** Grille de taille variable (`map_grid_size()`), tables d'offsets calculées. *Critère* : parité.
+- [x] **M3.2** Grille de taille variable (`map_grid_size()`), tables d'offsets calculées. *Critère* : parité.
 - [ ] **M3.3** Outil de composition : placer une sauvegarde classique dans un monde plus grand, avec un décalage,
   puis l'extraire. *Critère* : test d'invariance par translation sur les 36 cas.
 - [x] **M3.4** Contexte de cité : `city_data` par cité, `city_extra`, générateur aléatoire par cité (D-004, D-007).

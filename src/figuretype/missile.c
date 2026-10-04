@@ -9,6 +9,7 @@
 #include "map/figure.h"
 #include "map/point.h"
 #include "sound/effect.h"
+#include "map/grid.h"
 
 static const int CLOUD_TILE_OFFSETS[] = {0, 0, 0, 1, 1, 2};
 
@@ -38,8 +39,8 @@ void figure_create_explosion_cloud(int x, int y, int size)
         if (f->id) {
             f->cross_country_x += cc_offset;
             f->cross_country_y += cc_offset;
-            f->destination_x += CLOUD_DIRECTION[i].x;
-            f->destination_y += CLOUD_DIRECTION[i].y;
+            f->destination_x = GRID_COORD(f->destination_x + CLOUD_DIRECTION[i].x);
+            f->destination_y = GRID_COORD(f->destination_y + CLOUD_DIRECTION[i].y);
             figure_movement_set_cross_country_direction(f,
                 f->cross_country_x, f->cross_country_y,
                 15 * f->destination_x + cc_offset,
@@ -56,8 +57,8 @@ void figure_create_missile(int building_id, int x, int y, int x_dst, int y_dst, 
     if (f->id) {
         f->missile_damage = type == FIGURE_BOLT ? 60 : 10;
         f->building_id = building_id;
-        f->destination_x = x_dst;
-        f->destination_y = y_dst;
+        f->destination_x = GRID_COORD(x_dst);
+        f->destination_y = GRID_COORD(y_dst);
         figure_movement_set_cross_country_direction(
             f, f->cross_country_x, f->cross_country_y,
             15 * x_dst, 15 * y_dst, 1);

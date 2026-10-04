@@ -17,6 +17,7 @@
 #include "scenario/gladiator_revolt.h"
 #include "sound/effect.h"
 #include "sound/speech.h"
+#include "map/grid.h"
 
 static void enemy_initial(figure *f, formation *m)
 {
@@ -38,8 +39,8 @@ static void enemy_initial(figure *f, formation *m)
         if (m->recent_fight) {
             f->action_state = FIGURE_ACTION_154_ENEMY_FIGHTING;
         } else {
-            f->destination_x = m->destination_x + f->formation_position_x.enemy;
-            f->destination_y = m->destination_y + f->formation_position_y.enemy;
+            f->destination_x = GRID_COORD(m->destination_x + f->formation_position_x.enemy);
+            f->destination_y = GRID_COORD(m->destination_y + f->formation_position_y.enemy);
             if (calc_general_direction(f->x, f->y, f->destination_x, f->destination_y) < 8) {
                 f->action_state = FIGURE_ACTION_153_ENEMY_MARCHING;
             }
@@ -95,8 +96,8 @@ static void enemy_marching(figure *f, const formation *m)
     f->wait_ticks--;
     if (f->wait_ticks <= 0) {
         f->wait_ticks = 50;
-        f->destination_x = m->destination_x + f->formation_position_x.enemy;
-        f->destination_y = m->destination_y + f->formation_position_y.enemy;
+        f->destination_x = GRID_COORD(m->destination_x + f->formation_position_x.enemy);
+        f->destination_y = GRID_COORD(m->destination_y + f->formation_position_y.enemy);
         if (calc_general_direction(f->x, f->y, f->destination_x, f->destination_y) == DIR_FIGURE_AT_DESTINATION) {
             f->action_state = FIGURE_ACTION_151_ENEMY_INITIAL;
             return;
@@ -137,8 +138,8 @@ static void enemy_fighting(figure *f, const formation *m)
         target_id = figure_combat_get_target_for_enemy(f->x, f->y);
         if (target_id) {
             figure *target = figure_get(target_id);
-            f->destination_x = target->x;
-            f->destination_y = target->y;
+            f->destination_x = GRID_COORD(target->x);
+            f->destination_y = GRID_COORD(target->y);
             f->target_figure_id = target_id;
             f->target_figure_created_sequence = target->created_sequence;
             target->targeted_by_figure_id = f->id;
@@ -149,8 +150,8 @@ static void enemy_fighting(figure *f, const formation *m)
         figure_movement_move_ticks(f, f->speed_multiplier);
         if (f->direction == DIR_FIGURE_AT_DESTINATION) {
             figure *target = figure_get(f->target_figure_id);
-            f->destination_x = target->x;
-            f->destination_y = target->y;
+            f->destination_x = GRID_COORD(target->x);
+            f->destination_y = GRID_COORD(target->y);
             figure_route_remove(f);
         } else if (f->direction == DIR_FIGURE_REROUTE || f->direction == DIR_FIGURE_LOST) {
             f->action_state = FIGURE_ACTION_151_ENEMY_INITIAL;
@@ -177,8 +178,8 @@ static void enemy_action(figure *f, formation *m)
             figure_combat_handle_corpse(f);
             break;
         case FIGURE_ACTION_148_FLEEING:
-            f->destination_x = f->source_x;
-            f->destination_y = f->source_y;
+            f->destination_x = GRID_COORD(f->source_x);
+            f->destination_y = GRID_COORD(f->source_y);
             figure_movement_move_ticks(f, f->speed_multiplier);
             if (f->direction == DIR_FIGURE_AT_DESTINATION ||
                 f->direction == DIR_FIGURE_REROUTE ||
@@ -590,8 +591,8 @@ void figure_enemy_gladiator_action(figure *f)
                 int x_tile, y_tile;
                 int building_id = formation_rioter_get_target_building(&x_tile, &y_tile);
                 if (building_id) {
-                    f->destination_x = x_tile;
-                    f->destination_y = y_tile;
+                    f->destination_x = GRID_COORD(x_tile);
+                    f->destination_y = GRID_COORD(y_tile);
                     f->destination_building_id = building_id;
                     figure_route_remove(f);
                 } else {

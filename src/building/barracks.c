@@ -109,8 +109,8 @@ int building_barracks_create_soldier(building *barracks, int x, int y)
             building *academy = building_get(academy_id);
             if (map_has_road_access(academy->x, academy->y, academy->size, &road)) {
                 f->action_state = FIGURE_ACTION_85_SOLDIER_GOING_TO_MILITARY_ACADEMY;
-                f->destination_x = road.x;
-                f->destination_y = road.y;
+                f->destination_x = GRID_COORD(road.x);
+                f->destination_y = GRID_COORD(road.y);
                 f->destination_grid_offset = map_grid_offset(f->destination_x, f->destination_y);
             } else {
                 f->action_state = FIGURE_ACTION_81_SOLDIER_GOING_TO_FORT;
@@ -144,8 +144,8 @@ int building_barracks_create_tower_sentry(building *barracks, int x, int y)
     f->action_state = FIGURE_ACTION_174_TOWER_SENTRY_GOING_TO_TOWER;
     map_point road;
     if (map_has_road_access(tower->x, tower->y, tower->size, &road)) {
-        f->destination_x = road.x;
-        f->destination_y = road.y;
+        f->destination_x = GRID_COORD(road.x);
+        f->destination_y = GRID_COORD(road.y);
     } else {
         f->state = FIGURE_STATE_DEAD;
     }

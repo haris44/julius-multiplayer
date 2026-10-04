@@ -38,18 +38,18 @@ typedef struct {
     signed char direction;
     signed char previous_tile_direction;
     signed char attack_direction;
-    unsigned char x;
-    unsigned char y;
-    unsigned char previous_tile_x;
-    unsigned char previous_tile_y;
+    unsigned short x; // 8 bits in classic saved games
+    unsigned short y; // 8 bits in classic saved games
+    unsigned short previous_tile_x; // 8 bits in classic saved games
+    unsigned short previous_tile_y; // 8 bits in classic saved games
     unsigned char missile_damage;
     unsigned char damage;
-    short grid_offset;
-    unsigned char destination_x;
-    unsigned char destination_y;
-    short destination_grid_offset; // only used for soldiers
-    unsigned char source_x;
-    unsigned char source_y;
+    int grid_offset; // 16 bits in classic saved games
+    unsigned short destination_x; // 8 bits in classic saved games
+    unsigned short destination_y; // 8 bits in classic saved games
+    int destination_grid_offset; // only used for soldiers; 16 bits in classic saved games
+    unsigned short source_x; // 8 bits in classic saved games
+    unsigned short source_y; // 8 bits in classic saved games
     union {
         unsigned char soldier;
         signed char enemy;

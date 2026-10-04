@@ -13,6 +13,7 @@
 #include "game/resource.h"
 #include "map/road_network.h"
 #include "map/routing_terrain.h"
+#include "map/grid.h"
 
 static const int CART_OFFSET_MULTIPLE_LOADS_FOOD[] = {0, 0, 8, 16, 0, 0, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 static const int CART_OFFSET_MULTIPLE_LOADS_NON_FOOD[] = {0, 0, 0, 0, 0, 8, 0, 16, 24, 32, 40, 48, 56, 64, 72, 80};
@@ -29,8 +30,8 @@ static void set_destination(figure *f, int action, int building_id, int x_dst, i
     f->destination_building_id = building_id;
     f->action_state = action;
     f->wait_ticks = 0;
-    f->destination_x = x_dst;
-    f->destination_y = y_dst;
+    f->destination_x = GRID_COORD(x_dst);
+    f->destination_y = GRID_COORD(y_dst);
 }
 
 static void determine_cartpusher_destination(figure *f, building *b, int road_network_id)
@@ -222,8 +223,8 @@ void figure_cartpusher_action(figure *f)
                 if (building_warehouse_add_resource(building_get(f->destination_building_id), f->resource_id)) {
                     f->action_state = FIGURE_ACTION_27_CARTPUSHER_RETURNING;
                     f->wait_ticks = 0;
-                    f->destination_x = f->source_x;
-                    f->destination_y = f->source_y;
+                    f->destination_x = GRID_COORD(f->source_x);
+                    f->destination_y = GRID_COORD(f->source_y);
                 } else {
                     figure_route_remove(f);
                     f->action_state = FIGURE_ACTION_20_CARTPUSHER_INITIAL;
@@ -238,8 +239,8 @@ void figure_cartpusher_action(figure *f)
                 if (building_granary_add_resource(building_get(f->destination_building_id), f->resource_id, 1)) {
                     f->action_state = FIGURE_ACTION_27_CARTPUSHER_RETURNING;
                     f->wait_ticks = 0;
-                    f->destination_x = f->source_x;
-                    f->destination_y = f->source_y;
+                    f->destination_x = GRID_COORD(f->source_x);
+                    f->destination_y = GRID_COORD(f->source_y);
                 } else {
                     determine_cartpusher_destination_food(f, road_network_id);
                 }
@@ -252,8 +253,8 @@ void figure_cartpusher_action(figure *f)
                 building_workshop_add_raw_material(building_get(f->destination_building_id));
                 f->action_state = FIGURE_ACTION_27_CARTPUSHER_RETURNING;
                 f->wait_ticks = 0;
-                f->destination_x = f->source_x;
-                f->destination_y = f->source_y;
+                f->destination_x = GRID_COORD(f->source_x);
+                f->destination_y = GRID_COORD(f->source_y);
             }
             f->image_offset = 0;
             break;
@@ -473,8 +474,8 @@ void figure_warehouseman_action(figure *f)
                 // BUG: what if warehouse/granary is full and returns false?
                 f->action_state = FIGURE_ACTION_53_WAREHOUSEMAN_RETURNING_EMPTY;
                 f->wait_ticks = 0;
-                f->destination_x = f->source_x;
-                f->destination_y = f->source_y;
+                f->destination_x = GRID_COORD(f->source_x);
+                f->destination_y = GRID_COORD(f->source_y);
             }
             f->image_offset = 0;
             break;
@@ -507,8 +508,8 @@ void figure_warehouseman_action(figure *f)
                 f->resource_id = resource;
                 f->action_state = FIGURE_ACTION_56_WAREHOUSEMAN_RETURNING_WITH_FOOD;
                 f->wait_ticks = 0;
-                f->destination_x = f->source_x;
-                f->destination_y = f->source_y;
+                f->destination_x = GRID_COORD(f->source_x);
+                f->destination_y = GRID_COORD(f->source_y);
                 figure_route_remove(f);
             }
             f->image_offset = 0;
@@ -565,8 +566,8 @@ void figure_warehouseman_action(figure *f)
                 f->resource_id = f->collecting_item_id;
                 f->action_state = FIGURE_ACTION_59_WAREHOUSEMAN_RETURNING_WITH_RESOURCE;
                 f->wait_ticks = 0;
-                f->destination_x = f->source_x;
-                f->destination_y = f->source_y;
+                f->destination_x = GRID_COORD(f->source_x);
+                f->destination_y = GRID_COORD(f->source_y);
                 figure_route_remove(f);
             }
             f->image_offset = 0;

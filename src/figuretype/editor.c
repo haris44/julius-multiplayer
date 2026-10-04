@@ -48,8 +48,8 @@ void figure_editor_flag_action(figure *f)
         point = scenario_editor_herd_point(id - MAP_FLAG_HERD_MIN);
         f->cart_image_id = image_group(GROUP_FIGURE_FORT_STANDARD_ICONS) + 4;
     }
-    f->x = point.x;
-    f->y = point.y;
+    f->x = GRID_COORD(point.x);
+    f->y = GRID_COORD(point.y);
 
     f->grid_offset = map_grid_offset(f->x, f->y);
     f->cross_country_x = 15 * f->x + 7;

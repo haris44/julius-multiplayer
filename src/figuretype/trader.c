@@ -24,6 +24,7 @@
 #include "map/figure.h"
 #include "map/road_access.h"
 #include "scenario/map.h"
+#include "map/grid.h"
 
 int figure_create_trade_caravan(int x, int y, int city_id)
 {
@@ -313,13 +314,13 @@ static void go_to_next_warehouse(figure *f, int x_src, int y_src, int distance_t
     if (warehouse_id) {
         f->destination_building_id = warehouse_id;
         f->action_state = FIGURE_ACTION_101_TRADE_CARAVAN_ARRIVING;
-        f->destination_x = dst.x;
-        f->destination_y = dst.y;
+        f->destination_x = GRID_COORD(dst.x);
+        f->destination_y = GRID_COORD(dst.y);
     } else {
         const map_tile *exit = city_map_exit_point();
         f->action_state = FIGURE_ACTION_103_TRADE_CARAVAN_LEAVING;
-        f->destination_x = exit->x;
-        f->destination_y = exit->y;
+        f->destination_x = GRID_COORD(exit->x);
+        f->destination_y = GRID_COORD(exit->y);
     }
 }
 
@@ -502,8 +503,8 @@ void figure_native_trader_action(figure *f)
                 if (building_id) {
                     f->action_state = FIGURE_ACTION_160_NATIVE_TRADER_GOING_TO_WAREHOUSE;
                     f->destination_building_id = building_id;
-                    f->destination_x = tile.x;
-                    f->destination_y = tile.y;
+                    f->destination_x = GRID_COORD(tile.x);
+                    f->destination_y = GRID_COORD(tile.y);
                 } else {
                     f->state = FIGURE_STATE_DEAD;
                 }
@@ -524,12 +525,12 @@ void figure_native_trader_action(figure *f)
                     if (building_id) {
                         f->action_state = FIGURE_ACTION_160_NATIVE_TRADER_GOING_TO_WAREHOUSE;
                         f->destination_building_id = building_id;
-                        f->destination_x = tile.x;
-                        f->destination_y = tile.y;
+                        f->destination_x = GRID_COORD(tile.x);
+                        f->destination_y = GRID_COORD(tile.y);
                     } else {
                         f->action_state = FIGURE_ACTION_161_NATIVE_TRADER_RETURNING;
-                        f->destination_x = f->source_x;
-                        f->destination_y = f->source_y;
+                        f->destination_x = GRID_COORD(f->source_x);
+                        f->destination_y = GRID_COORD(f->source_y);
                     }
                 }
             }
@@ -635,12 +636,12 @@ void figure_trade_ship_action(figure *f)
                 if (dock_id) {
                     f->destination_building_id = dock_id;
                     f->action_state = FIGURE_ACTION_111_TRADE_SHIP_GOING_TO_DOCK;
-                    f->destination_x = tile.x;
-                    f->destination_y = tile.y;
+                    f->destination_x = GRID_COORD(tile.x);
+                    f->destination_y = GRID_COORD(tile.y);
                 } else if (building_dock_get_queue_destination(&tile)) {
                     f->action_state = FIGURE_ACTION_113_TRADE_SHIP_GOING_TO_DOCK_QUEUE;
-                    f->destination_x = tile.x;
-                    f->destination_y = tile.y;
+                    f->destination_x = GRID_COORD(tile.x);
+                    f->destination_y = GRID_COORD(tile.y);
                 } else {
                     f->state = FIGURE_STATE_DEAD;
                 }
@@ -665,8 +666,8 @@ void figure_trade_ship_action(figure *f)
                 f->action_state = FIGURE_ACTION_115_TRADE_SHIP_LEAVING;
                 f->wait_ticks = 0;
                 map_point river_exit = scenario_map_river_exit();
-                f->destination_x = river_exit.x;
-                f->destination_y = river_exit.y;
+                f->destination_x = GRID_COORD(river_exit.x);
+                f->destination_y = GRID_COORD(river_exit.y);
             }
             break;
         case FIGURE_ACTION_112_TRADE_SHIP_MOORED:
@@ -675,15 +676,15 @@ void figure_trade_ship_action(figure *f)
                 f->action_state = FIGURE_ACTION_115_TRADE_SHIP_LEAVING;
                 f->wait_ticks = 0;
                 map_point river_entry = scenario_map_river_entry();
-                f->destination_x = river_entry.x;
-                f->destination_y = river_entry.y;
+                f->destination_x = GRID_COORD(river_entry.x);
+                f->destination_y = GRID_COORD(river_entry.y);
             } else if (trade_ship_done_trading(f)) {
                 f->trade_ship_failed_dock_attempts = 0;
                 f->action_state = FIGURE_ACTION_115_TRADE_SHIP_LEAVING;
                 f->wait_ticks = 0;
                 map_point river_entry = scenario_map_river_entry();
-                f->destination_x = river_entry.x;
-                f->destination_y = river_entry.y;
+                f->destination_x = GRID_COORD(river_entry.x);
+                f->destination_y = GRID_COORD(river_entry.y);
                 building *dst = building_get(f->destination_building_id);
                 dst->data.dock.queued_docker_id = 0;
                 dst->data.dock.num_ships = 0;
@@ -716,13 +717,13 @@ void figure_trade_ship_action(figure *f)
                 if (dock_id) {
                     f->destination_building_id = dock_id;
                     f->action_state = FIGURE_ACTION_111_TRADE_SHIP_GOING_TO_DOCK;
-                    f->destination_x = tile.x;
-                    f->destination_y = tile.y;
+                    f->destination_x = GRID_COORD(tile.x);
+                    f->destination_y = GRID_COORD(tile.y);
                 } else if (map_figure_at(f->grid_offset) != f->id &&
                     building_dock_get_queue_destination(&tile)) {
                     f->action_state = FIGURE_ACTION_113_TRADE_SHIP_GOING_TO_DOCK_QUEUE;
-                    f->destination_x = tile.x;
-                    f->destination_y = tile.y;
+                    f->destination_x = GRID_COORD(tile.x);
+                    f->destination_y = GRID_COORD(tile.y);
                 }
                 f->wait_ticks = 0;
             }

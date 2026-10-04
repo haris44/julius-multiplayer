@@ -11,6 +11,7 @@
 #include "figure/movement.h"
 #include "figure/route.h"
 #include "map/road_access.h"
+#include "map/grid.h"
 
 void figure_create_immigrant(building *house, int num_people)
 {
@@ -108,8 +109,8 @@ void figure_immigrant_action(figure *f)
                 int x_road, y_road;
                 if (map_closest_road_within_radius(b->x, b->y, b->size, 2, &x_road, &y_road)) {
                     f->action_state = FIGURE_ACTION_2_IMMIGRANT_ARRIVING;
-                    f->destination_x = x_road;
-                    f->destination_y = y_road;
+                    f->destination_x = GRID_COORD(x_road);
+                    f->destination_y = GRID_COORD(y_road);
                     f->roam_length = 0;
                 } else {
                     f->state = FIGURE_STATE_DEAD;
@@ -200,8 +201,8 @@ void figure_emigrant_action(figure *f)
             if (figure_movement_move_ticks_cross_country(f, 1) == 1) {
                 const map_tile *entry = city_map_entry_point();
                 f->action_state = FIGURE_ACTION_6_EMIGRANT_LEAVING;
-                f->destination_x = entry->x;
-                f->destination_y = entry->y;
+                f->destination_x = GRID_COORD(entry->x);
+                f->destination_y = GRID_COORD(entry->y);
                 f->roam_length = 0;
                 f->progress_on_tile = 15;
             }
@@ -245,8 +246,8 @@ void figure_homeless_action(figure *f)
                         b->immigrant_figure_id = f->id;
                         f->immigrant_building_id = building_id;
                         f->action_state = FIGURE_ACTION_8_HOMELESS_GOING_TO_HOUSE;
-                        f->destination_x = x_road;
-                        f->destination_y = y_road;
+                        f->destination_x = GRID_COORD(x_road);
+                        f->destination_y = GRID_COORD(y_road);
                         f->roam_length = 0;
                     } else {
                         f->state = FIGURE_STATE_DEAD;
@@ -254,8 +255,8 @@ void figure_homeless_action(figure *f)
                 } else {
                     const map_tile *exit = city_map_exit_point();
                     f->action_state = FIGURE_ACTION_10_HOMELESS_LEAVING;
-                    f->destination_x = exit->x;
-                    f->destination_y = exit->y;
+                    f->destination_x = GRID_COORD(exit->x);
+                    f->destination_y = GRID_COORD(exit->y);
                     f->roam_length = 0;
                     f->wait_ticks = 0;
                 }
@@ -320,8 +321,8 @@ void figure_homeless_action(figure *f)
                         b->immigrant_figure_id = f->id;
                         f->immigrant_building_id = building_id;
                         f->action_state = FIGURE_ACTION_8_HOMELESS_GOING_TO_HOUSE;
-                        f->destination_x = x_road;
-                        f->destination_y = y_road;
+                        f->destination_x = GRID_COORD(x_road);
+                        f->destination_y = GRID_COORD(y_road);
                         f->roam_length = 0;
                         figure_route_remove(f);
                     }

@@ -188,3 +188,14 @@
 - Coût : environ 60 Ko recopiés par changement. Grâce aux tranches d'ids (D-005), on change de cité quelques fois
   par tick et par joueur, pas à chaque entité. À mesurer en M3.6.
 - Risque : oublier d'enregistrer un état. Parade : les tests d'indice et « jumeaux » (M3.7) détectent toute fuite.
+
+### D-022 — Coordonnées 16 bits qui « bouclent » à 256 sur les cartes classiques
+- 2026-10-04 · **adoptée**
+- Les coordonnées des bâtiments et des personnages passent de 8 à 16 bits, et leurs offsets de grille de 16 à
+  32 bits, pour les grandes cartes. Mais Caesar III calcule parfois des coordonnées négatives près du bord (explosions
+  du séisme, positions de formation) qui « bouclent » à 255 sur 8 bits. Le test de parité `sav_earthquake2` l'a
+  révélé.
+- Toute affectation d'une coordonnée de bâtiment ou de personnage passe par `GRID_COORD()`, qui masque à 8 bits sur
+  les grilles d'au plus 256 de côté (comportement d'origine) et à 16 bits au-delà.
+- Attention : ne jamais appliquer ce masque à d'autres structures (points de carte, tuiles) où -1 signifie
+  « invalide ». Un premier essai trop large a cassé 22 tests de parité.

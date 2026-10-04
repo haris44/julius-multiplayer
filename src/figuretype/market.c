@@ -9,6 +9,7 @@
 #include "figure/movement.h"
 #include "figure/route.h"
 #include "game/resource.h"
+#include "map/grid.h"
 
 static int create_delivery_boy(int leader_id, figure *f)
 {
@@ -130,12 +131,12 @@ void figure_market_buyer_action(figure *f)
                     }
                 }
                 f->action_state = FIGURE_ACTION_146_MARKET_BUYER_RETURNING;
-                f->destination_x = f->source_x;
-                f->destination_y = f->source_y;
+                f->destination_x = GRID_COORD(f->source_x);
+                f->destination_y = GRID_COORD(f->source_y);
             } else if (f->direction == DIR_FIGURE_REROUTE || f->direction == DIR_FIGURE_LOST) {
                 f->action_state = FIGURE_ACTION_146_MARKET_BUYER_RETURNING;
-                f->destination_x = f->source_x;
-                f->destination_y = f->source_y;
+                f->destination_x = GRID_COORD(f->source_x);
+                f->destination_y = GRID_COORD(f->source_y);
                 figure_route_remove(f);
             }
             break;

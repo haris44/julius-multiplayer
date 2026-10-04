@@ -9,6 +9,7 @@
 struct map_data_t map_data;
 
 int map_grid_stride = 162;
+int map_grid_coordinate_mask = 0xff;
 
 // Offsets are computed from the grid side; tables are refreshed when it changes
 static const int DIRECTION_XY[8][2] = {
@@ -66,6 +67,7 @@ void map_grid_set_stride(int stride)
 {
     if (stride > 0 && stride <= GRID_MAX_SIZE) {
         map_grid_stride = stride;
+        map_grid_coordinate_mask = stride <= 256 ? 0xff : 0xffff;
         update_tables();
     }
 }

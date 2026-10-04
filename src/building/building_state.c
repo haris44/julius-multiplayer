@@ -1,6 +1,7 @@
 #include "building_state.h"
 
 #include "game/resource.h"
+#include "map/grid.h"
 
 static int is_industry_type(const building *b)
 {
@@ -267,8 +268,8 @@ void building_state_load_from_buffer(buffer *buf, building *b)
     b->size = buffer_read_u8(buf);
     b->house_is_merged = buffer_read_u8(buf);
     b->house_size = buffer_read_u8(buf);
-    b->x = buffer_read_u8(buf);
-    b->y = buffer_read_u8(buf);
+    b->x = GRID_COORD(buffer_read_u8(buf));
+    b->y = GRID_COORD(buffer_read_u8(buf));
     b->grid_offset = buffer_read_i16(buf);
     b->type = buffer_read_i16(buf);
     b->subtype.house_level = buffer_read_i16(buf); // which union field we use does not matter
@@ -282,8 +283,8 @@ void building_state_load_from_buffer(buffer *buf, building *b)
     b->distance_from_entry = buffer_read_i16(buf);
     b->house_highest_population = buffer_read_i16(buf);
     b->house_unreachable_ticks = buffer_read_i16(buf);
-    b->road_access_x = buffer_read_u8(buf);
-    b->road_access_y = buffer_read_u8(buf);
+    b->road_access_x = GRID_COORD(buffer_read_u8(buf));
+    b->road_access_y = GRID_COORD(buffer_read_u8(buf));
     b->figure_id = buffer_read_i16(buf);
     b->figure_id2 = buffer_read_i16(buf);
     b->immigrant_figure_id = buffer_read_i16(buf);

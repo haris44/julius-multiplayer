@@ -9,6 +9,7 @@
 #include "figure/movement.h"
 #include "figure/route.h"
 #include "map/terrain.h"
+#include "map/grid.h"
 
 void figure_indigenous_native_action(figure *f)
 {
@@ -31,8 +32,8 @@ void figure_indigenous_native_action(figure *f)
             figure_movement_move_ticks(f, 1);
             if (f->direction == DIR_FIGURE_AT_DESTINATION) {
                 f->action_state = FIGURE_ACTION_157_NATIVE_RETURNING_FROM_MEETING;
-                f->destination_x = f->source_x;
-                f->destination_y = f->source_y;
+                f->destination_x = GRID_COORD(f->source_x);
+                f->destination_y = GRID_COORD(f->source_y);
             } else if (f->direction == DIR_FIGURE_REROUTE || f->direction == DIR_FIGURE_LOST) {
                 f->state = FIGURE_STATE_DEAD;
             }
@@ -56,14 +57,14 @@ void figure_indigenous_native_action(figure *f)
                     if (map_terrain_get_adjacent_road_or_clear_land(
                         meeting->x, meeting->y, meeting->size, &x_tile, &y_tile)) {
                         f->action_state = FIGURE_ACTION_156_NATIVE_GOING_TO_MEETING_CENTER;
-                        f->destination_x = x_tile;
-                        f->destination_y = y_tile;
+                        f->destination_x = GRID_COORD(x_tile);
+                        f->destination_y = GRID_COORD(y_tile);
                     }
                 } else {
                     const formation *m = formation_get(0);
                     f->action_state = FIGURE_ACTION_159_NATIVE_ATTACKING;
-                    f->destination_x = m->destination_x;
-                    f->destination_y = m->destination_y;
+                    f->destination_x = GRID_COORD(m->destination_x);
+                    f->destination_y = GRID_COORD(m->destination_y);
                     f->destination_building_id = m->destination_building_id;
                 }
                 figure_route_remove(f);

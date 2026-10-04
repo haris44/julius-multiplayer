@@ -136,8 +136,8 @@ static void merge(building *b)
     }
 
     map_building_tiles_remove(b->id, b->x, b->y);
-    b->x = merge_data.x;
-    b->y = merge_data.y;
+    b->x = GRID_COORD(merge_data.x);
+    b->y = GRID_COORD(merge_data.y);
     b->grid_offset = map_grid_offset(b->x, b->y);
     b->house_is_merged = 1;
     map_building_tiles_add(b->id, b->x, b->y, 2, image_id, TERRAIN_BUILDING);
@@ -378,8 +378,8 @@ void building_house_expand_to_large_insula(building *house)
     }
     int image_id = house_image_group(house->subtype.house_level) + (map_random_get(house->grid_offset) & 1);
     map_building_tiles_remove(house->id, house->x, house->y);
-    house->x = merge_data.x;
-    house->y = merge_data.y;
+    house->x = GRID_COORD(merge_data.x);
+    house->y = GRID_COORD(merge_data.y);
     house->grid_offset = map_grid_offset(house->x, house->y);
     map_building_tiles_add(house->id, house->x, house->y, house->size, image_id, TERRAIN_BUILDING);
 }
@@ -398,8 +398,8 @@ void building_house_expand_to_large_villa(building *house)
     }
     int image_id = house_image_group(house->subtype.house_level);
     map_building_tiles_remove(house->id, house->x, house->y);
-    house->x = merge_data.x;
-    house->y = merge_data.y;
+    house->x = GRID_COORD(merge_data.x);
+    house->y = GRID_COORD(merge_data.y);
     house->grid_offset = map_grid_offset(house->x, house->y);
     map_building_tiles_add(house->id, house->x, house->y, house->size, image_id, TERRAIN_BUILDING);
 }
@@ -418,8 +418,8 @@ void building_house_expand_to_large_palace(building *house)
     }
     int image_id = house_image_group(house->subtype.house_level);
     map_building_tiles_remove(house->id, house->x, house->y);
-    house->x = merge_data.x;
-    house->y = merge_data.y;
+    house->x = GRID_COORD(merge_data.x);
+    house->y = GRID_COORD(merge_data.y);
     house->grid_offset = map_grid_offset(house->x, house->y);
     map_building_tiles_add(house->id, house->x, house->y, house->size, image_id, TERRAIN_BUILDING);
 }
@@ -528,8 +528,8 @@ void building_house_check_for_corruption(building *house)
                 int grid_offset = map_grid_offset(x, y);
                 if (map_building_at(grid_offset) == house->id) {
                     house->grid_offset = grid_offset;
-                    house->x = map_grid_offset_to_x(grid_offset);
-                    house->y = map_grid_offset_to_y(grid_offset);
+                    house->x = GRID_COORD(map_grid_offset_to_x(grid_offset));
+                    house->y = GRID_COORD(map_grid_offset_to_y(grid_offset));
                     building_totals_add_corrupted_house(0);
                     return;
                 }

@@ -55,8 +55,8 @@ static void generate_rioter(building *b)
         f->roam_length = 0;
         f->wait_ticks = 10 + 4 * i;
         if (target_building_id) {
-            f->destination_x = x_target;
-            f->destination_y = y_target;
+            f->destination_x = GRID_COORD(x_target);
+            f->destination_y = GRID_COORD(y_target);
             f->destination_building_id = target_building_id;
         } else {
             f->state = FIGURE_STATE_DEAD;
@@ -218,8 +218,8 @@ void figure_rioter_action(figure *f)
                 int x_tile, y_tile;
                 int building_id = formation_rioter_get_target_building(&x_tile, &y_tile);
                 if (building_id) {
-                    f->destination_x = x_tile;
-                    f->destination_y = y_tile;
+                    f->destination_x = GRID_COORD(x_tile);
+                    f->destination_y = GRID_COORD(y_tile);
                     f->destination_building_id = building_id;
                     figure_route_remove(f);
                 } else {
@@ -234,8 +234,8 @@ void figure_rioter_action(figure *f)
                 int x_tile, y_tile;
                 int building_id = formation_rioter_get_target_building(&x_tile, &y_tile);
                 if (building_id) {
-                    f->destination_x = x_tile;
-                    f->destination_y = y_tile;
+                    f->destination_x = GRID_COORD(x_tile);
+                    f->destination_y = GRID_COORD(y_tile);
                     f->destination_building_id = building_id;
                     figure_route_remove(f);
                 } else {

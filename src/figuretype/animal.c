@@ -121,7 +121,7 @@ void figure_seagulls_action(figure *f)
     }
 }
 
-static void herd_get_destination(int index, const formation *m, uint8_t *x, uint8_t *y)
+static void herd_get_destination(int index, const formation *m, unsigned short *x, unsigned short *y)
 {
     int offset_x = formation_layout_position_x(FORMATION_HERD, index);
     int offset_y = formation_layout_position_y(FORMATION_HERD, index);
@@ -225,8 +225,8 @@ void figure_wolf_action(figure *f)
                 int target_id = figure_combat_get_target_for_wolf(f->x, f->y, 6);
                 if (target_id) {
                     figure *target = figure_get(target_id);
-                    f->destination_x = target->x;
-                    f->destination_y = target->y;
+                    f->destination_x = GRID_COORD(target->x);
+                    f->destination_y = GRID_COORD(target->y);
                     f->target_figure_id = target_id;
                     target->targeted_by_figure_id = f->id;
                     f->target_figure_created_sequence = target->created_sequence;
@@ -311,45 +311,45 @@ static void set_horse_destination(figure *f, int state)
     if (state == HORSE_CREATED) {
         map_figure_delete(f);
         if (orientation == DIR_0_TOP || orientation == DIR_6_LEFT) {
-            f->destination_x = b->x + HORSE_DESTINATION_1[f->wait_ticks_missile].x;
-            f->destination_y = b->y + HORSE_DESTINATION_1[f->wait_ticks_missile].y;
+            f->destination_x = GRID_COORD(b->x + HORSE_DESTINATION_1[f->wait_ticks_missile].x);
+            f->destination_y = GRID_COORD(b->y + HORSE_DESTINATION_1[f->wait_ticks_missile].y);
         } else {
-            f->destination_x = b->x + HORSE_DESTINATION_2[f->wait_ticks_missile].x;
-            f->destination_y = b->y + HORSE_DESTINATION_2[f->wait_ticks_missile].y;
+            f->destination_x = GRID_COORD(b->x + HORSE_DESTINATION_2[f->wait_ticks_missile].x);
+            f->destination_y = GRID_COORD(b->y + HORSE_DESTINATION_2[f->wait_ticks_missile].y);
         }
         if (f->resource_id == 1) {
             f->destination_y++;
         }
-        f->x = f->destination_x;
-        f->y = f->destination_y;
+        f->x = GRID_COORD(f->destination_x);
+        f->y = GRID_COORD(f->destination_y);
         f->cross_country_x = 15 * f->x;
         f->cross_country_y = 15 * f->y;
         f->grid_offset = map_grid_offset(f->x, f->y);
         map_figure_add(f);
     } else if (state == HORSE_RACING) {
         if (orientation == DIR_0_TOP || orientation == DIR_6_LEFT) {
-            f->destination_x = b->x + HORSE_DESTINATION_1[f->wait_ticks_missile].x;
-            f->destination_y = b->y + HORSE_DESTINATION_1[f->wait_ticks_missile].y;
+            f->destination_x = GRID_COORD(b->x + HORSE_DESTINATION_1[f->wait_ticks_missile].x);
+            f->destination_y = GRID_COORD(b->y + HORSE_DESTINATION_1[f->wait_ticks_missile].y);
         } else {
-            f->destination_x = b->x + HORSE_DESTINATION_2[f->wait_ticks_missile].x;
-            f->destination_y = b->y + HORSE_DESTINATION_2[f->wait_ticks_missile].y;
+            f->destination_x = GRID_COORD(b->x + HORSE_DESTINATION_2[f->wait_ticks_missile].x);
+            f->destination_y = GRID_COORD(b->y + HORSE_DESTINATION_2[f->wait_ticks_missile].y);
         }
     } else if (state == HORSE_FINISHED) {
         if (orientation == DIR_0_TOP || orientation == DIR_6_LEFT) {
             if (f->resource_id) {
-                f->destination_x = b->x + 1;
-                f->destination_y = b->y + 2;
+                f->destination_x = GRID_COORD(b->x + 1);
+                f->destination_y = GRID_COORD(b->y + 2);
             } else {
-                f->destination_x = b->x + 1;
-                f->destination_y = b->y + 1;
+                f->destination_x = GRID_COORD(b->x + 1);
+                f->destination_y = GRID_COORD(b->y + 1);
             }
         } else {
             if (f->resource_id) {
-                f->destination_x = b->x + 12;
-                f->destination_y = b->y + 3;
+                f->destination_x = GRID_COORD(b->x + 12);
+                f->destination_y = GRID_COORD(b->y + 3);
             } else {
-                f->destination_x = b->x + 12;
-                f->destination_y = b->y + 2;
+                f->destination_x = GRID_COORD(b->x + 12);
+                f->destination_y = GRID_COORD(b->y + 2);
             }
         }
     }

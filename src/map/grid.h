@@ -18,6 +18,13 @@
 extern int map_grid_stride;
 #define GRID_SIZE map_grid_stride
 
+/**
+ * Tile coordinates are stored on 8 bits in Caesar III: on classic grids (side up to 256) every
+ * computed coordinate wraps at 256 exactly as in the original, on larger grids at 65536.
+ */
+extern int map_grid_coordinate_mask;
+#define GRID_COORD(v) ((v) & map_grid_coordinate_mask)
+
 typedef struct {
     uint8_t items[GRID_MAX_TILES];
 } grid_u8;

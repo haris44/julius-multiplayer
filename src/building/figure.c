@@ -23,6 +23,7 @@
 #include "map/road_access.h"
 #include "map/terrain.h"
 #include "map/water.h"
+#include "map/grid.h"
 
 static int worker_percentage(const building *b)
 {
@@ -630,12 +631,12 @@ static void spawn_figure_market(building *b)
                 building *b_dst = building_get(dst_building_id);
                 if (map_has_road_access(b_dst->x, b_dst->y, b_dst->size, &road) ||
                     map_has_road_access(b_dst->x, b_dst->y, 3, &road)) {
-                    f->destination_x = road.x;
-                    f->destination_y = road.y;
+                    f->destination_x = GRID_COORD(road.x);
+                    f->destination_y = GRID_COORD(road.y);
                 } else {
                     f->action_state = FIGURE_ACTION_146_MARKET_BUYER_RETURNING;
-                    f->destination_x = f->x;
-                    f->destination_y = f->y;
+                    f->destination_x = GRID_COORD(f->x);
+                    f->destination_y = GRID_COORD(f->y);
                 }
             }
         }

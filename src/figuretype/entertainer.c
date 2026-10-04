@@ -212,8 +212,8 @@ void figure_entertainer_action(figure *f)
                     if (map_closest_road_within_radius(b_dst->x, b_dst->y, b_dst->size, 2, &x_road, &y_road)) {
                         f->destination_building_id = dst_building_id;
                         f->action_state = FIGURE_ACTION_92_ENTERTAINER_GOING_TO_VENUE;
-                        f->destination_x = x_road;
-                        f->destination_y = y_road;
+                        f->destination_x = GRID_COORD(x_road);
+                        f->destination_y = GRID_COORD(y_road);
                         f->roam_length = 0;
                     } else {
                         f->state = FIGURE_STATE_DEAD;
@@ -247,8 +247,8 @@ void figure_entertainer_action(figure *f)
                 int x_road, y_road;
                 if (map_closest_road_within_radius(b->x, b->y, b->size, 2, &x_road, &y_road)) {
                     f->action_state = FIGURE_ACTION_95_ENTERTAINER_RETURNING;
-                    f->destination_x = x_road;
-                    f->destination_y = y_road;
+                    f->destination_x = GRID_COORD(x_road);
+                    f->destination_y = GRID_COORD(y_road);
                 } else {
                     f->state = FIGURE_STATE_DEAD;
                 }

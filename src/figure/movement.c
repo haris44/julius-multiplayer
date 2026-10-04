@@ -121,8 +121,8 @@ static void move_to_next_tile(figure *f)
         f->is_on_road = 0;
     }
     figure_combat_attack_figure_at(f, f->grid_offset);
-    f->previous_tile_x = old_x;
-    f->previous_tile_y = old_y;
+    f->previous_tile_x = GRID_COORD(old_x);
+    f->previous_tile_y = GRID_COORD(old_y);
 }
 
 static void set_next_route_tile_direction(figure *f)
@@ -261,8 +261,8 @@ void figure_movement_init_roaming(figure *f)
     map_grid_bound(&x, &y);
     int x_road, y_road;
     if (map_closest_road_within_radius(x, y, 1, 6, &x_road, &y_road)) {
-        f->destination_x = x_road;
-        f->destination_y = y_road;
+        f->destination_x = GRID_COORD(x_road);
+        f->destination_y = GRID_COORD(y_road);
     } else {
         f->roam_choose_destination = 1;
     }
@@ -510,8 +510,8 @@ void figure_movement_set_cross_country_direction(figure *f, int x_src, int y_src
 
 void figure_movement_set_cross_country_destination(figure *f, int x_dst, int y_dst)
 {
-    f->destination_x = x_dst;
-    f->destination_y = y_dst;
+    f->destination_x = GRID_COORD(x_dst);
+    f->destination_y = GRID_COORD(y_dst);
     figure_movement_set_cross_country_direction(
         f, f->cross_country_x, f->cross_country_y,
         15 * x_dst, 15 * y_dst, 0);
@@ -589,8 +589,8 @@ int figure_movement_move_ticks_cross_country(figure *f, int num_ticks)
         }
         cross_country_advance(f);
     }
-    f->x = f->cross_country_x / 15;
-    f->y = f->cross_country_y / 15;
+    f->x = GRID_COORD(f->cross_country_x / 15);
+    f->y = GRID_COORD(f->cross_country_y / 15);
     f->grid_offset = map_grid_offset(f->x, f->y);
     if (map_terrain_is(f->grid_offset, TERRAIN_BUILDING)) {
         f->in_building_wait_ticks = 8;
@@ -619,8 +619,8 @@ int figure_movement_can_launch_cross_country_missile(int x_src, int y_src, int x
             }
             cross_country_advance(f);
         }
-        f->x = f->cross_country_x / 15;
-        f->y = f->cross_country_y / 15;
+        f->x = GRID_COORD(f->cross_country_x / 15);
+        f->y = GRID_COORD(f->cross_country_y / 15);
         if (height) {
             height--;
         } else {

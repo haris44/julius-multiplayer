@@ -25,9 +25,9 @@ typedef struct {
     unsigned char size;
     unsigned char house_is_merged;
     unsigned char house_size;
-    unsigned char x;
-    unsigned char y;
-    short grid_offset;
+    unsigned short x; // 8 bits in classic saved games
+    unsigned short y; // 8 bits in classic saved games
+    int grid_offset; // 16 bits in classic saved games
     short type;
     union {
         short house_level;
@@ -46,8 +46,8 @@ typedef struct {
     short distance_from_entry;
     short house_highest_population;
     short house_unreachable_ticks;
-    unsigned char road_access_x;
-    unsigned char road_access_y;
+    unsigned short road_access_x; // 8 bits in classic saved games
+    unsigned short road_access_y; // 8 bits in classic saved games
     short figure_id;
     short figure_id2; // labor seeker or market buyer
     short immigrant_figure_id;

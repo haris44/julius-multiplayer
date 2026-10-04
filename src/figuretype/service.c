@@ -9,6 +9,7 @@
 #include "figure/route.h"
 #include "map/building.h"
 #include "map/road_access.h"
+#include "map/grid.h"
 
 static void roamer_action(figure *f, int num_ticks)
 {
@@ -27,8 +28,8 @@ static void roamer_action(figure *f, int num_ticks)
                 building *b = building_get(f->building_id);
                 if (map_closest_road_within_radius(b->x, b->y, b->size, 2, &x, &y)) {
                     f->action_state = FIGURE_ACTION_126_ROAMER_RETURNING;
-                    f->destination_x = x;
-                    f->destination_y = y;
+                    f->destination_x = GRID_COORD(x);
+                    f->destination_y = GRID_COORD(y);
                     figure_route_remove(f);
                     f->roam_length = 0;
                 } else {
@@ -238,8 +239,8 @@ void figure_tax_collector_action(figure *f)
                 int x_road, y_road;
                 if (map_closest_road_within_radius(b->x, b->y, b->size, 2, &x_road, &y_road)) {
                     f->action_state = FIGURE_ACTION_43_TAX_COLLECTOR_RETURNING;
-                    f->destination_x = x_road;
-                    f->destination_y = y_road;
+                    f->destination_x = GRID_COORD(x_road);
+                    f->destination_y = GRID_COORD(y_road);
                 } else {
                     f->state = FIGURE_STATE_DEAD;
                 }

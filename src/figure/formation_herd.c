@@ -130,8 +130,8 @@ static void move_animals(const formation *m, int attacking_animals)
             if (target_id) {
                 figure *target = figure_get(target_id);
                 f->action_state = FIGURE_ACTION_199_WOLF_ATTACKING;
-                f->destination_x = target->x;
-                f->destination_y = target->y;
+                f->destination_x = GRID_COORD(target->x);
+                f->destination_y = GRID_COORD(target->y);
                 f->target_figure_id = target_id;
                 target->targeted_by_figure_id = f->id;
                 f->target_figure_created_sequence = target->created_sequence;

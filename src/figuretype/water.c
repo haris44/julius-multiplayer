@@ -72,8 +72,8 @@ void figure_flotsam_action(figure *f)
                     f->min_max_seen = 1;
                 }
                 map_point river_exit = scenario_map_river_exit();
-                f->destination_x = river_exit.x;
-                f->destination_y = river_exit.y;
+                f->destination_x = GRID_COORD(river_exit.x);
+                f->destination_y = GRID_COORD(river_exit.y);
             }
             break;
         case FIGURE_ACTION_129_FLOTSAM_FLOATING:
@@ -108,8 +108,8 @@ void figure_flotsam_action(figure *f)
             }
             map_figure_delete(f);
             map_point river_entry = scenario_map_river_entry();
-            f->x = river_entry.x;
-            f->y = river_entry.y;
+            f->x = GRID_COORD(river_entry.x);
+            f->y = GRID_COORD(river_entry.y);
             f->grid_offset = map_grid_offset(f->x, f->y);
             f->cross_country_x = 15 * f->x;
             f->cross_country_y = 15 * f->y;
@@ -148,8 +148,8 @@ void figure_shipwreck_action(figure *f)
         map_figure_delete(f);
         map_point tile;
         if (map_water_find_shipwreck_tile(f, &tile)) {
-            f->x = tile.x;
-            f->y = tile.y;
+            f->x = GRID_COORD(tile.x);
+            f->y = GRID_COORD(tile.y);
             f->grid_offset = map_grid_offset(f->x, f->y);
             f->cross_country_x = 15 * f->x + 7;
             f->cross_country_y = 15 * f->y + 7;
@@ -177,10 +177,10 @@ void figure_fishing_boat_action(figure *f)
             f->building_id = b->id;
             b->data.industry.fishing_boat_id = f->id;
             f->action_state = FIGURE_ACTION_193_FISHING_BOAT_GOING_TO_WHARF;
-            f->destination_x = tile.x;
-            f->destination_y = tile.y;
-            f->source_x = tile.x;
-            f->source_y = tile.y;
+            f->destination_x = GRID_COORD(tile.x);
+            f->destination_y = GRID_COORD(tile.y);
+            f->source_x = GRID_COORD(tile.x);
+            f->source_y = GRID_COORD(tile.y);
             figure_route_remove(f);
         } else {
             f->state = FIGURE_STATE_DEAD;
@@ -202,10 +202,10 @@ void figure_fishing_boat_action(figure *f)
                     f->building_id = wharf_id;
                     building_get(wharf_id)->data.industry.fishing_boat_id = f->id;
                     f->action_state = FIGURE_ACTION_193_FISHING_BOAT_GOING_TO_WHARF;
-                    f->destination_x = tile.x;
-                    f->destination_y = tile.y;
-                    f->source_x = tile.x;
-                    f->source_y = tile.y;
+                    f->destination_x = GRID_COORD(tile.x);
+                    f->destination_y = GRID_COORD(tile.y);
+                    f->source_x = GRID_COORD(tile.x);
+                    f->source_y = GRID_COORD(tile.y);
                     figure_route_remove(f);
                 }
             }
@@ -217,8 +217,8 @@ void figure_fishing_boat_action(figure *f)
                 map_point tile;
                 if (map_water_find_alternative_fishing_boat_tile(f, &tile)) {
                     figure_route_remove(f);
-                    f->destination_x = tile.x;
-                    f->destination_y = tile.y;
+                    f->destination_x = GRID_COORD(tile.x);
+                    f->destination_y = GRID_COORD(tile.y);
                     f->direction = f->previous_tile_direction;
                 } else {
                     f->action_state = FIGURE_ACTION_192_FISHING_BOAT_FISHING;
@@ -226,8 +226,8 @@ void figure_fishing_boat_action(figure *f)
                 }
             } else if (f->direction == DIR_FIGURE_REROUTE || f->direction == DIR_FIGURE_LOST) {
                 f->action_state = FIGURE_ACTION_194_FISHING_BOAT_AT_WHARF;
-                f->destination_x = f->source_x;
-                f->destination_y = f->source_y;
+                f->destination_x = GRID_COORD(f->source_x);
+                f->destination_y = GRID_COORD(f->source_y);
             }
             break;
         case FIGURE_ACTION_192_FISHING_BOAT_FISHING:
@@ -235,8 +235,8 @@ void figure_fishing_boat_action(figure *f)
             if (f->wait_ticks >= 200) {
                 f->wait_ticks = 0;
                 f->action_state = FIGURE_ACTION_195_FISHING_BOAT_RETURNING_WITH_FISH;
-                f->destination_x = f->source_x;
-                f->destination_y = f->source_y;
+                f->destination_x = GRID_COORD(f->source_x);
+                f->destination_y = GRID_COORD(f->source_y);
                 figure_route_remove(f);
             }
             break;
@@ -268,8 +268,8 @@ void figure_fishing_boat_action(figure *f)
                     map_point tile;
                     if (scenario_map_closest_fishing_point(f->x, f->y, &tile)) {
                         f->action_state = FIGURE_ACTION_191_FISHING_BOAT_GOING_TO_FISH;
-                        f->destination_x = tile.x;
-                        f->destination_y = tile.y;
+                        f->destination_x = GRID_COORD(tile.x);
+                        f->destination_y = GRID_COORD(tile.y);
                         figure_route_remove(f);
                     }
                 }
