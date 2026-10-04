@@ -24,4 +24,9 @@ void scenario_invasion_save_state(buffer *invasion_id, buffer *warnings);
 
 void scenario_invasion_load_state(buffer *invasion_id, buffer *warnings);
 
+/**
+ * Registers the per-city state of this module (game/player_context.h)
+ */
+void scenario_invasion_register_player_state(void);
+
 #endif // SCENARIO_INVASION_H

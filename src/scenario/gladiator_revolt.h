@@ -15,4 +15,9 @@ void scenario_gladiator_revolt_save_state(buffer *buf);
 
 void scenario_gladiator_revolt_load_state(buffer *buf);
 
+/**
+ * Registers the per-city state of this module (game/player_context.h)
+ */
+void scenario_gladiator_revolt_register_player_state(void);
+
 #endif // SCENARIO_GLADIATOR_REVOLT_H

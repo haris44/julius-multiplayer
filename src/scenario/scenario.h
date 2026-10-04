@@ -19,4 +19,9 @@ void scenario_settings_save_state(
 void scenario_settings_load_state(
     buffer *part1, buffer *part2, buffer *part3, buffer *player_name, buffer *scenario_name);
 
+/**
+ * Registers the per-city state of this module (game/player_context.h)
+ */
+void scenario_register_player_state(void);
+
 #endif // SCENARIO_SCENARIO_H

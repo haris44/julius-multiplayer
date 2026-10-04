@@ -1,4 +1,5 @@
 #include "time.h"
+#include "game/player_context.h"
 
 static struct {
     int tick; // 50 ticks in a day
@@ -91,4 +92,9 @@ void game_time_load_state(buffer *buf)
     data.month = buffer_read_i32(buf);
     data.year = buffer_read_i32(buf);
     data.total_days = buffer_read_i32(buf);
+}
+
+void game_time_register_player_state(void)
+{
+    player_context_register(&data, sizeof(data), "game_time");
 }

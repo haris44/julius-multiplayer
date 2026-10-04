@@ -10,6 +10,7 @@
 #include "empire/type.h"
 #include "figuretype/trader.h"
 #include "scenario/map.h"
+#include "game/player_context.h"
 
 #include <string.h>
 
@@ -397,4 +398,9 @@ void empire_city_load_state(buffer *buf)
         }
         buffer_skip(buf, 10);
     }
+}
+
+void empire_city_register_player_state(void)
+{
+    player_context_register(&cities, sizeof(cities), "empire_cities");
 }

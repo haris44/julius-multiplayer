@@ -41,4 +41,9 @@ void enemy_armies_save_state(buffer *buf, buffer *totals_buf);
 
 void enemy_armies_load_state(buffer *buf, buffer *totals_buf);
 
+/**
+ * Registers the per-city state of this module (game/player_context.h)
+ */
+void enemy_army_register_player_state(void);
+
 #endif // FIGURE_ENEMY_ARMY_H

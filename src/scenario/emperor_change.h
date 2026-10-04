@@ -11,4 +11,9 @@ void scenario_emperor_change_save_state(buffer *time, buffer *state);
 
 void scenario_emperor_change_load_state(buffer *time, buffer *state);
 
+/**
+ * Registers the per-city state of this module (game/player_context.h)
+ */
+void scenario_emperor_change_register_player_state(void);
+
 #endif // SCENARIO_EMPEROR_CHANGE_H

@@ -4,6 +4,7 @@
 
 #include "figure/formation.h"
 #include "map/soldier_strength.h"
+#include "game/player_context.h"
 
 static enemy_army enemy_armies[MAX_ENEMY_ARMIES];
 
@@ -195,4 +196,10 @@ void enemy_armies_load_state(buffer *buf, buffer *totals_buf)
     totals.legion_formations = buffer_read_i32(totals_buf);
     totals.legion_strength = buffer_read_i32(totals_buf);
     totals.days_since_roman_influence_calculation = buffer_read_i32(totals_buf);
+}
+
+void enemy_army_register_player_state(void)
+{
+    player_context_register(&enemy_armies, sizeof(enemy_armies), "enemy_armies");
+    player_context_register(&totals, sizeof(totals), "enemy_army_totals");
 }

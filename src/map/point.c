@@ -1,4 +1,5 @@
 #include "map/point.h"
+#include "game/player_context.h"
 
 static map_point last = {0, 0};
 
@@ -30,4 +31,9 @@ void map_point_load_state(buffer *buf)
 {
     last.x = buffer_read_i32(buf);
     last.y = buffer_read_i32(buf);
+}
+
+void map_point_register_player_state(void)
+{
+    player_context_register(&last, sizeof(last), "map_point_last");
 }

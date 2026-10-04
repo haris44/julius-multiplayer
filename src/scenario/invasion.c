@@ -15,6 +15,7 @@
 #include "scenario/data.h"
 #include "scenario/map.h"
 #include "scenario/property.h"
+#include "game/player_context.h"
 
 #include <string.h>
 
@@ -479,4 +480,9 @@ void scenario_invasion_load_state(buffer *invasion_id, buffer *warnings)
         w->invasion_id = buffer_read_u8(warnings);
         buffer_skip(warnings, 11);
     }
+}
+
+void scenario_invasion_register_player_state(void)
+{
+    player_context_register(&data, sizeof(data), "invasions");
 }

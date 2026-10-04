@@ -79,4 +79,9 @@ void game_time_save_state(buffer *buf);
  */
 void game_time_load_state(buffer *buf);
 
+/**
+ * Registers the per-city state of this module (game/player_context.h)
+ */
+void game_time_register_player_state(void);
+
 #endif // GAME_TIME_H

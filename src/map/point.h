@@ -45,4 +45,9 @@ void map_point_save_state(buffer *buf);
  */
 void map_point_load_state(buffer *buf);
 
+/**
+ * Registers the per-city state of this module (game/player_context.h)
+ */
+void map_point_register_player_state(void);
+
 #endif // MAP_POINT_H

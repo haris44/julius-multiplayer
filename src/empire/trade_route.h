@@ -36,4 +36,9 @@ void trade_routes_save_state(buffer *limit, buffer *traded);
 
 void trade_routes_load_state(buffer *limit, buffer *traded);
 
+/**
+ * Registers the per-city state of this module (game/player_context.h)
+ */
+void trade_route_register_player_state(void);
+
 #endif // EMPIRE_TRADE_ROUTE_H

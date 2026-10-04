@@ -6,6 +6,7 @@
 #include "core/random.h"
 #include "game/time.h"
 #include "scenario/data.h"
+#include "game/player_context.h"
 
 static struct {
     int game_year;
@@ -45,4 +46,9 @@ void scenario_emperor_change_load_state(buffer *time, buffer *state)
     data.game_year = buffer_read_i32(time);
     data.month = buffer_read_i32(time);
     data.state = buffer_read_i32(state);
+}
+
+void scenario_emperor_change_register_player_state(void)
+{
+    player_context_register(&data, sizeof(data), "emperor_change");
 }

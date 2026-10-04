@@ -14,6 +14,7 @@
 #include "map/tiles.h"
 #include "scenario/data.h"
 #include "sound/effect.h"
+#include "game/player_context.h"
 
 static struct {
     int game_year;
@@ -180,4 +181,9 @@ void scenario_earthquake_load_state(buffer *buf)
         data.expand[i].x = buffer_read_i32(buf);
         data.expand[i].y = buffer_read_i32(buf);
     }
+}
+
+void scenario_earthquake_register_player_state(void)
+{
+    player_context_register(&data, sizeof(data), "earthquake");
 }

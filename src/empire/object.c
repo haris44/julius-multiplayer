@@ -7,6 +7,7 @@
 #include "empire/type.h"
 #include "game/animation.h"
 #include "scenario/empire.h"
+#include "game/player_context.h"
 
 #define MAX_OBJECTS 200
 
@@ -370,4 +371,9 @@ static int get_animation_offset(int image_id, int current_index)
 int empire_object_update_animation(const empire_object *obj, int image_id)
 {
     return objects[obj->id].obj.animation_index = get_animation_offset(image_id, obj->animation_index);
+}
+
+void empire_object_register_player_state(void)
+{
+    player_context_register(&objects, sizeof(objects), "empire_objects");
 }

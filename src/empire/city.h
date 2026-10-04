@@ -63,4 +63,9 @@ void empire_city_save_state(buffer *buf);
 
 void empire_city_load_state(buffer *buf);
 
+/**
+ * Registers the per-city state of this module (game/player_context.h)
+ */
+void empire_city_register_player_state(void);
+
 #endif // EMPIRE_CITY_H

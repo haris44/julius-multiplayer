@@ -48,4 +48,9 @@ int empire_object_city_sells_resource(int object_id, int resource);
 
 int empire_object_update_animation(const empire_object *obj, int image_id);
 
+/**
+ * Registers the per-city state of this module (game/player_context.h)
+ */
+void empire_object_register_player_state(void);
+
 #endif // EMPIRE_OBJECT_H

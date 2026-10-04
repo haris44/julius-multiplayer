@@ -46,4 +46,9 @@ void trade_prices_save_state(buffer *buf);
  */
 void trade_prices_load_state(buffer *buf);
 
+/**
+ * Registers the per-city state of this module (game/player_context.h)
+ */
+void trade_prices_register_player_state(void);
+
 #endif // EMPIRE_TRADE_PRICES_H

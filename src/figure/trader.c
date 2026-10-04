@@ -1,6 +1,7 @@
 #include "figure/trader.h"
 
 #include "empire/trade_prices.h"
+#include "game/player_context.h"
 
 #include <string.h>
 
@@ -107,4 +108,9 @@ void traders_load_state(buffer *buf)
         t->sold_value = buffer_read_i32(buf);
     }
     data.next_index = buffer_read_i32(buf);
+}
+
+void traders_register_player_state(void)
+{
+    player_context_register(&data, sizeof(data), "traders");
 }

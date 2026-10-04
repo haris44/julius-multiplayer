@@ -17,4 +17,9 @@ void building_maintenance_reset_extra_state(void);
 void building_maintenance_save_extra_state(buffer *buf);
 void building_maintenance_load_extra_state(buffer *buf);
 
+/**
+ * Registers the per-city state of this module (game/player_context.h)
+ */
+void building_maintenance_register_player_state(void);
+
 #endif // BUILDING_MAINTENANCE_H

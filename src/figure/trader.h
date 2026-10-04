@@ -76,4 +76,9 @@ void traders_save_state(buffer *buf);
  */
 void traders_load_state(buffer *buf);
 
+/**
+ * Registers the per-city state of this module (game/player_context.h)
+ */
+void traders_register_player_state(void);
+
 #endif // FIGURE_TRADE_INFO_H

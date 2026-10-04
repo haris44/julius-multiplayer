@@ -4,8 +4,11 @@
 #include "map/figure.h"
 #include "map/grid.h"
 #include "map/routing.h"
+#include "game/player_context.h"
 
-static grid_u8 strength;
+// one grid per city: the strength of its legions as seen by its enemies
+static grid_u8 strength_grids[PLAYER_CONTEXT_MAX_PLAYERS];
+#define strength strength_grids[player_context_current_player]
 
 void map_soldier_strength_clear(void)
 {

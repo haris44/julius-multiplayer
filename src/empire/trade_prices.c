@@ -1,4 +1,5 @@
 #include "trade_prices.h"
+#include "game/player_context.h"
 
 struct trade_price {
     int32_t buy;
@@ -61,4 +62,9 @@ void trade_prices_load_state(buffer *buf)
         prices[i].buy = buffer_read_i32(buf);
         prices[i].sell = buffer_read_i32(buf);
     }
+}
+
+void trade_prices_register_player_state(void)
+{
+    player_context_register(&prices, sizeof(prices), "trade_prices");
 }

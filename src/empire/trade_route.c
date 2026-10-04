@@ -1,4 +1,5 @@
 #include "trade_route.h"
+#include "game/player_context.h"
 
 #define MAX_ROUTES 20
 
@@ -82,4 +83,9 @@ void trade_routes_load_state(buffer *limit, buffer *traded)
             data[route_id][r].traded = buffer_read_i32(traded);
         }
     }
+}
+
+void trade_route_register_player_state(void)
+{
+    player_context_register(&data, sizeof(data), "trade_routes");
 }

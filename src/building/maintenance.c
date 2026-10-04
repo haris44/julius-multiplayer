@@ -26,6 +26,7 @@
 #include "map/tiles.h"
 #include "scenario/property.h"
 #include "sound/effect.h"
+#include "game/player_context.h"
 
 static int fire_spread_direction = 0;
 
@@ -352,4 +353,9 @@ void building_maintenance_check_rome_access(void)
         city_warning_show(WARNING_CITY_BOXED_IN_PEOPLE_WILL_PERISH);
         city_view_go_to_grid_offset(problem_grid_offset);
     }
+}
+
+void building_maintenance_register_player_state(void)
+{
+    player_context_register(&fire_spread_direction, sizeof(fire_spread_direction), "fire_direction");
 }

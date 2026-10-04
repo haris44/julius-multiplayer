@@ -12,6 +12,20 @@
 #include "city/resource.h"
 #include "city/victory.h"
 #include "core/log.h"
+#include "map/point.h"
+#include "figure/trader.h"
+#include "empire/trade_prices.h"
+#include "empire/object.h"
+#include "empire/trade_route.h"
+#include "empire/city.h"
+#include "scenario/scenario.h"
+#include "scenario/emperor_change.h"
+#include "scenario/gladiator_revolt.h"
+#include "scenario/earthquake.h"
+#include "scenario/invasion.h"
+#include "figure/enemy_army.h"
+#include "building/maintenance.h"
+#include "game/time.h"
 #include "core/random.h"
 #include "figure/figure.h"
 #include "figure/formation.h"
@@ -20,7 +34,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define MAX_REGIONS 32
+#define MAX_REGIONS 48
 
 typedef struct {
     void *state;
@@ -75,6 +89,20 @@ void player_context_init(void)
     building_register_player_state();
     figure_register_player_state();
     figure_name_register_player_state();
+    game_time_register_player_state();
+    building_maintenance_register_player_state();
+    enemy_army_register_player_state();
+    scenario_invasion_register_player_state();
+    scenario_earthquake_register_player_state();
+    scenario_gladiator_revolt_register_player_state();
+    scenario_emperor_change_register_player_state();
+    scenario_register_player_state();
+    empire_city_register_player_state();
+    trade_route_register_player_state();
+    empire_object_register_player_state();
+    trade_prices_register_player_state();
+    traders_register_player_state();
+    map_point_register_player_state();
 }
 
 static int allocate_slots(void)

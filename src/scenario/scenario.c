@@ -3,6 +3,7 @@
 #include "game/difficulty.h"
 #include "game/settings.h"
 #include "scenario/data.h"
+#include "game/player_context.h"
 
 struct scenario_t scenario;
 
@@ -485,4 +486,9 @@ void scenario_settings_load_state(
     buffer_skip(player_name, MAX_PLAYER_NAME);
     buffer_read_raw(player_name, scenario.settings.player_name, MAX_PLAYER_NAME);
     buffer_read_raw(scenario_name, scenario.scenario_name, MAX_SCENARIO_NAME);
+}
+
+void scenario_register_player_state(void)
+{
+    player_context_register(&scenario, sizeof(scenario), "scenario");
 }

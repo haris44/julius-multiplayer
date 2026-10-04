@@ -5,6 +5,7 @@
 #include "core/random.h"
 #include "game/time.h"
 #include "scenario/data.h"
+#include "game/player_context.h"
 
 static struct {
     int game_year;
@@ -67,4 +68,9 @@ void scenario_gladiator_revolt_load_state(buffer *buf)
     data.month = buffer_read_i32(buf);
     data.end_month = buffer_read_i32(buf);
     data.state = buffer_read_i32(buf);
+}
+
+void scenario_gladiator_revolt_register_player_state(void)
+{
+    player_context_register(&data, sizeof(data), "gladiator_revolt");
 }
