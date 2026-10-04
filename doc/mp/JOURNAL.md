@@ -5,6 +5,34 @@
 
 ---
 
+## 2026-10-04 — Session 1 (suite) : M5 à M7, arrivée à M8
+
+**Fait** (commits d78e1d07 à 002b99e3, 146 tests ctest)
+- M5.5 : pause décidée par l'hôte (toutes les machines s'arrêtent au même tick), vitesse de l'hôte, un joueur qui
+  part n'arrête plus la partie, sauvegarde `.mpsav` en cours de partie et reprise depuis le salon.
+- M5.8 : salon complet (difficulté, dieux, fin, invasions), lancement par l'hôte, refus d'un client dont la version
+  ou les données du jeu diffèrent.
+- M6 : grandes cartes générées (200 ou 260 cases, un point d'arrivée par joueur au bord, ressources autour de chaque
+  cité), format `.mpmap`, option du salon ; 0,4 ms par tick pour 4 grandes cités. L'éditeur (M6.3) est reporté.
+- M7 : « Multijoueur » en tête du menu, couleurs des joueurs (vue et minicarte), scores dans le bandeau, conseiller
+  impérial masqué, avertissements des autres joueurs plus affichés chez soi.
+
+**Appris**
+- Répéter le test réel à deux instances a révélé trois désynchronisations dues à l'interface : sauvegarde
+  d'annulation des aqueducs dans la somme de contrôle, propriété des cases modifiée par l'aperçu « dégager le
+  terrain », écriture dans le bâtiment nul pour le son des jardins. Règle : la propriété ne change que pendant un
+  tick ou une commande. `MP_TRACE_TURNS=début-fin` trace la somme de chaque pièce pour comparer deux journaux.
+- Trois options de ligne de commande ajoutées n'étaient pas initialisées : le jeu démarrait parfois sur une carte
+  générée. Toujours initialiser un nouveau champ d'arguments.
+
+**Prochaine étape** : M8, commerce entre joueurs (D-019) : conception détaillée d'abord.
+
+**Points ouverts, à valider par Alexandre** : D-020 (autorisations), D-025, D-026 (tribut, salaires de Rome),
+D-029 (score), D-030 (cartes générées), D-031 (menu). M5.6 (intégration continue) demande un dépôt GitHub ; M5.7
+est la première partie avec lui ; M7.5 (discussion) reste optionnelle.
+
+---
+
 ## 2026-10-04 — Session 1 (suite) : jalon M4 complet, salon multijoueur
 
 **Demande d'Alexandre** : « continuer jusqu'à M8 ». Ordre suivi : M4.1, M4.2, salon (M5.4, avancé à sa demande),
