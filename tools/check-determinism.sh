@@ -14,7 +14,8 @@ FORBIDDEN='\b(float|double)\b|\b(s?rand|time|clock)[[:space:]]*\(|SDL_GetTicks|t
 # - city/warning.c, city/message.c: user interface timing (warnings and popups), not simulation state
 # - building/construction.c road_last_update: gatehouse orientation toggles while placing it,
 #   to become a command parameter (ROADMAP M2.2)
-ALLOWED='^src/city/warning\.c:|^src/city/message\.c:|^src/building/construction\.c:[0-9]+:.*road_last_update'
+# - mp/discovery.c: announcing and finding games on the network before a game starts, not simulation state
+ALLOWED='^src/city/warning\.c:|^src/city/message\.c:|^src/building/construction\.c:[0-9]+:.*road_last_update|^src/mp/discovery\.c:'
 
 # shellcheck disable=SC2086
 violations=$(grep -rnE "$FORBIDDEN" $SIMULATION | grep -vE "$ALLOWED" | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|\*)' || true)
