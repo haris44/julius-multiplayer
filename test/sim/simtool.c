@@ -30,6 +30,7 @@
 #include "map/bridge.h"
 #include "map/terrain.h"
 #include "map/grid.h"
+#include "figure/route.h"
 #include "mp/checksum.h"
 #include "game/time.h"
 #include "game/player_context.h"
@@ -866,6 +867,30 @@ static int find_twin_building_difference(const player_clone *c)
     return 0;
 }
 
+// Diagnosis: one figure of city 0, tick by tick, on a map of CITIES composed cities
+static int command_figtrace(const char *file, int num_cities, int id, int from, int to)
+{
+    int width, height;
+    if (!setup_twin_map(file, num_cities, &width, &height)) {
+        return 2;
+    }
+    setting_reset_speeds(500, setting_scroll_speed());
+    for (int tick = 1; tick <= to; tick++) {
+        run_one_tick();
+        for (int p = 0; tick >= from && p < num_cities; p++) {
+            figure *f = figure_get(id + p * MAX_FIGURES);
+            printf("  city %d target %d targeted by %d\n", p, f->target_figure_id, f->targeted_by_figure_id);
+            printf("%d: state %d action %d xy %d,%d dest %d,%d path %d/%d wait %d roam %d dir %d, free paths %d\n",
+                tick, f->state, f->action_state, f->x, f->y, f->destination_x, f->destination_y, f->routing_path_id,
+                f->routing_path_current_tile, f->wait_ticks, f->roam_length, f->direction, figure_route_count_free());
+            printf("    length %d progress %d previous %d,%d terrain %d building %d target %d missile %d source %d,%d\n",
+                f->routing_path_length, f->progress_on_tile, f->previous_tile_x, f->previous_tile_y,
+                f->terrain_usage, f->building_id, f->target_figure_id, f->wait_ticks_missile, f->source_x, f->source_y);
+        }
+    }
+    return 0;
+}
+
 static int command_twinfigures(const char *file, int ticks)
 {
     int width, height;
@@ -1196,6 +1221,8 @@ int main(int argc, char **argv)
         result = command_twinfigures(file, ticks);
     } else if (strcmp(command, "twinstats") == 0 && argc > 3) {
         result = command_twinstats(file, ticks);
+    } else if (strcmp(command, "figtrace") == 0 && argc > 6) {
+        result = command_figtrace(file, atoi(argv[3]), atoi(argv[4]), atoi(argv[5]), atoi(argv[6]));
     } else if (strcmp(command, "caesarfree") == 0 && argc > 3) {
         result = command_caesarfree(file, ticks);
     } else if (strcmp(command, "twins") == 0 && argc > 3) {

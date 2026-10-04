@@ -97,7 +97,7 @@ static int get_nearest_enemy(int x, int y, int *distance)
 {
     int min_enemy_id = 0;
     int min_dist = 10000;
-    for (int i = 1; i < FIGURE_ALL_END; i++) {
+    for (int i = FIGURE_FIRST; i < FIGURE_END; i++) {
         figure *f = figure_get(i);
         if (f->state != FIGURE_STATE_ALIVE || f->targeted_by_figure_id) {
             continue;

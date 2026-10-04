@@ -280,7 +280,8 @@ void figure_tower_sentry_action(figure *f)
 
 void figure_tower_sentry_reroute(void)
 {
-    for (int i = 1; i < FIGURE_ALL_END; i++) {
+    // sentries of the current player: the walls of the other cities do not move them
+    for (int i = FIGURE_FIRST; i < FIGURE_END; i++) {
         figure *f = figure_get(i);
         if (f->type != FIGURE_TOWER_SENTRY || map_routing_is_wall_passable(f->grid_offset)) {
             continue;

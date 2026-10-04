@@ -147,6 +147,15 @@ void figure_route_remove(figure *f)
     }
 }
 
+int figure_route_count_free(void)
+{
+    int count = 0;
+    for (int i = ROUTE_FIRST; i < ROUTE_END; i++) {
+        count += data.figure_ids[i] == 0;
+    }
+    return count;
+}
+
 int figure_route_get_direction(int path_id, int index)
 {
     return data.direction_paths[path_id][index];

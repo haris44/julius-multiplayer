@@ -35,7 +35,9 @@ static struct {
 
 building *building_get(int id)
 {
-    return &all_buildings[id];
+    // "no building" (id 0) is the first record of the slice of the current player: figures that lost their
+    // building walk to its tile, the corner of their own city (building 0 in a classic game)
+    return &all_buildings[id ? id : BUILDING_FIRST - 1];
 }
 
 building *building_main(building *b)
@@ -46,12 +48,12 @@ building *building_main(building *b)
         }
         b = &all_buildings[b->prev_part_building_id];
     }
-    return &all_buildings[0];
+    return building_get(0);
 }
 
 building *building_next(building *b)
 {
-    return &all_buildings[b->next_part_building_id];
+    return building_get(b->next_part_building_id);
 }
 
 building *building_create(building_type type, int x, int y)
@@ -65,7 +67,7 @@ building *building_create(building_type type, int x, int y)
     }
     if (!b) {
         city_warning_show(WARNING_DATA_LIMIT_REACHED);
-        return &all_buildings[0];
+        return building_get(0);
     }
 
     const building_properties *props = building_properties_for_type(type);
@@ -178,6 +180,10 @@ static void building_delete(building *b)
     int id = b->id;
     memset(b, 0, sizeof(building));
     b->id = id;
+    // at the tile (0, 0) of its city: where the original puts deleted buildings (building_get)
+    const building *none = building_get(0);
+    b->x = none->x;
+    b->y = none->y;
 }
 
 void building_clear_related_data(building *b)
@@ -392,6 +398,13 @@ void building_clone_record(building *b, const building *source, int new_id, cons
     *b = *source;
     b->id = new_id;
     if (b->state == BUILDING_STATE_UNUSED) {
+        // unused records, "no building" (building_get(0)) included, are at the tile (0, 0) of the city:
+        // figures whose building disappeared walk there
+        if (BUILDING_LOCAL_ID(new_id) == 0) {
+            b->id = 0;
+        }
+        b->x += c->dx;
+        b->y += c->dy;
         return;
     }
     b->x += c->dx;

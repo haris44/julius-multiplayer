@@ -260,3 +260,14 @@
   le message « Rome augmente les salaires » reste donc).
 - Pas encore traité : l'interface (conseiller impérial, cadeaux, faveur dans la barre latérale), à masquer en M7.
 
+### D-027 — Chaque cité a son propre « coin (0, 0) » et ses propres cibles
+- 2026-10-04 · **adoptée** (M4.2) · à revoir en M9 (guerre entre joueurs)
+- L'original envoie vers la case (0, 0) les figures dont le bâtiment a disparu : un bâtiment supprimé est remis à
+  zéro, donc placé en (0, 0). Sur une carte composée, ce point doit être le coin de la cité, pas celui de la grande
+  carte. Le « bâtiment nul » de chaque tranche (`building_get(0)`) porte ce coin, et un bâtiment supprimé y est
+  replacé. En partie classique, c'est toujours (0, 0).
+- Les recherches de cible des combats (soldats, ennemis IA, loups, tirs, préfets contre émeutiers) et les
+  recalculs de sentinelles et de chevaux ne voient que les figures de la cité courante. Certaines n'ont pas de
+  limite de distance (« la légion libre la plus proche, sinon la première ») : une armée IA traversait la carte vers
+  une autre cité. M9 ouvrira volontairement les combats aux figures des autres joueurs.
+

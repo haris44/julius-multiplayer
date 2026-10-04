@@ -408,8 +408,10 @@ void figure_clone_record(figure *f, const figure *source, int new_id, const play
     f->y += c->dy;
     f->previous_tile_x += c->dx;
     f->previous_tile_y += c->dy;
-    f->destination_x += c->dx;
-    f->destination_y += c->dy;
+    if (f->destination_x || f->destination_y) { // (0, 0): no destination (in the rock around composed cities)
+        f->destination_x += c->dx;
+        f->destination_y += c->dy;
+    }
     f->source_x += c->dx;
     f->source_y += c->dy;
     f->grid_offset += c->grid_delta;

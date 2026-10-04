@@ -225,6 +225,10 @@ foreach(save tower request_start kknight inv0 routing-full curses earthquake edg
     add_test(NAME mp_twins_${save} COMMAND simtool twins ${save}.sav 1500)
     add_test(NAME mp_twin_copy_${save} COMMAND simtool twinfigures ${save}.sav 1500)
 endforeach()
+# long runs where cities used to meet: lost buildings at (0, 0), sentries, combat targets (M4.2, D-027)
+foreach(save inv0 routing-full)
+    add_test(NAME mp_twin_copy_long_${save} COMMAND simtool twinfigures ${save}.sav 12000)
+endforeach()
 
 # Multiplayer saved games (M3.8): saving every city, loading and running on equals running on, with twin
 # cities and with one city on a large grid

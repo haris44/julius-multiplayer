@@ -14,6 +14,11 @@ void figure_route_remove(figure *f);
 
 int figure_route_get_direction(int path_id, int index);
 
+/**
+ * Free paths of the current player (tests)
+ */
+int figure_route_count_free(void);
+
 void figure_route_save_state(buffer *figures, buffer *paths);
 
 void figure_route_load_state(buffer *figures, buffer *paths);

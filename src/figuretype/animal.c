@@ -450,7 +450,7 @@ void figure_hippodrome_horse_reroute(void)
     if (!city_entertainment_hippodrome_has_race()) {
         return;
     }
-    for (int i = 1; i < FIGURE_ALL_END; i++) {
+    for (int i = FIGURE_FIRST; i < FIGURE_END; i++) { // the race of the current player
         figure *f = figure_get(i);
         if (f->state == FIGURE_STATE_ALIVE && f->type == FIGURE_HIPPODROME_HORSES) {
             f->wait_ticks_missile = 0;
