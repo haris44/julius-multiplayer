@@ -30,6 +30,8 @@
 #include "window/building_info.h"
 #include "window/city.h"
 #include "mp/session.h"
+#include "window/popup_dialog.h"
+#include "building/construction_clear.h"
 
 static struct {
     map_tile current_tile;
@@ -229,6 +231,30 @@ static void build_move(const map_tile *tile)
     building_construction_update(tile->x, tile->y, tile->grid_offset);
 }
 
+static building_construction_placement pending_clear_land;
+
+static void submit_placement(const building_construction_placement *placement)
+{
+    mp_command command = { .type = MP_COMMAND_BUILD, .args = {
+        placement->type, placement->sub_type, placement->x_start, placement->y_start,
+        placement->x_end, placement->y_end, placement->road_orientation,
+        (placement->fort_answer & 0xff) | ((placement->bridge_answer & 0xff) << 8)
+    } };
+    mp_command_submit(&command);
+}
+
+static void confirm_clear_fort(int accepted)
+{
+    pending_clear_land.fort_answer = accepted == 1 ? 1 : -1;
+    submit_placement(&pending_clear_land);
+}
+
+static void confirm_clear_bridge(int accepted)
+{
+    pending_clear_land.bridge_answer = accepted == 1 ? 1 : -1;
+    submit_placement(&pending_clear_land);
+}
+
 static void build_end(void)
 {
     if (building_construction_in_progress()) {
@@ -238,11 +264,19 @@ static void build_end(void)
         building_construction_placement placement;
         building_construction_get_placement(&placement);
         building_construction_remove_preview();
-        mp_command command = { .type = MP_COMMAND_BUILD, .args = {
-            placement.type, placement.sub_type, placement.x_start, placement.y_start,
-            placement.x_end, placement.y_end, placement.road_orientation
-        } };
-        mp_command_submit(&command);
+        int ask_fort = 0, ask_bridge = 0;
+        if (placement.type == BUILDING_CLEAR_LAND) {
+            building_construction_clear_land_needs_confirmation(placement.x_start, placement.y_start,
+                placement.x_end, placement.y_end, &ask_fort, &ask_bridge);
+        }
+        if (ask_fort || ask_bridge) {
+            // Ask first, then send the command with the answer
+            pending_clear_land = placement;
+            window_popup_dialog_show(ask_fort ? POPUP_DIALOG_DELETE_FORT : POPUP_DIALOG_DELETE_BRIDGE,
+                ask_fort ? confirm_clear_fort : confirm_clear_bridge, 2);
+        } else {
+            submit_placement(&placement);
+        }
         widget_minimap_invalidate();
     }
 }

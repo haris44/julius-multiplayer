@@ -24,6 +24,9 @@ static struct {
     int y_end;
     int bridge_confirmed;
     int fort_confirmed;
+    int has_preset_answers;
+    int preset_fort;
+    int preset_bridge;
 } confirm;
 
 static building *get_deletable_building(int grid_offset)
@@ -218,6 +221,17 @@ int building_construction_clear_land(int measure_only, int x_start, int y_start,
     confirm.y_start = y_start;
     confirm.x_end = x_end;
     confirm.y_end = y_end;
+    if ((ask_confirm_fort || ask_confirm_bridge) && confirm.has_preset_answers) {
+        // The player already answered before the command was sent: same outcome as answering the popup,
+        // including the original behaviour of returning -1 (cost of the last measure is paid)
+        if (ask_confirm_fort) {
+            confirm.fort_confirmed = confirm.preset_fort;
+        } else {
+            confirm.bridge_confirmed = confirm.preset_bridge;
+        }
+        clear_land_confirmed(0, x_start, y_start, x_end, y_end);
+        return -1;
+    }
     if (ask_confirm_fort) {
         window_popup_dialog_show(POPUP_DIALOG_DELETE_FORT, confirm_delete_fort, 2);
         return -1;
@@ -227,4 +241,44 @@ int building_construction_clear_land(int measure_only, int x_start, int y_start,
     } else {
         return clear_land_confirmed(measure_only, x_start, y_start, x_end, y_end);
     }
+}
+
+void building_construction_clear_land_needs_confirmation(int x_start, int y_start, int x_end, int y_end,
+    int *fort, int *bridge)
+{
+    *fort = 0;
+    *bridge = 0;
+    int x_min, x_max, y_min, y_max;
+    map_grid_start_end_to_area(x_start, y_start, x_end, y_end, &x_min, &y_min, &x_max, &y_max);
+    for (int y = y_min; y <= y_max; y++) {
+        for (int x = x_min; x <= x_max; x++) {
+            int grid_offset = map_grid_offset(x, y);
+            int building_id = map_building_at(grid_offset);
+            if (building_id) {
+                building *b = building_get(building_id);
+                if (b->type == BUILDING_FORT || b->type == BUILDING_FORT_GROUND) {
+                    *fort = 1;
+                }
+            }
+            if (map_is_bridge(grid_offset)) {
+                *bridge = 1;
+            }
+        }
+    }
+    // as in building_construction_clear_land: the fort question takes precedence
+    if (*fort) {
+        *bridge = 0;
+    }
+}
+
+void building_construction_clear_land_preset_answers(int fort_answer, int bridge_answer)
+{
+    confirm.has_preset_answers = 1;
+    confirm.preset_fort = fort_answer;
+    confirm.preset_bridge = bridge_answer;
+}
+
+void building_construction_clear_land_reset_answers(void)
+{
+    confirm.has_preset_answers = 0;
 }

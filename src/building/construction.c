@@ -704,6 +704,8 @@ void building_construction_get_placement(building_construction_placement *placem
     placement->x_end = data.end.x;
     placement->y_end = data.end.y;
     placement->road_orientation = data.road_orientation;
+    placement->fort_answer = 0;
+    placement->bridge_answer = 0;
 }
 
 void building_construction_remove_preview(void)
@@ -741,7 +743,11 @@ void building_construction_execute(const building_construction_placement *placem
             int length, direction;
             map_bridge_calculate_length_direction(placement->x_end, placement->y_end, &length, &direction);
         }
+        if (type == BUILDING_CLEAR_LAND) {
+            building_construction_clear_land_preset_answers(placement->fort_answer, placement->bridge_answer);
+        }
         building_construction_place();
+        building_construction_clear_land_reset_answers();
     }
 
     // Temples cycle through gods after each placement

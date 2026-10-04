@@ -1,6 +1,8 @@
 // Headless simulation tool: loads saved games, runs ticks exactly like the autopilot and
 // prints state checksums. See doc/mp/TESTING.md.
+#include "building/building.h"
 #include "building/construction.h"
+#include "building/construction_clear.h"
 #include "building/type.h"
 #include "city/finance.h"
 #include "core/time.h"
@@ -9,6 +11,7 @@
 #include "game/rules.h"
 #include "game/settings.h"
 #include "map/bridge.h"
+#include "map/terrain.h"
 #include "map/grid.h"
 #include "mp/checksum.h"
 #include "mp/session.h"
@@ -42,6 +45,8 @@ static int usage(void)
     printf("  simtool pieces SAVE [TICKS]            checksum of every saved game piece after TICKS\n");
     printf("  simtool buildequiv SAVE                placing buildings through commands gives the same\n");
     printf("                                         state as the former direct user interface calls\n");
+    printf("  simtool clearequiv SAVE                same for clearing forts and bridges: answering the popup\n");
+    printf("                                         equals sending the answer in the command\n");
     printf("  simtool idempotence SAVE TICKS [STEP]  loads and runs SAVE twice in one process,\n");
     printf("                                         fails if the two traces differ\n");
     printf("  simtool diffpieces SAVE TICKS [CHECK]  runs SAVE for TICKS, reloads it and runs CHECK ticks\n");
@@ -220,6 +225,78 @@ static int command_buildequiv(const char *file)
     return failures || effective < 10 ? 1 : 0;
 }
 
+int test_stub_answer_popup(int accepted);
+
+static int compare_clear(const char *file, building_construction_placement *p, int answer, int *failures)
+{
+    // former path: the popup is shown, then answered
+    if (!load(file)) {
+        return 0;
+    }
+    build_directly(p);
+    int asked = test_stub_answer_popup(answer);
+    uint64_t direct = mp_checksum_state();
+    int treasury_direct = city_finance_treasury();
+
+    if (!load(file)) {
+        return 0;
+    }
+    int ask_fort, ask_bridge;
+    building_construction_clear_land_needs_confirmation(p->x_start, p->y_start, p->x_end, p->y_end,
+        &ask_fort, &ask_bridge);
+    p->fort_answer = ask_fort ? answer : 0;
+    p->bridge_answer = ask_bridge ? answer : 0;
+    mp_command command = { .type = MP_COMMAND_BUILD, .args = {
+        p->type, p->sub_type, p->x_start, p->y_start, p->x_end, p->y_end, p->road_orientation,
+        (p->fort_answer & 0xff) | ((p->bridge_answer & 0xff) << 8)
+    } };
+    mp_command_submit(&command);
+    building_construction_clear_type();
+    if (direct != mp_checksum_state() || treasury_direct != city_finance_treasury() || asked != (ask_fort || ask_bridge)) {
+        printf("DIFFERENT: clear (%d,%d)-(%d,%d) answer %d asked %d/%d%d\n",
+            p->x_start, p->y_start, p->x_end, p->y_end, answer, asked, ask_fort, ask_bridge);
+        (*failures)++;
+    }
+    return asked;
+}
+
+static int command_clearequiv(const char *file)
+{
+    if (!load(file)) {
+        return 2;
+    }
+    // collect forts and bridges of the saved game
+    int targets_x[40], targets_y[40], num_targets = 0;
+    for (int i = 1; i < MAX_BUILDINGS && num_targets < 20; i++) {
+        building *b = building_get(i);
+        if (b->state == BUILDING_STATE_IN_USE && b->type == BUILDING_FORT) {
+            targets_x[num_targets] = b->x;
+            targets_y[num_targets] = b->y;
+            num_targets++;
+        }
+    }
+    for (int y = 0; y < GRID_SIZE && num_targets < 40; y++) {
+        for (int x = 0; x < GRID_SIZE && num_targets < 40; x++) {
+            if (map_is_bridge(map_grid_offset(x, y)) && (x + y) % 3 == 0) {
+                targets_x[num_targets] = x;
+                targets_y[num_targets] = y;
+                num_targets++;
+            }
+        }
+    }
+    int failures = 0, asked = 0;
+    for (int i = 0; i < num_targets; i++) {
+        for (int answer = 1; answer >= -1; answer -= 2) {
+            building_construction_placement p = { .type = BUILDING_CLEAR_LAND,
+                .x_start = targets_x[i] - 1, .y_start = targets_y[i] - 1,
+                .x_end = targets_x[i] + 1, .y_end = targets_y[i] + 1 };
+            asked += compare_clear(file, &p, answer, &failures);
+        }
+    }
+    printf("%d forts and bridges, %d confirmations asked, %d different\n", num_targets, asked, failures);
+    return failures || !asked ? 1 : 0;
+}
+
 static int command_trace(const char *file, int ticks, int step)
 {
     if (!load(file)) {
@@ -362,6 +439,8 @@ int main(int argc, char **argv)
     int result;
     if (strcmp(command, "checksum") == 0) {
         result = command_checksum(file);
+    } else if (strcmp(command, "clearequiv") == 0) {
+        result = command_clearequiv(file);
     } else if (strcmp(command, "buildequiv") == 0) {
         result = command_buildequiv(file);
     } else if (strcmp(command, "run") == 0 && argc > 4) {

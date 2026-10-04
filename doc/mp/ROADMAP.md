@@ -39,7 +39,9 @@ Prérequis à tout le reste : savoir prouver que deux simulations sont identique
   maisons, ponts, forts, portes, temples. Inventaire : code-map/05 §4.
   *Fait* : `MP_COMMAND_BUILD` rejoue « appuyer, glisser, relâcher » ; test `mp_build_equivalence_*` (234 placements
   identiques à l'ancien chemin, y compris 25 ticks après) et `test/automation/build-road.txt` dans le vrai jeu.
-- [ ] **M2.3** Démolition en commande ; l'aperçu de l'effacement ne marque plus les vrais bâtiments.
+- [x] **M2.3** Démolition en commande : la question « détruire le fort / le pont ? » est posée avant l'envoi et la
+  réponse voyage dans la commande. Test `mp_clear_equivalence_*` (fenêtre puis réponse = réponse dans la commande).
+  L'aperçu de l'effacement qui marque les vrais bâtiments est traité avec M2P.3 / M2.9.
 - [ ] **M2.4** Réglages de la cité en commandes : impôts, salaires, priorités, fêtes, entrepôts et greniers, commerce
   (routes, importation et exportation, seuils), industries à l'arrêt.
 - [ ] **M2.5** Ordres militaires en commandes : déplacer, retour au fort, formation, service.
@@ -64,7 +66,8 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
 - [ ] **M2P.1** Réseau TCP minimal (`src/platform/net.c`) : `--host PORT` / `--join IP:PORT` en ligne de commande.
 - [ ] **M2P.2** Lockstep : tours de K ticks, commandes exécutées au tour T+2, somme de contrôle par tour, pause et
   sauvegarde de diagnostic en cas de désynchronisation.
-- [ ] **M2P.3** Pendant les ticks, l'aperçu de construction est retiré de la carte puis remis ; rotation de la vue
+- [ ] **M2P.3** Pendant les ticks, l'aperçu de construction (y compris celui de l'effacement) est retiré de la carte
+  puis remis ; rotation de la vue
   bloquée en multijoueur (en attendant M2.10).
 - [ ] **M2P.4** `tools/play-mp.sh` : lance l'hôte et un client (deux fenêtres) sur une sauvegarde, sur le Mac.
 - [ ] **M2P.5** Test automatisé : deux instances sans fenêtre reliées en local, commandes scriptées, mêmes sommes de

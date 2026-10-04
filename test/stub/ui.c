@@ -57,8 +57,24 @@ void window_message_dialog_show_city_message(int text_id, int year, int month,
                                              int param1, int param2, int message_advisor, int use_popup)
 {}
 
+static void (*last_popup_callback)(int);
+
 void window_popup_dialog_show(popup_dialog_type type, void (*okFunc)(int), int hasOkCancelButtons)
-{}
+{
+    // remembered so that tests can answer it; never answered automatically
+    last_popup_callback = okFunc;
+}
+
+int test_stub_answer_popup(int accepted)
+{
+    void (*callback)(int) = last_popup_callback;
+    last_popup_callback = 0;
+    if (!callback) {
+        return 0;
+    }
+    callback(accepted);
+    return 1;
+}
 
 void widget_minimap_invalidate(void)
 {}

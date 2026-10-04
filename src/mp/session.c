@@ -4,6 +4,7 @@
 #include "game/time.h"
 
 #include <stddef.h>
+#include <stdint.h>
 
 static struct {
     int networked;
@@ -67,7 +68,9 @@ static void execute_build(const mp_command *command)
         .y_start = command->args[3],
         .x_end = command->args[4],
         .y_end = command->args[5],
-        .road_orientation = command->args[6]
+        .road_orientation = command->args[6],
+        .fort_answer = (int8_t) (command->args[7] & 0xff),
+        .bridge_answer = (int8_t) ((command->args[7] >> 8) & 0xff)
     };
     building_construction_execute(&placement);
 }

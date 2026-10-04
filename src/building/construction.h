@@ -47,6 +47,8 @@ typedef struct {
     int x_end;
     int y_end;
     int road_orientation;
+    int fort_answer;   /**< Clearing land: answer to "delete the fort?" (1 yes, -1 no, 0 not asked) */
+    int bridge_answer; /**< Clearing land: answer to "delete the bridge?" (1 yes, -1 no, 0 not asked) */
 } building_construction_placement;
 
 /**
