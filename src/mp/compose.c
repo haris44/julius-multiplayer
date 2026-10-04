@@ -216,7 +216,8 @@ static void copy_region(int x_min, int y_min, int width, int height, const playe
             figure_id = player_clone_id(c, figure_id, MAX_FIGURES);
             relocation.data[GRID_FIGURE][2 * to] = figure_id & 0xff;
             relocation.data[GRID_FIGURE][2 * to + 1] = figure_id >> 8;
-            map_owner_set(to, c->to);
+            int terrain = relocation.data[GRID_TERRAIN][2 * to] | (relocation.data[GRID_TERRAIN][2 * to + 1] << 8);
+            map_owner_set(to, terrain & TERRAIN_INFRASTRUCTURE ? c->to : MAP_OWNER_NONE);
         }
     }
 }

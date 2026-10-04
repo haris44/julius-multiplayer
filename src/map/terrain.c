@@ -1,6 +1,8 @@
 #include "terrain.h"
 
+#include "game/player_context.h"
 #include "map/grid.h"
+#include "map/owner.h"
 #include "map/ring.h"
 #include "map/routing.h"
 
@@ -17,19 +19,40 @@ int map_terrain_get(int grid_offset)
     return terrain_grid.items[grid_offset];
 }
 
+// With several cities, infrastructure (roads, walls, aqueducts, gardens) belongs to the player who builds
+// it: a free tile is claimed when infrastructure appears on it, and freed when none is left (D-018)
+static void update_owner(int grid_offset)
+{
+    if (player_context_player_count <= 1) {
+        return;
+    }
+    if (!(terrain_grid.items[grid_offset] & TERRAIN_INFRASTRUCTURE)) {
+        map_owner_set(grid_offset, MAP_OWNER_NONE);
+    } else if (map_owner_get_claimed(grid_offset) == MAP_OWNER_NONE) {
+        map_owner_set(grid_offset, player_context_current_player);
+    }
+}
+
 void map_terrain_set(int grid_offset, int terrain)
 {
     terrain_grid.items[grid_offset] = terrain;
+    update_owner(grid_offset);
 }
 
 void map_terrain_add(int grid_offset, int terrain)
 {
     terrain_grid.items[grid_offset] |= terrain;
+    if (terrain & TERRAIN_INFRASTRUCTURE) {
+        update_owner(grid_offset);
+    }
 }
 
 void map_terrain_remove(int grid_offset, int terrain)
 {
     terrain_grid.items[grid_offset] &= ~terrain;
+    if (terrain & TERRAIN_INFRASTRUCTURE) {
+        update_owner(grid_offset);
+    }
 }
 
 void map_terrain_add_with_radius(int x, int y, int size, int radius, int terrain)

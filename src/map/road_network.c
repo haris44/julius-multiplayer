@@ -47,6 +47,14 @@ int map_road_network_get(int grid_offset)
 
 static int mark_road_network_with_id(int grid_offset, uint16_t network_id);
 
+// owners of the roads of a network; access ramps are terrain, owned by nobody
+static void add_owner(int grid_offset)
+{
+    if (map_terrain_is(grid_offset, TERRAIN_ROAD)) {
+        current_owners |= 1 << map_owner_get(grid_offset);
+    }
+}
+
 static int mark_road_network(int grid_offset, int network_number)
 {
     uint16_t network_id = network_number & map_grid_coordinate_mask;
@@ -64,14 +72,14 @@ static int mark_road_network_with_id(int grid_offset, uint16_t network_id)
             break;
         }
         network.items[grid_offset] = network_id;
-        current_owners |= 1 << map_owner_get(grid_offset);
+        add_owner(grid_offset);
         next_offset = -1;
         for (int i = 0; i < 4; i++) {
             int new_offset = grid_offset + ADJACENT_OFFSETS(i);
             if (map_routing_citizen_is_passable(new_offset) && !network.items[new_offset]) {
                 if (map_routing_citizen_is_road(new_offset) || map_terrain_is(new_offset, TERRAIN_ACCESS_RAMP)) {
                     network.items[new_offset] = network_id;
-                    current_owners |= 1 << map_owner_get(new_offset);
+                    add_owner(new_offset);
                     size++;
                     if (next_offset == -1) {
                         next_offset = new_offset;
