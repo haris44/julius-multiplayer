@@ -683,6 +683,13 @@ static void start_network_game(const julius_args *args, const char *host_save)
     mp_lockstep_set_started_callback(window_mp_lobby_show_started_game);
     int port = args->mp_port ? args->mp_port : MP_LOCKSTEP_DEFAULT_PORT;
     if (args->mp_host_save) {
+        game_rules_settings rules;
+        game_rules_default_multiplayer_settings(&rules);
+        if (args->mp_score_years > 0) {
+            rules.end_condition = GAME_END_SCORE;
+            rules.score_years = args->mp_score_years;
+        }
+        mp_lockstep_set_rules(&rules);
         if (!mp_lockstep_host(port, args->mp_players, host_save, !args->mp_shared_city)) {
             SDL_Log("Unable to host the network game: %s", mp_lockstep_status());
         }

@@ -125,6 +125,21 @@ static translation_string all_strings[] = {
     {TR_MP_BACK, "Retour"},
     {TR_MP_NO_MAP, "Aucune carte ni sauvegarde trouvée"},
     {TR_MP_SEPARATE_CITIES, "Chaque joueur reçoit une copie de la cité de départ."},
+    {TR_MP_END, "Fin : "},
+    {TR_MP_END_NONE, "aucune"},
+    {TR_MP_END_SCORE, "au score après "},
+    {TR_MP_YEARS, " ans"},
+    {TR_MP_INVASIONS, "Invasions IA : "},
+    {TR_MP_YES, "oui"},
+    {TR_MP_NO, "non"},
+    {TR_MP_RESULTS_TITLE, "Fin de la partie"},
+    {TR_MP_PLAYER, "Joueur "},
+    {TR_MP_SCORE, "score : "},
+    {TR_MP_WINNER, "Vainqueur"},
+    {TR_MP_YOU, "(vous)"},
+    {TR_MP_WATCH, "Regarder la carte"},
+    {TR_MP_MAIN_MENU, "Menu principal"},
+    {TR_MP_SCORE_RULE, "Score : culture + prospérité + paix + population / 100"},
 };
 
 void translation_french(const translation_string **strings, int *num_strings)

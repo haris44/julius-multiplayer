@@ -3,6 +3,7 @@
 #include "core/buffer.h"
 #include "core/log.h"
 #include "game/extra_state.h"
+#include "mp/endgame.h"
 #include "game/file.h"
 #include "game/file_io.h"
 #include "game/player_context.h"
@@ -17,7 +18,7 @@
 #include <string.h>
 
 #define MAGIC 0x504d3343 // "C3MP"
-#define VERSION 1
+#define VERSION 2 // 2: rules for AI invasions and the end of the game
 #define MAX_NAME 64
 
 static void visit_buffer(mp_savegame_visitor visitor, void *userdata, const char *name,
@@ -60,6 +61,7 @@ void mp_savegame_visit(mp_savegame_visitor visitor, void *userdata)
 {
     visit_buffer(visitor, userdata, "mp_header", save_header, 256);
     visit_buffer(visitor, userdata, "owner_grid", map_owner_save_state, GRID_MAX_TILES);
+    visit_buffer(visitor, userdata, "mp_endgame", mp_endgame_save_state, 64);
     int previous = player_context_current();
     forward f = { visitor, userdata };
     for (int p = 0; p < player_context_num_players(); p++) {
@@ -249,6 +251,14 @@ static int load_pieces(void)
     buffer_skip(&buf, 6 * 4);
     game_rules_load_state(&buf);
     map_grid_init(width, height, start, border);
+    const piece *endgame = find_piece("mp_endgame", 0, reading.num_pieces);
+    if (endgame) {
+        buffer endgame_buf;
+        buffer_init(&endgame_buf, (uint8_t *) endgame->data, endgame->size);
+        mp_endgame_load_state(&endgame_buf);
+    } else {
+        mp_endgame_reset();
+    }
     const piece *owner = find_piece("owner_grid", 0, reading.num_pieces);
     if (owner) {
         buffer owner_buf;

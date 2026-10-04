@@ -258,4 +258,12 @@ add_test(NAME mp_neighbours_brugle-lugdunum COMMAND simtool neighbours brugle-lu
 foreach(save brugle-lugdunum tower)
     add_test(NAME mp_open_land_${save} COMMAND simtool openland ${save}.sav)
 endforeach()
+# AI invasions option (M4.5): enemy armies come only when the rules of the multiplayer game allow them
+foreach(save inv0 kknight)
+    add_test(NAME mp_ai_invasions_${save} COMMAND simtool aiinvasions ${save}.sav 20000)
+endforeach()
+# End of the game by score (M4.6): the game ends at the start of the year chosen, with a score for every city
+foreach(save brugle-lugdunum tower)
+    add_test(NAME mp_end_by_score_${save} COMMAND simtool endscore ${save}.sav 1)
+endforeach()
 

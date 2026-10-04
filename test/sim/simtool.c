@@ -41,6 +41,7 @@
 #include "map/figure.h"
 #include "map/water_supply.h"
 #include "map/owner.h"
+#include "mp/endgame.h"
 #include "mp/checksum.h"
 #include "game/time.h"
 #include "game/player_context.h"
@@ -1066,6 +1067,77 @@ static int command_openland(const char *file)
     return built && owner == 1 ? 0 : 1;
 }
 
+// AI invasions option (M4.5): enemy armies come in a multiplayer game only when the rules allow them
+static int count_new_enemies(const char *file, int ticks, int ai_invasions)
+{
+    if (!load(file)) {
+        return -1;
+    }
+    game_rules_settings rules;
+    game_rules_default_multiplayer_settings(&rules);
+    rules.ai_invasions = ai_invasions;
+    game_rules_set_multiplayer(&rules);
+    static unsigned char present[MAX_FIGURES];
+    for (int i = 1; i < MAX_FIGURES; i++) {
+        figure *f = figure_get(i);
+        present[i] = f->state == FIGURE_STATE_ALIVE && figure_is_enemy(f);
+    }
+    int new_enemies = 0;
+    setting_reset_speeds(500, setting_scroll_speed());
+    for (int tick = 0; tick < ticks; tick++) {
+        run_one_tick();
+        for (int i = 1; i < MAX_FIGURES; i++) {
+            figure *f = figure_get(i);
+            if (f->state == FIGURE_STATE_ALIVE && figure_is_enemy(f) && !present[i]) {
+                present[i] = 1;
+                new_enemies++;
+            }
+        }
+    }
+    return new_enemies;
+}
+
+static int command_aiinvasions(const char *file, int ticks)
+{
+    int with = count_new_enemies(file, ticks, 1);
+    int without = count_new_enemies(file, ticks, 0);
+    printf("new enemies with AI invasions: %d, without: %d\n", with, without);
+    if (with <= 0) {
+        printf("FAILED: no invasion in this game, the test proves nothing\n");
+        return 1;
+    }
+    return without ? 1 : 0;
+}
+
+// End of the game by score (M4.6): two cities, the second one with higher taxes; the game ends at the start
+// of the year start + YEARS, with a score for every city
+static int command_endscore(const char *file, int years)
+{
+    int width, height;
+    if (!setup_twin_map(file, 2, &width, &height)) {
+        return 2;
+    }
+    game_rules_settings rules;
+    game_rules_default_multiplayer_settings(&rules);
+    rules.end_condition = GAME_END_SCORE;
+    rules.score_years = years;
+    game_rules_set_multiplayer(&rules);
+    mp_endgame_reset();
+    int end_year = game_time_year() + years;
+    setting_reset_speeds(500, setting_scroll_speed());
+    int ticks = 0;
+    while (!mp_endgame_is_over() && ticks < 9600 * (years + 1)) {
+        run_one_tick();
+        ticks++;
+    }
+    int year = game_time_year();
+    printf("over: %d after %d ticks, year %d (expected %d), scores %d / %d, winner: player %d\n", mp_endgame_is_over(),
+        ticks, year, end_year, mp_endgame_score(0), mp_endgame_score(1), mp_endgame_winner() + 1);
+    player_context_switch(0);
+    player_context_set_num_players(1);
+    return mp_endgame_is_over() && year == end_year && mp_endgame_score(0) > 0 ? 0 : 1;
+}
+
 // Diagnosis: one figure of city 0, tick by tick, on a map of CITIES composed cities
 static int command_figtrace(const char *file, int num_cities, int id, int from, int to)
 {
@@ -1452,6 +1524,10 @@ int main(int argc, char **argv)
         result = command_twinfigures(file, ticks);
     } else if (strcmp(command, "twinstats") == 0 && argc > 3) {
         result = command_twinstats(file, ticks);
+    } else if (strcmp(command, "endscore") == 0 && argc > 3) {
+        result = command_endscore(file, ticks);
+    } else if (strcmp(command, "aiinvasions") == 0 && argc > 3) {
+        result = command_aiinvasions(file, ticks);
     } else if (strcmp(command, "openland") == 0 && argc > 2) {
         result = command_openland(file);
     } else if (strcmp(command, "intruders") == 0 && argc > 3) {

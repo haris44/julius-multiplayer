@@ -1,6 +1,8 @@
 #ifndef MP_LOCKSTEP_H
 #define MP_LOCKSTEP_H
 
+#include "game/rules.h"
+
 #include <stdint.h>
 
 /**
@@ -31,6 +33,11 @@ typedef enum {
  * @return 1 when listening
  */
 int mp_lockstep_host(int port, int num_players, const char *saved_game, int separate_cities);
+
+/**
+ * Rules of the next hosted game (default multiplayer rules otherwise)
+ */
+void mp_lockstep_set_rules(const game_rules_settings *rules);
 
 /**
  * Joins a hosted game; the game starts when the host sends the saved game

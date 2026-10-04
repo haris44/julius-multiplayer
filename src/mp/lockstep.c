@@ -19,7 +19,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define PROTOCOL_VERSION 2
+#define PROTOCOL_VERSION 3 // 3: the rules of the game travel with the welcome message
 #define TURN_TICKS 4
 #define TURN_DELAY 2
 #define HISTORY 256
@@ -42,6 +42,10 @@ typedef struct {
     int capacity;
 } receive_buffer;
 
+// rules chosen before hosting (lobby), kept across the reset of a new game
+static game_rules_settings host_rules;
+static int has_host_rules;
+
 static struct {
     mp_lockstep_state state;
     int is_host;
@@ -53,6 +57,7 @@ static struct {
     int local_player;
     char saved_game[512];
     int separate_cities;   // one city per player (a .mpsav is sent) instead of one shared city
+    game_rules_settings rules; // host: rules of the game, sent to the clients
     int base_tick;
     int last_known_turn;   // commands of all turns up to this one are known
     int done_turn[MP_LOCKSTEP_MAX_PLAYERS];
@@ -223,11 +228,9 @@ static void host_issue_turn(int turn)
 
 // ---------- game start ----------
 
-static void start_session(int player, int base_tick)
+static void start_session(int player, int base_tick, const game_rules_settings *rules)
 {
-    game_rules_settings rules;
-    game_rules_default_multiplayer_settings(&rules);
-    game_rules_set_multiplayer(&rules);
+    game_rules_set_multiplayer(rules);
     data.local_player = player;
     data.base_tick = base_tick;
     data.last_known_turn = TURN_DELAY - 1; // the first turns have no commands
@@ -288,7 +291,7 @@ static void host_start_game(void)
     }
     // rules must be set before the checksum: clients compare after doing the same
     data.is_host = 1;
-    start_session(0, game_time_absolute_tick());
+    start_session(0, game_time_absolute_tick(), &data.rules);
     uint64_t checksum = mp_checksum_state();
 
     int size = 64 + save_size;
@@ -303,6 +306,7 @@ static void host_start_game(void)
         buffer_write_u8(&buf, data.separate_cities);
         buffer_write_u32(&buf, (uint32_t) checksum);
         buffer_write_u32(&buf, (uint32_t) (checksum >> 32));
+        game_rules_save_state(&buf);
         buffer_write_i32(&buf, save_size);
         buffer_write_raw(&buf, save, save_size);
         if (!send_message(data.sockets[p], payload, buf.index)) {
@@ -322,6 +326,8 @@ static void client_welcome(buffer *buf)
     data.separate_cities = buffer_read_u8(buf);
     uint64_t checksum = buffer_read_u32(buf);
     checksum |= ((uint64_t) buffer_read_u32(buf)) << 32;
+    game_rules_load_state(buf); // the rules of the host
+    game_rules_settings rules = *game_rules_multiplayer_settings();
     int save_size = buffer_read_i32(buf);
     if (save_size <= 0 || save_size > buf->size - buf->index) {
         set_status("Message de l'hôte invalide");
@@ -349,7 +355,7 @@ static void client_welcome(buffer *buf)
     }
     // the interface shows the city of this player
     player_context_switch(data.separate_cities ? player : 0);
-    start_session(player, base_tick);
+    start_session(player, base_tick, &rules);
     if (game_time_absolute_tick() != base_tick || mp_checksum_state() != checksum) {
         desync(-1);
         return;
@@ -465,6 +471,12 @@ static void reset(void)
     }
 }
 
+void mp_lockstep_set_rules(const game_rules_settings *rules)
+{
+    host_rules = *rules;
+    has_host_rules = 1;
+}
+
 int mp_lockstep_host(int port, int num_players, const char *saved_game, int separate_cities)
 {
     void (*callback)(void) = data.started_callback;
@@ -477,6 +489,11 @@ int mp_lockstep_host(int port, int num_players, const char *saved_game, int sepa
     data.num_players = num_players;
     data.port = port;
     data.separate_cities = separate_cities;
+    if (has_host_rules) {
+        data.rules = host_rules;
+    } else {
+        game_rules_default_multiplayer_settings(&data.rules);
+    }
     snprintf(data.saved_game, sizeof(data.saved_game), "%s", saved_game);
     if (num_players > 1) {
         data.listener = net_listen(port);

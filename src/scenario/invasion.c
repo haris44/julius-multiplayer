@@ -327,8 +327,9 @@ void scenario_invasion_process(void)
         }
         // update warnings
         invasion_warning *warning = &data.warnings[i];
-        if (game_rules_is_multiplayer() && scenario.invasions[warning->invasion_id].type == INVASION_TYPE_CAESAR) {
-            warning->in_use = 0; // no Caesar in multiplayer (D-026)
+        if (game_rules_is_multiplayer() && (scenario.invasions[warning->invasion_id].type == INVASION_TYPE_CAESAR ||
+            !game_rules_ai_invasions())) {
+            warning->in_use = 0; // no Caesar in multiplayer (D-026), and enemy armies only if the rules allow them
             continue;
         }
         warning->months_to_go--;
@@ -383,7 +384,7 @@ void scenario_invasion_process(void)
         }
     }
     // local uprisings
-    for (int i = 0; i < MAX_INVASIONS; i++) {
+    for (int i = 0; i < MAX_INVASIONS && game_rules_ai_invasions(); i++) {
         if (scenario.invasions[i].type == INVASION_TYPE_LOCAL_UPRISING) {
             if (game_time_year() == scenario.start_year + scenario.invasions[i].year &&
                 game_time_month() == scenario.invasions[i].month) {

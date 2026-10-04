@@ -6,6 +6,7 @@
 #include "core/encoding.h"
 #include "core/string.h"
 #include "game/player_context.h"
+#include "game/rules.h"
 #include "graphics/button.h"
 #include "graphics/generic_button.h"
 #include "graphics/graphics.h"
@@ -18,6 +19,7 @@
 #include "map/grid.h"
 #include "mp/compose.h"
 #include "mp/discovery.h"
+#include "mp/endgame.h"
 #include "mp/lockstep.h"
 #include "mp/session.h"
 #include "platform/net.h"
@@ -25,6 +27,7 @@
 #include "widget/input_box.h"
 #include "window/city.h"
 #include "window/main_menu.h"
+#include "window/mp_results.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -42,6 +45,8 @@ static void button_select_game(int index, int param2);
 static void button_join(int param1, int param2);
 static void button_back(int param1, int param2);
 static void on_scroll(void);
+static void button_end(int param1, int param2);
+static void button_invasions(int param1, int param2);
 
 static generic_button file_buttons[] = {
     {24, 104, 264, 16, button_select_file, button_none, 0, 0},
@@ -63,13 +68,22 @@ static generic_button file_buttons[] = {
 #define BUTTON_HOST 2
 #define BUTTON_JOIN 3
 #define BUTTON_BACK 4
+#define BUTTON_END 5
+#define BUTTON_INVASIONS 6
+#define NUM_ACTION_BUTTONS 7
 static generic_button action_buttons[] = {
-    {176, 316, 24, 20, button_players, button_none, -1, 0},
-    {208, 316, 24, 20, button_players, button_none, 1, 0},
-    {64, 348, 192, 25, button_host, button_none, 0, 0},
+    {176, 310, 24, 20, button_players, button_none, -1, 0},
+    {208, 310, 24, 20, button_players, button_none, 1, 0},
+    {64, 382, 192, 25, button_host, button_none, 0, 0},
     {384, 348, 192, 25, button_join, button_none, 0, 0},
-    {224, 436, 192, 25, button_back, button_none, 0, 0},
+    {432, 440, 176, 25, button_back, button_none, 0, 0},
+    {16, 334, 296, 20, button_end, button_none, 0, 0},
+    {16, 356, 296, 20, button_invasions, button_none, 0, 0},
 };
+
+// end of the game: none, or by score after these years
+static const int END_YEARS[] = { 0, 5, 10, 20 };
+#define NUM_END_CHOICES 4
 
 static generic_button game_buttons[] = {
     {336, 104, 280, 20, button_select_game, button_none, 0, 0},
@@ -87,6 +101,9 @@ static struct {
     int num_files;
     int selected_file;
     int num_players;
+    int end_choice;
+    int ai_invasions;
+    int rules_initialized;
     uint8_t address[ADDRESS_LENGTH];
     char local_address[16];
     int focus_file;
@@ -118,6 +135,10 @@ static void init(void)
     }
     if (data.num_players < 1) {
         data.num_players = 2;
+    }
+    if (!data.rules_initialized) {
+        data.rules_initialized = 1;
+        data.ai_invasions = 1;
     }
     scrollbar_init(&scrollbar, 0, data.num_files);
     net_local_address(data.local_address);
@@ -179,8 +200,8 @@ static void draw_games(void)
 
 static void draw_status(void)
 {
-    int width = text_draw(translation_for(TR_MP_YOUR_ADDRESS), 16, 392, FONT_NORMAL_BLACK, 0);
-    draw_text_utf8(data.local_address, 16 + width, 392, FONT_NORMAL_BLACK);
+    int width = text_draw(translation_for(TR_MP_YOUR_ADDRESS), 16, 428, FONT_NORMAL_BLACK, 0);
+    draw_text_utf8(data.local_address, 16 + width, 428, FONT_NORMAL_BLACK);
     mp_lockstep_state state = mp_lockstep_get_state();
     if (state != MP_LOCKSTEP_OFF) {
         char status[200];
@@ -190,7 +211,7 @@ static void draw_status(void)
         } else {
             snprintf(status, sizeof(status), "%s", mp_lockstep_status());
         }
-        draw_text_utf8(status, 16, 412, FONT_NORMAL_BLACK);
+        draw_text_utf8(status, 16, 448, FONT_NORMAL_BLACK);
     }
 }
 
@@ -205,12 +226,24 @@ static void draw_foreground(void)
     // hosting
     text_draw(translation_for(TR_MP_HOST_TITLE), 16, 56, FONT_NORMAL_BLACK, 0);
     draw_files();
-    int width = text_draw(translation_for(TR_MP_PLAYERS), 16, 321, FONT_NORMAL_BLACK, 0);
-    text_draw_number(data.num_players, 0, "", 16 + width, 321, FONT_NORMAL_BLACK);
+    int width = text_draw(translation_for(TR_MP_PLAYERS), 16, 315, FONT_NORMAL_BLACK, 0);
+    text_draw_number(data.num_players, 0, "", 16 + width, 315, FONT_NORMAL_BLACK);
+    font_t end_font = data.focus_action == BUTTON_END + 1 ? FONT_NORMAL_WHITE : FONT_NORMAL_BLACK;
+    width = text_draw(translation_for(TR_MP_END), 16, 338, end_font, 0);
+    if (END_YEARS[data.end_choice]) {
+        width += text_draw(translation_for(TR_MP_END_SCORE), 16 + width, 338, end_font, 0);
+        width += text_draw_number(END_YEARS[data.end_choice], 0, "", 16 + width, 338, end_font);
+        text_draw(translation_for(TR_MP_YEARS), 16 + width, 338, end_font, 0);
+    } else {
+        text_draw(translation_for(TR_MP_END_NONE), 16 + width, 338, end_font, 0);
+    }
+    font_t invasions_font = data.focus_action == BUTTON_INVASIONS + 1 ? FONT_NORMAL_WHITE : FONT_NORMAL_BLACK;
+    width = text_draw(translation_for(TR_MP_INVASIONS), 16, 360, invasions_font, 0);
+    text_draw(translation_for(data.ai_invasions ? TR_MP_YES : TR_MP_NO), 16 + width, 360, invasions_font, 0);
     draw_button(&action_buttons[BUTTON_LESS], string_from_ascii("-"), data.focus_action == BUTTON_LESS + 1);
     draw_button(&action_buttons[BUTTON_MORE], string_from_ascii("+"), data.focus_action == BUTTON_MORE + 1);
     draw_button(&action_buttons[BUTTON_HOST], translation_for(TR_MP_HOST_BUTTON), data.focus_action == BUTTON_HOST + 1);
-    text_draw(translation_for(TR_MP_SEPARATE_CITIES), 16, 376, FONT_SMALL_PLAIN, 0);
+    text_draw(translation_for(TR_MP_SEPARATE_CITIES), 16, 412, FONT_SMALL_PLAIN, 0);
 
     // joining
     text_draw(translation_for(TR_MP_JOIN_TITLE), 336, 56, FONT_NORMAL_BLACK, 0);
@@ -237,7 +270,7 @@ static void handle_input(const mouse *m, const hotkeys *h)
         input_box_handle_mouse(m_dialog, &address_input) ||
         generic_buttons_handle_mouse(m_dialog, 0, 0, file_buttons, FILES_IN_VIEW, &data.focus_file) ||
         generic_buttons_handle_mouse(m_dialog, 0, 0, game_buttons, GAMES_IN_VIEW, &data.focus_game) ||
-        generic_buttons_handle_mouse(m_dialog, 0, 0, action_buttons, 5, &data.focus_action)) {
+        generic_buttons_handle_mouse(m_dialog, 0, 0, action_buttons, NUM_ACTION_BUTTONS, &data.focus_action)) {
         return;
     }
     if (input_go_back_requested(m, h)) {
@@ -267,11 +300,27 @@ static void button_players(int change, int param2)
     }
 }
 
+static void button_end(int param1, int param2)
+{
+    data.end_choice = (data.end_choice + 1) % NUM_END_CHOICES;
+}
+
+static void button_invasions(int param1, int param2)
+{
+    data.ai_invasions = !data.ai_invasions;
+}
+
 static void button_host(int param1, int param2)
 {
     if (!data.num_files || mp_lockstep_get_state() != MP_LOCKSTEP_OFF) {
         return;
     }
+    game_rules_settings rules;
+    game_rules_default_multiplayer_settings(&rules);
+    rules.ai_invasions = data.ai_invasions;
+    rules.end_condition = END_YEARS[data.end_choice] ? GAME_END_SCORE : GAME_END_NONE;
+    rules.score_years = END_YEARS[data.end_choice] ? END_YEARS[data.end_choice] : rules.score_years;
+    mp_lockstep_set_rules(&rules);
     mp_lockstep_set_started_callback(window_mp_lobby_show_started_game);
     mp_lockstep_host(MP_LOCKSTEP_DEFAULT_PORT, data.num_players, data.files[data.selected_file], 1);
 }
@@ -315,6 +364,7 @@ void window_mp_lobby_show_started_game(void)
     mp_discovery_stop();
     input_box_stop(&address_input);
     building_menu_update(); // the buildings this city may build (interface state, rebuilt on loading)
+    mp_endgame_set_over_callback(window_mp_results_show);
     // separate cities: the view starts on the city of this player
     if (player_context_num_players() > 1) {
         int x, y, size;

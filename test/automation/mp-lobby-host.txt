@@ -8,7 +8,7 @@ wait 10
 # first map of the list, then Host
 click 180 170
 wait 2
-click 240 420
+click 240 454
 wait 10
 screenshot build/automation/mp-lobby-host-waiting.png
 mpwait 0

@@ -287,3 +287,15 @@
   sauvegardes et l'affichage.
 - Restent partagés, comme prévu : la circulation sur toutes les routes et la désirabilité.
 
+### D-029 — Règles de partie : invasions IA et fin au score (provisoire)
+- 2026-10-04 · **adoptée, provisoire** (M4.5, M4.6) · *à valider* par Alexandre (formule du score, durées)
+- L'hôte choisit les règles dans le salon ; elles voyagent avec le message d'accueil (protocole v3) et dans le
+  `.mpsav`. Les machines ne lisent jamais leurs réglages locaux pour simuler (D-016).
+- **Invasions IA** (oui par défaut) : armées ennemies et soulèvements prévus par la carte. Non : aucun. César
+  n'existe pas en multijoueur (D-026). Indigènes et animaux font partie de la carte et restent propres à la cité où
+  ils se trouvent.
+- **Fin de partie** : aucune (par défaut), ou au score après 5, 10 ou 20 ans de partie. Le score provisoire d'une cité
+  est culture + prospérité + paix + population / 100. À la fin, la simulation s'arrête au même tick sur toutes les
+  machines et un écran donne le classement ; en cas d'égalité, le joueur de plus petit numéro l'emporte. La
+  conquête viendra avec la guerre (M9).
+

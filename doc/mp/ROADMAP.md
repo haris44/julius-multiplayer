@@ -129,8 +129,12 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
   *Fait* : le salon (M5.4) démarre depuis une carte `.map` ou une sauvegarde. L'hôte compose une copie par joueur,
   ouvre la terre entre les cités, écrit le `.mpsav` et l'envoie : un seul calcul, donc aucun risque de divergence.
   Tests : `tools/mp-lobby-test.sh` (captures), `simtool openland` (route entre deux cités).
-- [ ] **M4.5** Entités neutres (indigènes, animaux, menaces IA) et leurs options.
-- [ ] **M4.6** Fin de partie multijoueur : sans fin, conquête, score.
+- [x] **M4.5** Entités neutres (indigènes, animaux, menaces IA) et leurs options.
+  *Fait* (D-029) : option « invasions IA » du salon. `simtool aiinvasions` : 16 et 10 ennemis avec, aucun sans.
+- [x] **M4.6** Fin de partie multijoueur : sans fin, conquête, score.
+  *Fait* (D-029) : sans fin ou au score (5, 10, 20 ans), `mp/endgame`, écran de classement. Tests :
+  `simtool endscore`, partie réseau du vrai jeu finie au bout d'un an (`--mp-score-years 1`). La conquête viendra
+  avec M9.
 - [ ] **M4.7** Autorisations d'exploiter par point d'arrivée (D-020) : la règle d'origine est évaluée par cité,
   le menu de construction suit. *Critère* : une cité sans autorisation de fer ne peut ni bâtir de mine ni forger
   sans route qui fournit du fer.

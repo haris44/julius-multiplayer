@@ -33,6 +33,7 @@
 #include "figuretype/crime.h"
 #include "game/file.h"
 #include "game/rules.h"
+#include "mp/endgame.h"
 #include "game/settings.h"
 #include "game/time.h"
 #include "game/tutorial.h"
@@ -232,4 +233,5 @@ void game_tick_run(void)
     }
     world_turn = 1;
     player_context_switch(previous_player); // the user interface shows the local city
+    mp_endgame_check();
 }

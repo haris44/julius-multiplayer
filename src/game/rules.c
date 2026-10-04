@@ -25,6 +25,14 @@ void game_rules_default_multiplayer_settings(game_rules_settings *settings)
     settings->gods_enabled = 1;
     settings->fix_immigration_bug = 0;
     settings->fix_100_year_ghosts = 0;
+    settings->ai_invasions = 1;
+    settings->end_condition = GAME_END_NONE;
+    settings->score_years = 10;
+}
+
+const game_rules_settings *game_rules_multiplayer_settings(void)
+{
+    return &data.multiplayer;
 }
 
 game_mode game_rules_mode(void)
@@ -59,6 +67,21 @@ int game_rules_fix_100_year_ghosts(void)
         data.multiplayer.fix_100_year_ghosts : config_get(CONFIG_GP_FIX_100_YEAR_GHOSTS);
 }
 
+int game_rules_ai_invasions(void)
+{
+    return data.mode == GAME_MODE_MULTIPLAYER ? data.multiplayer.ai_invasions : 1;
+}
+
+game_end_condition game_rules_end_condition(void)
+{
+    return data.mode == GAME_MODE_MULTIPLAYER ? data.multiplayer.end_condition : GAME_END_NONE;
+}
+
+int game_rules_score_years(void)
+{
+    return data.multiplayer.score_years;
+}
+
 void game_rules_save_state(buffer *buf)
 {
     buffer_write_i32(buf, data.mode);
@@ -66,6 +89,9 @@ void game_rules_save_state(buffer *buf)
     buffer_write_i32(buf, data.multiplayer.gods_enabled);
     buffer_write_i32(buf, data.multiplayer.fix_immigration_bug);
     buffer_write_i32(buf, data.multiplayer.fix_100_year_ghosts);
+    buffer_write_i32(buf, data.multiplayer.ai_invasions);
+    buffer_write_i32(buf, data.multiplayer.end_condition);
+    buffer_write_i32(buf, data.multiplayer.score_years);
 }
 
 void game_rules_load_state(buffer *buf)
@@ -75,4 +101,7 @@ void game_rules_load_state(buffer *buf)
     data.multiplayer.gods_enabled = buffer_read_i32(buf);
     data.multiplayer.fix_immigration_bug = buffer_read_i32(buf);
     data.multiplayer.fix_100_year_ghosts = buffer_read_i32(buf);
+    data.multiplayer.ai_invasions = buffer_read_i32(buf);
+    data.multiplayer.end_condition = buffer_read_i32(buf);
+    data.multiplayer.score_years = buffer_read_i32(buf);
 }

@@ -125,6 +125,21 @@ static translation_string all_strings[] = {
     {TR_MP_BACK, "Back"},
     {TR_MP_NO_MAP, "No map or saved game found"},
     {TR_MP_SEPARATE_CITIES, "Every player gets a copy of the starting city."},
+    {TR_MP_END, "End: "},
+    {TR_MP_END_NONE, "none"},
+    {TR_MP_END_SCORE, "by score after "},
+    {TR_MP_YEARS, " years"},
+    {TR_MP_INVASIONS, "AI invasions: "},
+    {TR_MP_YES, "yes"},
+    {TR_MP_NO, "no"},
+    {TR_MP_RESULTS_TITLE, "End of the game"},
+    {TR_MP_PLAYER, "Player "},
+    {TR_MP_SCORE, "score: "},
+    {TR_MP_WINNER, "Winner"},
+    {TR_MP_YOU, "(you)"},
+    {TR_MP_WATCH, "Watch the map"},
+    {TR_MP_MAIN_MENU, "Main menu"},
+    {TR_MP_SCORE_RULE, "Score: culture + prosperity + peace + population / 100"},
 };
 
 void translation_english(const translation_string **strings, int *num_strings)

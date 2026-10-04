@@ -17,11 +17,19 @@ typedef enum {
     GAME_MODE_MULTIPLAYER = 1
 } game_mode;
 
+typedef enum {
+    GAME_END_NONE = 0,   /**< Endless game */
+    GAME_END_SCORE = 1   /**< After a number of years, the player with the best score wins */
+} game_end_condition;
+
 typedef struct {
     int difficulty; /**< One of the set_difficulty values of game/settings.h */
     int gods_enabled;
     int fix_immigration_bug;
     int fix_100_year_ghosts;
+    int ai_invasions;      /**< Enemy armies and local uprisings of the map (multiplayer) */
+    int end_condition;     /**< game_end_condition */
+    int score_years;       /**< Length of a GAME_END_SCORE game */
 } game_rules_settings;
 
 /**
@@ -43,6 +51,11 @@ void game_rules_default_multiplayer_settings(game_rules_settings *settings);
 
 game_mode game_rules_mode(void);
 
+/**
+ * Settings of the multiplayer rules last set or loaded
+ */
+const game_rules_settings *game_rules_multiplayer_settings(void);
+
 int game_rules_is_multiplayer(void);
 
 int game_rules_difficulty(void);
@@ -52,6 +65,17 @@ int game_rules_gods_enabled(void);
 int game_rules_fix_immigration_bug(void);
 
 int game_rules_fix_100_year_ghosts(void);
+
+/**
+ * Whether the enemy armies and local uprisings of the map attack (always in a classic game)
+ */
+int game_rules_ai_invasions(void);
+
+/**
+ * How a multiplayer game ends (GAME_END_NONE in a classic game) and after how many years
+ */
+game_end_condition game_rules_end_condition(void);
+int game_rules_score_years(void);
 
 void game_rules_save_state(buffer *buf);
 

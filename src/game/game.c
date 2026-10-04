@@ -30,6 +30,7 @@
 #include "window/logo.h"
 #include "window/main_menu.h"
 #include "building/construction.h"
+#include "mp/endgame.h"
 #include "mp/lockstep.h"
 #include "game/player_context.h"
 
@@ -172,7 +173,8 @@ int game_reload_language(void)
 static void run_multiplayer(void)
 {
     mp_lockstep_poll();
-    int num_ticks = game_speed_get_elapsed_ticks_multiplayer();
+    // a finished game stops on every computer at the same tick (mp/endgame)
+    int num_ticks = mp_endgame_is_over() ? 0 : game_speed_get_elapsed_ticks_multiplayer();
     int preview_suspended = 0;
     for (int i = 0; i < num_ticks && mp_lockstep_can_run_tick(); i++) {
         if (!preview_suspended) {
@@ -186,6 +188,7 @@ static void run_multiplayer(void)
     if (preview_suspended) {
         building_construction_resume_preview();
     }
+    mp_endgame_notify();
 }
 
 void game_run(void)

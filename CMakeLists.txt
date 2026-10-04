@@ -577,6 +577,7 @@ set(WINDOW_FILES
     ${PROJECT_SOURCE_DIR}/src/window/logo.c
     ${PROJECT_SOURCE_DIR}/src/window/main_menu.c
     ${PROJECT_SOURCE_DIR}/src/window/mp_lobby.c
+    ${PROJECT_SOURCE_DIR}/src/window/mp_results.c
     ${PROJECT_SOURCE_DIR}/src/window/message_dialog.c
     ${PROJECT_SOURCE_DIR}/src/window/message_list.c
     ${PROJECT_SOURCE_DIR}/src/window/military_menu.c
@@ -610,6 +611,7 @@ set(MP_FILES
     ${PROJECT_SOURCE_DIR}/src/mp/compose.c
     ${PROJECT_SOURCE_DIR}/src/mp/audit.c
     ${PROJECT_SOURCE_DIR}/src/mp/discovery.c
+    ${PROJECT_SOURCE_DIR}/src/mp/endgame.c
     ${PROJECT_SOURCE_DIR}/src/mp/lockstep.c
     ${PROJECT_SOURCE_DIR}/src/mp/savegame.c
     ${PROJECT_SOURCE_DIR}/src/platform/net.c
