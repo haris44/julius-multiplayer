@@ -548,10 +548,10 @@ static void button_cycle_legion(int cycle_forward, int param2)
     int step = cycle_forward ? 1 : -1;
     const formation *m;
     for (int i = legion->formation_id + step; i != legion->formation_id; i += step) {
-        if (i == 0) {
-            i = MAX_FORMATIONS;
-        } else if (i > MAX_FORMATIONS) {
-            i = 1;
+        if (i < FORMATION_FIRST) {
+            i = FORMATION_END - 1;
+        } else if (i >= FORMATION_END) {
+            i = FORMATION_FIRST;
         }
         m = formation_get(i);
         if (m->in_use && !m->is_herd && m->is_legion) {

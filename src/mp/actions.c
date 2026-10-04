@@ -141,8 +141,8 @@ void mp_action_send_request(int request_id)
 // Legion that can receive orders; the user interface made the same checks before
 static formation *legion_of(int formation_id)
 {
-    if (formation_id <= 0 || formation_id >= MAX_FORMATIONS) {
-        return 0;
+    if (formation_id < FORMATION_FIRST || formation_id >= FORMATION_END) {
+        return 0; // only legions of the player who sent the command
     }
     formation *m = formation_get(formation_id);
     if (!m->in_use || !m->is_legion || m->in_distant_battle) {
@@ -281,7 +281,7 @@ void mp_actions_execute(const mp_command *command)
             }
             break;
         case MP_ACTION_LEGION_TOGGLE_EMPIRE_SERVICE:
-            if (arg1 > 0 && arg1 < MAX_FORMATIONS) {
+            if (arg1 >= FORMATION_FIRST && arg1 < FORMATION_END) {
                 formation_toggle_empire_service(arg1);
                 formation_calculate_figures();
             }

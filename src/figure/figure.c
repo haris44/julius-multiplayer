@@ -14,7 +14,7 @@
 
 static struct {
     int created_sequence;
-    figure figures[MAX_FIGURES];
+    figure figures[FIGURE_ARRAY_SIZE];
 } data = {0};
 
 figure *figure_get(int id)
@@ -25,7 +25,7 @@ figure *figure_get(int id)
 figure *figure_create(figure_type type, int x, int y, direction_type dir)
 {
     int id = 0;
-    for (int i = 1; i < MAX_FIGURES; i++) {
+    for (int i = FIGURE_FIRST; i < FIGURE_END; i++) {
         if (!data.figures[i].state) {
             id = i;
             break;
@@ -136,7 +136,7 @@ int figure_is_herd(const figure *f)
 
 void figure_init_scenario(void)
 {
-    for (int i = 0; i < MAX_FIGURES; i++) {
+    for (int i = 0; i < FIGURE_ARRAY_SIZE; i++) {
         memset(&data.figures[i], 0, sizeof(figure));
         data.figures[i].id = i;
     }
@@ -361,3 +361,9 @@ void figure_load_state(buffer *list, buffer *seq)
         data.figures[i].id = i;
     }
 }
+
+void figure_register_player_state(void)
+{
+    player_context_register(&data.created_sequence, sizeof(data.created_sequence), "figure_sequence");
+}
+

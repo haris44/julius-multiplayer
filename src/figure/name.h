@@ -34,4 +34,6 @@ void figure_name_save_state(buffer *buf);
  */
 void figure_name_load_state(buffer *buf);
 
+void figure_name_register_player_state(void);
+
 #endif // FIGURE_NAME_H

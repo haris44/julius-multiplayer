@@ -1,19 +1,24 @@
 #include "route.h"
 
+#include "game/player_context.h"
 #include "map/routing.h"
 #include "map/routing_path.h"
 
 #define MAX_PATH_LENGTH 500
+/** Paths per player: every player has its own slice of path ids, as large as the original limit */
 #define MAX_ROUTES 600
+#define ROUTE_ARRAY_SIZE (MAX_ROUTES * PLAYER_CONTEXT_MAX_PLAYERS)
+#define ROUTE_FIRST (player_context_current_player * MAX_ROUTES + 1)
+#define ROUTE_END ((player_context_current_player + 1) * MAX_ROUTES)
 
 static struct {
-    int figure_ids[MAX_ROUTES];
-    uint8_t direction_paths[MAX_ROUTES][MAX_PATH_LENGTH];
+    int figure_ids[ROUTE_ARRAY_SIZE];
+    uint8_t direction_paths[ROUTE_ARRAY_SIZE][MAX_PATH_LENGTH];
 } data;
 
 void figure_route_clear_all(void)
 {
-    for (int i = 0; i < MAX_ROUTES; i++) {
+    for (int i = 0; i < ROUTE_ARRAY_SIZE; i++) {
         data.figure_ids[i] = 0;
         for (int j = 0; j < MAX_PATH_LENGTH; j++) {
             data.direction_paths[i][j] = 0;
@@ -23,9 +28,9 @@ void figure_route_clear_all(void)
 
 void figure_route_clean(void)
 {
-    for (int i = 0; i < MAX_ROUTES; i++) {
+    for (int i = 0; i < ROUTE_ARRAY_SIZE; i++) {
         int figure_id = data.figure_ids[i];
-        if (figure_id > 0 && figure_id < MAX_FIGURES) {
+        if (figure_id > 0 && figure_id < FIGURE_ARRAY_SIZE) {
             const figure *f = figure_get(figure_id);
             if (f->state != FIGURE_STATE_ALIVE || f->routing_path_id != i) {
                 data.figure_ids[i] = 0;
@@ -36,7 +41,8 @@ void figure_route_clean(void)
 
 static int get_first_available(void)
 {
-    for (int i = 1; i < MAX_ROUTES; i++) {
+    // paths of the figures of the current player
+    for (int i = ROUTE_FIRST; i < ROUTE_END; i++) {
         if (data.figure_ids[i] == 0) {
             return i;
         }

@@ -13,7 +13,9 @@
 #include "city/victory.h"
 #include "core/log.h"
 #include "core/random.h"
+#include "figure/figure.h"
 #include "figure/formation.h"
+#include "figure/name.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -71,6 +73,8 @@ void player_context_init(void)
     random_register_player_state();
     building_list_register_player_state();
     building_register_player_state();
+    figure_register_player_state();
+    figure_name_register_player_state();
 }
 
 static int allocate_slots(void)

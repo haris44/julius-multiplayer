@@ -3,8 +3,18 @@
 
 #include "core/buffer.h"
 #include "figure/type.h"
+#include "game/player_context.h"
 
+/**
+ * Formations per player: every player has its own slice of ids, as large as the original limit.
+ * Inside a slice, legions use local ids 1 to 9 and other formations (enemies, herds) 10 and up.
+ */
 #define MAX_FORMATIONS 50
+#define FORMATION_ARRAY_SIZE (MAX_FORMATIONS * PLAYER_CONTEXT_MAX_PLAYERS)
+#define FORMATION_BASE (player_context_current_player * MAX_FORMATIONS)
+#define FORMATION_FIRST (FORMATION_BASE + 1)
+#define FORMATION_END (FORMATION_BASE + MAX_FORMATIONS)
+#define FORMATION_OWNER(id) ((id) / MAX_FORMATIONS)
 
 #define MAX_LEGIONS 6
 #define MAX_FORMATION_FIGURES 16

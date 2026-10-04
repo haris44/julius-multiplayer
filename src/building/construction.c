@@ -534,7 +534,7 @@ void building_construction_update(int x, int y, int grid_offset)
 
 static int has_nearby_enemy(int x_start, int y_start, int x_end, int y_end)
 {
-    for (int i = 1; i < MAX_FIGURES; i++) {
+    for (int i = 1; i < FIGURE_ALL_END; i++) {
         figure *f = figure_get(i);
         if (f->state != FIGURE_STATE_ALIVE || !figure_is_enemy(f)) {
             continue;

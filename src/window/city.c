@@ -162,11 +162,14 @@ static void cycle_legion(void)
     static int current_legion_id = 1;
     if (window_is(WINDOW_CITY) || window_is(WINDOW_CITY_MILITARY)) {
         int legion_id = current_legion_id;
+        if (legion_id < FORMATION_BASE || legion_id > FORMATION_BASE + MAX_LEGIONS) {
+            legion_id = FORMATION_BASE; // legion of another player: restart at the first one
+        }
         current_legion_id = 0;
-        for (int i = 1; i < MAX_FORMATIONS; i++) {
+        for (int i = FORMATION_FIRST; i < FORMATION_END; i++) {
             legion_id++;
-            if (legion_id > MAX_LEGIONS) {
-                legion_id = 1;
+            if (legion_id > FORMATION_BASE + MAX_LEGIONS) {
+                legion_id = FORMATION_FIRST;
             }
             const formation *m = formation_get(legion_id);
             if (m->in_use == 1 && !m->is_herd && m->is_legion) {

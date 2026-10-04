@@ -1,6 +1,7 @@
 #include "figure/name.h"
 
 #include "core/random.h"
+#include "game/player_context.h"
 
 static struct {
     int32_t citizen_male;
@@ -225,3 +226,9 @@ void figure_name_load_state(buffer *buf)
     data.warship = buffer_read_i32(buf);
     data.enemy_warship = buffer_read_i32(buf);
 }
+
+void figure_name_register_player_state(void)
+{
+    player_context_register(&data, sizeof(data), "figure_names");
+}
+

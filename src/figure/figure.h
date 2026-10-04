@@ -5,8 +5,17 @@
 #include "core/direction.h"
 #include "figure/action.h"
 #include "figure/type.h"
+#include "game/player_context.h"
 
+/** Figures per player: every player has its own slice of ids, as large as the original limit */
 #define MAX_FIGURES 1000
+#define FIGURE_ARRAY_SIZE (MAX_FIGURES * PLAYER_CONTEXT_MAX_PLAYERS)
+/** First and past-the-end ids of the figures of the current player (1 and 1000 in a classic game) */
+#define FIGURE_FIRST (player_context_current_player * MAX_FIGURES + 1)
+#define FIGURE_END ((player_context_current_player + 1) * MAX_FIGURES)
+/** Past-the-end id of the figures of all players: figures of different players meet and fight */
+#define FIGURE_ALL_END (player_context_player_count * MAX_FIGURES)
+#define FIGURE_OWNER(id) ((id) / MAX_FIGURES)
 
 typedef struct {
     int id;
@@ -143,5 +152,10 @@ void figure_init_scenario(void);
 void figure_save_state(buffer *list, buffer *seq);
 
 void figure_load_state(buffer *list, buffer *seq);
+
+/**
+ * Registers the per-player figure counters (game/player_context.h)
+ */
+void figure_register_player_state(void);
 
 #endif // FIGURE_FIGURE_H

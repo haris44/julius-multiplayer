@@ -1,10 +1,15 @@
 #include "storage.h"
 
+#include "game/player_context.h"
 #include "building/building.h"
 
 #include <string.h>
 
+/** Storages per player: every player has its own slice of storage ids, as large as the original limit */
 #define MAX_STORAGES 200
+#define STORAGE_ARRAY_SIZE (MAX_STORAGES * PLAYER_CONTEXT_MAX_PLAYERS)
+#define STORAGE_FIRST (player_context_current_player * MAX_STORAGES + 1)
+#define STORAGE_END ((player_context_current_player + 1) * MAX_STORAGES)
 
 struct data_storage {
     int in_use;
@@ -13,17 +18,17 @@ struct data_storage {
 };
 
 static struct {
-    struct data_storage storages[MAX_STORAGES];
+    struct data_storage storages[STORAGE_ARRAY_SIZE];
 } data;
 
 void building_storage_clear_all(void)
 {
-    memset(data.storages, 0, MAX_STORAGES * sizeof(struct data_storage));
+    memset(data.storages, 0, STORAGE_ARRAY_SIZE * sizeof(struct data_storage));
 }
 
 void building_storage_reset_building_ids(void)
 {
-    for (int i = 1; i < MAX_STORAGES; i++) {
+    for (int i = STORAGE_FIRST; i < STORAGE_END; i++) {
         data.storages[i].building_id = 0;
     }
 
@@ -47,7 +52,7 @@ void building_storage_reset_building_ids(void)
 
 int building_storage_create(void)
 {
-    for (int i = 1; i < MAX_STORAGES; i++) {
+    for (int i = STORAGE_FIRST; i < STORAGE_END; i++) {
         if (!data.storages[i].in_use) {
             memset(&data.storages[i], 0, sizeof(struct data_storage));
             data.storages[i].in_use = 1;
