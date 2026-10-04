@@ -5,6 +5,7 @@
 #include "city/warning.h"
 #include "core/random.h"
 #include "map/ring.h"
+#include "mp/lockstep.h"
 
 static struct {
     int paused;
@@ -37,6 +38,10 @@ void game_state_unpause(void)
 
 void game_state_toggle_paused(void)
 {
+    if (mp_lockstep_is_active()) {
+        mp_lockstep_toggle_pause(); // a network game pauses for everybody (mp/lockstep)
+        return;
+    }
     data.paused = data.paused ? 0 : 1;
 }
 

@@ -4,6 +4,8 @@
 # Without 'desync': every player must end with the same checksum and the host must verify every turn.
 # With 'desync': the last client changes its own state; host and client must detect it.
 # With 'cities': every player has its own copy of the city (separate cities) instead of a shared city.
+# With 'pause': the last client pauses the game at half time and resumes it; everyone must see the pause.
+# With 'leave': the last client leaves at half time; the others must finish the game together.
 SIMTOOL=$1; PORT=$2; PLAYERS=$3; SAVE=$4; TICKS=$5; MODE=$6
 CITIES=""
 for arg in "$@"; do [ "$arg" = "cities" ] && CITIES="cities"; done
@@ -20,6 +22,8 @@ while [ $i -lt "$PLAYERS" ]; do
     CLIENT_MODE=""
     [ "$MODE" = "desync" ] && CLIENT_MODE="expect-desync"
     [ "$MODE" = "desync" ] && [ $i -eq $((PLAYERS - 1)) ] && CLIENT_MODE="desync"
+    [ "$MODE" = "pause" ] && [ $i -eq $((PLAYERS - 1)) ] && CLIENT_MODE="pause"
+    [ "$MODE" = "leave" ] && [ $i -eq $((PLAYERS - 1)) ] && CLIENT_MODE="leave"
     "$SIMTOOL" mpnode join 127.0.0.1 "$PORT" "$TICKS" $CLIENT_MODE > "$DIR/client$i.log" 2>&1 &
     PIDS="$PIDS $!"
     i=$((i + 1))
@@ -33,6 +37,10 @@ for f in "$DIR"/*.log; do
     echo "== $(basename "$f")"
     cat "$f"
 done
+if [ "$MODE" = "pause" ]; then
+    SEEN=$(grep -h "pause seen: 1" "$DIR"/*.log | wc -l | tr -d ' ')
+    [ "$SEEN" = "$PLAYERS" ] || { echo "The pause was not seen by every player"; FAILED=1; }
+fi
 if [ "$MODE" != "desync" ]; then
     COUNT=$(grep -h "checksum" "$DIR"/*.log | awk '{print $4}' | sort -u | wc -l | tr -d ' ')
     [ "$COUNT" = "1" ] || { echo "Final checksums differ"; FAILED=1; }

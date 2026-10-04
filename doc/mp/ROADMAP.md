@@ -158,7 +158,12 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
   partie sur le réseau local (annonce UDP, `mp/discovery`) ou tapent l'adresse. Test : `tools/mp-lobby-test.sh`
   (deux instances du vrai jeu, tout à la souris). Reste pour M5.8 : choix des règles, « prêt », vérification des
   données du jeu.
-- [ ] **M5.5** Pause, vitesse, déconnexion ; sauvegarde coordonnée par l'hôte.
+- [x] **M5.5** Pause, vitesse, déconnexion ; sauvegarde coordonnée par l'hôte.
+  *Fait* : la pause est décidée par l'hôte, qui cesse d'accorder des tours, donc toutes les machines s'arrêtent au
+  même tick (un client la demande ; protocole v3). La vitesse est celle de l'hôte ; un client en retard rattrape.
+  Un joueur qui part n'arrête plus la partie : sa cité continue sans ordres. « Enregistrer » écrit un `.mpsav`, et
+  le salon reprend une partie depuis un `.mpsav` (nombre de joueurs fixé par le fichier). Tests : `mp_lan_pause`,
+  `mp_lan_player_leaves`, `mp_lan_resume_mpsav`.
 - [ ] **M5.6** Intégration continue multiplateforme (macOS arm64, Windows x64, Linux) qui compare les traces de
   rejeu. *Nécessite un dépôt GitHub : à demander à Alexandre.*
 - [ ] **M5.7** Première vraie partie en LAN avec Alexandre (Mac et PC) et retour d'expérience.

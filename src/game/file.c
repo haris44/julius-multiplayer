@@ -35,6 +35,7 @@
 #include "game/player_context.h"
 #include "mp/command.h"
 #include "mp/endgame.h"
+#include "mp/savegame.h"
 #include "game/file_io.h"
 #include "game/settings.h"
 #include "game/state.h"
@@ -376,6 +377,17 @@ int game_file_load_saved_game(const char *filename)
 
 int game_file_write_saved_game(const char *filename)
 {
+    if (mp_savegame_is_needed()) {
+        // several cities or a large map: the multiplayer format, next to the requested name
+        char mp_filename[FILE_NAME_MAX + 8];
+        snprintf(mp_filename, sizeof(mp_filename), "%s", filename);
+        char *dot = strrchr(mp_filename, '.');
+        if (dot) {
+            *dot = 0;
+        }
+        strcat(mp_filename, ".mpsav");
+        return mp_savegame_write(mp_filename);
+    }
     return game_file_io_write_saved_game(filename);
 }
 

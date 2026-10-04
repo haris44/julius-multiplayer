@@ -21,6 +21,11 @@ int mp_savegame_write(const char *filename);
 int mp_savegame_read(const char *filename);
 
 /**
+ * Number of cities of a multiplayer saved game, 0 if the file is not one
+ */
+int mp_savegame_num_players(const char *filename);
+
+/**
  * @return Whether the current game needs the multiplayer format (several cities or a large grid)
  */
 int mp_savegame_is_needed(void);

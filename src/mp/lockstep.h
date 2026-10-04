@@ -68,6 +68,38 @@ void mp_lockstep_after_tick(void);
 int mp_lockstep_is_active(void);
 
 /**
+ * Pauses or resumes the game for every player: the host decides, a client asks the host
+ */
+void mp_lockstep_toggle_pause(void);
+
+/**
+ * Asks for the game to be paused (1) or resumed (0); requests that change nothing are ignored
+ */
+void mp_lockstep_request_pause(int paused);
+
+int mp_lockstep_is_paused(void);
+
+/**
+ * The host sets the speed of the game; clients run as fast as the turns of the host come
+ */
+int mp_lockstep_is_host(void);
+
+/**
+ * Ticks this computer may run before it needs a new turn of the host
+ */
+int mp_lockstep_ticks_available(void);
+
+/**
+ * Absolute tick at which the network game started
+ */
+int mp_lockstep_base_tick(void);
+
+/**
+ * Tests: stops the game after this number of ticks (0: no limit), once it runs
+ */
+void mp_lockstep_set_tick_limit(int ticks_in_game);
+
+/**
  * Host: players connected so far, the host included
  */
 int mp_lockstep_connected_players(void);

@@ -34,7 +34,9 @@ enum {
     MSG_COMMAND = 3,
     MSG_TURN = 4,
     MSG_DONE = 5,
-    MSG_DESYNC = 6
+    MSG_DESYNC = 6,
+    MSG_PAUSE_REQUEST = 7, // client to host: pause or resume the game
+    MSG_PAUSED = 8         // host to clients: the game is paused (1) or running (0)
 };
 
 typedef struct {
@@ -59,6 +61,9 @@ static struct {
     char saved_game[512];
     int separate_cities;   // one city per player (a .mpsav is sent) instead of one shared city
     game_rules_settings rules; // host: rules of the game, sent to the clients
+    int paused;                // the host issues no turn while paused: every computer stops at the same tick
+    int dropped[MP_LOCKSTEP_MAX_PLAYERS]; // host: players who left a running game, no longer waited for
+    int tick_limit;            // tests: no tick runs from this absolute tick on (0: no limit)
     int base_tick;
     int last_known_turn;   // commands of all turns up to this one are known
     int done_turn[MP_LOCKSTEP_MAX_PLAYERS];
@@ -90,13 +95,38 @@ static int send_message(int socket, const uint8_t *payload, int size)
     return net_send(socket, header, 4) && net_send(socket, payload, size);
 }
 
+static void drop_player(int player);
+
 static void send_to_clients(const uint8_t *payload, int size)
 {
     for (int p = 1; p < data.num_players; p++) {
         if (data.sockets[p] != NET_INVALID_SOCKET && !send_message(data.sockets[p], payload, size)) {
-            data.state = MP_LOCKSTEP_DISCONNECTED;
-            set_status("Joueur déconnecté");
+            drop_player(p);
         }
+    }
+}
+
+// Host: a player left a running game; the others go on, and the city of that player lives on without orders
+static void drop_player(int player)
+{
+    net_close(data.sockets[player]);
+    data.sockets[player] = NET_INVALID_SOCKET;
+    if (data.dropped[player]) {
+        return;
+    }
+    data.dropped[player] = 1;
+    char text[128];
+    snprintf(text, sizeof(text), "Le joueur %d s'est déconnecté : sa cité continue sans lui", player + 1);
+    set_status(text);
+}
+
+static void set_paused(int paused)
+{
+    data.paused = paused;
+    set_status(paused ? "Partie en pause" : "Partie en cours");
+    if (data.is_host) {
+        uint8_t payload[2] = { MSG_PAUSED, (uint8_t) paused };
+        send_to_clients(payload, 2);
     }
 }
 
@@ -168,6 +198,9 @@ static void verify_turn(int turn)
     }
     uint64_t own = data.checksums[0][turn % HISTORY].checksum;
     for (int p = 1; p < data.num_players; p++) {
+        if (data.dropped[p]) {
+            continue;
+        }
         if (data.checksums[p][turn % HISTORY].turn != turn) {
             return;
         }
@@ -256,8 +289,18 @@ static int is_scenario(const char *filename)
     return length > 4 && (strcmp(filename + length - 4, ".map") == 0 || strcmp(filename + length - 4, ".MAP") == 0);
 }
 
+static int is_multiplayer_save(const char *filename)
+{
+    size_t length = strlen(filename);
+    return length > 6 && strcmp(filename + length - 6, ".mpsav") == 0;
+}
+
 static int host_compose_cities(void)
 {
+    if (is_multiplayer_save(data.saved_game)) {
+        // a multiplayer game goes on: its cities are already there
+        return mp_savegame_read(data.saved_game) && player_context_num_players() == data.num_players;
+    }
     // a map of the free game (.map) starts a new city; a saved game (.sav) goes on with its city
     int loaded;
     if (is_scenario(data.saved_game)) {
@@ -280,6 +323,9 @@ static int host_compose_cities(void)
 
 static void host_start_game(void)
 {
+    if (is_multiplayer_save(data.saved_game)) {
+        data.separate_cities = 1;
+    }
     if (data.separate_cities && !host_compose_cities()) {
         set_status("Impossible de composer les cités des joueurs");
         data.state = MP_LOCKSTEP_DISCONNECTED;
@@ -391,6 +437,11 @@ static void handle_message(int from, uint8_t *payload, int size)
                 data.done_turn[from] = turn;
             }
             verify_turn(turn);
+        } else if (type == MSG_PAUSE_REQUEST && data.state == MP_LOCKSTEP_RUNNING) {
+            int paused = buffer_read_u8(&buf);
+            if (paused != data.paused) {
+                set_paused(paused);
+            }
         }
     } else {
         if (type == MSG_WELCOME && data.state == MP_LOCKSTEP_WAITING_FOR_PLAYERS) {
@@ -407,6 +458,8 @@ static void handle_message(int from, uint8_t *payload, int size)
             data.last_known_turn = turn;
         } else if (type == MSG_DESYNC) {
             desync(buffer_read_i32(&buf));
+        } else if (type == MSG_PAUSED) {
+            set_paused(buffer_read_u8(&buf));
         }
     }
 }
@@ -457,8 +510,14 @@ static void receive_from(int player)
     memmove(rb->data, rb->data + offset, rb->size - offset);
     rb->size -= offset;
     if (closed && data.state != MP_LOCKSTEP_DESYNC) {
-        data.state = MP_LOCKSTEP_DISCONNECTED;
-        set_status(data.is_host ? "Un joueur s'est déconnecté" : "Connexion à l'hôte perdue");
+        if (data.is_host && data.state == MP_LOCKSTEP_RUNNING) {
+            drop_player(player);
+        } else if (data.is_host) {
+            set_status("Un joueur est parti avant le lancement"); // its place is free again
+        } else {
+            data.state = MP_LOCKSTEP_DISCONNECTED;
+            set_status("Connexion à l'hôte perdue");
+        }
     }
 }
 
@@ -581,12 +640,18 @@ int mp_lockstep_can_run_tick(void)
     if (data.state != MP_LOCKSTEP_RUNNING) {
         return 0;
     }
+    if (data.tick_limit && game_time_absolute_tick() >= data.tick_limit) {
+        return 0;
+    }
     int ticks = game_time_absolute_tick() - data.base_tick;
     int turn = ticks / TURN_TICKS;
     if (data.is_host && ticks % TURN_TICKS == 0 && turn + TURN_DELAY > data.last_known_turn) {
+        if (data.paused) {
+            return 0;
+        }
         // starting a turn: clients must not lag behind, then announce the commands of turn + delay
         for (int p = 1; p < data.num_players; p++) {
-            if (data.done_turn[p] < turn - TURN_DELAY) {
+            if (!data.dropped[p] && data.done_turn[p] < turn - TURN_DELAY) {
                 return 0;
             }
         }
@@ -626,6 +691,59 @@ void mp_lockstep_after_tick(void)
             set_status("Connexion à l'hôte perdue");
         }
     }
+}
+
+void mp_lockstep_set_tick_limit(int ticks_in_game)
+{
+    data.tick_limit = ticks_in_game > 0 ? data.base_tick + ticks_in_game : 0;
+}
+
+int mp_lockstep_base_tick(void)
+{
+    return data.base_tick;
+}
+
+int mp_lockstep_ticks_available(void)
+{
+    if (data.state != MP_LOCKSTEP_RUNNING) {
+        return 0;
+    }
+    int ticks = game_time_absolute_tick() - data.base_tick;
+    int available = (data.last_known_turn + 1) * TURN_TICKS - ticks;
+    return available > 0 ? available : 0;
+}
+
+void mp_lockstep_request_pause(int paused)
+{
+    if (data.state != MP_LOCKSTEP_RUNNING) {
+        return;
+    }
+    if (data.is_host) {
+        if (paused != data.paused) {
+            set_paused(paused);
+        }
+    } else {
+        uint8_t payload[2] = { MSG_PAUSE_REQUEST, (uint8_t) paused };
+        if (!send_message(data.sockets[0], payload, 2)) {
+            data.state = MP_LOCKSTEP_DISCONNECTED;
+            set_status("Connexion à l'hôte perdue");
+        }
+    }
+}
+
+void mp_lockstep_toggle_pause(void)
+{
+    mp_lockstep_request_pause(!data.paused);
+}
+
+int mp_lockstep_is_paused(void)
+{
+    return data.paused;
+}
+
+int mp_lockstep_is_host(void)
+{
+    return data.is_host;
 }
 
 int mp_lockstep_connected_players(void)

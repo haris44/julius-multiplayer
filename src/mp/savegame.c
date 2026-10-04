@@ -269,7 +269,7 @@ static int load_pieces(void)
     return 1;
 }
 
-int mp_savegame_read(const char *filename)
+static int read_whole_file(const char *filename)
 {
     FILE *fp = fopen(filename, "rb");
     if (!fp) {
@@ -281,6 +281,31 @@ int mp_savegame_read(const char *filename)
     reading.file = malloc(reading.file_size);
     int ok = reading.file && fread(reading.file, 1, reading.file_size, fp) == (size_t) reading.file_size;
     fclose(fp);
+    return ok;
+}
+
+int mp_savegame_num_players(const char *filename)
+{
+    int num_players = 0;
+    if (read_whole_file(filename) && parse()) {
+        const piece *header = find_piece("mp_header", 0, reading.num_pieces);
+        if (header && header->size >= 6 * 4) {
+            buffer buf;
+            buffer_init(&buf, (uint8_t *) header->data, header->size);
+            buffer_skip(&buf, 5 * 4);
+            num_players = buffer_read_i32(&buf);
+        }
+    }
+    free(reading.file);
+    free(reading.pieces);
+    reading.file = 0;
+    reading.pieces = 0;
+    return num_players;
+}
+
+int mp_savegame_read(const char *filename)
+{
+    int ok = read_whole_file(filename);
     ok = ok && parse() && load_pieces();
     free(reading.file);
     free(reading.pieces);

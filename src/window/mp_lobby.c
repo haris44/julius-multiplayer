@@ -21,6 +21,7 @@
 #include "mp/discovery.h"
 #include "mp/endgame.h"
 #include "mp/lockstep.h"
+#include "mp/savegame.h"
 #include "mp/session.h"
 #include "platform/net.h"
 #include "translation/translation.h"
@@ -130,6 +131,7 @@ static void init(void)
     data.num_files = 0;
     add_files("map");
     add_files("sav");
+    add_files("mpsav");
     if (data.selected_file >= data.num_files) {
         data.selected_file = 0;
     }
@@ -286,11 +288,19 @@ static void button_select_file(int index, int param2)
 {
     if (scrollbar.scroll_position + index < data.num_files) {
         data.selected_file = scrollbar.scroll_position + index;
+        // a multiplayer game goes on with as many players as it has cities
+        int cities = mp_savegame_num_players(data.files[data.selected_file]);
+        if (cities > 0) {
+            data.num_players = cities;
+        }
     }
 }
 
 static void button_players(int change, int param2)
 {
+    if (data.num_files && mp_savegame_num_players(data.files[data.selected_file]) > 0) {
+        return; // fixed by the saved game
+    }
     data.num_players += change;
     if (data.num_players < 1) {
         data.num_players = 1;

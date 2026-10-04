@@ -99,6 +99,8 @@ static int usage(void)
     printf("                                         (DX, DY), runs TICKS exactly as on its original grid\n");
     printf("  simtool twins SAVE TICKS               the city with a twin city below it on a large map runs\n");
     printf("                                         exactly as alone, and the twin gets the same statistics\n");
+    printf("  simtool mpsave SAVE CITIES TICKS OUT   writes OUT, a multiplayer saved game of CITIES copies of\n");
+    printf("                                         SAVE after TICKS ticks\n");
     printf("  simtool intruders SAVE TICKS           the walkers of a twin city moved into the first city act on\n");
     printf("                                         none of its buildings\n");
     printf("  simtool neighbours SAVE TICKS          two copies of the city joined by a road: walkers cross,\n");
@@ -510,6 +512,12 @@ static int command_mpnode(int argc, char **argv)
     }
     int ticks = atoi(is_host ? argv[6] : argv[5]);
     int cheat = is_join && argc >= 7 && strcmp(argv[6], "desync") == 0;
+    // 'pause': this client pauses the game at half time and resumes it a second later;
+    // 'leave': this client leaves the game at half time
+    int pauser = is_join && argc >= 7 && strcmp(argv[6], "pause") == 0;
+    int leaver = is_join && argc >= 7 && strcmp(argv[6], "leave") == 0;
+    time_t pause_start = 0;
+    int paused_seen = 0, ticks_while_paused = 0, tick_at_pause = -1;
     int ok = is_host ? mp_lockstep_host(atoi(argv[3]), atoi(argv[4]), argv[5], cities)
                      : mp_lockstep_join(argv[3], atoi(argv[4]));
     if (!ok) {
@@ -527,22 +535,43 @@ static int command_mpnode(int argc, char **argv)
             break;
         }
         if (state == MP_LOCKSTEP_RUNNING && start_tick < 0) {
-            start_tick = game_time_absolute_tick();
+            start_tick = mp_lockstep_base_tick();
+            mp_lockstep_set_tick_limit(ticks);
             start_tax = city_finance_tax_percentage();
         }
         int before = game_time_absolute_tick();
         if (start_tick >= 0) {
             int tick_in_game = before - start_tick;
-            if (tick_in_game >= ticks) {
+            if (tick_in_game >= ticks || (leaver && tick_in_game >= ticks / 2)) {
                 break;
             }
-            if (tick_in_game != last_played) {
-                mpnode_play(tick_in_game);
-                if (cheat && tick_in_game == ticks / 2) {
+            if (mp_lockstep_is_paused()) {
+                // turns issued before the pause still run, nothing after them
+                if (tick_at_pause < 0) {
+                    tick_at_pause = tick_in_game;
+                }
+                paused_seen = 1;
+                if (tick_in_game - tick_at_pause > ticks_while_paused) {
+                    ticks_while_paused = tick_in_game - tick_at_pause;
+                }
+                if (pauser && time(0) - pause_start >= 1) {
+                    mp_lockstep_request_pause(0);
+                }
+            } else {
+                tick_at_pause = -1;
+            }
+            if (pauser && !pause_start && tick_in_game >= ticks / 2) {
+                pause_start = time(0);
+                mp_lockstep_request_pause(1);
+            }
+            // every tick passed since the last frame: a client catching up runs several in a frame
+            for (int t = last_played + 1; t <= tick_in_game; t++) {
+                mpnode_play(t);
+                if (cheat && t == ticks / 2) {
                     city_finance_change_tax_percentage(3); // changed on this computer only
                 }
-                last_played = tick_in_game;
             }
+            last_played = tick_in_game;
         }
         clock_millis += 2;
         time_set_millis(clock_millis);
@@ -575,8 +604,14 @@ static int command_mpnode(int argc, char **argv)
         mp_lockstep_stop();
         return detected ? 0 : 1;
     }
+    if (leaver) {
+        printf("left the game at tick %d\n", game_time_absolute_tick() - start_tick);
+        mp_lockstep_stop();
+        return 0;
+    }
     printf("tick %d checksum %016" PRIx64 "\n", start_tick >= 0 ? game_time_absolute_tick() - start_tick : -1,
         mp_checksum_state());
+    printf("pause seen: %d, ticks run while paused: %d\n", paused_seen, ticks_while_paused);
     int result = mp_lockstep_get_state() == MP_LOCKSTEP_RUNNING && start_tick >= 0 &&
         game_time_absolute_tick() - start_tick == ticks;
     if (player_context_num_players() > 1) {
@@ -598,6 +633,11 @@ static int command_mpnode(int argc, char **argv)
     }
     if (is_host) {
         result = result && mp_lockstep_last_verified_turn() == (ticks / 4) - 1;
+    }
+    // a pause stops every computer within the turns already issued (2 turns of 4 ticks)
+    if (ticks_while_paused > 8) {
+        printf("WRONG: %d ticks ran during the pause\n", ticks_while_paused);
+        result = 0;
     }
     mp_lockstep_stop();
     return result ? 0 : 1;
@@ -1189,6 +1229,23 @@ static int command_permissions(const char *file, int num_cities)
     return failures ? 1 : 0;
 }
 
+// A multiplayer saved game of CITIES copies of a city, after TICKS ticks (tests and manual games)
+static int command_mpsave(const char *file, int num_cities, int ticks, const char *output)
+{
+    int width, height;
+    if (!setup_twin_map(file, num_cities, &width, &height)) {
+        return 2;
+    }
+    mp_compose_open_land_between_cities(TWIN_GAP);
+    mp_permissions_share_out();
+    run_trace(ticks, ticks, 0, 0);
+    int ok = mp_savegame_write(output);
+    printf("%s: %d cities after %d ticks%s\n", output, num_cities, ticks, ok ? "" : ", NOT written");
+    player_context_switch(0);
+    player_context_set_num_players(1);
+    return ok ? 0 : 1;
+}
+
 // Diagnosis: one figure of city 0, tick by tick, on a map of CITIES composed cities
 static int command_figtrace(const char *file, int num_cities, int id, int from, int to)
 {
@@ -1575,6 +1632,8 @@ int main(int argc, char **argv)
         result = command_twinfigures(file, ticks);
     } else if (strcmp(command, "twinstats") == 0 && argc > 3) {
         result = command_twinstats(file, ticks);
+    } else if (strcmp(command, "mpsave") == 0 && argc > 5) {
+        result = command_mpsave(file, atoi(argv[3]), atoi(argv[4]), argv[5]);
     } else if (strcmp(command, "permissions") == 0 && argc > 3) {
         result = command_permissions(file, atoi(argv[3]));
     } else if (strcmp(command, "endscore") == 0 && argc > 3) {

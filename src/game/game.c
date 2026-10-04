@@ -170,11 +170,22 @@ int game_reload_language(void)
     return reload_language(0, 1);
 }
 
+#define MP_CLIENT_TICKS_PER_FRAME 20
+#define MP_CLIENT_LAG_TICKS 8
+
 static void run_multiplayer(void)
 {
     mp_lockstep_poll();
     // a finished game stops on every computer at the same tick (mp/endgame)
-    int num_ticks = mp_endgame_is_over() ? 0 : game_speed_get_elapsed_ticks_multiplayer();
+    int num_ticks = 0;
+    if (!mp_endgame_is_over()) {
+        num_ticks = game_speed_get_elapsed_ticks_multiplayer();
+        // the host sets the pace: a client that lags behind its turns catches up
+        int available = mp_lockstep_ticks_available();
+        if (!mp_lockstep_is_host() && available > MP_CLIENT_LAG_TICKS) {
+            num_ticks = available < MP_CLIENT_TICKS_PER_FRAME ? available : MP_CLIENT_TICKS_PER_FRAME;
+        }
+    }
     int preview_suspended = 0;
     for (int i = 0; i < num_ticks && mp_lockstep_can_run_tick(); i++) {
         if (!preview_suspended) {
