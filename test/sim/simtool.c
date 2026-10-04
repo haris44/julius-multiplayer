@@ -32,6 +32,14 @@
 #include "map/terrain.h"
 #include "map/grid.h"
 #include "figure/route.h"
+#include "mp/audit.h"
+#include "map/road_network.h"
+#include "map/routing.h"
+#include "map/routing_terrain.h"
+#include "building/construction_routed.h"
+#include "game/undo.h"
+#include "map/figure.h"
+#include "map/water_supply.h"
 #include "mp/checksum.h"
 #include "game/time.h"
 #include "game/player_context.h"
@@ -88,6 +96,10 @@ static int usage(void)
     printf("                                         (DX, DY), runs TICKS exactly as on its original grid\n");
     printf("  simtool twins SAVE TICKS               the city with a twin city below it on a large map runs\n");
     printf("                                         exactly as alone, and the twin gets the same statistics\n");
+    printf("  simtool intruders SAVE TICKS           the walkers of a twin city moved into the first city act on\n");
+    printf("                                         none of its buildings\n");
+    printf("  simtool neighbours SAVE TICKS          two copies of the city joined by a road: walkers cross,\n");
+    printf("                                         but no city acts on the buildings of the other\n");
     printf("  simtool caesarfree SAVE TICKS          Caesar (requests, anger, salary...) acts in a classic game\n");
     printf("                                         and not in a multiplayer game\n");
     printf("  simtool mpresume SAVE TICKS MORE       twin cities: saving after TICKS (.mpsav), then loading it and\n");
@@ -873,6 +885,158 @@ static int find_twin_building_difference(const player_clone *c)
     return 0;
 }
 
+// Connected neighbours (M4.3): two copies of a city side by side on land, joined by a road built by the
+// second player. Walkers cross over, but no city acts on the buildings of the other (mp/audit)
+static int find_edge_road(int x_min, int x_max, int y_min, int y_max, int rightmost, int *x_road, int *y_road)
+{
+    int found = 0;
+    for (int y = y_min; y <= y_max; y++) {
+        for (int x = x_min; x <= x_max; x++) {
+            int offset = map_grid_offset(x, y);
+            if (map_terrain_is(offset, TERRAIN_ROAD) && !map_terrain_is(offset, TERRAIN_BUILDING) &&
+                (!found || (rightmost ? x > *x_road : x < *x_road))) {
+                *x_road = x;
+                *y_road = y;
+                found = 1;
+            }
+        }
+    }
+    return found;
+}
+
+#define NEIGHBOUR_GAP 4
+#define NEIGHBOUR_ROADS 6
+
+// a road from a road of the first city to the nearest reachable road of the second, built by the second player
+static int connect_cities(int width, int height, int shift, int attempt)
+{
+    int xa, ya;
+    if (!find_edge_road(TWIN_GAP, TWIN_GAP + width - 1 - attempt, TWIN_GAP, TWIN_GAP + height - 1, 1, &xa, &ya) ||
+        !map_routing_calculate_distances_for_building(ROUTED_BUILDING_ROAD, xa, ya)) {
+        return 0;
+    }
+    int x1 = 0, y1 = 0, best = 0;
+    for (int y = TWIN_GAP; y < TWIN_GAP + height; y++) {
+        for (int x = TWIN_GAP + shift; x < TWIN_GAP + shift + width; x++) {
+            int offset = map_grid_offset(x, y);
+            int distance = map_routing_distance(offset);
+            if (map_terrain_is(offset, TERRAIN_ROAD) && distance > 1 && (!best || distance < best)) {
+                best = distance;
+                x1 = x;
+                y1 = y;
+            }
+        }
+    }
+    if (!best) {
+        return 0;
+    }
+    mp_command command = { .type = MP_COMMAND_BUILD, .player_id = 1, .args = { BUILDING_ROAD, 0, xa, ya, x1, y1, 0, 0 } };
+    mp_command_execute(&command);
+    map_road_network_update(); // done by the next daily update in a game
+    return map_road_network_get(map_grid_offset(xa, ya)) == map_road_network_get(map_grid_offset(x1, y1));
+}
+
+static int command_neighbours(const char *file, int ticks)
+{
+    if (!load(file)) {
+        return 2;
+    }
+    int width = map_data.width;
+    int height = map_data.height;
+    int shift = width + NEIGHBOUR_GAP;
+    if (!mp_compose_relocate(GRID_MAX_SIZE, TWIN_GAP, TWIN_GAP) ||
+        !mp_compose_extend_map(TWIN_GAP, TWIN_GAP, shift + TWIN_GAP, TWIN_GAP) ||
+        !mp_compose_add_twin(TWIN_GAP, TWIN_GAP, width, height, shift, 0)) {
+        printf("Unable to compose the neighbours\n");
+        return 2;
+    }
+    // land between the two cities
+    for (int y = TWIN_GAP; y < TWIN_GAP + height; y++) {
+        for (int x = TWIN_GAP + width; x < TWIN_GAP + shift; x++) {
+            map_terrain_set(map_grid_offset(x, y), 0);
+        }
+    }
+    map_routing_update_all();
+    player_context_switch(1);
+    city_finance_process_donation(100000);
+    player_context_switch(0);
+    int roads = 0;
+    for (int attempt = 0; attempt < 120 && roads < NEIGHBOUR_ROADS; attempt += 3) {
+        roads += connect_cities(width, height, shift, attempt);
+    }
+    printf("roads joining the cities: %d\n", roads);
+    if (!roads) {
+        printf("No road of the second city can be reached from the first one\n");
+        return 2;
+    }
+
+    mp_audit_reset();
+    setting_reset_speeds(500, setting_scroll_speed());
+    int crossings[2] = { 0, 0 };
+    for (int tick = 0; tick < ticks; tick++) {
+        run_one_tick();
+        for (int i = 1; i < 2 * MAX_FIGURES; i++) {
+            figure *f = figure_get(i);
+            if (f->state == FIGURE_STATE_ALIVE && !figure_is_herd(f)) {
+                int owner = i / MAX_FIGURES;
+                int in_other_city = owner == 0 ? f->x >= TWIN_GAP + shift : f->x < TWIN_GAP + width;
+                crossings[owner] += in_other_city;
+            }
+        }
+    }
+    printf("walkers in the other city (figure ticks): %d from the first city, %d from the second\n",
+        crossings[0], crossings[1]);
+    printf("effects on the buildings of the other player: %d%s%s\n", mp_audit_violations(),
+        mp_audit_violations() ? ", first: " : "", mp_audit_violations() ? mp_audit_first_kind() : "");
+    if (!crossings[0] && !crossings[1]) {
+        printf("FAILED: nobody crossed, the test proves nothing\n");
+        return 1;
+    }
+    return mp_audit_violations() ? 1 : 0;
+}
+
+// Intruders (M4.3): the walkers of the twin city are moved to the same place in the first city, an exact copy
+// of theirs: they walk its roads like their twins, but no effect of theirs may reach its buildings
+static int command_intruders(const char *file, int ticks)
+{
+    int width, height;
+    if (!setup_twin_map(file, 2, &width, &height)) {
+        return 2;
+    }
+    int shift = (width > height ? width : height) + TWIN_GAP;
+    setting_reset_speeds(500, setting_scroll_speed());
+    run_trace(50, 50, 0, 0);
+    int moved = 0;
+    for (int i = MAX_FIGURES + 1; i < 2 * MAX_FIGURES; i++) {
+        figure *f = figure_get(i);
+        if (f->state != FIGURE_STATE_ALIVE || figure_is_herd(f) || !f->grid_offset) {
+            continue;
+        }
+        map_figure_delete(f);
+        f->x -= shift;
+        f->y -= shift;
+        f->previous_tile_x -= shift;
+        f->previous_tile_y -= shift;
+        f->cross_country_x -= 15 * shift;
+        f->cross_country_y -= 15 * shift;
+        f->grid_offset = map_grid_offset(f->x, f->y);
+        map_figure_add(f);
+        moved++;
+    }
+    mp_audit_reset();
+    run_trace(ticks, ticks, 0, 0);
+    printf("walkers moved into the first city: %d\n", moved);
+    printf("effects on the buildings of the other player: %d%s%s\n", mp_audit_violations(),
+        mp_audit_violations() ? ", first: " : "", mp_audit_violations() ? mp_audit_first_kind() : "");
+    player_context_switch(0);
+    player_context_set_num_players(1);
+    if (!moved) {
+        printf("FAILED: no walker to move, the test proves nothing\n");
+        return 1;
+    }
+    return mp_audit_violations() ? 1 : 0;
+}
+
 // Diagnosis: one figure of city 0, tick by tick, on a map of CITIES composed cities
 static int command_figtrace(const char *file, int num_cities, int id, int from, int to)
 {
@@ -953,6 +1117,21 @@ static void record_piece(const char *name, uint64_t checksum, void *userdata)
     }
 }
 
+static figure continued_figures[2 * MAX_FIGURES];
+
+static void print_ranges(const char *label)
+{
+    for (int p = 0; p < player_context_num_players(); p++) {
+        player_context_switch(p);
+        int count = 0;
+        for (int i = 0; i < GRID_SIZE * GRID_SIZE; i++) {
+            count += map_water_supply_has_range(i, TERRAIN_RESERVOIR_RANGE) * 1000 + map_water_supply_has_range(i, TERRAIN_FOUNTAIN_RANGE);
+        }
+        printf("  %s: city %d ranges %d\n", label, p, count);
+    }
+    player_context_switch(0);
+}
+
 static int command_mpresume(const char *file, int ticks, int more)
 {
     int width, height;
@@ -962,6 +1141,9 @@ static int command_mpresume(const char *file, int ticks, int more)
         return 2;
     }
     run_trace(ticks, ticks, 0, 0);
+    if (getenv("MPRESUME_RANGES")) {
+        print_ranges("saved");
+    }
     // one file per tested save: ctest runs the tests in parallel
     char mpsav[300];
     snprintf(mpsav, sizeof(mpsav), "mpresume-%s-%d.mpsav", file, num_cities);
@@ -989,6 +1171,9 @@ static int command_mpresume(const char *file, int ticks, int more)
     if (diff_at > 0 && diff_at < more) {
         run_trace(diff_at, diff_at, 0, 0);
         mp_checksum_state_pieces(record_piece, &continued_pieces);
+        for (int i = 0; i < 2 * MAX_FIGURES; i++) {
+            continued_figures[i] = *figure_get(i);
+        }
         more -= diff_at;
     }
     int n = run_trace(more, 1, continued, 0);
@@ -996,6 +1181,9 @@ static int command_mpresume(const char *file, int ticks, int more)
     if (!mp_savegame_read(mpsav)) {
         printf("Unable to read the multiplayer saved game\n");
         return 2;
+    }
+    if (getenv("MPRESUME_RANGES")) {
+        print_ranges("loaded");
     }
     player_context_flush();
     int restored = 1;
@@ -1017,6 +1205,14 @@ static int command_mpresume(const char *file, int ticks, int more)
     if (continued_pieces.count) {
         run_trace(diff_at, diff_at, 0, 0);
         mp_checksum_state_pieces(record_piece, &resumed_pieces);
+        for (int i = 0; i < 2 * MAX_FIGURES; i++) {
+            figure *f = figure_get(i);
+            if (memcmp(f, &continued_figures[i], sizeof(figure)) != 0) {
+                printf("  figure %d: continued type %d action %d xy %d,%d / resumed type %d action %d xy %d,%d\n", i,
+                    continued_figures[i].type, continued_figures[i].action_state, continued_figures[i].x,
+                    continued_figures[i].y, f->type, f->action_state, f->x, f->y);
+            }
+        }
         for (int i = 0; i < continued_pieces.count && i < resumed_pieces.count; i++) {
             if (continued_pieces.checksums[i] != resumed_pieces.checksums[i]) {
                 printf("  piece %d differs %d ticks after loading: %s\n", i, diff_at, continued_pieces.names[i]);
@@ -1227,6 +1423,10 @@ int main(int argc, char **argv)
         result = command_twinfigures(file, ticks);
     } else if (strcmp(command, "twinstats") == 0 && argc > 3) {
         result = command_twinstats(file, ticks);
+    } else if (strcmp(command, "intruders") == 0 && argc > 3) {
+        result = command_intruders(file, ticks);
+    } else if (strcmp(command, "neighbours") == 0 && argc > 3) {
+        result = command_neighbours(file, ticks);
     } else if (strcmp(command, "figtrace") == 0 && argc > 6) {
         result = command_figtrace(file, atoi(argv[3]), atoi(argv[4]), atoi(argv[5]), atoi(argv[6]));
     } else if (strcmp(command, "caesarfree") == 0 && argc > 3) {

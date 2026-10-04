@@ -26,6 +26,15 @@ void map_owner_set(int grid_offset, int player_id);
 
 void map_owner_clear_all(void);
 
+/**
+ * Player whose construction commands run (mp_command_execute): only they claim free tiles, never the
+ * updates of the whole map that run in the turn of a city
+ * @param player_id Player, or MAP_OWNER_NONE once the command is done
+ */
+void map_owner_set_builder(int player_id);
+
+int map_owner_builder(void);
+
 void map_owner_save_state(buffer *buf);
 
 void map_owner_load_state(buffer *buf);

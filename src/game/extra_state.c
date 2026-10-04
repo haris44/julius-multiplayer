@@ -10,8 +10,14 @@
 #include "map/image_context.h"
 #include "map/point.h"
 #include "map/soldier_strength.h"
+#include "map/water_supply.h"
+
+#include "core/log.h"
 
 #include <stdlib.h>
+
+// grids of the extra state (soldier strength, water ranges), with room to spare
+#define EXTRA_STATE_GRIDS 4
 
 void game_extra_state_reset(void)
 {
@@ -24,6 +30,7 @@ void game_extra_state_reset(void)
     building_list_reset_extra_state();
     city_labor_reset_extra_state();
     building_granary_reset_extra_state();
+    map_water_supply_reset_extra_state();
 }
 
 void game_extra_state_save(buffer *buf)
@@ -37,6 +44,7 @@ void game_extra_state_save(buffer *buf)
     building_list_save_extra_state(buf);
     city_labor_save_extra_state(buf);
     building_granary_save_extra_state(buf);
+    map_water_supply_save_extra_state(buf);
 }
 
 void game_extra_state_load(buffer *buf)
@@ -50,6 +58,7 @@ void game_extra_state_load(buffer *buf)
     building_list_load_extra_state(buf);
     city_labor_load_extra_state(buf);
     building_granary_load_extra_state(buf);
+    map_water_supply_load_extra_state(buf);
 }
 
 int game_extra_state_size(void)
@@ -57,7 +66,7 @@ int game_extra_state_size(void)
     // depends on the size of the grid (soldier strength): measured on every call
     static void *data;
     static int capacity;
-    int needed = 64 * 1024 + GRID_MAX_TILES;
+    int needed = 64 * 1024 + EXTRA_STATE_GRIDS * GRID_MAX_TILES;
     if (capacity < needed) {
         free(data);
         data = malloc(needed);
@@ -69,5 +78,8 @@ int game_extra_state_size(void)
     buffer buf;
     buffer_init(&buf, data, capacity);
     game_extra_state_save(&buf);
+    if (buf.overflow) {
+        log_error("Extra state larger than its buffer: raise EXTRA_STATE_GRIDS", 0, 0);
+    }
     return buf.index;
 }

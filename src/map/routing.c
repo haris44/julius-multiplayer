@@ -1,9 +1,11 @@
 #include "routing.h"
 
 #include "building/building.h"
+#include "game/player_context.h"
 #include "map/building.h"
 #include "map/figure.h"
 #include "map/grid.h"
+#include "map/owner.h"
 #include "map/road_aqueduct.h"
 #include "map/routing_data.h"
 #include "map/terrain.h"
@@ -347,7 +349,10 @@ int map_routing_calculate_distances_for_building(routed_building_type type, int 
 static int callback_delete_wall_aqueduct(int next_offset, int dist)
 {
     if (terrain_land_citizen.items[next_offset] < CITIZEN_0_ROAD) {
-        if (map_terrain_is(next_offset, TERRAIN_AQUEDUCT | TERRAIN_WALL)) {
+        // the road to Rome only clears the walls and aqueducts of its own city (D-018)
+        int owner = map_owner_get_claimed(next_offset);
+        if (map_terrain_is(next_offset, TERRAIN_AQUEDUCT | TERRAIN_WALL) &&
+            (owner == MAP_OWNER_NONE || owner == player_context_current_player)) {
             map_terrain_remove(next_offset, TERRAIN_CLEARABLE);
             return UNTIL_STOP;
         }

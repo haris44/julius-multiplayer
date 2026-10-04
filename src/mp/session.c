@@ -3,6 +3,7 @@
 #include "building/construction.h"
 #include "game/player_context.h"
 #include "game/time.h"
+#include "map/owner.h"
 #include "mp/actions.h"
 
 #include <stddef.h>
@@ -88,7 +89,9 @@ void mp_command_execute(const mp_command *command)
     player_context_switch(player_id);
     switch (command->type) {
         case MP_COMMAND_BUILD:
+            map_owner_set_builder(player_id); // what is built belongs to the player (map/owner.h)
             execute_build(command);
+            map_owner_set_builder(MAP_OWNER_NONE);
             break;
         case MP_COMMAND_CITY_ACTION:
             mp_actions_execute(command);

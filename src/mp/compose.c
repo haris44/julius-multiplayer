@@ -29,6 +29,7 @@
 #include "map/property.h"
 #include "map/random.h"
 #include "map/road_network.h"
+#include "map/water_supply.h"
 #include "map/routing_terrain.h"
 #include "map/soldier_strength.h"
 #include "map/sprite.h"
@@ -265,7 +266,10 @@ int mp_compose_add_twin(int x_min, int y_min, int width, int height, int dx, int
     map_point_clone_fixup(&c);
     empire_city_clone_fixup(&c);
     building_granary_clone_fixup(&c);
+    // water ranges of each city: those of the terrain on its own area
+    map_water_supply_init_ranges_from_terrain(x_min + dx - 1, y_min + dy - 1, x_min + dx + width, y_min + dy + height);
     player_context_switch(0);
+    map_water_supply_init_ranges_from_terrain(x_min - 1, y_min - 1, x_min + width, y_min + height);
 
     // the road networks of the whole map are numbered again: the buildings keep the numbers of their
     // network, the copy those of its own networks

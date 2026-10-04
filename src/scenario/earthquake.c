@@ -8,6 +8,7 @@
 #include "figuretype/missile.h"
 #include "game/time.h"
 #include "map/building.h"
+#include "map/owner.h"
 #include "map/grid.h"
 #include "map/routing_terrain.h"
 #include "map/terrain.h"
@@ -16,6 +17,7 @@
 #include "sound/effect.h"
 #include "game/player_context.h"
 #include "game/player_clone.h"
+#include "mp/audit.h"
 
 static struct {
     int game_year;
@@ -62,18 +64,26 @@ void scenario_earthquake_init(void)
 
 static int can_advance_earthquake_to_tile(int x, int y)
 {
-    if (map_terrain_is(map_grid_offset(x, y), TERRAIN_ELEVATION | TERRAIN_ROCK | TERRAIN_WATER)) {
+    int grid_offset = map_grid_offset(x, y);
+    if (map_terrain_is(grid_offset, TERRAIN_ELEVATION | TERRAIN_ROCK | TERRAIN_WATER)) {
         return 0;
-    } else {
-        return 1;
     }
+    // the earthquake of a city stops at the buildings and infrastructure of the other players
+    int building_id = map_building_at(grid_offset);
+    int owner = map_owner_get_claimed(grid_offset);
+    if ((building_id && !BUILDING_IS_OWN(building_id)) ||
+        (owner != MAP_OWNER_NONE && owner != player_context_current_player)) {
+        return 0;
+    }
+    return 1;
 }
 
 static void advance_earthquake_to_tile(int x, int y)
 {
     int grid_offset = map_grid_offset(x, y);
     int building_id = map_building_at(grid_offset);
-    if (building_id) {
+    if (building_id && BUILDING_IS_OWN(building_id)) {
+        mp_audit_effect(building_id, "earthquake");
         building_destroy_by_fire(building_get(building_id));
         sound_effect_play(SOUND_EFFECT_EXPLOSION);
         int ruin_id = map_building_at(grid_offset);

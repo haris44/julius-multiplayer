@@ -6,6 +6,7 @@
 #include "game/resource.h"
 #include "map/building.h"
 #include "map/grid.h"
+#include "mp/audit.h"
 
 #define MAX_COVERAGE 96
 
@@ -18,8 +19,9 @@ static int provide_culture(int x, int y, void (*callback)(building *))
         for (int xx = x_min; xx <= x_max; xx++) {
             int grid_offset = map_grid_offset(xx, yy);
             int building_id = map_building_at(grid_offset);
-            if (building_id) {
+            if (building_id && BUILDING_IS_OWN(building_id)) { // services reach the houses of their city only
                 building *b = building_get(building_id);
+                mp_audit_effect(building_id, "service");
                 if (b->house_size && b->house_population > 0) {
                     callback(b);
                     serviced++;
@@ -39,8 +41,9 @@ static int provide_entertainment(int x, int y, int shows, void (*callback)(build
         for (int xx = x_min; xx <= x_max; xx++) {
             int grid_offset = map_grid_offset(xx, yy);
             int building_id = map_building_at(grid_offset);
-            if (building_id) {
+            if (building_id && BUILDING_IS_OWN(building_id)) { // services reach the houses of their city only
                 building *b = building_get(building_id);
+                mp_audit_effect(building_id, "service");
                 if (b->house_size && b->house_population > 0) {
                     callback(b, shows);
                     serviced++;
@@ -148,8 +151,9 @@ static int provide_missionary_coverage(int x, int y)
     for (int yy = y_min; yy <= y_max; yy++) {
         for (int xx = x_min; xx <= x_max; xx++) {
             int building_id = map_building_at(map_grid_offset(xx, yy));
-            if (building_id) {
+            if (building_id && BUILDING_IS_OWN(building_id)) { // services reach the houses of their city only
                 building *b = building_get(building_id);
+                mp_audit_effect(building_id, "missionary");
                 if (b->type == BUILDING_NATIVE_HUT || b->type == BUILDING_NATIVE_MEETING) {
                     b->sentiment.native_anger = 0;
                 }
@@ -168,8 +172,9 @@ static int provide_service(int x, int y, int *data, void (*callback)(building *,
         for (int xx = x_min; xx <= x_max; xx++) {
             int grid_offset = map_grid_offset(xx, yy);
             int building_id = map_building_at(grid_offset);
-            if (building_id) {
+            if (building_id && BUILDING_IS_OWN(building_id)) { // services reach the houses of their city only
                 building *b = building_get(building_id);
+                mp_audit_effect(building_id, "service");
                 callback(b, data);
                 if (b->house_size && b->house_population > 0) {
                     serviced++;
@@ -285,8 +290,9 @@ static int provide_market_goods(int market_building_id, int x, int y)
         for (int xx = x_min; xx <= x_max; xx++) {
             int grid_offset = map_grid_offset(xx, yy);
             int building_id = map_building_at(grid_offset);
-            if (building_id) {
+            if (building_id && BUILDING_IS_OWN(building_id)) { // services reach the houses of their city only
                 building *b = building_get(building_id);
+                mp_audit_effect(building_id, "service");
                 if (b->house_size && b->house_population > 0) {
                     distribute_market_resources(b, market);
                     serviced++;

@@ -16,6 +16,8 @@
 #define BUILDING_ALL_END (player_context_player_count * MAX_BUILDINGS)
 /** Owner of a building id */
 #define BUILDING_OWNER(id) ((id) / MAX_BUILDINGS)
+/** Whether a building belongs to the current player: a city acts only on its own buildings (D-018) */
+#define BUILDING_IS_OWN(id) (BUILDING_OWNER(id) == player_context_current_player)
 /** Id inside the slice of its owner: the original id in a classic game, for code that uses ids as numbers */
 #define BUILDING_LOCAL_ID(id) ((id) % MAX_BUILDINGS)
 

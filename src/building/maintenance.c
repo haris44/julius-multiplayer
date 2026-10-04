@@ -27,6 +27,7 @@
 #include "scenario/property.h"
 #include "sound/effect.h"
 #include "game/player_context.h"
+#include "mp/audit.h"
 
 static int fire_spread_direction = 0;
 
@@ -94,19 +95,22 @@ void building_maintenance_update_burning_ruins(void)
 
         int grid_offset = b->grid_offset;
         int next_building_id = map_building_at(grid_offset + map_grid_direction_delta(fire_spread_direction));
-        if (next_building_id && !building_get(next_building_id)->fire_proof) {
+        if (next_building_id && BUILDING_IS_OWN(next_building_id) && !building_get(next_building_id)->fire_proof) {
+            mp_audit_effect(next_building_id, "fire spread");
             building_destroy_by_fire(building_get(next_building_id));
             sound_effect_play(SOUND_EFFECT_EXPLOSION);
             recalculate_terrain = 1;
         } else {
             next_building_id = map_building_at(grid_offset + map_grid_direction_delta(dir1));
-            if (next_building_id && !building_get(next_building_id)->fire_proof) {
+            if (next_building_id && BUILDING_IS_OWN(next_building_id) && !building_get(next_building_id)->fire_proof) {
+                mp_audit_effect(next_building_id, "fire spread");
                 building_destroy_by_fire(building_get(next_building_id));
                 sound_effect_play(SOUND_EFFECT_EXPLOSION);
                 recalculate_terrain = 1;
             } else {
                 next_building_id = map_building_at(grid_offset + map_grid_direction_delta(dir2));
-                if (next_building_id && !building_get(next_building_id)->fire_proof) {
+                if (next_building_id && BUILDING_IS_OWN(next_building_id) && !building_get(next_building_id)->fire_proof) {
+                    mp_audit_effect(next_building_id, "fire spread");
                     building_destroy_by_fire(building_get(next_building_id));
                     sound_effect_play(SOUND_EFFECT_EXPLOSION);
                     recalculate_terrain = 1;

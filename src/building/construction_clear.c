@@ -4,6 +4,7 @@
 #include "city/warning.h"
 #include "core/config.h"
 #include "figuretype/migrant.h"
+#include "game/player_context.h"
 #include "game/undo.h"
 #include "graphics/window.h"
 #include "map/aqueduct.h"
@@ -11,6 +12,7 @@
 #include "map/building.h"
 #include "map/building_tiles.h"
 #include "map/grid.h"
+#include "map/owner.h"
 #include "map/property.h"
 #include "map/routing_terrain.h"
 #include "map/terrain.h"
@@ -28,6 +30,17 @@ static struct {
     int preset_fort;
     int preset_bridge;
 } confirm;
+
+// what another player built is destroyed by war, not by clearing land (D-018)
+static int belongs_to_other_player(int grid_offset)
+{
+    int building_id = map_building_at(grid_offset);
+    if (building_id && !BUILDING_IS_OWN(building_id)) {
+        return 1;
+    }
+    int owner = map_owner_get_claimed(grid_offset);
+    return owner != MAP_OWNER_NONE && owner != player_context_current_player;
+}
 
 static building *get_deletable_building(int grid_offset)
 {
@@ -60,6 +73,9 @@ static int clear_land_confirmed(int measure_only, int x_start, int y_start, int 
     for (int y = y_min; y <= y_max; y++) {
         for (int x = x_min; x <= x_max; x++) {
             int grid_offset = map_grid_offset(x, y);
+            if (belongs_to_other_player(grid_offset)) {
+                continue;
+            }
             if (measure_only && visual_feedback_on_delete) {
                 building *b = get_deletable_building(grid_offset);
                 if (map_property_is_deleted(grid_offset) || (b && map_property_is_deleted(b->grid_offset))) {

@@ -4,6 +4,17 @@
 
 // player id + 1, 0 when nobody claimed the tile
 static grid_u8 owner;
+static int builder = MAP_OWNER_NONE;
+
+void map_owner_set_builder(int player_id)
+{
+    builder = player_id;
+}
+
+int map_owner_builder(void)
+{
+    return builder;
+}
 
 int map_owner_get(int grid_offset)
 {

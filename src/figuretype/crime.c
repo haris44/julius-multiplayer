@@ -20,6 +20,7 @@
 #include "map/grid.h"
 #include "map/road_access.h"
 #include "scenario/property.h"
+#include "mp/audit.h"
 
 static const int CRIMINAL_OFFSETS[] = {
     0, 0, 1, 2, 3, 4, 5, 6, 7, 7, 6, 5, 4, 3, 2, 1
@@ -276,8 +277,8 @@ int figure_rioter_collapse_building(figure *f)
 {
     for (int dir = 0; dir < 8; dir += 2) {
         int grid_offset = f->grid_offset + map_grid_direction_delta(dir);
-        if (!map_building_at(grid_offset)) {
-            continue;
+        if (!map_building_at(grid_offset) || !BUILDING_IS_OWN(map_building_at(grid_offset))) {
+            continue; // rioters destroy the buildings of their own city only
         }
         building *b = building_get(map_building_at(grid_offset));
         switch (b->type) {
@@ -294,6 +295,7 @@ int figure_rioter_collapse_building(figure *f)
         city_message_apply_sound_interval(MESSAGE_CAT_RIOT_COLLAPSE);
         city_message_post(0, MESSAGE_DESTROYED_BUILDING, b->type, f->grid_offset);
         city_message_increase_category_count(MESSAGE_CAT_RIOT_COLLAPSE);
+        mp_audit_effect(b->id, "rioter");
         building_destroy_by_rioter(b);
         f->action_state = FIGURE_ACTION_120_RIOTER_CREATED;
         f->wait_ticks = 0;

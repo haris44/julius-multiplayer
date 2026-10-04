@@ -10,6 +10,7 @@
 #include "map/building.h"
 #include "map/grid.h"
 #include "map/image.h"
+#include "map/owner.h"
 #include "map/property.h"
 #include "map/terrain.h"
 #include "scenario/property.h"
@@ -29,6 +30,84 @@ static struct {
     int head;
     int tail;
 } queue;
+
+// With several cities, the water ranges of each city: the range bits of the terrain are the union of all
+// cities (saved games, overlays), but a city only gets water from its own fountains and reservoirs (D-018)
+static grid_u8 ranges[PLAYER_CONTEXT_MAX_PLAYERS];
+
+static int several_cities(void)
+{
+    return player_context_player_count > 1;
+}
+
+static int range_bits(int terrain)
+{
+    return (terrain & TERRAIN_FOUNTAIN_RANGE ? 1 : 0) | (terrain & TERRAIN_RESERVOIR_RANGE ? 2 : 0);
+}
+
+static void add_range(int x, int y, int size, int radius, int terrain)
+{
+    map_terrain_add_with_radius(x, y, size, radius, terrain);
+    if (several_cities()) {
+        int x_min, y_min, x_max, y_max;
+        map_grid_get_area(x, y, size, radius, &x_min, &y_min, &x_max, &y_max);
+        for (int yy = y_min; yy <= y_max; yy++) {
+            for (int xx = x_min; xx <= x_max; xx++) {
+                ranges[player_context_current_player].items[map_grid_offset(xx, yy)] |= range_bits(terrain);
+            }
+        }
+    }
+}
+
+int map_water_supply_has_range(int grid_offset, int terrain)
+{
+    if (several_cities()) {
+        return (ranges[player_context_current_player].items[grid_offset] & range_bits(terrain)) != 0;
+    }
+    return map_terrain_is(grid_offset, terrain);
+}
+
+int map_water_supply_has_range_in_area(int x, int y, int size, int terrain)
+{
+    if (!several_cities()) {
+        return map_terrain_exists_tile_in_area_with_type(x, y, size, terrain);
+    }
+    for (int yy = y; yy < y + size; yy++) {
+        for (int xx = x; xx < x + size; xx++) {
+            if (map_grid_is_inside(xx, yy, 1) && map_water_supply_has_range(map_grid_offset(xx, yy), terrain)) {
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
+
+void map_water_supply_init_ranges_from_terrain(int x_min, int y_min, int x_max, int y_max)
+{
+    for (int y = y_min; y <= y_max; y++) {
+        for (int x = x_min; x <= x_max; x++) {
+            int grid_offset = map_grid_offset(x, y);
+            ranges[player_context_current_player].items[grid_offset] = range_bits(map_terrain_get(grid_offset));
+        }
+    }
+}
+
+void map_water_supply_reset_extra_state(void)
+{
+    for (int p = 0; p < PLAYER_CONTEXT_MAX_PLAYERS; p++) {
+        map_grid_clear_u8(ranges[p].items);
+    }
+}
+
+void map_water_supply_save_extra_state(buffer *buf)
+{
+    map_grid_save_state_u8(ranges[player_context_current_player].items, buf);
+}
+
+void map_water_supply_load_extra_state(buffer *buf)
+{
+    map_grid_load_state_u8(ranges[player_context_current_player].items, buf);
+}
 
 static void mark_well_access(int well_id, int radius)
 {
@@ -59,8 +138,7 @@ void map_water_supply_update_houses(void)
         } else if (b->house_size) {
             b->has_water_access = 0;
             b->has_well_access = 0;
-            if (map_terrain_exists_tile_in_area_with_type(
-                b->x, b->y, b->size, TERRAIN_FOUNTAIN_RANGE)) {
+            if (map_water_supply_has_range_in_area(b->x, b->y, b->size, TERRAIN_FOUNTAIN_RANGE)) {
                 b->has_water_access = 1;
             }
         }
@@ -111,7 +189,11 @@ static void fill_aqueducts_from_offset(int grid_offset)
         for (int i = 0; i < 4; i++) {
             int new_offset = grid_offset + ADJACENT_OFFSETS(i);
             building *b = building_get(map_building_at(new_offset));
-            if (b->id && b->type == BUILDING_RESERVOIR) {
+            int owner = map_owner_get_claimed(new_offset);
+            if (owner != MAP_OWNER_NONE && owner != player_context_current_player) {
+                continue; // the aqueducts of another city do not carry the water of this one
+            }
+            if (b->id && b->type == BUILDING_RESERVOIR && BUILDING_IS_OWN(b->id)) {
                 // check if aqueduct connects to reservoir --> doesn't connect to corner
                 int xy = map_property_multi_tile_xy(new_offset);
                 if (xy != EDGE_X0Y0 && xy != EDGE_X2Y0 && xy != EDGE_X0Y2 && xy != EDGE_X2Y2) {
@@ -154,6 +236,9 @@ void map_water_supply_clear(void)
 
 void map_water_supply_update_reservoir_fountain_of_city(void)
 {
+    if (several_cities()) {
+        map_grid_clear_u8(ranges[player_context_current_player].items);
+    }
     building_list_large_clear(1);
     // mark reservoirs next to water
     for (int i = BUILDING_FIRST; i < BUILDING_END; i++) {
@@ -189,7 +274,7 @@ void map_water_supply_update_reservoir_fountain_of_city(void)
     for (int i = 0; i < total_reservoirs; i++) {
         building *b = building_get(reservoirs[i]);
         if (b->has_water_access) {
-            map_terrain_add_with_radius(b->x, b->y, 3, 10, TERRAIN_RESERVOIR_RANGE);
+            add_range(b->x, b->y, 3, 10, TERRAIN_RESERVOIR_RANGE);
         }
     }
     // fountains
@@ -210,9 +295,9 @@ void map_water_supply_update_reservoir_fountain_of_city(void)
             image_id = image_group(GROUP_BUILDING_FOUNTAIN_1);
         }
         map_building_tiles_add(i, b->x, b->y, 1, image_id, TERRAIN_BUILDING);
-        if (map_terrain_is(b->grid_offset, TERRAIN_RESERVOIR_RANGE) && b->num_workers) {
+        if (map_water_supply_has_range(b->grid_offset, TERRAIN_RESERVOIR_RANGE) && b->num_workers) {
             b->has_water_access = 1;
-            map_terrain_add_with_radius(b->x, b->y, 1,
+            add_range(b->x, b->y, 1,
                 scenario_property_climate() == CLIMATE_DESERT ? 3 : 4,
                 TERRAIN_FOUNTAIN_RANGE);
         } else {
@@ -232,9 +317,9 @@ int map_water_supply_is_well_unnecessary(int well_id, int radius)
         for (int xx = x_min; xx <= x_max; xx++) {
             int grid_offset = map_grid_offset(xx, yy);
             int building_id = map_building_at(grid_offset);
-            if (building_id && building_get(building_id)->house_size) {
+            if (building_id && BUILDING_IS_OWN(building_id) && building_get(building_id)->house_size) {
                 num_houses++;
-                if (!map_terrain_is(grid_offset, TERRAIN_FOUNTAIN_RANGE)) {
+                if (!map_water_supply_has_range(grid_offset, TERRAIN_FOUNTAIN_RANGE)) {
                     return WELL_NECESSARY;
                 }
             }

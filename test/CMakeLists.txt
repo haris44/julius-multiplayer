@@ -246,3 +246,12 @@ endforeach()
 foreach(save request_start tower)
     add_test(NAME mp_no_caesar_${save} COMMAND simtool caesarfree ${save}.sav 12000)
 endforeach()
+
+# Connected cities (M4.3, D-018): the walkers of a city act on none of the buildings of another one, even when
+# they walk through it (intruders: the twin's walkers moved into the first city; neighbours: two cities
+# side by side joined by roads)
+foreach(save brugle-lugdunum valentia57 request_start kknight earthquake)
+    add_test(NAME mp_intruders_${save} COMMAND simtool intruders ${save}.sav 1500)
+endforeach()
+add_test(NAME mp_neighbours_brugle-lugdunum COMMAND simtool neighbours brugle-lugdunum.sav 3000)
+

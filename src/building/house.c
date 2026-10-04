@@ -9,6 +9,7 @@
 #include "map/image.h"
 #include "map/random.h"
 #include "map/terrain.h"
+#include "mp/audit.h"
 
 #define MAX_DIR 4
 
@@ -109,7 +110,8 @@ static void prepare_for_merge(int building_id, int num_tiles)
         int house_offset = grid_offset + HOUSE_TILE_OFFSET(i);
         if (map_terrain_is(house_offset, TERRAIN_BUILDING)) {
             building *house = building_get(map_building_at(house_offset));
-            if (house->id != building_id && house->house_size) {
+            if (house->id != building_id && house->house_size && BUILDING_IS_OWN(house->id)) {
+                mp_audit_effect(house->id, "house merge");
                 merge_data.population += house->house_population;
                 for (int inv = 0; inv < INVENTORY_MAX; inv++) {
                     merge_data.inventory[inv] += house->data.house.inventory[inv];
@@ -349,7 +351,8 @@ static void split(building *house, int num_tiles)
         int tile_offset = grid_offset + HOUSE_TILE_OFFSET(i);
         if (map_terrain_is(tile_offset, TERRAIN_BUILDING)) {
             building *other_house = building_get(map_building_at(tile_offset));
-            if (other_house->id != house->id && other_house->house_size) {
+            if (other_house->id != house->id && other_house->house_size && BUILDING_IS_OWN(other_house->id)) {
+                mp_audit_effect(other_house->id, "house split");
                 if (other_house->house_is_merged == 1) {
                     split_size2(other_house, other_house->type);
                 } else if (other_house->house_size == 2) {

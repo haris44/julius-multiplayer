@@ -20,7 +20,8 @@ int map_terrain_get(int grid_offset)
 }
 
 // With several cities, infrastructure (roads, walls, aqueducts, gardens) belongs to the player who builds
-// it: a free tile is claimed when infrastructure appears on it, and freed when none is left (D-018)
+// it: a free tile is claimed when a construction command adds infrastructure to it, and freed when none
+// is left (D-018)
 static void update_owner(int grid_offset)
 {
     if (player_context_player_count <= 1) {
@@ -28,8 +29,8 @@ static void update_owner(int grid_offset)
     }
     if (!(terrain_grid.items[grid_offset] & TERRAIN_INFRASTRUCTURE)) {
         map_owner_set(grid_offset, MAP_OWNER_NONE);
-    } else if (map_owner_get_claimed(grid_offset) == MAP_OWNER_NONE) {
-        map_owner_set(grid_offset, player_context_current_player);
+    } else if (map_owner_get_claimed(grid_offset) == MAP_OWNER_NONE && map_owner_builder() != MAP_OWNER_NONE) {
+        map_owner_set(grid_offset, map_owner_builder());
     }
 }
 

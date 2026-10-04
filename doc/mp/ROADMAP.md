@@ -115,11 +115,15 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
   test long a révélé des fuites entre cités, corrigées (D-027) : sans-abri envoyés au coin de la grande carte,
   sentinelles et chevaux recalculés pour toutes les cités, ennemis IA visant les légions d'une autre cité. Les
   13 sauvegardes restent des copies exactes sur 12 000 ticks (jumelles et figure par figure).
-- [ ] **M4.3** Construction partout et propriété (D-018) : grille `owner` des infrastructures, démolition limitée
+- [x] **M4.3** Construction partout et propriété (D-018) : grille `owner` des infrastructures, démolition limitée
   à ce qui vous appartient, recherches de cible filtrées par propriétaire, eau par propriétaire.
   *Critère* : test « voisins branchés » (deux cités reliées par une route ; aucune couverture, aucun ouvrier,
   aucune marchandise, aucune eau ni aucun pompier ne passe chez l'autre ; chaque cité non branchée reste identique
   à l'original).
+  *Fait* (D-028) : `simtool neighbours` (deux cités reliées par 5 routes, des marcheurs passent chez l'autre) et
+  `simtool intruders` (les marcheurs de la jumelle déplacés dans la première cité : sans les filtres, des dizaines
+  de milliers d'effets sur ses bâtiments ; avec, aucun, sur 13 sauvegardes). Les recherches de bâtiments ne voyaient
+  déjà que la tranche de la cité (M3). Les jumelles restent exactes.
 - [ ] **M4.4** Démarrage d'une partie multijoueur depuis une carte, de 1 à 4 joueurs, par un chemin déterministe.
   La partie libre solo est jouable (menu provisoire). *Critère* : scénario d'automatisation avec captures.
 - [ ] **M4.5** Entités neutres (indigènes, animaux, menaces IA) et leurs options.

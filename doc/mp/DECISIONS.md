@@ -271,3 +271,16 @@
   limite de distance (« la légion libre la plus proche, sinon la première ») : une armée IA traversait la carte vers
   une autre cité. M9 ouvrira volontairement les combats aux figures des autres joueurs.
 
+### D-028 — Propriété : ce qui est revendiqué, et ce qui reste partagé (précise D-018)
+- 2026-10-04 · **adoptée** (M4.3)
+- Une case d'infrastructure (route, mur, aqueduc, jardin) est revendiquée par le joueur dont la **commande de
+  construction** la crée. Elle est libérée quand l'infrastructure disparaît. Les mises à jour générales de la carte,
+  qui tournent pendant le tour d'une cité, ne revendiquent rien : sinon une cité s'appropriait les routes d'une autre.
+- Une cité n'agit que sur ses propres bâtiments : couverture des services et des marchés, fusion des maisons,
+  propagation du feu, émeutiers, séisme (qui s'arrête aussi aux infrastructures des autres), démolition, « route de
+  Rome » qui supprime un mur ou un aqueduc bloquant.
+- Eau : les aqueducs d'une cité ne portent que son eau, vers ses réservoirs. Chaque cité a sa propre grille des zones
+  desservies (sauvegardée dans l'état « extra »). Les bits du terrain restent l'union de toutes les cités, pour les
+  sauvegardes et l'affichage.
+- Restent partagés, comme prévu : la circulation sur toutes les routes et la désirabilité.
+

@@ -22,6 +22,7 @@
 #include "map/random.h"
 #include "map/road_access.h"
 #include "map/terrain.h"
+#include "map/water_supply.h"
 #include "map/water.h"
 #include "map/grid.h"
 
@@ -648,7 +649,7 @@ static void set_bathhouse_graphic(building *b)
     if (b->state != BUILDING_STATE_IN_USE) {
         return;
     }
-    if (map_terrain_exists_tile_in_area_with_type(b->x, b->y, b->size, TERRAIN_RESERVOIR_RANGE)) {
+    if (map_water_supply_has_range_in_area(b->x, b->y, b->size, TERRAIN_RESERVOIR_RANGE)) {
         b->has_water_access = 1;
     } else {
         b->has_water_access = 0;
