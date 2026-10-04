@@ -370,3 +370,9 @@ void building_register_player_state(void)
     player_context_register(&extra, sizeof(extra), "building_extra");
 }
 
+void building_relocate_grid_offsets(int (*remap)(int grid_offset))
+{
+    for (int i = 0; i < BUILDING_ARRAY_SIZE; i++) {
+        all_buildings[i].grid_offset = remap(all_buildings[i].grid_offset);
+    }
+}

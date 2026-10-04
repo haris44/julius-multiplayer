@@ -25,6 +25,7 @@
 #include "mp/checksum.h"
 #include "game/time.h"
 #include "mp/actions.h"
+#include "mp/compose.h"
 #include "mp/lockstep.h"
 #include "mp/session.h"
 
@@ -67,6 +68,8 @@ static int usage(void)
     printf("                                         'desync' it changes its own state to test detection\n");
     printf("                                         each player issues scripted commands; prints the\n");
     printf("                                         final checksum, fails on desynchronisation\n");
+    printf("  simtool relocequiv SAVE TICKS STRIDE DX DY  a city moved to a grid of side STRIDE, shifted by\n");
+    printf("                                         (DX, DY), runs TICKS exactly as on its original grid\n");
     printf("  simtool idempotence SAVE TICKS [STEP]  loads and runs SAVE twice in one process,\n");
     printf("                                         fails if the two traces differ\n");
     printf("  simtool diffpieces SAVE TICKS [CHECK]  runs SAVE for TICKS, reloads it and runs CHECK ticks\n");
@@ -527,6 +530,37 @@ static int command_mpnode(int argc, char **argv)
     return result ? 0 : 1;
 }
 
+static int command_relocequiv(const char *file, int ticks, int stride, int dx, int dy)
+{
+    // reference: same code path, but the city stays where it is
+    if (!load(file) || !mp_compose_relocate(162, 0, 0)) {
+        return 2;
+    }
+    run_trace(ticks, ticks, 0, 0);
+    mp_compose_relocate(162, 0, 0);
+    uint64_t reference = mp_checksum_state();
+    game_file_write_saved_game("relocequiv-reference.sav");
+
+    if (!load(file) || !mp_compose_relocate(stride, dx, dy)) {
+        printf("Unable to move the city to a grid of %d shifted by (%d, %d)\n", stride, dx, dy);
+        return 2;
+    }
+    run_trace(ticks, ticks, 0, 0);
+    if (!mp_compose_relocate(162, -dx, -dy)) {
+        printf("Unable to move the city back\n");
+        return 2;
+    }
+    uint64_t moved = mp_checksum_state();
+    game_file_write_saved_game("relocequiv-moved.sav");
+    if (moved != reference) {
+        printf("DIFFERENT after %d ticks on a grid of %d shifted by (%d, %d): see relocequiv-*.sav\n",
+            ticks, stride, dx, dy);
+        return 1;
+    }
+    printf("Identical after %d ticks on a grid of %d shifted by (%d, %d)\n", ticks, stride, dx, dy);
+    return 0;
+}
+
 static int command_trace(const char *file, int ticks, int step)
 {
     if (!load(file)) {
@@ -669,6 +703,8 @@ int main(int argc, char **argv)
     int result;
     if (strcmp(command, "checksum") == 0) {
         result = command_checksum(file);
+    } else if (strcmp(command, "relocequiv") == 0 && argc > 6) {
+        result = command_relocequiv(file, ticks, atoi(argv[4]), atoi(argv[5]), atoi(argv[6]));
     } else if (strcmp(command, "mpnode") == 0) {
         result = command_mpnode(argc, argv);
     } else if (strcmp(command, "actionequiv") == 0) {

@@ -117,3 +117,9 @@ int scenario_map_has_flotsam(void)
 {
     return scenario.flotsam_enabled;
 }
+
+void scenario_map_set_grid_position(int grid_start, int grid_border_size)
+{
+    scenario.map.grid_start = grid_start;
+    scenario.map.grid_border_size = grid_border_size;
+}

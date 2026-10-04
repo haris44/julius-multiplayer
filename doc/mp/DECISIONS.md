@@ -195,7 +195,10 @@
   32 bits, pour les grandes cartes. Mais Caesar III calcule parfois des coordonnées négatives près du bord (explosions
   du séisme, positions de formation) qui « bouclent » à 255 sur 8 bits. Le test de parité `sav_earthquake2` l'a
   révélé.
-- Toute affectation d'une coordonnée de bâtiment ou de personnage passe par `GRID_COORD()`, qui masque à 8 bits sur
-  les grilles d'au plus 256 de côté (comportement d'origine) et à 16 bits au-delà.
+- Toute affectation d'une coordonnée de bâtiment ou de personnage passe par `GRID_COORD()`. Le masque dépend de la
+  taille de la **carte**, car les coordonnées comptent à partir de son premier coin : 8 bits pour une carte de moins
+  de 256 cases (comportement d'origine), 16 bits au-delà. Le test de translation sur une grille de 400 l'a montré.
+- Conséquence assumée : sur une grande carte multijoueur, ce bogue d'origine (coordonnées négatives qui bouclent
+  à 255) n'existe plus. Il n'a d'effet que sur des personnages hors carte (explosions du séisme près du bord).
 - Attention : ne jamais appliquer ce masque à d'autres structures (points de carte, tuiles) où -1 signifie
   « invalide ». Un premier essai trop large a cassé 22 tests de parité.

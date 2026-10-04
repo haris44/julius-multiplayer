@@ -1058,3 +1058,14 @@ void city_data_register_player_state(void)
 {
     player_context_register(&city_data, sizeof(city_data), "city_data");
 }
+
+void city_data_relocate_grid_offsets(int (*remap)(int grid_offset))
+{
+    city_data.building.senate_grid_offset = remap(city_data.building.senate_grid_offset);
+    city_data.building.barracks_grid_offset = remap(city_data.building.barracks_grid_offset);
+    city_data.building.distribution_center_grid_offset = remap(city_data.building.distribution_center_grid_offset);
+    city_data.map.entry_point.grid_offset = remap(city_data.map.entry_point.grid_offset);
+    city_data.map.exit_point.grid_offset = remap(city_data.map.exit_point.grid_offset);
+    city_data.map.entry_flag.grid_offset = remap(city_data.map.entry_flag.grid_offset);
+    city_data.map.exit_flag.grid_offset = remap(city_data.map.exit_flag.grid_offset);
+}

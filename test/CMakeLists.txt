@@ -206,3 +206,9 @@ if(UNIX)
     add_test(NAME mp_lan_desync_detected COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/sim/lan_test.sh $<TARGET_FILE:simtool> 27433 3 brugle-lugdunum.sav 400 desync)
     set_tests_properties(mp_lan_2_players mp_lan_4_players mp_lan_desync_detected PROPERTIES TIMEOUT 120)
 endif()
+
+# Large grids (M3.3): a city moved to a larger grid behaves exactly as on its original grid
+foreach(save tower inv0 earthquake edge-start valentia57 brugle-lugdunum)
+    add_test(NAME mp_relocation_${save} COMMAND simtool relocequiv ${save}.sav 1500 400 120 90)
+endforeach()
+add_test(NAME mp_relocation_max_grid COMMAND simtool relocequiv kknight.sav 1500 512 300 13)

@@ -192,4 +192,9 @@ void building_save_state(buffer *buf, buffer *highest_id, buffer *highest_id_eve
 void building_load_state(buffer *buf, buffer *highest_id, buffer *highest_id_ever,
                          buffer *sequence, buffer *corrupt_houses);
 
+/**
+ * Moves the buildings on a grid of another size (doc/mp/ROADMAP.md M3.3)
+ */
+void building_relocate_grid_offsets(int (*remap)(int grid_offset));
+
 #endif // BUILDING_BUILDING_H

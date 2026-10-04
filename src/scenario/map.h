@@ -29,4 +29,9 @@ int scenario_map_closest_fishing_point(int x, int y, map_point *fish);
 
 int scenario_map_has_flotsam(void);
 
+/**
+ * Places the map on a grid of another size: offset of its first tile and border width
+ */
+void scenario_map_set_grid_position(int grid_start, int grid_border_size);
+
 #endif // SCENARIO_MAP_H

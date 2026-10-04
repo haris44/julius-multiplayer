@@ -20,4 +20,9 @@ void city_data_load_state(buffer *main, buffer *faction, buffer *faction_unknown
  */
 void city_data_register_player_state(void);
 
+/**
+ * Moves the grid offsets stored in the city data on a grid of another size (doc/mp/ROADMAP.md M3.3)
+ */
+void city_data_relocate_grid_offsets(int (*remap)(int grid_offset));
+
 #endif // CITY_DATA_H

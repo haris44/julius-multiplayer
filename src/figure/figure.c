@@ -367,3 +367,10 @@ void figure_register_player_state(void)
     player_context_register(&data.created_sequence, sizeof(data.created_sequence), "figure_sequence");
 }
 
+void figure_relocate_grid_offsets(int (*remap)(int grid_offset))
+{
+    for (int i = 0; i < FIGURE_ARRAY_SIZE; i++) {
+        data.figures[i].grid_offset = remap(data.figures[i].grid_offset);
+        data.figures[i].destination_grid_offset = remap(data.figures[i].destination_grid_offset);
+    }
+}

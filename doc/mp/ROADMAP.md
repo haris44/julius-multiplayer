@@ -80,12 +80,13 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
 - [x] **M3.1** Types élargis en mémoire (coordonnées 16 bits, offsets 32 bits). Le format classique est réécrit à
   l'identique. *Critère* : parité.
 - [x] **M3.2** Grille de taille variable (`map_grid_size()`), tables d'offsets calculées. *Critère* : parité.
-- [ ] **M3.3** Outil de composition : placer une sauvegarde classique dans un monde plus grand, avec un décalage,
+- [x] **M3.3** Outil de composition : placer une sauvegarde classique dans un monde plus grand, avec un décalage,
   puis l'extraire. *Critère* : test d'invariance par translation sur les 36 cas.
 - [x] **M3.4** Contexte de cité : `city_data` par cité, `city_extra`, générateur aléatoire par cité (D-004, D-007).
   *Critère* : parité.
 - [x] **M3.5** Tranches d'identifiants et conversion des boucles (D-005). *Critère* : parité.
-- [ ] **M3.6** Ordonnancement d'un tick à N cités (DESIGN §3.3). *Critère* : parité.
+- [ ] **M3.6** Ordonnancement d'un tick à N cités (DESIGN §3.3). *Critère* : parité. Plan détaillé et liste des 14 tâches
+  à adapter : `doc/mp/code-map/06-ordonnancement-multi-cites.md`.
 - [ ] **M3.7** **Test d'isolement « jumeaux »** : la même sauvegarde placée deux fois (cités 0 et 1) redonne,
   pour chacune, la référence du jeu original, sur les 36 cas. Plus le test d'indice (une seule cité placée en
   position k). C'est la preuve de E7 pour le moteur multi-cités.

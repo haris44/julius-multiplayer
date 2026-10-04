@@ -67,7 +67,6 @@ void map_grid_set_stride(int stride)
 {
     if (stride > 0 && stride <= GRID_MAX_SIZE) {
         map_grid_stride = stride;
-        map_grid_coordinate_mask = stride <= 256 ? 0xff : 0xffff;
         update_tables();
     }
 }
@@ -76,6 +75,8 @@ void map_grid_init(int width, int height, int start_offset, int border_size)
 {
     // the grid side is the map width plus its border: 162 for classic maps
     map_grid_set_stride(width + border_size);
+    // coordinates count from the first tile of the map: on maps that fit in 8 bits they wrap like the original
+    map_grid_coordinate_mask = width < 256 && height < 256 ? 0xff : 0xffff;
     map_data.width = width;
     map_data.height = height;
     map_data.start_offset = start_offset;

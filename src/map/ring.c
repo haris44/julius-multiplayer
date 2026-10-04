@@ -6,7 +6,18 @@
 static struct {
     ring_tile tiles[1080];
     int index[6][7];
+    int num_tiles;
+    int stride;
 } data;
+
+static void update_offsets(void)
+{
+    // offsets depend on the grid side, which changes with the map
+    for (int i = 0; i < data.num_tiles; i++) {
+        data.tiles[i].grid_offset = map_grid_delta(data.tiles[i].x, data.tiles[i].y);
+    }
+    data.stride = GRID_SIZE;
+}
 
 void map_ring_init(void)
 {
@@ -47,9 +58,8 @@ void map_ring_init(void)
             }
         }
     }
-    for (int i = 0; i < index; i++) {
-        data.tiles[i].grid_offset = map_grid_delta(data.tiles[i].x, data.tiles[i].y);
-    }
+    data.num_tiles = index;
+    update_offsets();
 }
 
 int map_ring_start(int size, int distance)
@@ -70,5 +80,8 @@ int map_ring_is_inside_map(int x, int y)
 
 const ring_tile *map_ring_tile(int index)
 {
+    if (data.stride != GRID_SIZE) {
+        update_offsets();
+    }
     return &data.tiles[index];
 }

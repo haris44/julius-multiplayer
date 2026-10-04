@@ -158,4 +158,9 @@ void figure_load_state(buffer *list, buffer *seq);
  */
 void figure_register_player_state(void);
 
+/**
+ * Moves the figures on a grid of another size (doc/mp/ROADMAP.md M3.3)
+ */
+void figure_relocate_grid_offsets(int (*remap)(int grid_offset));
+
 #endif // FIGURE_FIGURE_H
