@@ -237,3 +237,8 @@ foreach(save tower brugle-lugdunum)
     add_test(NAME mp_resume_4_cities_${save} COMMAND simtool mpresume ${save}.sav 800 300)
     set_tests_properties(mp_resume_4_cities_${save} PROPERTIES ENVIRONMENT MPRESUME_CITIES=4)
 endforeach()
+
+# No Caesar in multiplayer (M4.1): requests, anger and invasions, salary happen in the classic game only
+foreach(save request_start tower)
+    add_test(NAME mp_no_caesar_${save} COMMAND simtool caesarfree ${save}.sav 12000)
+endforeach()

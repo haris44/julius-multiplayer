@@ -5,6 +5,7 @@
 #include "city/culture.h"
 #include "city/data_private.h"
 #include "core/calc.h"
+#include "game/rules.h"
 #include "game/time.h"
 #include "scenario/criteria.h"
 #include "scenario/property.h"
@@ -598,7 +599,9 @@ static void update_favor_rating(int is_yearly_update)
 void city_ratings_update(int is_yearly_update)
 {
     update_culture_rating();
-    update_favor_rating(is_yearly_update);
+    if (!game_rules_is_multiplayer()) {
+        update_favor_rating(is_yearly_update); // no Caesar in multiplayer: favor stays as it is (D-026)
+    }
     calculate_max_prosperity();
     if (is_yearly_update) {
         update_prosperity_rating();

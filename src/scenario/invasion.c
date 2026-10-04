@@ -9,6 +9,7 @@
 #include "figure/formation.h"
 #include "figure/name.h"
 #include "game/difficulty.h"
+#include "game/rules.h"
 #include "game/time.h"
 #include "map/grid.h"
 #include "map/terrain.h"
@@ -326,6 +327,10 @@ void scenario_invasion_process(void)
         }
         // update warnings
         invasion_warning *warning = &data.warnings[i];
+        if (game_rules_is_multiplayer() && scenario.invasions[warning->invasion_id].type == INVASION_TYPE_CAESAR) {
+            warning->in_use = 0; // no Caesar in multiplayer (D-026)
+            continue;
+        }
         warning->months_to_go--;
         if (warning->months_to_go <= 0) {
             if (warning->handled != 1) {

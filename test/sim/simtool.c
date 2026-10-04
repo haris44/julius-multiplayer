@@ -15,6 +15,9 @@
 #include "city/health.h"
 #include "city/population.h"
 #include "city/ratings.h"
+#include "scenario/data.h"
+#include "scenario/request.h"
+#include "city/data_private.h"
 #include "city/resource.h"
 #include "city/sentiment.h"
 #include "empire/city.h"
@@ -83,6 +86,8 @@ static int usage(void)
     printf("                                         (DX, DY), runs TICKS exactly as on its original grid\n");
     printf("  simtool twins SAVE TICKS               the city with a twin city below it on a large map runs\n");
     printf("                                         exactly as alone, and the twin gets the same statistics\n");
+    printf("  simtool caesarfree SAVE TICKS          Caesar (requests, anger, salary...) acts in a classic game\n");
+    printf("                                         and not in a multiplayer game\n");
     printf("  simtool mpresume SAVE TICKS MORE       twin cities: saving after TICKS (.mpsav), then loading it and\n");
     printf("                                         running MORE ticks equals running on without saving\n");
     printf("  simtool idempotence SAVE TICKS [STEP]  loads and runs SAVE twice in one process,\n");
@@ -671,6 +676,72 @@ static void print_stats(const char *label, const city_stats *s)
         s->peace, s->favor, s->employed, s->unemployment, s->sentiment, s->health);
 }
 
+// Caesar in a game (M4.1): requests, anger, invasions, distant battles, emperor changes, salary
+typedef struct {
+    int requests, anger, imperial_soldiers, distant_battles, salary;
+} caesar_events;
+
+static uint64_t requests_state(void)
+{
+    uint64_t hash = 0;
+    for (int i = 0; i < MAX_REQUESTS; i++) {
+        const scenario_request *r = scenario_request_get(i);
+        hash = hash * 31 + r->state * 1000 + r->months_to_comply;
+    }
+    return hash;
+}
+
+static void run_caesar_game(const char *file, int ticks, int multiplayer, caesar_events *events)
+{
+    options.multiplayer = multiplayer;
+    memset(events, 0, sizeof(*events));
+    if (!load(file)) {
+        return;
+    }
+    // an angry Caesar, and a salary
+    city_ratings_change_favor(-100);
+    city_data.emperor.salary_amount = 50;
+    uint64_t requests = requests_state();
+    int warnings = city_data.emperor.invasion.warnings_given;
+    int savings = city_data.emperor.personal_savings;
+    int battle = city_data.distant_battle.months_until_battle;
+    setting_reset_speeds(500, setting_scroll_speed());
+    for (int t = 0; t < ticks; t++) {
+        run_one_tick();
+        if (city_data.figure.imperial_soldiers > events->imperial_soldiers) {
+            events->imperial_soldiers = city_data.figure.imperial_soldiers;
+        }
+    }
+    events->requests = requests_state() != requests;
+    events->anger = city_data.emperor.invasion.warnings_given - warnings;
+    events->salary = city_data.emperor.personal_savings - savings;
+    events->distant_battles = city_data.distant_battle.months_until_battle != battle;
+    options.multiplayer = 0;
+}
+
+static int command_caesarfree(const char *file, int ticks)
+{
+    caesar_events classic, multiplayer;
+    run_caesar_game(file, ticks, 0, &classic);
+    run_caesar_game(file, ticks, 1, &multiplayer);
+    const caesar_events *e[2] = { &classic, &multiplayer };
+    for (int m = 0; m < 2; m++) {
+        printf("%-11s requests changed %d, anger warnings %d, imperial soldiers %d, distant battle %d, salary %d\n",
+            m ? "multiplayer" : "classic", e[m]->requests, e[m]->anger, e[m]->imperial_soldiers,
+            e[m]->distant_battles, e[m]->salary);
+    }
+    int classic_has_caesar = classic.requests || classic.anger || classic.imperial_soldiers || classic.salary;
+    int multiplayer_has_caesar = multiplayer.requests || multiplayer.anger || multiplayer.imperial_soldiers ||
+        multiplayer.distant_battles || multiplayer.salary;
+    if (!classic_has_caesar) {
+        printf("FAILED: Caesar does nothing in the classic game either, the test proves nothing\n");
+        return 1;
+    }
+    printf("%s\n", multiplayer_has_caesar ? "DIFFERENT: Caesar acts in the multiplayer game" :
+        "Identical: Caesar acts in the classic game only");
+    return multiplayer_has_caesar ? 1 : 0;
+}
+
 static int command_twins(const char *file, int ticks)
 {
     static fingerprint alone, twin;
@@ -1125,6 +1196,8 @@ int main(int argc, char **argv)
         result = command_twinfigures(file, ticks);
     } else if (strcmp(command, "twinstats") == 0 && argc > 3) {
         result = command_twinstats(file, ticks);
+    } else if (strcmp(command, "caesarfree") == 0 && argc > 3) {
+        result = command_caesarfree(file, ticks);
     } else if (strcmp(command, "twins") == 0 && argc > 3) {
         result = command_twins(file, ticks);
     } else if (strcmp(command, "mpnode") == 0) {

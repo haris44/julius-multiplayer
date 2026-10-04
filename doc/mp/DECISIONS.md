@@ -250,3 +250,13 @@
   D-023) y donne des choix de grenier légèrement différents de la cité d'origine. C'est le comportement de l'original
   sur une carte décalée, sans effet sur le déterminisme.
 
+### D-026 — Ce que devient César en multijoueur
+- 2026-10-04 · **adoptée** (M4.1) · *à valider* par Alexandre pour le tribut et les salaires de Rome
+- **Supprimés** en multijoueur, par le mode (le classique ne change pas) : demandes de biens et de troupes,
+  colère et invasions de César (y compris celles prévues par le scénario), batailles lointaines, changement
+  d'empereur, évolution de la faveur (figée à sa valeur), salaire du gouverneur.
+- **Gardés**, parce que l'économie interne en dépend (gameplay intérieur identique, E7) : tribut annuel, prêt de
+  secours en cas de dette, variations aléatoires des salaires de Rome (référence du sentiment et de la prospérité ;
+  le message « Rome augmente les salaires » reste donc).
+- Pas encore traité : l'interface (conseiller impérial, cadeaux, faveur dans la barre latérale), à masquer en M7.
+

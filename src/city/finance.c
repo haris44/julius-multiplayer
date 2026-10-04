@@ -5,6 +5,7 @@
 #include "city/data_private.h"
 #include "core/calc.h"
 #include "game/difficulty.h"
+#include "game/rules.h"
 #include "game/time.h"
 
 #define MAX_HOUSE_LEVELS 20
@@ -269,7 +270,9 @@ void city_finance_handle_month_change(void)
     collect_monthly_taxes();
     pay_monthly_wages();
     pay_monthly_interest();
-    pay_monthly_salary();
+    if (!game_rules_is_multiplayer()) {
+        pay_monthly_salary(); // the governor is paid by Caesar (D-026)
+    }
 }
 
 static void reset_taxes(void)

@@ -32,6 +32,7 @@
 #include "figure/formation.h"
 #include "figuretype/crime.h"
 #include "game/file.h"
+#include "game/rules.h"
 #include "game/settings.h"
 #include "game/time.h"
 #include "game/tutorial.h"
@@ -81,9 +82,14 @@ static void advance_month(void)
     scenario_random_event_process();
     city_finance_handle_month_change();
     city_resource_consume_food();
-    scenario_distant_battle_process();
+    // multiplayer: no Caesar, so no distant battles nor requests (doc/mp/DECISIONS.md D-026)
+    if (!game_rules_is_multiplayer()) {
+        scenario_distant_battle_process();
+    }
     scenario_invasion_process();
-    scenario_request_process();
+    if (!game_rules_is_multiplayer()) {
+        scenario_request_process();
+    }
     scenario_demand_change_process();
     scenario_price_change_process();
     city_victory_update_months_to_govern();
@@ -202,7 +208,9 @@ static void run_city_tick(void)
     figure_action_handle();
     scenario_earthquake_process();
     scenario_gladiator_revolt_process();
-    scenario_emperor_change_process();
+    if (!game_rules_is_multiplayer()) {
+        scenario_emperor_change_process();
+    }
     city_victory_check();
 }
 

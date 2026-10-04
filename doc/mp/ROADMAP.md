@@ -106,8 +106,10 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
   l'interface). 16 cas dans ctest.
 
 ## M4 — Règles du jeu libre multijoueur
-- [ ] **M4.1** Neutralisation de César en multijoueur (liste : code-map/04 §3). *Critères* : en multijoueur, une
+- [x] **M4.1** Neutralisation de César en multijoueur (liste : code-map/04 §3). *Critères* : en multijoueur, une
   sauvegarde avec demande ou invasion de César ne déclenche rien ; parité verte.
+  *Fait* (D-026) : `simtool caesarfree` ; sur 12 000 ticks avec une faveur à 0, la partie classique voit une
+  demande, la colère, 32 soldats impériaux et le salaire ; la même partie en multijoueur, rien.
 - [ ] **M4.2** Point d'arrivée par joueur : entrée et sortie, « route de Rome » calculée par cité.
 - [ ] **M4.3** Construction partout et propriété (D-018) : grille `owner` des infrastructures, démolition limitée
   à ce qui vous appartient, recherches de cible filtrées par propriétaire, eau par propriétaire.

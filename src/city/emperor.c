@@ -7,6 +7,7 @@
 #include "core/calc.h"
 #include "figure/formation.h"
 #include "game/difficulty.h"
+#include "game/rules.h"
 #include "game/time.h"
 #include "scenario/property.h"
 #include "scenario/invasion.h"
@@ -156,7 +157,9 @@ static void process_caesar_invasion(void)
 void city_emperor_update(void)
 {
     update_debt_state();
-    process_caesar_invasion();
+    if (!game_rules_is_multiplayer()) {
+        process_caesar_invasion(); // no Caesar in multiplayer (D-026)
+    }
 }
 
 void city_emperor_init_selected_gift(void)
