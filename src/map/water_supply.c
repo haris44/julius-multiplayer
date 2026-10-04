@@ -145,11 +145,15 @@ static void fill_aqueducts_from_offset(int grid_offset)
     } while (next_offset > -1);
 }
 
-void map_water_supply_update_reservoir_fountain(void)
+void map_water_supply_clear(void)
 {
     map_terrain_remove_all(TERRAIN_FOUNTAIN_RANGE | TERRAIN_RESERVOIR_RANGE);
     // reservoirs
     set_all_aqueducts_to_no_water();
+}
+
+void map_water_supply_update_reservoir_fountain_of_city(void)
+{
     building_list_large_clear(1);
     // mark reservoirs next to water
     for (int i = BUILDING_FIRST; i < BUILDING_END; i++) {
@@ -238,3 +242,10 @@ int map_water_supply_is_well_unnecessary(int well_id, int radius)
     }
     return num_houses ? WELL_UNNECESSARY_FOUNTAIN : WELL_UNNECESSARY_NO_HOUSES;
 }
+
+void map_water_supply_update_reservoir_fountain(void)
+{
+    map_water_supply_clear();
+    map_water_supply_update_reservoir_fountain_of_city();
+}
+

@@ -421,6 +421,7 @@ set(MAP_FILES
     ${PROJECT_SOURCE_DIR}/src/map/image_context.c
     ${PROJECT_SOURCE_DIR}/src/map/natives.c
     ${PROJECT_SOURCE_DIR}/src/map/orientation.c
+    ${PROJECT_SOURCE_DIR}/src/map/owner.c
     ${PROJECT_SOURCE_DIR}/src/map/point.c
     ${PROJECT_SOURCE_DIR}/src/map/property.c
     ${PROJECT_SOURCE_DIR}/src/map/random.c
@@ -604,6 +605,7 @@ set(MP_FILES
     ${PROJECT_SOURCE_DIR}/src/mp/actions.c
     ${PROJECT_SOURCE_DIR}/src/mp/checksum.c
     ${PROJECT_SOURCE_DIR}/src/mp/command.c
+    ${PROJECT_SOURCE_DIR}/src/mp/compose.c
     ${PROJECT_SOURCE_DIR}/src/mp/lockstep.c
     ${PROJECT_SOURCE_DIR}/src/platform/net.c
     ${PROJECT_SOURCE_DIR}/src/mp/session.c

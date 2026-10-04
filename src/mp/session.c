@@ -1,6 +1,7 @@
 #include "session.h"
 
 #include "building/construction.h"
+#include "game/player_context.h"
 #include "game/time.h"
 #include "mp/actions.h"
 
@@ -81,6 +82,10 @@ void mp_command_execute(const mp_command *command)
     if (data.observer) {
         data.observer(command);
     }
+    // a command acts on the city of the player who sent it (city 0 when cities are shared)
+    int previous_player = player_context_current();
+    int player_id = command->player_id < player_context_num_players() ? command->player_id : 0;
+    player_context_switch(player_id);
     switch (command->type) {
         case MP_COMMAND_BUILD:
             execute_build(command);
@@ -91,6 +96,7 @@ void mp_command_execute(const mp_command *command)
         default:
             break;
     }
+    player_context_switch(previous_player);
 }
 
 void mp_command_run_scheduled(void)

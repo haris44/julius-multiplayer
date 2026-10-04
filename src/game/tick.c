@@ -55,6 +55,11 @@
 #include "sound/music.h"
 #include "widget/minimap.h"
 #include "mp/session.h"
+#include "game/player_context.h"
+
+// Every city runs the original tick in turn, in its own context (doc/mp/code-map/06): the parts that
+// work on the whole map run once, in the turn of the first city, where the original runs them
+static int world_turn = 1;
 
 static void advance_year(void)
 {
@@ -85,9 +90,11 @@ static void advance_month(void)
     formation_update_monthly_morale_at_rest();
     city_message_decrease_delays();
 
-    map_tiles_update_all_roads();
-    map_tiles_update_all_water();
-    map_routing_update_land_citizen();
+    if (world_turn) {
+        map_tiles_update_all_roads();
+        map_tiles_update_all_water();
+        map_routing_update_land_citizen();
+    }
     city_message_sort_and_compact();
 
     if (game_time_advance_month()) {
@@ -99,7 +106,7 @@ static void advance_month(void)
     city_population_record_monthly();
     city_festival_update();
     tutorial_on_month_tick();
-    if (setting_monthly_autosave()) {
+    if (setting_monthly_autosave() && player_context_num_players() == 1) {
         game_file_write_saved_game("autosave.sav");
     }
 }
@@ -121,12 +128,26 @@ static void advance_tick(void)
     // 0, 9, 11, 13, 14, 15, 26, 41, 42, 47
     switch (game_time_tick()) {
         case 1: city_gods_calculate_moods(1); break;
-        case 2: sound_music_update(0); break;
-        case 3: widget_minimap_invalidate(); break;
+        case 2:
+            if (player_context_current() == mp_session_local_player_id() || player_context_num_players() == 1) {
+                sound_music_update(0);
+            }
+            break;
+        case 3: if (world_turn) widget_minimap_invalidate(); break;
         case 4: city_emperor_update(); break;
         case 5: formation_update_all(0); break;
-        case 6: map_natives_check_land(); break;
-        case 7: map_road_network_update(); break;
+        case 6:
+            if (world_turn) {
+                map_natives_clear_land();
+            }
+            map_natives_check_land_of_city();
+            break;
+        case 7:
+            if (world_turn) {
+                map_road_network_update_grid();
+            }
+            map_road_network_update_largest();
+            break;
         case 8: building_granaries_calculate_stocks(); break;
         case 10: building_update_highest_id(); break;
         case 12: house_service_decay_houses_covered(); break;
@@ -140,17 +161,22 @@ static void advance_tick(void)
         case 23: house_population_update_migration(); break;
         case 24: house_population_evict_overcrowded(); break;
         case 25: city_labor_update(); break;
-        case 27: map_water_supply_update_reservoir_fountain(); break;
+        case 27:
+            if (world_turn) {
+                map_water_supply_clear();
+            }
+            map_water_supply_update_reservoir_fountain_of_city();
+            break;
         case 28: map_water_supply_update_houses(); break;
         case 29: formation_update_all(1); break;
-        case 30: widget_minimap_invalidate(); break;
+        case 30: if (world_turn) widget_minimap_invalidate(); break;
         case 31: building_figure_generate(); break;
         case 32: city_trade_update(); break;
         case 33: building_count_update(); city_culture_update_coverage(); break;
         case 34: building_government_distribute_treasury(); break;
         case 35: house_service_decay_culture(); break;
         case 36: house_service_calculate_culture_aggregates(); break;
-        case 37: map_desirability_update(); break;
+        case 37: if (world_turn) map_desirability_update(); break;
         case 38: building_update_desirability(); break;
         case 39: building_house_process_evolve_and_consume_goods(); break;
         case 40: building_update_state(); break;
@@ -166,6 +192,20 @@ static void advance_tick(void)
     }
 }
 
+static void run_city_tick(void)
+{
+    random_generate_next();
+    if (world_turn) {
+        game_undo_reduce_time_available();
+    }
+    advance_tick();
+    figure_action_handle();
+    scenario_earthquake_process();
+    scenario_gladiator_revolt_process();
+    scenario_emperor_change_process();
+    city_victory_check();
+}
+
 void game_tick_run(void)
 {
     if (editor_is_active()) {
@@ -175,12 +215,13 @@ void game_tick_run(void)
     }
     // Commands of all players scheduled for this tick run first, identically on every computer
     mp_command_run_scheduled();
-    random_generate_next();
-    game_undo_reduce_time_available();
-    advance_tick();
-    figure_action_handle();
-    scenario_earthquake_process();
-    scenario_gladiator_revolt_process();
-    scenario_emperor_change_process();
-    city_victory_check();
+    int num_players = player_context_num_players();
+    int previous_player = player_context_current();
+    for (int player_id = 0; player_id < num_players; player_id++) {
+        player_context_switch(player_id); // nothing happens with one player
+        world_turn = player_id == 0;
+        run_city_tick();
+    }
+    world_turn = 1;
+    player_context_switch(previous_player); // the user interface shows the local city
 }

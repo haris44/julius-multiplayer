@@ -194,9 +194,13 @@ void map_natives_init_editor(void)
     }
 }
 
-void map_natives_check_land(void)
+void map_natives_clear_land(void)
 {
     map_property_clear_all_native_land();
+}
+
+void map_natives_check_land_of_city(void)
+{
     city_military_decrease_native_attack_duration();
 
     for (int i = BUILDING_FIRST; i < BUILDING_END; i++) {
@@ -224,3 +228,10 @@ void map_natives_check_land(void)
         }
     }
 }
+
+void map_natives_check_land(void)
+{
+    map_natives_clear_land();
+    map_natives_check_land_of_city();
+}
+
