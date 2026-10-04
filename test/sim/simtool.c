@@ -42,6 +42,7 @@
 #include "map/water_supply.h"
 #include "map/owner.h"
 #include "mp/endgame.h"
+#include "mp/permissions.h"
 #include "mp/checksum.h"
 #include "game/time.h"
 #include "game/player_context.h"
@@ -1138,6 +1139,56 @@ static int command_endscore(const char *file, int years)
     return mp_endgame_is_over() && year == end_year && mp_endgame_score(0) > 0 ? 0 : 1;
 }
 
+// Permissions to exploit (M4.7, D-020): shared out between the cities, evaluated in each city's context
+static int command_permissions(const char *file, int num_cities)
+{
+    int width, height;
+    if (!setup_twin_map(file, num_cities, &width, &height)) {
+        return 2;
+    }
+    static const struct { int building; int resource; const char *name; } RAW[] = {
+        {BUILDING_IRON_MINE, RESOURCE_IRON, "iron"}, {BUILDING_CLAY_PIT, RESOURCE_CLAY, "clay"},
+        {BUILDING_TIMBER_YARD, RESOURCE_TIMBER, "timber"}, {BUILDING_OLIVE_FARM, RESOURCE_OLIVES, "olives"},
+        {BUILDING_VINES_FARM, RESOURCE_VINES, "vines"}, {BUILDING_MARBLE_QUARRY, RESOURCE_MARBLE, "marble"},
+    };
+    int originally[6];
+    building_menu_update();
+    for (int r = 0; r < 6; r++) {
+        originally[r] = building_menu_is_enabled(RAW[r].building);
+    }
+    mp_permissions_share_out();
+    int failures = 0;
+    int holders[6] = { 0 };
+    for (int p = 0; p < num_cities; p++) {
+        player_context_switch(p);
+        building_menu_update();
+        printf("city %d:", p);
+        for (int r = 0; r < 6; r++) {
+            if (building_menu_is_enabled(RAW[r].building)) {
+                printf(" %s", RAW[r].name);
+                holders[r]++;
+            }
+        }
+        int weapons = building_menu_is_enabled(BUILDING_WEAPONS_WORKSHOP);
+        int iron_available = building_menu_is_enabled(BUILDING_IRON_MINE) ||
+            empire_can_import_resource_potentially(RESOURCE_IRON);
+        printf(", weapons workshop %s (iron %s)\n", weapons ? "yes" : "no", iron_available ? "available" : "none");
+        if (weapons != iron_available) {
+            printf("WRONG: weapons workshop without iron, or iron without workshop\n");
+            failures++;
+        }
+    }
+    player_context_switch(0);
+    for (int r = 0; r < 6; r++) {
+        if (originally[r] && holders[r] != 1) {
+            printf("WRONG: %s may be produced by %d cities instead of one\n", RAW[r].name, holders[r]);
+            failures++;
+        }
+    }
+    player_context_set_num_players(1);
+    return failures ? 1 : 0;
+}
+
 // Diagnosis: one figure of city 0, tick by tick, on a map of CITIES composed cities
 static int command_figtrace(const char *file, int num_cities, int id, int from, int to)
 {
@@ -1524,6 +1575,8 @@ int main(int argc, char **argv)
         result = command_twinfigures(file, ticks);
     } else if (strcmp(command, "twinstats") == 0 && argc > 3) {
         result = command_twinstats(file, ticks);
+    } else if (strcmp(command, "permissions") == 0 && argc > 3) {
+        result = command_permissions(file, atoi(argv[3]));
     } else if (strcmp(command, "endscore") == 0 && argc > 3) {
         result = command_endscore(file, ticks);
     } else if (strcmp(command, "aiinvasions") == 0 && argc > 3) {

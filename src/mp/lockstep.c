@@ -10,6 +10,7 @@
 #include "mp/command.h"
 #include "mp/compose.h"
 #include "mp/discovery.h"
+#include "mp/permissions.h"
 #include "mp/savegame.h"
 #include "mp/session.h"
 #include "scenario/property.h"
@@ -271,6 +272,8 @@ static int host_compose_cities(void)
     }
     // players may build between their cities and join them (D-018)
     mp_compose_open_land_between_cities(MP_COMPOSE_CITY_GAP);
+    // each arrival point may exploit different resources (D-020)
+    mp_permissions_share_out();
     snprintf(data.saved_game, sizeof(data.saved_game), "mp-session-%d-p0.mpsav", data.port);
     return mp_savegame_write(data.saved_game) && mp_savegame_read(data.saved_game);
 }

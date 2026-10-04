@@ -266,4 +266,8 @@ endforeach()
 foreach(save brugle-lugdunum tower)
     add_test(NAME mp_end_by_score_${save} COMMAND simtool endscore ${save}.sav 1)
 endforeach()
+# Permissions to exploit (M4.7, D-020): every raw material for a single city, weapons only with iron
+foreach(save brugle-lugdunum valentia57 kknight)
+    add_test(NAME mp_permissions_${save} COMMAND simtool permissions ${save}.sav 3)
+endforeach()
 

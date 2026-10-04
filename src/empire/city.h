@@ -33,6 +33,12 @@ int empire_can_export_resource(int resource);
 
 int empire_can_produce_resource(int resource);
 
+/**
+ * Whether our city of the empire map may produce a raw resource (multiplayer permissions, D-020)
+ */
+int empire_city_our_production_allowed(int resource);
+void empire_city_set_our_production_allowed(int resource, int allowed);
+
 int empire_can_produce_resource_potentially(int resource);
 
 int empire_city_get_for_object(int empire_object_id);

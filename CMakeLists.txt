@@ -612,6 +612,7 @@ set(MP_FILES
     ${PROJECT_SOURCE_DIR}/src/mp/audit.c
     ${PROJECT_SOURCE_DIR}/src/mp/discovery.c
     ${PROJECT_SOURCE_DIR}/src/mp/endgame.c
+    ${PROJECT_SOURCE_DIR}/src/mp/permissions.c
     ${PROJECT_SOURCE_DIR}/src/mp/lockstep.c
     ${PROJECT_SOURCE_DIR}/src/mp/savegame.c
     ${PROJECT_SOURCE_DIR}/src/platform/net.c

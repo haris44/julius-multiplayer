@@ -107,6 +107,20 @@ static int get_raw_resource(int resource)
     }
 }
 
+int empire_city_our_production_allowed(int resource)
+{
+    return can_produce_resource(resource);
+}
+
+void empire_city_set_our_production_allowed(int resource, int allowed)
+{
+    for (int i = 0; i < MAX_CITIES; i++) {
+        if (cities[i].in_use && cities[i].type == EMPIRE_CITY_OURS) {
+            cities[i].sells_resource[resource] = allowed ? 1 : 0;
+        }
+    }
+}
+
 int empire_can_produce_resource(int resource)
 {
     int raw_resource = get_raw_resource(resource);

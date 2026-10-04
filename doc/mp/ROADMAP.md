@@ -135,9 +135,12 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
   *Fait* (D-029) : sans fin ou au score (5, 10, 20 ans), `mp/endgame`, écran de classement. Tests :
   `simtool endscore`, partie réseau du vrai jeu finie au bout d'un an (`--mp-score-years 1`). La conquête viendra
   avec M9.
-- [ ] **M4.7** Autorisations d'exploiter par point d'arrivée (D-020) : la règle d'origine est évaluée par cité,
+- [x] **M4.7** Autorisations d'exploiter par point d'arrivée (D-020) : la règle d'origine est évaluée par cité,
   le menu de construction suit. *Critère* : une cité sans autorisation de fer ne peut ni bâtir de mine ni forger
   sans route qui fournit du fer.
+  *Fait* : `mp/permissions` (répartition provisoire, D-020) appliquée par l'hôte. `simtool permissions` vérifie,
+  cité par cité, le menu de construction : chaque matière pour une seule cité, l'atelier d'armes seulement avec
+  du fer à soi ou importable.
 
 ## M5 — Réseau local → premier prototype jouable en LAN
 - [ ] **M5.1** Couche sockets (TCP non bloquant, POSIX et Winsock). *Critère* : tests en boucle locale.

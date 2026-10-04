@@ -174,6 +174,10 @@
   l'empire) ou les prendre. Les villes de l'empire n'en vendront qu'avec parcimonie (réglage).
 - Points d'équilibrage à mesurer en M10 : nombre de joueurs avec fer ou armes, prix des armes, quotas, fonds de
   départ. On évaluera avec des parties simulées sans tête.
+- *Répartition provisoire (M4.7, à valider)*, en attendant que les cartes la définissent (M6) : l'agriculture reste
+  permise à tous ; le fer, donc la forge d'armes, va au seul joueur 1 ; argile, bois, olives, vignes et marbre
+  sont distribués à tour de rôle à partir du joueur 2. Une cité garde le droit de forger si une route peut lui
+  fournir du fer (règle d'origine). Les bâtiments déjà présents dans une sauvegarde continuent de fonctionner.
 
 
 ### D-021 — Contexte de cité par échange de zones mémoire enregistrées (précise D-004)
