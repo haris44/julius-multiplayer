@@ -5,6 +5,8 @@
 #include "figure/formation.h"
 #include "map/soldier_strength.h"
 #include "game/player_context.h"
+#include "building/building.h"
+#include "game/player_clone.h"
 
 static enemy_army enemy_armies[MAX_ENEMY_ARMIES];
 
@@ -202,4 +204,20 @@ void enemy_army_register_player_state(void)
 {
     player_context_register(&enemy_armies, sizeof(enemy_armies), "enemy_armies");
     player_context_register(&totals, sizeof(totals), "enemy_army_totals");
+}
+
+void enemy_army_clone_fixup(const player_clone *c)
+{
+    for (int i = 0; i < MAX_ENEMY_ARMIES; i++) {
+        enemy_army *army = &enemy_armies[i];
+        if (!army->formation_id) {
+            continue;
+        }
+        army->formation_id = player_clone_id(c, army->formation_id, MAX_FORMATIONS);
+        army->home_x += c->dx;
+        army->home_y += c->dy;
+        army->destination_x += c->dx;
+        army->destination_y += c->dy;
+        army->destination_building_id = player_clone_id(c, army->destination_building_id, MAX_BUILDINGS);
+    }
 }

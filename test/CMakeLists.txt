@@ -212,3 +212,11 @@ foreach(save tower inv0 earthquake edge-start valentia57 brugle-lugdunum)
     add_test(NAME mp_relocation_${save} COMMAND simtool relocequiv ${save}.sav 1500 400 120 90)
 endforeach()
 add_test(NAME mp_relocation_max_grid COMMAND simtool relocequiv kknight.sav 1500 512 300 13)
+
+# Several cities (M3.7): a city with a twin city on a large map runs exactly as alone, and the twin is an
+# exact copy of it, figure by figure (simtool twins / twinfigures)
+foreach(save tower request_start kknight inv0 routing-full curses earthquake edge-start brugle-massilia-start
+        valentia57 brugle-lugdunum cicero-lugdunum-trade brugle-palacepeaks)
+    add_test(NAME mp_twins_${save} COMMAND simtool twins ${save}.sav 1500)
+    add_test(NAME mp_twin_copy_${save} COMMAND simtool twinfigures ${save}.sav 1500)
+endforeach()

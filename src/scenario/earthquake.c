@@ -15,6 +15,7 @@
 #include "scenario/data.h"
 #include "sound/effect.h"
 #include "game/player_context.h"
+#include "game/player_clone.h"
 
 static struct {
     int game_year;
@@ -186,4 +187,14 @@ void scenario_earthquake_load_state(buffer *buf)
 void scenario_earthquake_register_player_state(void)
 {
     player_context_register(&data, sizeof(data), "earthquake");
+}
+
+void scenario_earthquake_clone_fixup(const player_clone *c)
+{
+    for (int i = 0; i < 4; i++) {
+        if (data.expand[i].x || data.expand[i].y) {
+            data.expand[i].x += c->dx;
+            data.expand[i].y += c->dy;
+        }
+    }
 }

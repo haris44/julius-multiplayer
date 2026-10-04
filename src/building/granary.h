@@ -36,4 +36,7 @@ void building_granary_warehouse_curse(int big);
  */
 void building_granary_register_player_state(void);
 
+#include "game/player_clone.h"
+void building_granary_clone_fixup(const player_clone *c);
+
 #endif // BUILDING_GRANARY_H

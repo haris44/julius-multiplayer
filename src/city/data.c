@@ -6,6 +6,8 @@
 #include "game/difficulty.h"
 #include "scenario/property.h"
 #include "game/player_context.h"
+#include "building/building.h"
+#include "game/player_clone.h"
 
 #include <string.h>
 
@@ -1068,4 +1070,47 @@ void city_data_relocate_grid_offsets(int (*remap)(int grid_offset))
     city_data.map.exit_point.grid_offset = remap(city_data.map.exit_point.grid_offset);
     city_data.map.entry_flag.grid_offset = remap(city_data.map.entry_flag.grid_offset);
     city_data.map.exit_flag.grid_offset = remap(city_data.map.exit_flag.grid_offset);
+}
+
+static void shift_tile(map_tile *tile, const player_clone *c)
+{
+    if (tile->grid_offset > 0) {
+        tile->x += c->dx;
+        tile->y += c->dy;
+        tile->grid_offset += c->grid_delta;
+    }
+}
+
+void city_data_clone_fixup(const player_clone *c)
+{
+    // in the context of the receiving player, right after its city was copied
+#define B(id) player_clone_id(c, id, MAX_BUILDINGS)
+    city_data.building.senate_building_id = B(city_data.building.senate_building_id);
+    city_data.building.barracks_building_id = B(city_data.building.barracks_building_id);
+    city_data.building.distribution_center_building_id = B(city_data.building.distribution_center_building_id);
+    city_data.building.trade_center_building_id = B(city_data.building.trade_center_building_id);
+    for (int i = 0; i < 10; i++) {
+        city_data.building.working_dock_ids[i] = B(city_data.building.working_dock_ids[i]);
+    }
+    if (city_data.building.senate_grid_offset > 0) {
+        city_data.building.senate_grid_offset += c->grid_delta;
+    }
+    if (city_data.building.barracks_grid_offset > 0) {
+        city_data.building.barracks_grid_offset += c->grid_delta;
+    }
+    if (city_data.building.distribution_center_grid_offset > 0) {
+        city_data.building.distribution_center_grid_offset += c->grid_delta;
+    }
+    if (city_data.building.main_native_meeting.x || city_data.building.main_native_meeting.y) {
+        city_data.building.main_native_meeting.x += c->dx;
+        city_data.building.main_native_meeting.y += c->dy;
+    }
+    city_data.population.last_used_house_add = B(city_data.population.last_used_house_add);
+    city_data.population.last_used_house_remove = B(city_data.population.last_used_house_remove);
+    city_data.resource.last_used_warehouse = B(city_data.resource.last_used_warehouse);
+    shift_tile(&city_data.map.entry_point, c);
+    shift_tile(&city_data.map.exit_point, c);
+    shift_tile(&city_data.map.entry_flag, c);
+    shift_tile(&city_data.map.exit_flag, c);
+#undef B
 }

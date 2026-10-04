@@ -49,7 +49,7 @@ void figure_indigenous_native_action(figure *f)
         case FIGURE_ACTION_158_NATIVE_CREATED:
             f->image_offset = 0;
             f->wait_ticks++;
-            if (f->wait_ticks > 10 + (f->id & 3)) {
+            if (f->wait_ticks > 10 + (FIGURE_LOCAL_ID(f->id) & 3)) {
                 f->wait_ticks = 0;
                 if (!city_military_is_native_attack_active()) {
                     int x_tile, y_tile;

@@ -127,7 +127,9 @@ static uint64_t hash_piece(const char *name, const uint8_t *data, int size, cons
     if (strcmp(name, "figures") == 0) {
         for (int i = 0; i < size; i++) {
             int field = i % RECORD_SIZE;
-            int masked = field >= FIGURE_PHRASE_OFFSET && field < FIGURE_PHRASE_OFFSET + FIGURE_PHRASE_SIZE;
+            // record 0 is the null figure: a scratch record written to when no figure exists, shared by all cities
+            int masked = i < RECORD_SIZE ||
+                (field >= FIGURE_PHRASE_OFFSET && field < FIGURE_PHRASE_OFFSET + FIGURE_PHRASE_SIZE);
             hash = hash_byte(hash, masked ? 0 : data[i]);
         }
     } else if (strcmp(name, "buildings") == 0) {

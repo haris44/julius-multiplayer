@@ -1,8 +1,11 @@
 #include "route.h"
 
+#include <string.h>
+
 #include "game/player_context.h"
 #include "map/routing.h"
 #include "map/routing_path.h"
+#include "game/player_clone.h"
 
 #define MAX_PATH_LENGTH 500
 /** Paths per player: every player has its own slice of path ids, as large as the original limit */
@@ -162,5 +165,14 @@ void figure_route_load_state(buffer *figures, buffer *paths)
     for (int i = 0; i < MAX_ROUTES; i++) {
         data.figure_ids[i] = buffer_read_i16(figures);
         buffer_read_raw(paths, data.direction_paths[i], MAX_PATH_LENGTH);
+    }
+}
+
+void figure_route_clone_player(const player_clone *c)
+{
+    for (int i = 0; i < MAX_ROUTES; i++) {
+        data.figure_ids[c->to * MAX_ROUTES + i] = player_clone_id(c, data.figure_ids[c->from * MAX_ROUTES + i], MAX_FIGURES);
+        memcpy(data.direction_paths[c->to * MAX_ROUTES + i], data.direction_paths[c->from * MAX_ROUTES + i],
+            MAX_PATH_LENGTH);
     }
 }

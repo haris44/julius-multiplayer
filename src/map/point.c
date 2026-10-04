@@ -1,5 +1,6 @@
 #include "map/point.h"
 #include "game/player_context.h"
+#include "game/player_clone.h"
 
 static map_point last = {0, 0};
 
@@ -36,4 +37,10 @@ void map_point_load_state(buffer *buf)
 void map_point_register_player_state(void)
 {
     player_context_register(&last, sizeof(last), "map_point_last");
+}
+
+void map_point_clone_fixup(const player_clone *c)
+{
+    last.x += c->dx;
+    last.y += c->dy;
 }

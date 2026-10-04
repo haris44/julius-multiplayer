@@ -2,11 +2,10 @@
 
 #include "game/player_context.h"
 #include "building/building.h"
+#include "game/player_clone.h"
 
 #include <string.h>
 
-/** Storages per player: every player has its own slice of storage ids, as large as the original limit */
-#define MAX_STORAGES 200
 #define STORAGE_ARRAY_SIZE (MAX_STORAGES * PLAYER_CONTEXT_MAX_PLAYERS)
 #define STORAGE_FIRST (player_context_current_player * MAX_STORAGES + 1)
 #define STORAGE_END ((player_context_current_player + 1) * MAX_STORAGES)
@@ -133,5 +132,14 @@ void building_storage_load_state(buffer *buf)
             data.storages[i].storage.resource_state[r] = buffer_read_u8(buf);
         }
         buffer_skip(buf, 6); // unused resource states
+    }
+}
+
+void building_storage_clone_player(const player_clone *c)
+{
+    for (int i = 0; i < MAX_STORAGES; i++) {
+        struct data_storage *s = &data.storages[c->to * MAX_STORAGES + i];
+        *s = data.storages[c->from * MAX_STORAGES + i];
+        s->building_id = player_clone_id(c, s->building_id, MAX_BUILDINGS);
     }
 }

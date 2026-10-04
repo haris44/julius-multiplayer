@@ -24,4 +24,7 @@ void scenario_settings_load_state(
  */
 void scenario_register_player_state(void);
 
+#include "game/player_clone.h"
+void scenario_clone_fixup(const player_clone *c);
+
 #endif // SCENARIO_SCENARIO_H

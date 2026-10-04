@@ -17,6 +17,9 @@
 #include "map/routing_terrain.h"
 #include "map/terrain.h"
 #include "map/tiles.h"
+#include "figure/figure.h"
+#include "figure/formation.h"
+#include "game/player_clone.h"
 
 #include <string.h>
 
@@ -376,3 +379,62 @@ void building_relocate_grid_offsets(int (*remap)(int grid_offset))
         all_buildings[i].grid_offset = remap(all_buildings[i].grid_offset);
     }
 }
+
+#define B(id) player_clone_id(c, id, MAX_BUILDINGS)
+#define F(id) player_clone_id(c, id, MAX_FIGURES)
+#define FO(id) player_clone_id(c, id, MAX_FORMATIONS)
+
+void building_clone_record(building *b, const building *source, int new_id, const player_clone *c)
+{
+    *b = *source;
+    b->id = new_id;
+    if (b->state == BUILDING_STATE_UNUSED) {
+        return;
+    }
+    b->x += c->dx;
+    b->y += c->dy;
+    b->grid_offset += c->grid_delta;
+    if (b->road_access_x || b->road_access_y) {
+        b->road_access_x += c->dx;
+        b->road_access_y += c->dy;
+    }
+    b->prev_part_building_id = B(b->prev_part_building_id);
+    b->next_part_building_id = B(b->next_part_building_id);
+    b->figure_id = F(b->figure_id);
+    b->figure_id2 = F(b->figure_id2);
+    b->immigrant_figure_id = F(b->immigrant_figure_id);
+    b->figure_id4 = F(b->figure_id4);
+    b->formation_id = FO(b->formation_id);
+    if (b->type == BUILDING_NATIVE_HUT) {
+        b->subtype.native_meeting_center_id = B(b->subtype.native_meeting_center_id);
+    }
+    b->storage_id = player_clone_id(c, b->storage_id, MAX_STORAGES);
+    if (b->type == BUILDING_DOCK) {
+        b->data.dock.queued_docker_id = F(b->data.dock.queued_docker_id);
+        for (int d = 0; d < 3; d++) {
+            b->data.dock.docker_ids[d] = F(b->data.dock.docker_ids[d]);
+        }
+        b->data.dock.trade_ship_id = F(b->data.dock.trade_ship_id);
+    } else if (b->type == BUILDING_WHARF) {
+        b->data.industry.fishing_boat_id = F(b->data.industry.fishing_boat_id);
+    }
+}
+
+void building_clone_player(const player_clone *c)
+{
+    for (int i = 0; i < MAX_BUILDINGS; i++) {
+        building source = all_buildings[c->from * MAX_BUILDINGS + i];
+        building_clone_record(&all_buildings[c->to * MAX_BUILDINGS + i], &source, c->to * MAX_BUILDINGS + i, c);
+    }
+}
+
+void building_clone_player_counters(const player_clone *c)
+{
+    // in the context of the receiving player
+    extra.highest_id_in_use = B(extra.highest_id_in_use);
+    extra.highest_id_ever = B(extra.highest_id_ever);
+}
+
+#undef B
+#undef F
+#undef FO

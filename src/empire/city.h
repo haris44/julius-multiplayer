@@ -68,4 +68,7 @@ void empire_city_load_state(buffer *buf);
  */
 void empire_city_register_player_state(void);
 
+#include "game/player_clone.h"
+void empire_city_clone_fixup(const player_clone *c);
+
 #endif // EMPIRE_CITY_H

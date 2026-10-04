@@ -36,7 +36,8 @@ void figure_create_flotsam(void)
     if (!scenario_map_has_river_entry() || !scenario_map_has_river_exit() || !scenario_map_has_flotsam()) {
         return;
     }
-    for (int i = 1; i < FIGURE_ALL_END; i++) {
+    // the flotsam of the current city only
+    for (int i = FIGURE_FIRST; i < FIGURE_END; i++) {
         figure *f = figure_get(i);
         if (f->state && f->type == FIGURE_FLOTSAM) {
             figure_delete(f);

@@ -9,6 +9,8 @@
 #include "figure/trader.h"
 #include "map/figure.h"
 #include "map/grid.h"
+#include "figure/formation.h"
+#include "game/player_clone.h"
 
 #include <string.h>
 
@@ -274,8 +276,14 @@ static void figure_load(buffer *buf, figure *f)
     f->destination_grid_offset = buffer_read_i16(buf);
     f->source_x = GRID_COORD(buffer_read_u8(buf));
     f->source_y = GRID_COORD(buffer_read_u8(buf));
-    f->formation_position_x.soldier = buffer_read_u8(buf);
-    f->formation_position_y.soldier = buffer_read_u8(buf);
+    // one byte in classic saved games: signed for enemies, unsigned for soldiers
+    if (figure_is_enemy(f)) {
+        f->formation_position_x.enemy = buffer_read_i8(buf);
+        f->formation_position_y.enemy = buffer_read_i8(buf);
+    } else {
+        f->formation_position_x.soldier = buffer_read_u8(buf);
+        f->formation_position_y.soldier = buffer_read_u8(buf);
+    }
     f->__unused_24 = buffer_read_i16(buf);
     f->wait_ticks = buffer_read_i16(buf);
     f->action_state = buffer_read_u8(buf);
@@ -372,5 +380,66 @@ void figure_relocate_grid_offsets(int (*remap)(int grid_offset))
     for (int i = 0; i < FIGURE_ARRAY_SIZE; i++) {
         data.figures[i].grid_offset = remap(data.figures[i].grid_offset);
         data.figures[i].destination_grid_offset = remap(data.figures[i].destination_grid_offset);
+    }
+}
+
+void figure_clone_record(figure *f, const figure *source, int new_id, const player_clone *c)
+{
+#define B(id) player_clone_id(c, id, MAX_BUILDINGS)
+#define F(id) player_clone_id(c, id, MAX_FIGURES)
+    *f = *source;
+    f->id = new_id;
+    if (!f->state) {
+        return;
+    }
+    f->x += c->dx;
+    f->y += c->dy;
+    f->previous_tile_x += c->dx;
+    f->previous_tile_y += c->dy;
+    f->destination_x += c->dx;
+    f->destination_y += c->dy;
+    f->source_x += c->dx;
+    f->source_y += c->dy;
+    f->grid_offset += c->grid_delta;
+    if (f->destination_grid_offset) {
+        f->destination_grid_offset += c->grid_delta;
+    }
+    f->cross_country_x += 15 * c->dx;
+    f->cross_country_y += 15 * c->dy;
+    if (f->cc_destination_x || f->cc_destination_y) { // 0: no cross-country movement yet
+        f->cc_destination_x += 15 * c->dx;
+        f->cc_destination_y += 15 * c->dy;
+    }
+    if (figure_is_legion(f)) {
+        f->formation_position_x.soldier += c->dx; // map coordinates for soldiers, offsets for enemies
+        f->formation_position_y.soldier += c->dy;
+    }
+    f->next_figure_id_on_same_tile = F(f->next_figure_id_on_same_tile);
+    f->routing_path_id = player_clone_id(c, f->routing_path_id, 600);
+    if (f->type == FIGURE_ARROW || f->type == FIGURE_SPEAR || f->type == FIGURE_JAVELIN || f->type == FIGURE_BOLT) {
+        f->building_id = F(f->building_id); // missiles keep the id of the figure that shot them
+    } else {
+        f->building_id = B(f->building_id);
+    }
+    f->immigrant_building_id = B(f->immigrant_building_id);
+    f->destination_building_id = B(f->destination_building_id);
+    f->formation_id = player_clone_id(c, f->formation_id, MAX_FORMATIONS);
+    if (f->type != FIGURE_HIPPODROME_HORSES) { // horses count their laps in this field
+        f->leading_figure_id = F(f->leading_figure_id);
+    }
+    f->target_figure_id = F(f->target_figure_id);
+    f->targeted_by_figure_id = F(f->targeted_by_figure_id);
+    f->opponent_id = F(f->opponent_id);
+    f->attacker_id1 = F(f->attacker_id1);
+    f->attacker_id2 = F(f->attacker_id2);
+#undef B
+#undef F
+}
+
+void figure_clone_player(const player_clone *c)
+{
+    for (int i = 0; i < MAX_FIGURES; i++) {
+        figure source = data.figures[c->from * MAX_FIGURES + i];
+        figure_clone_record(&data.figures[c->to * MAX_FIGURES + i], &source, c->to * MAX_FIGURES + i, c);
     }
 }

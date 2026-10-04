@@ -18,4 +18,7 @@ void scenario_earthquake_load_state(buffer *buf);
  */
 void scenario_earthquake_register_player_state(void);
 
+#include "game/player_clone.h"
+void scenario_earthquake_clone_fixup(const player_clone *c);
+
 #endif // SCENARIO_EARTHQUAKE_H

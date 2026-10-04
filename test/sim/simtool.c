@@ -2,6 +2,7 @@
 // prints state checksums. See doc/mp/TESTING.md.
 #include "building/building.h"
 #include "building/construction.h"
+#include "figure/figure.h"
 #include "building/construction_clear.h"
 #include "building/type.h"
 #include "building/count.h"
@@ -11,7 +12,11 @@
 #include "city/festival.h"
 #include "city/finance.h"
 #include "city/labor.h"
+#include "city/health.h"
+#include "city/population.h"
+#include "city/ratings.h"
 #include "city/resource.h"
+#include "city/sentiment.h"
 #include "empire/city.h"
 #include "empire/type.h"
 #include "core/time.h"
@@ -24,6 +29,8 @@
 #include "map/grid.h"
 #include "mp/checksum.h"
 #include "game/time.h"
+#include "game/player_context.h"
+#include "map/data.h"
 #include "mp/actions.h"
 #include "mp/compose.h"
 #include "mp/lockstep.h"
@@ -37,6 +44,8 @@
 #include <string.h>
 
 #define MAX_SAMPLES 100000
+#define MAX_PIECES 128
+#define FIGURE_TYPE_COUNT 256
 
 static time_millis clock_millis;
 
@@ -70,6 +79,8 @@ static int usage(void)
     printf("                                         final checksum, fails on desynchronisation\n");
     printf("  simtool relocequiv SAVE TICKS STRIDE DX DY  a city moved to a grid of side STRIDE, shifted by\n");
     printf("                                         (DX, DY), runs TICKS exactly as on its original grid\n");
+    printf("  simtool twins SAVE TICKS               the city with a twin city below it on a large map runs\n");
+    printf("                                         exactly as alone, and the twin gets the same statistics\n");
     printf("  simtool idempotence SAVE TICKS [STEP]  loads and runs SAVE twice in one process,\n");
     printf("                                         fails if the two traces differ\n");
     printf("  simtool diffpieces SAVE TICKS [CHECK]  runs SAVE for TICKS, reloads it and runs CHECK ticks\n");
@@ -561,6 +572,285 @@ static int command_relocequiv(const char *file, int ticks, int stride, int dx, i
     return 0;
 }
 
+#define TWIN_GAP 24 // farther than desirability and herds reach
+
+typedef struct {
+    int count;
+    uint64_t hash[MAX_PIECES];
+    const char *name[MAX_PIECES];
+} fingerprint;
+
+static void record_city_piece(const char *name, uint64_t checksum, void *userdata)
+{
+    fingerprint *fp = userdata;
+    // grids are compared on the area of the city; the image variants are shared by all cities
+    if (strstr(name, "grid") || strcmp(name, "extra_state") == 0) {
+        return;
+    }
+    if (fp->count < MAX_PIECES) {
+        fp->name[fp->count] = name;
+        fp->hash[fp->count++] = checksum;
+    }
+}
+
+// both cities on one large map: the city on top, the copy (if any) below, water and forest between
+static int setup_twin_map(const char *file, int with_twin, int *width, int *height)
+{
+    if (!load(file)) {
+        return 0;
+    }
+    *width = map_data.width;
+    *height = map_data.height;
+    // each city has the same surroundings: TWIN_GAP tiles of forest and water on every side.
+    // The twin is placed diagonally (same shift on x and y): an original bug passes x for y when choosing
+    // a granary (granary.c), so only such shifts keep distances identical.
+    int shift = (*width > *height ? *width : *height) + TWIN_GAP;
+    if (!mp_compose_relocate(512, TWIN_GAP, TWIN_GAP) ||
+        !mp_compose_extend_map(TWIN_GAP, TWIN_GAP, shift + TWIN_GAP, shift + TWIN_GAP)) {
+        return 0;
+    }
+    if (with_twin && !mp_compose_add_twin(TWIN_GAP, TWIN_GAP, *width, *height, shift, shift)) {
+        return 0;
+    }
+    return 1;
+}
+
+typedef struct {
+    int population, treasury, culture, prosperity, peace, favor, employed, unemployment, sentiment, health;
+} city_stats;
+
+static void get_stats(city_stats *s)
+{
+    s->population = city_population();
+    s->treasury = city_finance_treasury();
+    s->culture = city_rating_culture();
+    s->prosperity = city_rating_prosperity();
+    s->peace = city_rating_peace();
+    s->favor = city_rating_favor();
+    s->employed = city_labor_workers_employed();
+    s->unemployment = city_labor_unemployment_percentage();
+    s->sentiment = city_sentiment();
+    s->health = city_health();
+}
+
+static void print_stats(const char *label, const city_stats *s)
+{
+    printf("  %-6s population %d, treasury %d, culture %d, prosperity %d, peace %d, favor %d, employed %d, "
+        "unemployment %d%%, sentiment %d, health %d\n", label, s->population, s->treasury, s->culture, s->prosperity,
+        s->peace, s->favor, s->employed, s->unemployment, s->sentiment, s->health);
+}
+
+static int command_twins(const char *file, int ticks)
+{
+    static fingerprint alone, twin;
+    int width, height;
+    memset(&alone, 0, sizeof(alone));
+    memset(&twin, 0, sizeof(twin));
+
+    if (!setup_twin_map(file, 0, &width, &height)) {
+        printf("Unable to prepare the map\n");
+        return 2;
+    }
+    run_trace(ticks, ticks, 0, 0);
+    mp_checksum_state_pieces(record_city_piece, &alone);
+    game_file_write_saved_game("twins-alone.sav"); // entity records are comparable, large grids are cut
+    uint64_t alone_area = mp_compose_region_checksum(TWIN_GAP, TWIN_GAP, width, height);
+    city_stats alone_stats;
+    get_stats(&alone_stats);
+
+    if (!setup_twin_map(file, 1, &width, &height)) {
+        printf("Unable to create the twin city\n");
+        return 2;
+    }
+    run_trace(ticks, ticks, 0, 0);
+    mp_checksum_state_pieces(record_city_piece, &twin);
+    game_file_write_saved_game("twins-city.sav");
+    uint64_t twin_area = mp_compose_region_checksum(TWIN_GAP, TWIN_GAP, width, height);
+    city_stats first_stats, second_stats;
+    get_stats(&first_stats);
+    player_context_switch(1);
+    get_stats(&second_stats);
+    player_context_switch(0);
+    player_context_set_num_players(1);
+
+    int failures = 0;
+    for (int i = 0; i < alone.count && i < twin.count; i++) {
+        if (alone.hash[i] != twin.hash[i]) {
+            printf("city differs from the city alone: %s\n", alone.name[i]);
+            failures++;
+        }
+    }
+    if (alone_area != twin_area) {
+        printf("city differs from the city alone: map grids of its area\n");
+        failures++;
+    }
+    if (memcmp(&first_stats, &second_stats, sizeof(city_stats)) != 0) {
+        printf("the twin city has different statistics\n");
+        failures++;
+    }
+    print_stats("alone", &alone_stats);
+    print_stats("city", &first_stats);
+    print_stats("twin", &second_stats);
+    printf("%s after %d ticks\n", failures ? "DIFFERENT" : "Identical", ticks);
+    return failures ? 1 : 0;
+}
+
+// first figure of the twin that is not the copy of its counterpart in the first city
+static int find_twin_figure_difference(const player_clone *c)
+{
+    for (int i = 1; i < MAX_FIGURES; i++) {
+        figure expected;
+        figure_clone_record(&expected, figure_get(i), MAX_FIGURES + i, c);
+        figure *actual = figure_get(MAX_FIGURES + i);
+        if (!expected.state && !actual->state) {
+            continue;
+        }
+        if (memcmp(&expected, actual, sizeof(figure)) != 0) {
+            const unsigned char *a = (const unsigned char *) &expected;
+            const unsigned char *b = (const unsigned char *) actual;
+            printf("  figure %d (type %d, action %d): first different byte at struct offset %d\n",
+                i, expected.type, expected.action_state, (int) 0);
+            for (int k = 0; k < (int) sizeof(figure); k++) {
+                if (a[k] != b[k]) {
+                    printf("    offset %d: expected %d, twin %d\n", k, a[k], b[k]);
+                }
+            }
+            printf("    expected: state %d action %d xy %d,%d dest %d,%d path %d wait %d building %d formation %d\n",
+                expected.state, expected.action_state, expected.x, expected.y, expected.destination_x,
+                expected.destination_y, expected.routing_path_id, expected.wait_ticks, expected.building_id,
+                expected.formation_id);
+            if (getenv("TWIN_DEBUG_FIGURE")) {
+                int id = atoi(getenv("TWIN_DEBUG_FIGURE"));
+                for (int p = 0; p < 2; p++) {
+                    figure *g = figure_get(id + p * MAX_FIGURES);
+                    printf("    figure %d: type %d state %d action %d xy %d,%d next %d\n", g->id, g->type, g->state,
+                        g->action_state, g->x, g->y, g->next_figure_id_on_same_tile);
+                }
+            }
+            printf("    twin:     state %d action %d xy %d,%d dest %d,%d path %d wait %d building %d formation %d\n",
+                actual->state, actual->action_state, actual->x, actual->y, actual->destination_x,
+                actual->destination_y, actual->routing_path_id, actual->wait_ticks, actual->building_id,
+                actual->formation_id);
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static int find_twin_building_difference(const player_clone *c)
+{
+    for (int i = 1; i < MAX_BUILDINGS; i++) {
+        building expected;
+        building_clone_record(&expected, building_get(i), MAX_BUILDINGS + i, c);
+        building *actual = building_get(MAX_BUILDINGS + i);
+        if (expected.state == BUILDING_STATE_UNUSED && actual->state == BUILDING_STATE_UNUSED) {
+            continue;
+        }
+        // road network numbers are numbered across the whole map: only equality between buildings matters
+        expected.road_network_id = actual->road_network_id;
+        if (memcmp(&expected, actual, sizeof(building)) != 0) {
+            const unsigned char *a = (const unsigned char *) &expected;
+            const unsigned char *b = (const unsigned char *) actual;
+            printf("  building %d (type %d): differing bytes at struct offsets", i, expected.type);
+            for (int k = 0; k < (int) sizeof(building); k++) {
+                if (a[k] != b[k]) {
+                    printf(" %d (%d/%d)", k, a[k], b[k]);
+                }
+            }
+            printf("\n");
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static int command_twinfigures(const char *file, int ticks)
+{
+    int width, height;
+    if (!setup_twin_map(file, 1, &width, &height)) {
+        return 2;
+    }
+    int shift = (width > height ? width : height) + TWIN_GAP;
+    player_clone c = { 0, 1, shift, shift, shift + shift * GRID_SIZE };
+    setting_reset_speeds(500, setting_scroll_speed());
+    for (int tick = 0; tick <= ticks; tick++) {
+        if (tick) {
+            run_one_tick();
+        }
+        if (getenv("TWIN_DEBUG_IDS")) {
+            int ids[3];
+            if (sscanf(getenv("TWIN_DEBUG_IDS"), "%d,%d,%d", &ids[0], &ids[1], &ids[2]) == 3 && tick >= 49) {
+                for (int k = 0; k < 3; k++) {
+                    for (int p = 0; p < 2; p++) {
+                        building *b = building_get(ids[k] + p * MAX_BUILDINGS);
+                        printf("    tick %d building %d: type %d network %d entry %d road %d\n", tick, b->id, b->type,
+                            b->road_network_id, b->distance_from_entry, b->has_road_access);
+                    }
+                }
+            }
+        }
+        if (find_twin_building_difference(&c) || find_twin_figure_difference(&c)) {
+            printf("the twin's figures differ at tick %d\n", tick);
+            game_file_write_saved_game("twinfigures-city.sav");
+            player_context_switch(1);
+            game_file_write_saved_game("twinfigures-twin.sav");
+            player_context_switch(0);
+            player_context_set_num_players(1);
+            return 1;
+        }
+    }
+    player_context_set_num_players(1);
+    printf("twin figures are copies for %d ticks\n", ticks);
+    return 0;
+}
+
+// first tick at which the twin city's statistics differ from the first city's
+static int command_twinstats(const char *file, int ticks)
+{
+    int width, height;
+    if (!setup_twin_map(file, 1, &width, &height)) {
+        return 2;
+    }
+    setting_reset_speeds(500, setting_scroll_speed());
+    for (int tick = 0; tick <= ticks; tick++) {
+        if (tick) {
+            run_one_tick();
+        }
+        city_stats first, second;
+        get_stats(&first);
+        player_context_switch(1);
+        get_stats(&second);
+        player_context_switch(0);
+        if (memcmp(&first, &second, sizeof(city_stats)) != 0) {
+            printf("statistics differ at tick %d\n", tick);
+            print_stats("city", &first);
+            print_stats("twin", &second);
+            // alive figures by type in each city
+            int counts[2][FIGURE_TYPE_COUNT] = {{0}};
+            for (int i = 1; i < 2 * MAX_FIGURES; i++) {
+                figure *f = figure_get(i);
+                if (f->state == FIGURE_STATE_ALIVE && f->type < FIGURE_TYPE_COUNT) {
+                    counts[i / MAX_FIGURES][f->type]++;
+                }
+            }
+            for (int t = 0; t < FIGURE_TYPE_COUNT; t++) {
+                if (counts[0][t] != counts[1][t]) {
+                    printf("  figure type %d: city %d, twin %d\n", t, counts[0][t], counts[1][t]);
+                }
+            }
+            game_file_write_saved_game("twinstats-city.sav");
+            player_context_switch(1);
+            game_file_write_saved_game("twinstats-twin.sav");
+            player_context_switch(0);
+            player_context_set_num_players(1);
+            return 1;
+        }
+    }
+    player_context_set_num_players(1);
+    printf("same statistics for %d ticks\n", ticks);
+    return 0;
+}
+
 static int command_trace(const char *file, int ticks, int step)
 {
     if (!load(file)) {
@@ -582,8 +872,6 @@ static int command_pieces(const char *file, int ticks)
     printf("%-34s %016" PRIx64 "\n", "TOTAL", total);
     return 0;
 }
-
-#define MAX_PIECES 128
 
 typedef struct {
     int count;
@@ -705,6 +993,12 @@ int main(int argc, char **argv)
         result = command_checksum(file);
     } else if (strcmp(command, "relocequiv") == 0 && argc > 6) {
         result = command_relocequiv(file, ticks, atoi(argv[4]), atoi(argv[5]), atoi(argv[6]));
+    } else if (strcmp(command, "twinfigures") == 0 && argc > 3) {
+        result = command_twinfigures(file, ticks);
+    } else if (strcmp(command, "twinstats") == 0 && argc > 3) {
+        result = command_twinstats(file, ticks);
+    } else if (strcmp(command, "twins") == 0 && argc > 3) {
+        result = command_twins(file, ticks);
     } else if (strcmp(command, "mpnode") == 0) {
         result = command_mpnode(argc, argv);
     } else if (strcmp(command, "actionequiv") == 0) {

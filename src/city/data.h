@@ -25,4 +25,7 @@ void city_data_register_player_state(void);
  */
 void city_data_relocate_grid_offsets(int (*remap)(int grid_offset));
 
+#include "game/player_clone.h"
+void city_data_clone_fixup(const player_clone *c);
+
 #endif // CITY_DATA_H

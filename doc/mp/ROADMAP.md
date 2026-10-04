@@ -87,9 +87,12 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
 - [x] **M3.5** Tranches d'identifiants et conversion des boucles (D-005). *Critère* : parité.
 - [x] **M3.6** Ordonnancement d'un tick à N cités (DESIGN §3.3). *Critère* : parité. Plan détaillé et liste des 14 tâches
   à adapter : `doc/mp/code-map/06-ordonnancement-multi-cites.md`.
-- [ ] **M3.7** **Test d'isolement « jumeaux »** : la même sauvegarde placée deux fois (cités 0 et 1) redonne,
+- [x] **M3.7** **Test d'isolement « jumeaux »** : la même sauvegarde placée deux fois (cités 0 et 1) redonne,
   pour chacune, la référence du jeu original, sur les 36 cas. Plus le test d'indice (une seule cité placée en
   position k). C'est la preuve de E7 pour le moteur multi-cités.
+  *Fait* : `simtool twins` et `twinfigures`, 16 sauvegardes identiques sur 3 000 ticks (et 12 000 pour 4 d'entre
+  elles), dont la jumelle copie exacte personnage par personnage (D-023). Seul écart connu : les sans-abri d'une carte
+  sans point de sortie visent tous la case (0, 0) de la carte (inv0, après 4 300 ticks) ; réglé par M4.2.
 - [ ] **M3.8** Sauvegarde multijoueur `.mpsav` (monde, cités, état caché). *Critère* : test de reprise exacte
   (continuer la partie = sauvegarder puis recharger).
 

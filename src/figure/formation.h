@@ -15,6 +15,8 @@
 #define FORMATION_FIRST (FORMATION_BASE + 1)
 #define FORMATION_END (FORMATION_BASE + MAX_FORMATIONS)
 #define FORMATION_OWNER(id) ((id) / MAX_FORMATIONS)
+/** Id inside the slice of its owner: the original id in a classic game, for code that uses ids as numbers */
+#define FORMATION_LOCAL_ID(id) ((id) % MAX_FORMATIONS)
 
 #define MAX_LEGIONS 6
 #define MAX_FORMATION_FIGURES 16
@@ -194,5 +196,9 @@ void formations_load_state(buffer *buf, buffer *totals);
  * Registers the per-city state of this module (game/player_context.h)
  */
 void formation_register_player_state(void);
+
+#include "game/player_clone.h"
+void formation_clone_player(const player_clone *c);
+void formation_clone_player_counters(const player_clone *c);
 
 #endif // FIGURE_FORMATION_H

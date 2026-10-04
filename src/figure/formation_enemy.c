@@ -348,7 +348,8 @@ static void mars_kill_enemies(void)
         return;
     }
     int grid_offset = 0;
-    for (int i = 1; i < FIGURE_ALL_END && to_kill > 0; i++) {
+    // the enemies attacking the blessed city
+    for (int i = FIGURE_FIRST; i < FIGURE_END && to_kill > 0; i++) {
         figure *f = figure_get(i);
         if (f->state != FIGURE_STATE_ALIVE) {
             continue;

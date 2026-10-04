@@ -88,7 +88,7 @@ static void create_herd(int x, int y)
             figure *f = figure_create(herd_type, x, y, DIR_0_TOP);
             f->action_state = FIGURE_ACTION_196_HERD_ANIMAL_AT_REST;
             f->formation_id = formation_id;
-            f->wait_ticks = f->id & 0x1f;
+            f->wait_ticks = FIGURE_LOCAL_ID(f->id) & 0x1f;
         }
     }
 }
@@ -112,7 +112,7 @@ void figure_seagulls_action(figure *f)
             f->source_x + SEAGULL_OFFSETS[f->progress_on_tile].x,
             f->source_y + SEAGULL_OFFSETS[f->progress_on_tile].y);
     }
-    if (f->id & 1) {
+    if (FIGURE_LOCAL_ID(f->id) & 1) {
         figure_image_increase_offset(f, 54);
         f->image_id = image_group(GROUP_FIGURE_SEAGULLS) + f->image_offset / 3;
     } else {
@@ -151,7 +151,7 @@ void figure_sheep_action(figure *f)
         case FIGURE_ACTION_196_HERD_ANIMAL_AT_REST:
             f->wait_ticks++;
             if (f->wait_ticks > 400) {
-                f->wait_ticks = f->id & 0x1f;
+                f->wait_ticks = FIGURE_LOCAL_ID(f->id) & 0x1f;
                 f->action_state = FIGURE_ACTION_197_HERD_ANIMAL_MOVING;
                 herd_get_destination(f->index_in_formation, m, &f->destination_x, &f->destination_y);
                 f->roam_length = 0;
@@ -162,7 +162,7 @@ void figure_sheep_action(figure *f)
             if (f->direction == DIR_FIGURE_AT_DESTINATION || f->direction == DIR_FIGURE_LOST) {
                 f->direction = f->previous_tile_direction;
                 f->action_state = FIGURE_ACTION_196_HERD_ANIMAL_AT_REST;
-                f->wait_ticks = f->id & 0x1f;
+                f->wait_ticks = FIGURE_LOCAL_ID(f->id) & 0x1f;
             } else if (f->direction == DIR_FIGURE_REROUTE) {
                 figure_route_remove(f);
             }
@@ -173,7 +173,7 @@ void figure_sheep_action(figure *f)
         f->image_id = image_group(GROUP_FIGURE_SHEEP) + 104 +
             figure_image_corpse_offset(f);
     } else if (f->action_state == FIGURE_ACTION_196_HERD_ANIMAL_AT_REST) {
-        if (f->id & 3) {
+        if (FIGURE_LOCAL_ID(f->id) & 3) {
             f->image_id = image_group(GROUP_FIGURE_SHEEP) + 48 + dir +
                 8 * SHEEP_IMAGE_OFFSETS[f->wait_ticks & 0x3f];
         } else {
@@ -203,7 +203,7 @@ void figure_wolf_action(figure *f)
         case FIGURE_ACTION_196_HERD_ANIMAL_AT_REST:
             f->wait_ticks++;
             if (f->wait_ticks > 400) {
-                f->wait_ticks = f->id & 0x1f;
+                f->wait_ticks = FIGURE_LOCAL_ID(f->id) & 0x1f;
                 f->action_state = FIGURE_ACTION_197_HERD_ANIMAL_MOVING;
                 herd_get_destination(f->index_in_formation, m, &f->destination_x, &f->destination_y);
                 f->roam_length = 0;
@@ -214,7 +214,7 @@ void figure_wolf_action(figure *f)
             if (f->direction == DIR_FIGURE_AT_DESTINATION || f->direction == DIR_FIGURE_LOST) {
                 f->direction = f->previous_tile_direction;
                 f->action_state = FIGURE_ACTION_196_HERD_ANIMAL_AT_REST;
-                f->wait_ticks = f->id & 0x1f;
+                f->wait_ticks = FIGURE_LOCAL_ID(f->id) & 0x1f;
             } else if (f->direction == DIR_FIGURE_REROUTE) {
                 figure_route_remove(f);
             }
@@ -234,14 +234,14 @@ void figure_wolf_action(figure *f)
                 } else {
                     f->direction = f->previous_tile_direction;
                     f->action_state = FIGURE_ACTION_196_HERD_ANIMAL_AT_REST;
-                    f->wait_ticks = f->id & 0x1f;
+                    f->wait_ticks = FIGURE_LOCAL_ID(f->id) & 0x1f;
                 }
             } else if (f->direction == DIR_FIGURE_REROUTE) {
                 figure_route_remove(f);
             } else if (f->direction == DIR_FIGURE_LOST) {
                 f->direction = f->previous_tile_direction;
                 f->action_state = FIGURE_ACTION_196_HERD_ANIMAL_AT_REST;
-                f->wait_ticks = f->id & 0x1f;
+                f->wait_ticks = FIGURE_LOCAL_ID(f->id) & 0x1f;
             }
             break;
     }
@@ -277,7 +277,7 @@ void figure_zebra_action(figure *f)
         case FIGURE_ACTION_196_HERD_ANIMAL_AT_REST:
             f->wait_ticks++;
             if (f->wait_ticks > 200) {
-                f->wait_ticks = f->id & 0x1f;
+                f->wait_ticks = FIGURE_LOCAL_ID(f->id) & 0x1f;
                 f->action_state = FIGURE_ACTION_197_HERD_ANIMAL_MOVING;
                 herd_get_destination(f->index_in_formation, m, &f->destination_x, &f->destination_y);
                 f->roam_length = 0;
@@ -288,7 +288,7 @@ void figure_zebra_action(figure *f)
             if (f->direction == DIR_FIGURE_AT_DESTINATION || f->direction == DIR_FIGURE_LOST) {
                 f->direction = f->previous_tile_direction;
                 f->action_state = FIGURE_ACTION_196_HERD_ANIMAL_AT_REST;
-                f->wait_ticks = f->id & 0x1f;
+                f->wait_ticks = FIGURE_LOCAL_ID(f->id) & 0x1f;
             } else if (f->direction == DIR_FIGURE_REROUTE) {
                 figure_route_remove(f);
             }
@@ -389,13 +389,13 @@ void figure_hippodrome_horse_action(figure *f)
                         f->wait_ticks = 0;
                         f->action_state = FIGURE_ACTION_202_HIPPODROME_HORSE_DONE;
                     }
-                    if ((f->id + random_byte()) & 1) {
+                    if ((FIGURE_LOCAL_ID(f->id) + random_byte()) & 1) {
                         f->speed_multiplier = 3;
                     } else {
                         f->speed_multiplier = 4;
                     }
                 } else if (f->wait_ticks_missile == 11) {
-                    if ((f->id + random_byte()) & 1) {
+                    if ((FIGURE_LOCAL_ID(f->id) + random_byte()) & 1) {
                         f->speed_multiplier = 3;
                     } else {
                         f->speed_multiplier = 4;

@@ -123,3 +123,9 @@ void scenario_map_set_grid_position(int grid_start, int grid_border_size)
     scenario.map.grid_start = grid_start;
     scenario.map.grid_border_size = grid_border_size;
 }
+
+void scenario_map_set_size(int width, int height)
+{
+    scenario.map.width = width;
+    scenario.map.height = height;
+}

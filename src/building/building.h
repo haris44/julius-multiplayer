@@ -4,6 +4,7 @@
 #include "building/type.h"
 #include "core/buffer.h"
 #include "game/player_context.h"
+#include "game/player_clone.h"
 
 /** Buildings per player: every player has its own slice of ids, as large as the original limit */
 #define MAX_BUILDINGS 2000
@@ -15,6 +16,8 @@
 #define BUILDING_ALL_END (player_context_player_count * MAX_BUILDINGS)
 /** Owner of a building id */
 #define BUILDING_OWNER(id) ((id) / MAX_BUILDINGS)
+/** Id inside the slice of its owner: the original id in a classic game, for code that uses ids as numbers */
+#define BUILDING_LOCAL_ID(id) ((id) % MAX_BUILDINGS)
 
 typedef struct {
     int id;
@@ -37,7 +40,7 @@ typedef struct {
         short fort_figure_type;
         short native_meeting_center_id;
     } subtype;
-    unsigned char road_network_id;
+    unsigned short road_network_id; // 8 bits in classic saved games
     unsigned short created_sequence;
     short houses_covered;
     short percentage_houses_covered;
@@ -196,5 +199,16 @@ void building_load_state(buffer *buf, buffer *highest_id, buffer *highest_id_eve
  * Moves the buildings on a grid of another size (doc/mp/ROADMAP.md M3.3)
  */
 void building_relocate_grid_offsets(int (*remap)(int grid_offset));
+
+/**
+ * Copies the buildings of a player into the slice of another one (game/player_clone.h)
+ */
+void building_clone_player(const player_clone *c);
+
+/**
+ * The record a building would have once copied to another player (tests compare twin cities with it)
+ */
+void building_clone_record(building *b, const building *source, int new_id, const player_clone *c);
+void building_clone_player_counters(const player_clone *c);
 
 #endif // BUILDING_BUILDING_H

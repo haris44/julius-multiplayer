@@ -34,4 +34,9 @@ int scenario_map_has_flotsam(void);
  */
 void scenario_map_set_grid_position(int grid_start, int grid_border_size);
 
+/**
+ * Changes the size of the playable map area (multiplayer maps built from several cities)
+ */
+void scenario_map_set_size(int width, int height);
+
 #endif // SCENARIO_MAP_H

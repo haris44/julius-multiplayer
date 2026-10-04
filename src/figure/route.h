@@ -18,4 +18,7 @@ void figure_route_save_state(buffer *figures, buffer *paths);
 
 void figure_route_load_state(buffer *figures, buffer *paths);
 
+#include "game/player_clone.h"
+void figure_route_clone_player(const player_clone *c);
+
 #endif // FIGURE_ROUTE_H

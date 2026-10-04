@@ -1,5 +1,7 @@
 #include "list.h"
 #include "game/player_context.h"
+#include "building/building.h"
+#include "game/player_clone.h"
 
 #include <string.h>
 
@@ -147,4 +149,17 @@ void building_list_load_state(buffer *small, buffer *large, buffer *burning, buf
 void building_list_register_player_state(void)
 {
     player_context_register(&data, sizeof(data), "building_lists");
+}
+
+void building_list_clone_fixup(const player_clone *c)
+{
+    for (int i = 0; i < MAX_SMALL; i++) {
+        data.small.items[i] = player_clone_id(c, data.small.items[i], MAX_BUILDINGS);
+    }
+    for (int i = 0; i < MAX_LARGE; i++) {
+        data.large.items[i] = player_clone_id(c, data.large.items[i], MAX_BUILDINGS);
+    }
+    for (int i = 0; i < MAX_BURNING; i++) {
+        data.burning.items[i] = player_clone_id(c, data.burning.items[i], MAX_BUILDINGS);
+    }
 }

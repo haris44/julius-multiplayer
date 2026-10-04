@@ -49,4 +49,7 @@ void city_labor_load_extra_state(buffer *buf);
  */
 void city_labor_register_player_state(void);
 
+#include "game/player_clone.h"
+void city_labor_clone_fixup(const player_clone *c);
+
 #endif // CITY_LABOR_H

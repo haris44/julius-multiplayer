@@ -10,6 +10,7 @@
 #include "game/time.h"
 #include "scenario/property.h"
 #include "game/player_context.h"
+#include "game/player_clone.h"
 
 #define MAX_CATS 10
 
@@ -536,4 +537,9 @@ int city_labor_max_selectable_priority(int category)
 void city_labor_register_player_state(void)
 {
     player_context_register(&water_start_building_id, sizeof(water_start_building_id), "water_workers_cursor");
+}
+
+void city_labor_clone_fixup(const player_clone *c)
+{
+    water_start_building_id = player_clone_id(c, water_start_building_id, MAX_BUILDINGS);
 }

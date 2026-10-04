@@ -11,6 +11,8 @@
 #include "map/grid.h"
 #include "sound/effect.h"
 #include "game/player_context.h"
+#include "building/building.h"
+#include "game/player_clone.h"
 
 #include <string.h>
 
@@ -756,4 +758,40 @@ void formations_load_state(buffer *buf, buffer *totals)
 void formation_register_player_state(void)
 {
     player_context_register(&data, sizeof(data), "formation_totals");
+}
+
+void formation_clone_player(const player_clone *c)
+{
+    for (int i = 0; i < MAX_FORMATIONS; i++) {
+        formation *m = &formations[c->to * MAX_FORMATIONS + i];
+        *m = formations[c->from * MAX_FORMATIONS + i];
+        m->id = c->to * MAX_FORMATIONS + i;
+        if (!m->in_use) {
+            continue;
+        }
+        m->x += c->dx;
+        m->y += c->dy;
+        m->x_home += c->dx;
+        m->y_home += c->dy;
+        m->standard_x += c->dx;
+        m->standard_y += c->dy;
+        m->destination_x += c->dx;
+        m->destination_y += c->dy;
+        m->prev.x_home += c->dx;
+        m->prev.y_home += c->dy;
+        m->building_id = player_clone_id(c, m->building_id, MAX_BUILDINGS);
+        m->destination_building_id = player_clone_id(c, m->destination_building_id, MAX_BUILDINGS);
+        m->standard_figure_id = player_clone_id(c, m->standard_figure_id, MAX_FIGURES);
+        m->missile_attack_formation_id = player_clone_id(c, m->missile_attack_formation_id, MAX_FORMATIONS);
+        for (int f = 0; f < MAX_FORMATION_FIGURES; f++) {
+            m->figures[f] = player_clone_id(c, m->figures[f], MAX_FIGURES);
+        }
+    }
+}
+
+void formation_clone_player_counters(const player_clone *c)
+{
+    // in the context of the receiving player
+    data.id_last_in_use = player_clone_id(c, data.id_last_in_use, MAX_FORMATIONS);
+    data.id_last_legion = player_clone_id(c, data.id_last_legion, MAX_FORMATIONS);
 }

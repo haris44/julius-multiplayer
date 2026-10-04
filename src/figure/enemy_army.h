@@ -46,4 +46,7 @@ void enemy_armies_load_state(buffer *buf, buffer *totals_buf);
  */
 void enemy_army_register_player_state(void);
 
+#include "game/player_clone.h"
+void enemy_army_clone_fixup(const player_clone *c);
+
 #endif // FIGURE_ENEMY_ARMY_H

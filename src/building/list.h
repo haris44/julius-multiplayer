@@ -79,4 +79,7 @@ void building_list_load_extra_state(buffer *buf);
  */
 void building_list_register_player_state(void);
 
+#include "game/player_clone.h"
+void building_list_clone_fixup(const player_clone *c);
+
 #endif // BUILDING_LIST_H

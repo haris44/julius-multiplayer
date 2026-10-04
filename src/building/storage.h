@@ -4,6 +4,9 @@
 #include "core/buffer.h"
 #include "game/resource.h"
 
+/** Storages per player: every player has its own slice of storage ids, as large as the original limit */
+#define MAX_STORAGES 200
+
 /**
  * @file
  * Building storage functions
@@ -92,5 +95,8 @@ void building_storage_save_state(buffer *buf);
  * @param buf Buffer to read from
  */
 void building_storage_load_state(buffer *buf);
+
+#include "game/player_clone.h"
+void building_storage_clone_player(const player_clone *c);
 
 #endif // BUILDING_STORAGE_H

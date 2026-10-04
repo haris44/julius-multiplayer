@@ -16,6 +16,8 @@
 /** Past-the-end id of the figures of all players: figures of different players meet and fight */
 #define FIGURE_ALL_END (player_context_player_count * MAX_FIGURES)
 #define FIGURE_OWNER(id) ((id) / MAX_FIGURES)
+/** Id inside the slice of its owner: the original id in a classic game, for code that uses ids as numbers */
+#define FIGURE_LOCAL_ID(id) ((id) % MAX_FIGURES)
 
 typedef struct {
     int id;
@@ -51,12 +53,12 @@ typedef struct {
     unsigned short source_x; // 8 bits in classic saved games
     unsigned short source_y; // 8 bits in classic saved games
     union {
-        unsigned char soldier;
-        signed char enemy;
-    } formation_position_x;
+        unsigned short soldier; // map coordinate: wraps like other coordinates (GRID_COORD)
+        short enemy; // offset in the formation
+    } formation_position_x; // 8 bits in classic saved games
     union {
-        unsigned char soldier;
-        signed char enemy;
+        unsigned short soldier;
+        short enemy;
     } formation_position_y;
     short __unused_24;
     short wait_ticks;
@@ -162,5 +164,13 @@ void figure_register_player_state(void);
  * Moves the figures on a grid of another size (doc/mp/ROADMAP.md M3.3)
  */
 void figure_relocate_grid_offsets(int (*remap)(int grid_offset));
+
+#include "game/player_clone.h"
+void figure_clone_player(const player_clone *c);
+
+/**
+ * The record a figure would have once copied to another player (tests compare twin cities with it)
+ */
+void figure_clone_record(figure *f, const figure *source, int new_id, const player_clone *c);
 
 #endif // FIGURE_FIGURE_H

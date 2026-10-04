@@ -11,6 +11,8 @@
 #include "figuretype/trader.h"
 #include "scenario/map.h"
 #include "game/player_context.h"
+#include "figure/figure.h"
+#include "game/player_clone.h"
 
 #include <string.h>
 
@@ -403,4 +405,13 @@ void empire_city_load_state(buffer *buf)
 void empire_city_register_player_state(void)
 {
     player_context_register(&cities, sizeof(cities), "empire_cities");
+}
+
+void empire_city_clone_fixup(const player_clone *c)
+{
+    for (int i = 0; i < MAX_CITIES; i++) {
+        for (int t = 0; t < 3; t++) {
+            cities[i].trader_figure_ids[t] = player_clone_id(c, cities[i].trader_figure_ids[t], MAX_FIGURES);
+        }
+    }
 }

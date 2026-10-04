@@ -52,7 +52,7 @@ static int get_free_tile(int x, int y, int allow_negative_desirability, int *x_t
 static int get_roaming_destination(int formation_id, int allow_negative_desirability,
                                    int x, int y, int distance, int direction, int *x_tile, int *y_tile)
 {
-    int target_direction = (formation_id + random_byte()) & 6;
+    int target_direction = (FORMATION_LOCAL_ID(formation_id) + random_byte()) & 6;
     if (direction) {
         target_direction = direction;
         allow_negative_desirability = 1;
@@ -165,7 +165,7 @@ static void update_herd_formation(formation *m)
             figure *wolf = figure_create(m->figure_type, m->x, m->y, DIR_0_TOP);
             wolf->action_state = FIGURE_ACTION_196_HERD_ANIMAL_AT_REST;
             wolf->formation_id = m->id;
-            wolf->wait_ticks = wolf->id & 0x1f;
+            wolf->wait_ticks = FIGURE_LOCAL_ID(wolf->id) & 0x1f;
         }
     }
     int attacking_animals = 0;

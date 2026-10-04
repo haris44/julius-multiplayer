@@ -244,8 +244,8 @@ void figure_soldier_action(figure *f)
     if (f->formation_at_rest || f->action_state == FIGURE_ACTION_81_SOLDIER_GOING_TO_FORT) {
         layout = FORMATION_AT_REST;
     }
-    f->formation_position_x.soldier = m->x + formation_layout_position_x(layout, f->index_in_formation);
-    f->formation_position_y.soldier = m->y + formation_layout_position_y(layout, f->index_in_formation);
+    f->formation_position_x.soldier = GRID_COORD(m->x + formation_layout_position_x(layout, f->index_in_formation));
+    f->formation_position_y.soldier = GRID_COORD(m->y + formation_layout_position_y(layout, f->index_in_formation));
 
     switch (f->action_state) {
         case FIGURE_ACTION_150_ATTACK:

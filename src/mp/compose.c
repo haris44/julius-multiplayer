@@ -1,6 +1,20 @@
 #include "compose.h"
 
 #include "building/building.h"
+#include "building/granary.h"
+#include "empire/city.h"
+#include "scenario/scenario.h"
+#include "scenario/earthquake.h"
+#include "map/point.h"
+#include "map/owner.h"
+#include "game/player_context.h"
+#include "game/player_clone.h"
+#include "figure/route.h"
+#include "figure/formation.h"
+#include "figure/enemy_army.h"
+#include "city/labor.h"
+#include "building/storage.h"
+#include "building/list.h"
 #include "city/data.h"
 #include "core/buffer.h"
 #include "figure/figure.h"
@@ -162,5 +176,198 @@ int mp_compose_relocate(int new_stride, int dx, int dy)
         free(old_data[g]);
         free(relocation.data[g]);
     }
+    return 1;
+}
+
+int mp_compose_set_map_size(int width, int height)
+{
+    int x0 = map_data.start_offset % GRID_SIZE;
+    int y0 = map_data.start_offset / GRID_SIZE;
+    if (x0 + width >= GRID_SIZE || y0 + height >= GRID_SIZE) {
+        return 0;
+    }
+    map_grid_init(width, height, map_data.start_offset, GRID_SIZE - width);
+    scenario_map_set_size(width, height);
+    scenario_map_set_grid_position(map_data.start_offset, GRID_SIZE - width);
+    return 1;
+}
+
+static void copy_region(int x_min, int y_min, int width, int height, const player_clone *c)
+{
+    int stride = GRID_SIZE;
+    // map-relative region of the copied city, one tile of border included
+    for (int y = y_min - 1; y <= y_min + height; y++) {
+        for (int x = x_min - 1; x <= x_min + width; x++) {
+            int from = map_grid_offset(x, y);
+            int to = from + c->grid_delta;
+            if (from < 0 || to < 0 || to >= stride * stride) {
+                continue;
+            }
+            for (int g = 0; g < NUM_GRIDS; g++) {
+                int size = ITEM_SIZE[g];
+                memcpy(&relocation.data[g][to * size], &relocation.data[g][from * size], size);
+            }
+            // ids stored in the building and figure grids belong to the copied slices
+            int building_id = relocation.data[GRID_BUILDING][2 * to] | (relocation.data[GRID_BUILDING][2 * to + 1] << 8);
+            building_id = player_clone_id(c, building_id, MAX_BUILDINGS);
+            relocation.data[GRID_BUILDING][2 * to] = building_id & 0xff;
+            relocation.data[GRID_BUILDING][2 * to + 1] = building_id >> 8;
+            int figure_id = relocation.data[GRID_FIGURE][2 * to] | (relocation.data[GRID_FIGURE][2 * to + 1] << 8);
+            figure_id = player_clone_id(c, figure_id, MAX_FIGURES);
+            relocation.data[GRID_FIGURE][2 * to] = figure_id & 0xff;
+            relocation.data[GRID_FIGURE][2 * to + 1] = figure_id >> 8;
+            map_owner_set(to, c->to);
+        }
+    }
+}
+
+int mp_compose_add_twin(int x_min, int y_min, int width, int height, int dx, int dy)
+{
+    int stride = GRID_SIZE;
+    if (player_context_num_players() != 1 || x_min + dx + width > map_data.width ||
+        y_min + dy + height > map_data.height) {
+        return 0;
+    }
+    player_clone c = { 0, 1, dx, dy, dx + dy * stride };
+    for (int g = 0; g < NUM_GRIDS; g++) {
+        relocation.data[g] = malloc(GRID_MAX_TILES * ITEM_SIZE[g]);
+    }
+    init_buffers(stride);
+    save_grids();
+    copy_region(x_min, y_min, width, height, &c);
+    init_buffers(stride);
+    load_grids();
+    for (int g = 0; g < NUM_GRIDS; g++) {
+        free(relocation.data[g]);
+    }
+
+    // the per-city state of the twin starts as a copy of the first city
+    player_context_set_num_players(2);
+    building_clone_player(&c);
+    figure_clone_player(&c);
+    formation_clone_player(&c);
+    building_storage_clone_player(&c);
+    figure_route_clone_player(&c);
+
+    player_context_switch(1);
+    city_data_clone_fixup(&c);
+    building_clone_player_counters(&c);
+    formation_clone_player_counters(&c);
+    city_labor_clone_fixup(&c);
+    building_list_clone_fixup(&c);
+    enemy_army_clone_fixup(&c);
+    scenario_clone_fixup(&c);
+    scenario_earthquake_clone_fixup(&c);
+    map_point_clone_fixup(&c);
+    empire_city_clone_fixup(&c);
+    building_granary_clone_fixup(&c);
+    player_context_switch(0);
+
+    map_routing_update_all();
+    map_road_network_update_grid();
+    for (int p = 0; p < 2; p++) {
+        player_context_switch(p);
+        map_road_network_update_largest();
+    }
+    player_context_switch(0);
+
+    // road network numbers kept in the buildings: those of the copy's own networks
+    static int network_of_copy[65536];
+    memset(network_of_copy, 0, sizeof(network_of_copy));
+    for (int y = y_min - 1; y <= y_min + height; y++) {
+        for (int x = x_min - 1; x <= x_min + width; x++) {
+            int offset = map_grid_offset(x, y);
+            int network = map_road_network_get(offset);
+            if (network) {
+                network_of_copy[network] = map_road_network_get(offset + c.grid_delta);
+            }
+        }
+    }
+    for (int i = MAX_BUILDINGS; i < 2 * MAX_BUILDINGS; i++) {
+        building *b = building_get(i);
+        if (b->state != BUILDING_STATE_UNUSED && b->road_network_id) {
+            b->road_network_id = network_of_copy[b->road_network_id];
+        }
+    }
+    return 1;
+}
+
+uint64_t mp_compose_region_checksum(int x_min, int y_min, int width, int height)
+{
+    uint64_t hash = 0xcbf29ce484222325ULL;
+    for (int g = 0; g < NUM_GRIDS; g++) {
+        relocation.data[g] = malloc(GRID_MAX_TILES * ITEM_SIZE[g]);
+    }
+    init_buffers(GRID_SIZE);
+    save_grids();
+    for (int g = 0; g < NUM_GRIDS; g++) {
+        if (g == GRID_IMAGE || g == GRID_SPRITE || g == GRID_SPRITE_BACKUP) {
+            continue; // written by the user interface, as in mp_checksum_state
+        }
+        for (int y = y_min - 1; y <= y_min + height; y++) {
+            for (int x = x_min - 1; x <= x_min + width; x++) {
+                int offset = map_grid_offset(x, y);
+                for (int b = 0; b < ITEM_SIZE[g]; b++) {
+                    uint8_t value = relocation.data[g][offset * ITEM_SIZE[g] + b];
+                    if (g == GRID_BITFIELDS) {
+                        value &= 0xaf; // construction previews
+                    }
+                    hash = (hash ^ value) * 0x100000001b3ULL;
+                }
+            }
+        }
+        free(relocation.data[g]);
+    }
+    return hash;
+}
+
+static void shift_city_in_place(int player_id, int dx, int dy)
+{
+    // tiles stay where they are on the grid; their map coordinates change with the map origin
+    player_clone c = { player_id, player_id, dx, dy, 0 };
+    building_clone_player(&c);
+    figure_clone_player(&c);
+    formation_clone_player(&c);
+    int previous = player_context_current();
+    player_context_switch(player_id);
+    city_data_clone_fixup(&c);
+    enemy_army_clone_fixup(&c);
+    scenario_clone_fixup(&c);
+    scenario_earthquake_clone_fixup(&c);
+    map_point_clone_fixup(&c);
+    player_context_switch(previous);
+}
+
+int mp_compose_extend_map(int left, int top, int right, int bottom)
+{
+    int stride = GRID_SIZE;
+    int x0 = map_data.start_offset % stride - left;
+    int y0 = map_data.start_offset / stride - top;
+    int width = map_data.width + left + right;
+    int height = map_data.height + top + bottom;
+    if (x0 < 1 || y0 < 1 || x0 + width >= stride || y0 + height >= stride || width <= 0 || height <= 0) {
+        return 0;
+    }
+    int start = x0 + y0 * stride;
+    // tiles added to the map are impassable rock: like the outside of a classic map, they block
+    // walkers, boats and floating debris alike (forest and water inside the map would be navigable)
+    int old_x0 = map_data.start_offset % stride;
+    int old_y0 = map_data.start_offset / stride;
+    for (int y = y0; y < y0 + height; y++) {
+        for (int x = x0; x < x0 + width; x++) {
+            int was_inside = x >= old_x0 && x < old_x0 + map_data.width && y >= old_y0 && y < old_y0 + map_data.height;
+            if (!was_inside) {
+                map_terrain_set(x + y * stride, TERRAIN_ROCK);
+            }
+        }
+    }
+    map_grid_init(width, height, start, stride - width);
+    scenario_map_set_size(width, height);
+    scenario_map_set_grid_position(start, stride - width);
+    for (int p = 0; p < player_context_num_players(); p++) {
+        shift_city_in_place(p, left, top);
+    }
+    map_routing_update_all();
+    map_road_network_update();
     return 1;
 }

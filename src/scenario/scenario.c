@@ -4,6 +4,7 @@
 #include "game/settings.h"
 #include "scenario/data.h"
 #include "game/player_context.h"
+#include "game/player_clone.h"
 
 struct scenario_t scenario;
 
@@ -491,4 +492,30 @@ void scenario_settings_load_state(
 void scenario_register_player_state(void)
 {
     player_context_register(&scenario, sizeof(scenario), "scenario");
+}
+
+static void shift_point(map_point *point, const player_clone *c)
+{
+    if (point->x >= 0 && point->y >= 0) {
+        point->x += c->dx;
+        point->y += c->dy;
+    }
+}
+
+void scenario_clone_fixup(const player_clone *c)
+{
+    shift_point(&scenario.entry_point, c);
+    shift_point(&scenario.exit_point, c);
+    shift_point(&scenario.river_entry_point, c);
+    shift_point(&scenario.river_exit_point, c);
+    shift_point(&scenario.earthquake_point, c);
+    for (int i = 0; i < MAX_HERD_POINTS; i++) {
+        shift_point(&scenario.herd_points[i], c);
+    }
+    for (int i = 0; i < MAX_FISH_POINTS; i++) {
+        shift_point(&scenario.fishing_points[i], c);
+    }
+    for (int i = 0; i < MAX_INVASION_POINTS; i++) {
+        shift_point(&scenario.invasion_points[i], c);
+    }
 }

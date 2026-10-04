@@ -50,4 +50,7 @@ void map_point_load_state(buffer *buf);
  */
 void map_point_register_player_state(void);
 
+#include "game/player_clone.h"
+void map_point_clone_fixup(const player_clone *c);
+
 #endif // MAP_POINT_H

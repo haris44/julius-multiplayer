@@ -585,7 +585,7 @@ void figure_enemy_gladiator_action(figure *f)
         case FIGURE_ACTION_158_NATIVE_CREATED:
             f->image_offset = 0;
             f->wait_ticks++;
-            if (f->wait_ticks > 10 + (f->id & 3)) {
+            if (f->wait_ticks > 10 + (FIGURE_LOCAL_ID(f->id) & 3)) {
                 f->wait_ticks = 0;
                 f->action_state = FIGURE_ACTION_159_NATIVE_ATTACKING;
                 int x_tile, y_tile;

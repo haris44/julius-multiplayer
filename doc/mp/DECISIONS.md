@@ -202,3 +202,24 @@
   à 255) n'existe plus. Il n'a d'effet que sur des personnages hors carte (explosions du séisme près du bord).
 - Attention : ne jamais appliquer ce masque à d'autres structures (points de carte, tuiles) où -1 signifie
   « invalide ». Un premier essai trop large a cassé 22 tests de parité.
+
+### D-023 — Ce que le test « jumeaux » impose au moteur multi-cités
+- 2026-10-04 · **adoptée** (M3.7)
+- Le test place une ville et sa copie sur une même grande carte, chacune entourée de 24 cases de forêt et d'eau, et
+  vérifie deux choses : la ville d'origine évolue exactement comme si elle était seule, et la copie obtient
+  exactement la même évolution. Il a révélé et fait corriger :
+  - des **numéros utilisés comme des nombres** : direction des troupeaux, attentes et parité des animaux et des
+    ennemis (`id & 0x1f`…). On passe désormais par le numéro **local** (`FIGURE_LOCAL_ID`, `FORMATION_LOCAL_ID`,
+    `BUILDING_LOCAL_ID`), égal au numéro d'origine en partie classique ;
+  - des champs 8 bits trop étroits : `storage_id`, `formation_position_*` (positions des soldats), numéros de réseau
+    routier, qui passent à 16 bits et « bouclent » à 256 sur les cartes classiques, comme l'original ;
+  - des boucles devenues globales à tort : création des débris flottants et colère/bénédiction de Mars (cité
+    courante seulement) ;
+  - la figure « nulle » n° 0, enregistrement poubelle commun à toutes les cités : exclue de la somme de contrôle,
+    comme le bâtiment n° 0.
+- La copie est placée **en diagonale** (même décalage en x et en y). Un bogue d'origine conservé
+  (`building_granary_for_getting` passe x à la place de y) rend sinon les distances différentes. Conséquence pour
+  le jeu : ce calcul dépend légèrement de la position sur la carte. C'était déjà le cas dans Caesar III, et ce n'est
+  pas une fuite entre cités.
+- Effet de voisinage voulu (DESIGN §3.4) : à moins de 24 cases, la désirabilité et l'errance des troupeaux traversent
+  d'une cité à l'autre.

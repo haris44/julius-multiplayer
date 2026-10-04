@@ -11,6 +11,7 @@
 #include "scenario/property.h"
 #include "sound/effect.h"
 #include "game/player_context.h"
+#include "game/player_clone.h"
 
 #define MAX_GRANARIES 100
 #define ONE_LOAD 100
@@ -456,4 +457,11 @@ void building_granary_warehouse_curse(int big)
 void building_granary_register_player_state(void)
 {
     player_context_register(&non_getting_granaries, sizeof(non_getting_granaries), "granaries");
+}
+
+void building_granary_clone_fixup(const player_clone *c)
+{
+    for (int i = 0; i < non_getting_granaries.num_items; i++) {
+        non_getting_granaries.building_ids[i] = player_clone_id(c, non_getting_granaries.building_ids[i], MAX_BUILDINGS);
+    }
 }

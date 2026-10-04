@@ -15,7 +15,9 @@
 // grid side only known at run time: up, right, down, left
 #define ADJACENT_OFFSETS(i) ((i) == 0 ? -GRID_SIZE : (i) == 1 ? 1 : (i) == 2 ? GRID_SIZE : -1)
 
-static grid_u8 network;
+// network number of each road tile: 8 bits in Caesar III (numbers wrap at 256 on classic maps, as the
+// coordinates do), 16 bits on large maps where several cities have many networks
+static grid_u16 network;
 
 // networks found by the last update of the grid, in the original raster order
 #define MAX_NETWORKS 2048
@@ -35,7 +37,7 @@ static struct {
 
 void map_road_network_clear(void)
 {
-    map_grid_clear_u8(network.items);
+    map_grid_clear_u16(network.items);
 }
 
 int map_road_network_get(int grid_offset)
@@ -43,7 +45,15 @@ int map_road_network_get(int grid_offset)
     return network.items[grid_offset];
 }
 
-static int mark_road_network(int grid_offset, uint8_t network_id)
+static int mark_road_network_with_id(int grid_offset, uint16_t network_id);
+
+static int mark_road_network(int grid_offset, int network_number)
+{
+    uint16_t network_id = network_number & map_grid_coordinate_mask;
+    return mark_road_network_with_id(grid_offset, network_id);
+}
+
+static int mark_road_network_with_id(int grid_offset, uint16_t network_id)
 {
     memset(&queue, 0, sizeof(queue));
     int guard = 0;
@@ -90,7 +100,7 @@ static int mark_road_network(int grid_offset, uint8_t network_id)
 
 void map_road_network_update_grid(void)
 {
-    map_grid_clear_u8(network.items);
+    map_grid_clear_u16(network.items);
     networks.count = 0;
     int network_id = 1;
     int grid_offset = map_data.start_offset;
