@@ -29,6 +29,7 @@ static const char *EXCLUDED_PIECES[] = {
     "image_grid",          // rewritten by water animation and view orientation
     "sprite_grid",         // building animation offsets, written by rendering
     "sprite_backup_grid",
+    "aqueduct_backup_grid", // undo backup, taken by the user interface when a construction starts
     "city_view_orientation",
     "city_view_camera",
     "city_graph_order",

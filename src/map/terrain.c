@@ -24,7 +24,8 @@ int map_terrain_get(int grid_offset)
 // is left (D-018)
 static void update_owner(int grid_offset)
 {
-    if (player_context_player_count <= 1) {
+    // previews of the interface change the terrain too, then restore it: they must not touch ownership
+    if (player_context_player_count <= 1 || (!map_owner_is_simulating() && map_owner_builder() == MAP_OWNER_NONE)) {
         return;
     }
     if (!(terrain_grid.items[grid_offset] & TERRAIN_INFRASTRUCTURE)) {

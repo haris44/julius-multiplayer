@@ -771,6 +771,30 @@ int mp_lockstep_can_run_tick(void)
     return turn <= data.last_known_turn;
 }
 
+// Diagnosis of a desynchronisation: MP_TRACE_TURNS=FIRST-LAST logs the checksum of every piece of these turns,
+// to compare between the logs of two computers
+static void trace_piece(const char *name, uint64_t checksum, void *userdata)
+{
+    char text[128];
+    snprintf(text, sizeof(text), "turn %d %s %016llx", *(int *) userdata, name, (unsigned long long) checksum);
+    log_info("Piece checksum:", text, 0);
+}
+
+static uint64_t turn_checksum(int turn)
+{
+    static int first = -1, last = -2;
+    if (first == -1) {
+        const char *range = getenv("MP_TRACE_TURNS");
+        if (!range || sscanf(range, "%d-%d", &first, &last) != 2) {
+            first = -2;
+        }
+    }
+    if (turn >= first && turn <= last) {
+        return mp_checksum_state_pieces(trace_piece, &turn);
+    }
+    return mp_checksum_state();
+}
+
 void mp_lockstep_after_tick(void)
 {
     if (data.state != MP_LOCKSTEP_RUNNING) {
@@ -781,7 +805,7 @@ void mp_lockstep_after_tick(void)
         return;
     }
     int turn = ticks / TURN_TICKS - 1;
-    uint64_t checksum = mp_checksum_state();
+    uint64_t checksum = turn_checksum(turn);
     if (data.is_host) {
         store_checksum(0, turn, checksum);
         verify_turn(turn);

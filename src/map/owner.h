@@ -35,6 +35,13 @@ void map_owner_set_builder(int player_id);
 
 int map_owner_builder(void);
 
+/**
+ * Ticks of the simulation run: infrastructure that disappears frees its tile. Outside ticks and commands, terrain
+ * changes come from the interface (construction previews) and never touch ownership.
+ */
+void map_owner_set_simulating(int simulating);
+int map_owner_is_simulating(void);
+
 void map_owner_save_state(buffer *buf);
 
 void map_owner_load_state(buffer *buf);

@@ -33,6 +33,7 @@
 #include "figuretype/crime.h"
 #include "game/file.h"
 #include "game/rules.h"
+#include "map/owner.h"
 #include "mp/endgame.h"
 #include "game/settings.h"
 #include "game/time.h"
@@ -222,6 +223,7 @@ void game_tick_run(void)
         figure_action_handle(); // just update the flag figures
         return;
     }
+    map_owner_set_simulating(1);
     // Commands of all players scheduled for this tick run first, identically on every computer
     mp_command_run_scheduled();
     int num_players = player_context_num_players();
@@ -234,4 +236,5 @@ void game_tick_run(void)
     world_turn = 1;
     player_context_switch(previous_player); // the user interface shows the local city
     mp_endgame_check();
+    map_owner_set_simulating(0);
 }

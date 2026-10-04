@@ -16,6 +16,7 @@
 #include "graphics/image.h"
 #include "graphics/window.h"
 #include "map/building.h"
+#include "mp/colors.h"
 #include "map/figure.h"
 #include "map/grid.h"
 #include "map/image.h"
@@ -125,9 +126,10 @@ static void draw_footprint(int x, int y, int grid_offset)
             }
         }
         if (map_terrain_is(grid_offset, TERRAIN_GARDEN)) {
-            building *b = building_get(0); // abuse empty building
-            b->type = BUILDING_GARDENS;
-            sound_city_mark_building_view(b, SOUND_DIRECTION_CENTER);
+            // a building of the interface only: the "no building" record belongs to the simulation
+            static building gardens;
+            gardens.type = BUILDING_GARDENS;
+            sound_city_mark_building_view(&gardens, SOUND_DIRECTION_CENTER);
         }
         int image_id = map_image_at(grid_offset);
         if (map_property_is_constructing(grid_offset)) {
@@ -141,6 +143,9 @@ static void draw_footprint(int x, int y, int grid_offset)
                 image_id = draw_context.image_id_water_first;
             }
             map_image_set(grid_offset, image_id);
+        }
+        if (!color_mask) {
+            color_mask = mp_colors_tint_for_tile(grid_offset); // what another player built
         }
         image_draw_isometric_footprint_from_draw_tile(image_id, x, y, color_mask);
     }
@@ -282,6 +287,8 @@ static void draw_top(int x, int y, int grid_offset)
     color_t color_mask = 0;
     if (draw_building_as_deleted(b) || (map_property_is_deleted(grid_offset) && !is_multi_tile_terrain(grid_offset))) {
         color_mask = COLOR_MASK_RED;
+    } else {
+        color_mask = mp_colors_tint_for_tile(grid_offset); // what another player built
     }
     image_draw_isometric_top_from_draw_tile(image_id, x, y, color_mask);
     // specific buildings

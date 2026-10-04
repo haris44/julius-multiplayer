@@ -6,6 +6,18 @@
 static grid_u8 owner;
 static int builder = MAP_OWNER_NONE;
 
+static int simulating;
+
+void map_owner_set_simulating(int value)
+{
+    simulating = value;
+}
+
+int map_owner_is_simulating(void)
+{
+    return simulating;
+}
+
 void map_owner_set_builder(int player_id)
 {
     builder = player_id;
