@@ -1,0 +1,8 @@
+# The normal game loop advances the simulation (respects UI pauses), mouse starts centered.
+load test/data/brugle-massilia-start.sav
+speed 100
+wait 30
+screenshot build/automation/run-1-after-wait.png
+run 100
+screenshot build/automation/run-2-after-run-100.png
+quit

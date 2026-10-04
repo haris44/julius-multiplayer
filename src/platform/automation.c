@@ -3,7 +3,10 @@
 #include "game/file.h"
 #include "game/settings.h"
 #include "game/tick.h"
+#include "game/time.h"
+#include "graphics/screen.h"
 #include "graphics/screenshot.h"
+#include "input/mouse.h"
 #include "window/city.h"
 
 #include "SDL.h"
@@ -22,6 +25,9 @@
 #define MAX_PATH_LENGTH 1024
 #define MILLIS_PER_FRAME 16
 #define START_TIME 1000
+// Frames allowed per requested tick for the "run" command: the slowest game speed needs ~44 frames per tick
+#define RUN_FRAMES_PER_TICK 60
+#define RUN_EXTRA_FRAMES 600
 
 typedef enum {
     PENDING_NONE = 0,
@@ -34,6 +40,12 @@ static struct {
     int active;
     int finished;
     int failed;
+    int mouse_initialized;
+    struct {
+        int active;
+        int target_tick;
+        int frames_left;
+    } run;
     char *script;
     char **lines;
     int num_lines;
@@ -245,6 +257,12 @@ static int handle_pending(void)
     return 1;
 }
 
+// Monotonic tick counter derived from the game date: 50 ticks per day, 16 days per month, 12 months per year
+static int total_ticks(void)
+{
+    return ((game_time_year() * 12 + game_time_month()) * 16 + game_time_day()) * 50 + game_time_tick();
+}
+
 static void request_screenshot(const char *filename, int full_city)
 {
     data.screenshot.requested = 1;
@@ -359,6 +377,16 @@ static int execute(char *line)
             game_tick_run();
         }
         return 1;
+    } else if (strcmp(command, "run") == 0) {
+        // Unlike "ticks", lets the normal game loop advance the simulation, including UI pauses
+        if (sscanf(rest, "%d", &n) != 1 || n <= 0) {
+            fail("invalid run:", rest);
+            return 1;
+        }
+        data.run.active = 1;
+        data.run.target_tick = total_ticks() + n;
+        data.run.frames_left = n * RUN_FRAMES_PER_TICK + RUN_EXTRA_FRAMES;
+        return 1;
     } else if (strcmp(command, "speed") == 0) {
         if (sscanf(rest, "%d", &n) != 1 || n < 10 || n > 500) {
             fail("invalid speed (10-500):", rest);
@@ -392,8 +420,22 @@ void platform_automation_before_frame(void)
         return;
     }
     data.time += MILLIS_PER_FRAME;
+    if (!data.mouse_initialized) {
+        // Start with the mouse in the middle of the screen: at (0,0) the city view would scroll on its own
+        mouse_set_position(screen_width() / 2, screen_height() / 2);
+        data.mouse_initialized = 1;
+    }
     if (handle_pending()) {
         return;
+    }
+    if (data.run.active) {
+        if (total_ticks() < data.run.target_tick) {
+            if (--data.run.frames_left <= 0) {
+                fail("run timed out: is the game paused or not showing the city?", 0);
+            }
+            return;
+        }
+        data.run.active = 0;
     }
     if (data.wait_frames > 0) {
         data.wait_frames--;
