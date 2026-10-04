@@ -8,6 +8,7 @@
 #include "city/festival.h"
 #include "city/population.h"
 #include "core/calc.h"
+#include "game/player_context.h"
 
 static struct {
     int theater;
@@ -166,7 +167,7 @@ void city_culture_calculate(void)
     city_data.culture.average_health = 0;
 
     int num_houses = 0;
-    for (int i = 1; i < MAX_BUILDINGS; i++) {
+    for (int i = BUILDING_FIRST; i < BUILDING_END; i++) {
         building *b = building_get(i);
         if (b->state == BUILDING_STATE_IN_USE && b->house_size) {
             num_houses++;
@@ -221,4 +222,9 @@ void city_culture_load_state(buffer *buf)
     coverage.library = buffer_read_i32(buf);
     coverage.academy = buffer_read_i32(buf);
     coverage.hospital = buffer_read_i32(buf);
+}
+
+void city_culture_register_player_state(void)
+{
+    player_context_register(&coverage, sizeof(coverage), "culture_coverage");
 }

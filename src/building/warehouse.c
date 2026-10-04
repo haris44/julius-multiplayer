@@ -198,11 +198,11 @@ void building_warehouse_space_remove_export(building *space, int resource)
 
 void building_warehouses_add_resource(int resource, int amount)
 {
-    int building_id = city_resource_last_used_warehouse();
-    for (int i = 1; i < MAX_BUILDINGS && amount > 0; i++) {
+    int building_id = building_slice_cursor(city_resource_last_used_warehouse());
+    for (int i = BUILDING_FIRST; i < BUILDING_END && amount > 0; i++) {
         building_id++;
-        if (building_id >= MAX_BUILDINGS) {
-            building_id = 1;
+        if (building_id >= BUILDING_END) {
+            building_id = BUILDING_FIRST;
         }
         building *b = building_get(building_id);
         if (b->state == BUILDING_STATE_IN_USE && b->type == BUILDING_WAREHOUSE) {
@@ -217,12 +217,12 @@ void building_warehouses_add_resource(int resource, int amount)
 int building_warehouses_remove_resource(int resource, int amount)
 {
     int amount_left = amount;
-    int building_id = city_resource_last_used_warehouse();
+    int building_id = building_slice_cursor(city_resource_last_used_warehouse());
     // first go for non-getting warehouses
-    for (int i = 1; i < MAX_BUILDINGS && amount_left > 0; i++) {
+    for (int i = BUILDING_FIRST; i < BUILDING_END && amount_left > 0; i++) {
         building_id++;
-        if (building_id >= MAX_BUILDINGS) {
-            building_id = 1;
+        if (building_id >= BUILDING_END) {
+            building_id = BUILDING_FIRST;
         }
         building *b = building_get(building_id);
         if (b->state == BUILDING_STATE_IN_USE && b->type == BUILDING_WAREHOUSE) {
@@ -233,10 +233,10 @@ int building_warehouses_remove_resource(int resource, int amount)
         }
     }
     // if that doesn't work, take it anyway
-    for (int i = 1; i < MAX_BUILDINGS && amount_left > 0; i++) {
+    for (int i = BUILDING_FIRST; i < BUILDING_END && amount_left > 0; i++) {
         building_id++;
-        if (building_id >= MAX_BUILDINGS) {
-            building_id = 1;
+        if (building_id >= BUILDING_END) {
+            building_id = BUILDING_FIRST;
         }
         building *b = building_get(building_id);
         if (b->state == BUILDING_STATE_IN_USE && b->type == BUILDING_WAREHOUSE) {
@@ -253,7 +253,7 @@ int building_warehouse_for_storing(int src_building_id, int x, int y, int resour
 {
     int min_dist = 10000;
     int min_building_id = 0;
-    for (int i = 1; i < MAX_BUILDINGS; i++) {
+    for (int i = BUILDING_FIRST; i < BUILDING_END; i++) {
         building *b = building_get(i);
         if (b->state != BUILDING_STATE_IN_USE || b->type != BUILDING_WAREHOUSE_SPACE) {
             continue;
@@ -302,7 +302,7 @@ int building_warehouse_for_getting(building *src, int resource, map_point *dst)
 {
     int min_dist = 10000;
     building *min_building = 0;
-    for (int i = 1; i < MAX_BUILDINGS; i++) {
+    for (int i = BUILDING_FIRST; i < BUILDING_END; i++) {
         building *b = building_get(i);
         if (b->state != BUILDING_STATE_IN_USE || b->type != BUILDING_WAREHOUSE) {
             continue;
@@ -348,7 +348,7 @@ static int determine_granary_accept_foods(int resources[RESOURCE_MAX_FOOD])
         resources[i] = 0;
     }
     int can_accept = 0;
-    for (int i = 1; i < MAX_BUILDINGS; i++) {
+    for (int i = BUILDING_FIRST; i < BUILDING_END; i++) {
         building *b = building_get(i);
         if (b->state != BUILDING_STATE_IN_USE || b->type != BUILDING_GRANARY || !b->has_road_access) {
             continue;
@@ -378,7 +378,7 @@ static int determine_granary_get_foods(int resources[RESOURCE_MAX_FOOD])
         resources[i] = 0;
     }
     int can_get = 0;
-    for (int i = 1; i < MAX_BUILDINGS; i++) {
+    for (int i = BUILDING_FIRST; i < BUILDING_END; i++) {
         building *b = building_get(i);
         if (b->state != BUILDING_STATE_IN_USE || b->type != BUILDING_GRANARY || !b->has_road_access) {
             continue;

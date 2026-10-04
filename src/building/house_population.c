@@ -13,10 +13,10 @@
 int house_population_add_to_city(int num_people)
 {
     int added = 0;
-    int building_id = city_population_last_used_house_add();
-    for (int i = 1; i < MAX_BUILDINGS && added < num_people; i++) {
-        if (++building_id >= MAX_BUILDINGS) {
-            building_id = 1;
+    int building_id = building_slice_cursor(city_population_last_used_house_add());
+    for (int i = BUILDING_FIRST; i < BUILDING_END && added < num_people; i++) {
+        if (++building_id >= BUILDING_END) {
+            building_id = BUILDING_FIRST;
         }
         building *b = building_get(building_id);
         if (b->state == BUILDING_STATE_IN_USE && b->house_size
@@ -39,10 +39,10 @@ int house_population_add_to_city(int num_people)
 int house_population_remove_from_city(int num_people)
 {
     int removed = 0;
-    int building_id = city_population_last_used_house_remove();
+    int building_id = building_slice_cursor(city_population_last_used_house_remove());
     for (int i = 1; i < 4 * MAX_BUILDINGS && removed < num_people; i++) {
-        if (++building_id >= MAX_BUILDINGS) {
-            building_id = 1;
+        if (++building_id >= BUILDING_END) {
+            building_id = BUILDING_FIRST;
         }
         building *b = building_get(building_id);
         if (b->state == BUILDING_STATE_IN_USE && b->house_size) {
@@ -59,7 +59,7 @@ int house_population_remove_from_city(int num_people)
 static void fill_building_list_with_houses(void)
 {
     building_list_large_clear(0);
-    for (int i = 1; i < MAX_BUILDINGS; i++) {
+    for (int i = BUILDING_FIRST; i < BUILDING_END; i++) {
         building *b = building_get(i);
         if (b->state == BUILDING_STATE_IN_USE && b->house_size) {
             building_list_large_add(i);

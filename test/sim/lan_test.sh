@@ -33,5 +33,5 @@ if [ "$MODE" != "desync" ]; then
     COUNT=$(grep -h "checksum" "$DIR"/*.log | awk '{print $4}' | sort -u | wc -l | tr -d ' ')
     [ "$COUNT" = "1" ] || { echo "Final checksums differ"; FAILED=1; }
 fi
-rm -rf "$DIR" mp-session-p*.sav mp-desync-*.sav
+rm -rf "$DIR" mp-session-"$PORT"-p*.sav mp-desync-"$PORT"-*.sav
 exit $FAILED

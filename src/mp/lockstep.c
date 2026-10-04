@@ -44,6 +44,7 @@ static struct {
     int sockets[MP_LOCKSTEP_MAX_PLAYERS]; // host: one per client player id; client: [0] = host
     receive_buffer received[MP_LOCKSTEP_MAX_PLAYERS];
     int num_players;
+    int port;
     int local_player;
     char saved_game[512];
     int base_tick;
@@ -125,7 +126,7 @@ static void desync(int turn)
     }
     data.state = MP_LOCKSTEP_DESYNC;
     char filename[64];
-    snprintf(filename, sizeof(filename), "mp-desync-p%d-turn%d.sav", data.local_player, turn);
+    snprintf(filename, sizeof(filename), "mp-desync-%d-p%d-turn%d.sav", data.port, data.local_player, turn);
     game_file_write_saved_game(filename);
     char text[128];
     snprintf(text, sizeof(text), "Désynchronisation au tour %d (état écrit dans %s)", turn, filename);
@@ -280,7 +281,8 @@ static void client_welcome(buffer *buf)
         data.state = MP_LOCKSTEP_DISCONNECTED;
         return;
     }
-    snprintf(data.saved_game, sizeof(data.saved_game), "mp-session-p%d.sav", player);
+    // the port keeps the files of several games on one computer apart (tests)
+    snprintf(data.saved_game, sizeof(data.saved_game), "mp-session-%d-p%d.sav", data.port, player);
     FILE *fp = fopen(data.saved_game, "wb");
     if (!fp || fwrite(&buf->data[buf->index], 1, save_size, fp) != (size_t) save_size) {
         if (fp) {
@@ -352,6 +354,7 @@ static void handle_message(int from, uint8_t *payload, int size)
 static void receive_from(int player)
 {
     receive_buffer *rb = &data.received[player];
+    int closed = 0;
     for (;;) {
         if (rb->capacity - rb->size < 65536) {
             int capacity = rb->capacity ? rb->capacity * 2 : 262144;
@@ -364,13 +367,11 @@ static void receive_from(int player)
         }
         int received = net_receive(data.sockets[player], rb->data + rb->size, rb->capacity - rb->size);
         if (received < 0) {
+            // the messages received before the connection closed are handled first
             net_close(data.sockets[player]);
             data.sockets[player] = NET_INVALID_SOCKET;
-            if (data.state != MP_LOCKSTEP_DESYNC) {
-                data.state = MP_LOCKSTEP_DISCONNECTED;
-                set_status(data.is_host ? "Un joueur s'est déconnecté" : "Connexion à l'hôte perdue");
-            }
-            return;
+            closed = 1;
+            break;
         }
         if (received == 0) {
             break;
@@ -395,6 +396,10 @@ static void receive_from(int player)
     }
     memmove(rb->data, rb->data + offset, rb->size - offset);
     rb->size -= offset;
+    if (closed && data.state != MP_LOCKSTEP_DESYNC) {
+        data.state = MP_LOCKSTEP_DISCONNECTED;
+        set_status(data.is_host ? "Un joueur s'est déconnecté" : "Connexion à l'hôte perdue");
+    }
 }
 
 // ---------- public ----------
@@ -419,6 +424,7 @@ int mp_lockstep_host(int port, int num_players, const char *saved_game)
     }
     data.is_host = 1;
     data.num_players = num_players;
+    data.port = port;
     snprintf(data.saved_game, sizeof(data.saved_game), "%s", saved_game);
     if (num_players > 1) {
         data.listener = net_listen(port);
@@ -439,7 +445,15 @@ int mp_lockstep_join(const char *address, int port)
     void (*callback)(void) = data.started_callback;
     reset();
     data.started_callback = callback;
-    data.sockets[0] = net_connect(address, port, 5000);
+    data.port = port;
+    // the host may not be listening yet: try for a few seconds
+    for (int attempt = 0; attempt < 20; attempt++) {
+        data.sockets[0] = net_connect(address, port, 2000);
+        if (data.sockets[0] != NET_INVALID_SOCKET) {
+            break;
+        }
+        net_sleep(250);
+    }
     if (data.sockets[0] == NET_INVALID_SOCKET) {
         set_status("Impossible de joindre l'hôte");
         return 0;

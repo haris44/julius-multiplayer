@@ -10,6 +10,7 @@
 #include "figure/properties.h"
 #include "map/grid.h"
 #include "sound/effect.h"
+#include "game/player_context.h"
 
 #include <string.h>
 
@@ -747,4 +748,9 @@ void formations_load_state(buffer *buf, buffer *totals)
         buffer_skip(buf, 17);
         f->invasion_sequence = buffer_read_i16(buf);
     }
+}
+
+void formation_register_player_state(void)
+{
+    player_context_register(&data, sizeof(data), "formation_totals");
 }

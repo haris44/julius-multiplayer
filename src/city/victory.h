@@ -23,4 +23,9 @@ void city_victory_stop_governing(void);
 
 int city_victory_has_won(void);
 
+/**
+ * Registers the per-city state of this module (game/player_context.h)
+ */
+void city_victory_register_player_state(void);
+
 #endif // CITY_VICTORY_H

@@ -79,4 +79,9 @@ void random_save_extra_state(buffer *buf);
  */
 void random_load_extra_state(buffer *buf);
 
+/**
+ * Registers the per-city state of this module (game/player_context.h)
+ */
+void random_register_player_state(void);
+
 #endif // CORE_RANDOM_H

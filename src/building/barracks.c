@@ -11,6 +11,7 @@
 #include "figure/formation.h"
 #include "map/grid.h"
 #include "map/road_access.h"
+#include "game/player_context.h"
 
 #define INFINITE 10000
 
@@ -75,7 +76,7 @@ static int get_closest_military_academy(const building *fort)
 {
     int min_building_id = 0;
     int min_distance = INFINITE;
-    for (int i = 1; i < MAX_BUILDINGS; i++) {
+    for (int i = BUILDING_FIRST; i < BUILDING_END; i++) {
         building *b = building_get(i);
         if (b->state == BUILDING_STATE_IN_USE && b->type == BUILDING_MILITARY_ACADEMY &&
             b->num_workers >= model_get_building(BUILDING_MILITARY_ACADEMY)->laborers) {
@@ -128,7 +129,7 @@ int building_barracks_create_tower_sentry(building *barracks, int x, int y)
         return 0;
     }
     building *tower = 0;
-    for (int i = 1; i < MAX_BUILDINGS; i++) {
+    for (int i = BUILDING_FIRST; i < BUILDING_END; i++) {
         building *b = building_get(i);
         if (b->state == BUILDING_STATE_IN_USE && b->type == BUILDING_TOWER && b->num_workers > 0 &&
             !b->figure_id && b->road_network_id == barracks->road_network_id) {
@@ -178,4 +179,9 @@ void building_barracks_save_state(buffer *buf)
 void building_barracks_load_state(buffer *buf)
 {
     tower_sentry_request = buffer_read_i32(buf);
+}
+
+void building_barracks_register_player_state(void)
+{
+    player_context_register(&tower_sentry_request, sizeof(tower_sentry_request), "tower_sentry_request");
 }

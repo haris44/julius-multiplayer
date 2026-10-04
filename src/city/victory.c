@@ -13,6 +13,7 @@
 #include "window/mission_end.h"
 #include "window/victory_dialog.h"
 #include "game/rules.h"
+#include "game/player_context.h"
 
 static struct {
     int state;
@@ -167,4 +168,9 @@ void city_victory_stop_governing(void)
 int city_victory_has_won(void)
 {
     return city_data.mission.has_won;
+}
+
+void city_victory_register_player_state(void)
+{
+    player_context_register(&data, sizeof(data), "victory");
 }

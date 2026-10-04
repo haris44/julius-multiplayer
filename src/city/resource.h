@@ -57,4 +57,9 @@ void city_resource_calculate_workshop_stocks(void);
 
 void city_resource_consume_food(void);
 
+/**
+ * Registers the per-city state of this module (game/player_context.h)
+ */
+void city_resource_register_player_state(void);
+
 #endif // CITY_RESOURCE_H

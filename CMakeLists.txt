@@ -383,6 +383,7 @@ set(GAME_FILES
     ${PROJECT_SOURCE_DIR}/src/game/file_io.c
     ${PROJECT_SOURCE_DIR}/src/game/extra_state.c
     ${PROJECT_SOURCE_DIR}/src/game/rules.c
+    ${PROJECT_SOURCE_DIR}/src/game/player_context.c
     ${PROJECT_SOURCE_DIR}/src/game/game.c
     ${PROJECT_SOURCE_DIR}/src/game/mission.c
     ${PROJECT_SOURCE_DIR}/src/game/orientation.c

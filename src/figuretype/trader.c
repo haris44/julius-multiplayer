@@ -244,7 +244,7 @@ static int get_closest_warehouse(
     }
     int min_distance = 10000;
     building *min_building = 0;
-    for (int i = 1; i < MAX_BUILDINGS; i++) {
+    for (int i = BUILDING_FIRST; i < BUILDING_END; i++) {
         building *b = building_get(i);
         if (b->state != BUILDING_STATE_IN_USE || b->type != BUILDING_WAREHOUSE) {
             continue;

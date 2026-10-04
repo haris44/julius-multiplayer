@@ -3,8 +3,18 @@
 
 #include "building/type.h"
 #include "core/buffer.h"
+#include "game/player_context.h"
 
+/** Buildings per player: every player has its own slice of ids, as large as the original limit */
 #define MAX_BUILDINGS 2000
+#define BUILDING_ARRAY_SIZE (MAX_BUILDINGS * PLAYER_CONTEXT_MAX_PLAYERS)
+/** First and past-the-end ids of the buildings of the current player (1 and 2000 in a classic game) */
+#define BUILDING_FIRST (player_context_current_player * MAX_BUILDINGS + 1)
+#define BUILDING_END ((player_context_current_player + 1) * MAX_BUILDINGS)
+/** Past-the-end id of the buildings of all players */
+#define BUILDING_ALL_END (player_context_player_count * MAX_BUILDINGS)
+/** Owner of a building id */
+#define BUILDING_OWNER(id) ((id) / MAX_BUILDINGS)
 
 typedef struct {
     int id;
@@ -154,6 +164,17 @@ void building_update_state(void);
 void building_update_desirability(void);
 
 int building_is_house(building_type type);
+
+/**
+ * Round-robin cursor over the buildings of the current player: returns the cursor, or the position
+ * before the first building of the current player when the cursor belongs to another player
+ */
+int building_slice_cursor(int building_id);
+
+/**
+ * Registers the per-player building counters (game/player_context.h)
+ */
+void building_register_player_state(void);
 
 int building_is_fort(building_type type);
 

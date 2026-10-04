@@ -1,4 +1,5 @@
 #include "list.h"
+#include "game/player_context.h"
 
 #include <string.h>
 
@@ -141,4 +142,9 @@ void building_list_load_state(buffer *small, buffer *large, buffer *burning, buf
     }
     data.burning.total = buffer_read_i32(burning_totals);
     data.burning.size = buffer_read_i32(burning_totals);
+}
+
+void building_list_register_player_state(void)
+{
+    player_context_register(&data, sizeof(data), "building_lists");
 }

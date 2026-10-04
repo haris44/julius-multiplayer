@@ -9,6 +9,7 @@
 #include "core/random.h"
 #include "game/time.h"
 #include "scenario/property.h"
+#include "game/player_context.h"
 
 #define MAX_CATS 10
 
@@ -174,7 +175,7 @@ static void calculate_workers_needed_per_category(void)
         city_data.labor.categories[cat].workers_allocated = 0;
         city_data.labor.categories[cat].workers_needed = 0;
     }
-    for (int i = 1; i < MAX_BUILDINGS; i++) {
+    for (int i = BUILDING_FIRST; i < BUILDING_END; i++) {
         building *b = building_get(i);
         if (b->state != BUILDING_STATE_IN_USE) {
             continue;
@@ -288,7 +289,7 @@ static void check_employment(void)
 static void set_building_worker_weight(void)
 {
     int water_per_10k_per_building = calc_percentage(100, city_data.labor.categories[LABOR_CATEGORY_WATER].buildings);
-    for (int i = 1; i < MAX_BUILDINGS; i++) {
+    for (int i = BUILDING_FIRST; i < BUILDING_END; i++) {
         building *b = building_get(i);
         if (b->state != BUILDING_STATE_IN_USE) {
             continue;
@@ -340,10 +341,13 @@ static void allocate_workers_to_water(void)
         workers_per_building = water_cat->workers_allocated / (water_cat->buildings - buildings_to_skip);
     }
     int building_id = water_start_building_id;
+    if (building_id < BUILDING_FIRST || building_id >= BUILDING_END) {
+        building_id = BUILDING_FIRST; // first allocation in this city
+    }
     water_start_building_id = 0;
     for (int guard = 1; guard < MAX_BUILDINGS; guard++, building_id++) {
-        if (building_id >= MAX_BUILDINGS) {
-            building_id = 1;
+        if (building_id >= BUILDING_END) {
+            building_id = BUILDING_FIRST;
         }
         building *b = building_get(building_id);
         if (b->state != BUILDING_STATE_IN_USE || CATEGORY_FOR_BUILDING_TYPE[b->type] != LABOR_CATEGORY_WATER) {
@@ -381,7 +385,7 @@ static void allocate_workers_to_non_water_buildings(void)
             city_data.labor.categories[i].workers_allocated < city_data.labor.categories[i].workers_needed
             ? 1 : 0;
     }
-    for (int i = 1; i < MAX_BUILDINGS; i++) {
+    for (int i = BUILDING_FIRST; i < BUILDING_END; i++) {
         building *b = building_get(i);
         if (b->state != BUILDING_STATE_IN_USE) {
             continue;
@@ -423,7 +427,7 @@ static void allocate_workers_to_non_water_buildings(void)
             }
         }
     }
-    for (int i = 1; i < MAX_BUILDINGS; i++) {
+    for (int i = BUILDING_FIRST; i < BUILDING_END; i++) {
         building *b = building_get(i);
         if (b->state != BUILDING_STATE_IN_USE) {
             continue;
@@ -527,4 +531,9 @@ int city_labor_max_selectable_priority(int category)
         ++max;
     }
     return max;
+}
+
+void city_labor_register_player_state(void)
+{
+    player_context_register(&water_start_building_id, sizeof(water_start_building_id), "water_workers_cursor");
 }

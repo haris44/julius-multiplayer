@@ -158,7 +158,8 @@ static int valid_resource(int resource)
 
 static int storage_of(int building_id)
 {
-    if (building_id <= 0 || building_id >= MAX_BUILDINGS) {
+    // only the buildings of the player who sent the command (the current player)
+    if (building_id < BUILDING_FIRST || building_id >= BUILDING_END) {
         return -1;
     }
     building *b = building_get(building_id);

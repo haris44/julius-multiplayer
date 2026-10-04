@@ -74,4 +74,9 @@ void building_list_reset_extra_state(void);
 void building_list_save_extra_state(buffer *buf);
 void building_list_load_extra_state(buffer *buf);
 
+/**
+ * Registers the per-city state of this module (game/player_context.h)
+ */
+void building_list_register_player_state(void);
+
 #endif // BUILDING_LIST_H

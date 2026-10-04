@@ -20,7 +20,7 @@
 
 #include <string.h>
 
-static building all_buildings[MAX_BUILDINGS];
+static building all_buildings[BUILDING_ARRAY_SIZE];
 
 static struct {
     int highest_id_in_use;
@@ -54,7 +54,7 @@ building *building_next(building *b)
 building *building_create(building_type type, int x, int y)
 {
     building *b = 0;
-    for (int i = 1; i < MAX_BUILDINGS; i++) {
+    for (int i = BUILDING_FIRST; i < BUILDING_END; i++) {
         if (all_buildings[i].state == BUILDING_STATE_UNUSED && !game_undo_contains_building(i)) {
             b = &all_buildings[i];
             break;
@@ -209,7 +209,7 @@ void building_update_state(void)
     int wall_recalc = 0;
     int road_recalc = 0;
     int aqueduct_recalc = 0;
-    for (int i = 1; i < MAX_BUILDINGS; i++) {
+    for (int i = BUILDING_FIRST; i < BUILDING_END; i++) {
         building *b = &all_buildings[i];
         if (b->state == BUILDING_STATE_CREATED) {
             b->state = BUILDING_STATE_IN_USE;
@@ -253,7 +253,7 @@ void building_update_state(void)
 
 void building_update_desirability(void)
 {
-    for (int i = 1; i < MAX_BUILDINGS; i++) {
+    for (int i = BUILDING_FIRST; i < BUILDING_END; i++) {
         building *b = &all_buildings[i];
         if (b->state != BUILDING_STATE_IN_USE) {
             continue;
@@ -293,7 +293,7 @@ int building_get_highest_id(void)
 void building_update_highest_id(void)
 {
     extra.highest_id_in_use = 0;
-    for (int i = 1; i < MAX_BUILDINGS; i++) {
+    for (int i = BUILDING_FIRST; i < BUILDING_END; i++) {
         if (all_buildings[i].state != BUILDING_STATE_UNUSED) {
             extra.highest_id_in_use = i;
         }
@@ -313,7 +313,7 @@ void building_totals_add_corrupted_house(int unfixable)
 
 void building_clear_all(void)
 {
-    for (int i = 0; i < MAX_BUILDINGS; i++) {
+    for (int i = 0; i < BUILDING_ARRAY_SIZE; i++) {
         memset(&all_buildings[i], 0, sizeof(building));
         all_buildings[i].id = i;
     }
@@ -354,3 +354,19 @@ void building_load_state(buffer *buf, buffer *highest_id, buffer *highest_id_eve
     extra.incorrect_houses = buffer_read_i32(corrupt_houses);
     extra.unfixable_houses = buffer_read_i32(corrupt_houses);
 }
+
+int building_slice_cursor(int building_id)
+{
+    // a cursor of another slice (or 0) restarts at the beginning of the current one;
+    // in a classic game every valid cursor is kept as is
+    if (building_id < BUILDING_FIRST - 1 || building_id >= BUILDING_END) {
+        return BUILDING_FIRST - 1;
+    }
+    return building_id;
+}
+
+void building_register_player_state(void)
+{
+    player_context_register(&extra, sizeof(extra), "building_extra");
+}
+

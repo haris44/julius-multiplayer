@@ -211,4 +211,9 @@ void city_message_save_state(buffer *messages, buffer *extra, buffer *counts, bu
 
 void city_message_load_state(buffer *messages, buffer *extra, buffer *counts, buffer *delays, buffer *population);
 
+/**
+ * Registers the per-city state of this module (game/player_context.h)
+ */
+void city_message_register_player_state(void);
+
 #endif // CITY_MESSAGE_H

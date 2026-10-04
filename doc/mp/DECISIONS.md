@@ -175,3 +175,16 @@
 - Points d'équilibrage à mesurer en M10 : nombre de joueurs avec fer ou armes, prix des armes, quotas, fonds de
   départ. On évaluera avec des parties simulées sans tête.
 
+
+### D-021 — Contexte de cité par échange de zones mémoire enregistrées (précise D-004)
+- 2026-10-04 · **adoptée**
+- Chaque module qui détient de l'état « par cité » (`city_data`, couvertures culturelles, compteurs de bâtiments,
+  greniers, sentinelles, totaux de légions, victoire, messages, générateur aléatoire, listes de travail…) enregistre
+  sa zone de mémoire (`player_context_register`). Changer de cité courante recopie les zones de la cité quittée dans
+  son emplacement et charge celles de la nouvelle.
+- Pourquoi plutôt qu'une macro sur un pointeur : un seul mécanisme pour `city_data` et pour la douzaine de `static`
+  dispersés, aucune des 2 111 lignes `city_data.` ni du code des modules à modifier, et rien ne change avec un seul
+  joueur (aucun échange).
+- Coût : environ 60 Ko recopiés par changement. Grâce aux tranches d'ids (D-005), on change de cité quelques fois
+  par tick et par joueur, pas à chaque entité. À mesurer en M3.6.
+- Risque : oublier d'enregistrer un état. Parade : les tests d'indice et « jumeaux » (M3.7) détectent toute fuite.

@@ -5,6 +5,7 @@
 #include "city/gods.h"
 #include "game/difficulty.h"
 #include "scenario/property.h"
+#include "game/player_context.h"
 
 #include <string.h>
 
@@ -1051,4 +1052,9 @@ void city_data_load_state(buffer *main, buffer *faction, buffer *faction_unknown
     city_data.unused.unknown_order = buffer_read_i32(graph_order);
 
     load_entry_exit(entry_exit_xy, entry_exit_grid_offset);
+}
+
+void city_data_register_player_state(void)
+{
+    player_context_register(&city_data, sizeof(city_data), "city_data");
 }

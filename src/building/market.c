@@ -70,7 +70,7 @@ int building_market_get_storage_destination(building *market)
         resources[i].num_buildings = 0;
         resources[i].distance = 40;
     }
-    for (int i = 1; i < MAX_BUILDINGS; i++) {
+    for (int i = BUILDING_FIRST; i < BUILDING_END; i++) {
         building *b = building_get(i);
         if (b->state != BUILDING_STATE_IN_USE) {
             continue;

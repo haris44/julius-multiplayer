@@ -31,4 +31,9 @@ void building_granary_bless(void);
 
 void building_granary_warehouse_curse(int big);
 
+/**
+ * Registers the per-city state of this module (game/player_context.h)
+ */
+void building_granary_register_player_state(void);
+
 #endif // BUILDING_GRANARY_H

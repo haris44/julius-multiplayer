@@ -10,6 +10,7 @@
 #include "graphics/window.h"
 #include "sound/effect.h"
 #include "window/message_dialog.h"
+#include "game/player_context.h"
 
 #define MAX_MESSAGES 1000
 #define MAX_QUEUE 20
@@ -576,4 +577,10 @@ void city_message_load_state(buffer *messages, buffer *extra, buffer *counts, bu
     data.population_shown.pop15000 = buffer_read_u8(population);
     data.population_shown.pop20000 = buffer_read_u8(population);
     data.population_shown.pop25000 = buffer_read_u8(population);
+}
+
+void city_message_register_player_state(void)
+{
+    player_context_register(&data, sizeof(data), "messages");
+    player_context_register(&should_play_sound, sizeof(should_play_sound), "message_sound");
 }

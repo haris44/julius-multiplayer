@@ -54,7 +54,7 @@ void building_maintenance_update_burning_ruins(void)
     scenario_climate climate = scenario_property_climate();
     int recalculate_terrain = 0;
     building_list_burning_clear();
-    for (int i = 1; i < MAX_BUILDINGS; i++) {
+    for (int i = BUILDING_FIRST; i < BUILDING_END; i++) {
         building *b = building_get(i);
         if (b->state != BUILDING_STATE_IN_USE || b->type != BUILDING_BURNING_RUIN) {
             continue;
@@ -240,7 +240,7 @@ void building_maintenance_check_rome_access(void)
     const map_tile *entry_point = city_map_entry_point();
     map_routing_calculate_distances(entry_point->x, entry_point->y);
     int problem_grid_offset = 0;
-    for (int i = 1; i < MAX_BUILDINGS; i++) {
+    for (int i = BUILDING_FIRST; i < BUILDING_END; i++) {
         building *b = building_get(i);
         if (b->state != BUILDING_STATE_IN_USE) {
             continue;

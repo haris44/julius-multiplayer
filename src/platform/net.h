@@ -43,4 +43,9 @@ int net_receive(int socket, void *data, int max_length);
 
 void net_close(int socket);
 
+/**
+ * Waits without using the processor
+ */
+void net_sleep(int milliseconds);
+
 #endif // PLATFORM_NET_H

@@ -44,4 +44,9 @@ void city_labor_reset_extra_state(void);
 void city_labor_save_extra_state(buffer *buf);
 void city_labor_load_extra_state(buffer *buf);
 
+/**
+ * Registers the per-city state of this module (game/player_context.h)
+ */
+void city_labor_register_player_state(void);
+
 #endif // CITY_LABOR_H

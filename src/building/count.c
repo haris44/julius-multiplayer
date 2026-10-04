@@ -4,6 +4,7 @@
 #include "city/buildings.h"
 #include "city/health.h"
 #include "figure/figure.h"
+#include "game/player_context.h"
 
 #include <string.h>
 
@@ -54,7 +55,7 @@ void building_count_update(void)
     city_buildings_reset_dock_wharf_counters();
     city_health_reset_hospital_workers();
 
-    for (int i = 1; i < MAX_BUILDINGS; i++) {
+    for (int i = BUILDING_FIRST; i < BUILDING_END; i++) {
         building *b = building_get(i);
         if (b->state != BUILDING_STATE_IN_USE || b->house_size) {
             continue;
@@ -423,4 +424,9 @@ void building_count_load_state(buffer *industry, buffer *culture1, buffer *cultu
     data.buildings[BUILDING_RESERVOIR].active = buffer_read_i32(support);
     data.buildings[BUILDING_FOUNTAIN].total = buffer_read_i32(support);
     data.buildings[BUILDING_FOUNTAIN].active = buffer_read_i32(support);
+}
+
+void building_count_register_player_state(void)
+{
+    player_context_register(&data, sizeof(data), "building_count");
 }

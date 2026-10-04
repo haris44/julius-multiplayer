@@ -31,6 +31,7 @@
 #include "window/main_menu.h"
 #include "building/construction.h"
 #include "mp/lockstep.h"
+#include "game/player_context.h"
 
 static void errlog(const char *msg)
 {
@@ -49,6 +50,7 @@ static encoding_type update_encoding(void)
 
 int game_pre_init(void)
 {
+    player_context_init();
     settings_load();
     config_load();
     hotkey_config_load();

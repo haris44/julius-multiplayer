@@ -1,4 +1,5 @@
 #include "core/random.h"
+#include "game/player_context.h"
 
 #include <string.h>
 
@@ -114,4 +115,9 @@ void random_load_extra_state(buffer *buf)
     for (int i = 0; i < MAX_RANDOM; i++) {
         data.pool[i] = buffer_read_i32(buf);
     }
+}
+
+void random_register_player_state(void)
+{
+    player_context_register(&data, sizeof(data), "random");
 }
