@@ -1015,7 +1015,7 @@ static int get_access_ramp_image_offset(int x, int y)
     if (!map_grid_is_inside(x, y, 1)) {
         return -1;
     }
-    static const int offsets[4][6] = {
+    const int offsets[4][6] = { // grid side known at run time
         {OFFSET(0,1), OFFSET(1,1), OFFSET(0,0), OFFSET(1,0), OFFSET(0,2), OFFSET(1,2)},
         {OFFSET(0,0), OFFSET(0,1), OFFSET(1,0), OFFSET(1,1), OFFSET(-1,0), OFFSET(-1,1)},
         {OFFSET(0,0), OFFSET(1,0), OFFSET(0,1), OFFSET(1,1), OFFSET(0,-1), OFFSET(1,-1)},

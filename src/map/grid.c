@@ -8,36 +8,72 @@
 
 struct map_data_t map_data;
 
-static const int DIRECTION_DELTA[] = {
-    -OFFSET(0,1), OFFSET(1,-1), 1, OFFSET(1,1), OFFSET(0,1), OFFSET(-1,1), -1, -OFFSET(1,1)
-};
+int map_grid_stride = 162;
 
-static const int ADJACENT_OFFSETS[][21] = {
-    {0},
-    {OFFSET(0,-1), OFFSET(1,0), OFFSET(0,1), OFFSET(-1,0), 0},
-    {OFFSET(0,-1), OFFSET(1,-1), OFFSET(2,0), OFFSET(2,1), OFFSET(1,2), OFFSET(0,2), OFFSET(-1,1), OFFSET(-1,0), 0},
+// Offsets are computed from the grid side; tables are refreshed when it changes
+static const int DIRECTION_XY[8][2] = {
+    {0, -1}, {1, -1}, {1, 0}, {1, 1}, {0, 1}, {-1, 1}, {-1, 0}, {-1, -1}
+};
+static int DIRECTION_DELTA[8];
+
+#define MAX_ADJACENT 21
+static const int ADJACENT_XY[][MAX_ADJACENT][2] = {
+    {{0, 0}},
+    {{0,-1}, {1,0}, {0,1}, {-1,0}},
+    {{0,-1}, {1,-1}, {2,0}, {2,1}, {1,2}, {0,2}, {-1,1}, {-1,0}},
     {
-        OFFSET(0,-1), OFFSET(1,-1), OFFSET(2,-1),
-        OFFSET(3,0), OFFSET(3,1), OFFSET(3,2),
-        OFFSET(2,3), OFFSET(1,3), OFFSET(0,3),
-        OFFSET(-1,2), OFFSET(-1,1), OFFSET(-1,0), 0
+        {0,-1}, {1,-1}, {2,-1},
+        {3,0}, {3,1}, {3,2},
+        {2,3}, {1,3}, {0,3},
+        {-1,2}, {-1,1}, {-1,0}
     },
     {
-        OFFSET(0,-1), OFFSET(1,-1), OFFSET(2,-1), OFFSET(3,-1),
-        OFFSET(4,0), OFFSET(4,1), OFFSET(4,2), OFFSET(4,3),
-        OFFSET(3,4), OFFSET(2,4), OFFSET(1,4), OFFSET(0,4),
-        OFFSET(-1,3), OFFSET(-1,2), OFFSET(-1,1), OFFSET(-1,0), 0
+        {0,-1}, {1,-1}, {2,-1}, {3,-1},
+        {4,0}, {4,1}, {4,2}, {4,3},
+        {3,4}, {2,4}, {1,4}, {0,4},
+        {-1,3}, {-1,2}, {-1,1}, {-1,0}
     },
     {
-        OFFSET(0,-1), OFFSET(1,-1), OFFSET(2,-1), OFFSET(3,-1), OFFSET(4,-1),
-        OFFSET(5,0), OFFSET(5,1), OFFSET(5,2), OFFSET(5,3), OFFSET(5,4),
-        OFFSET(4,5), OFFSET(3,5), OFFSET(2,5), OFFSET(1,5), OFFSET(0,5),
-        OFFSET(-1,4), OFFSET(-1,3), OFFSET(-1,2), OFFSET(-1,1), OFFSET(-1,0), 0
+        {0,-1}, {1,-1}, {2,-1}, {3,-1}, {4,-1},
+        {5,0}, {5,1}, {5,2}, {5,3}, {5,4},
+        {4,5}, {3,5}, {2,5}, {1,5}, {0,5},
+        {-1,4}, {-1,3}, {-1,2}, {-1,1}, {-1,0}
     },
 };
+static const int ADJACENT_COUNT[] = {1, 4, 8, 12, 16, 20};
+static int ADJACENT_OFFSETS[6][MAX_ADJACENT];
+static int tables_stride;
+
+static void update_tables(void)
+{
+    if (tables_stride == map_grid_stride) {
+        return;
+    }
+    for (int i = 0; i < 8; i++) {
+        DIRECTION_DELTA[i] = OFFSET(DIRECTION_XY[i][0], DIRECTION_XY[i][1]);
+    }
+    for (int size = 0; size < 6; size++) {
+        for (int i = 0; i < MAX_ADJACENT; i++) {
+            // each list ends with 0, as the original constant tables
+            ADJACENT_OFFSETS[size][i] = i < ADJACENT_COUNT[size] && size > 0 ?
+                OFFSET(ADJACENT_XY[size][i][0], ADJACENT_XY[size][i][1]) : 0;
+        }
+    }
+    tables_stride = map_grid_stride;
+}
+
+void map_grid_set_stride(int stride)
+{
+    if (stride > 0 && stride <= GRID_MAX_SIZE) {
+        map_grid_stride = stride;
+        update_tables();
+    }
+}
 
 void map_grid_init(int width, int height, int start_offset, int border_size)
 {
+    // the grid side is the map width plus its border: 162 for classic maps
+    map_grid_set_stride(width + border_size);
     map_data.width = width;
     map_data.height = height;
     map_data.start_offset = start_offset;
@@ -83,6 +119,7 @@ int map_grid_add_delta(int grid_offset, int x, int y)
 int map_grid_direction_delta(int direction)
 {
     if (direction >= 0 && direction < 8) {
+        update_tables();
         return DIRECTION_DELTA[direction];
     } else {
         return 0;
@@ -174,6 +211,7 @@ int map_grid_is_inside(int x, int y, int size)
 
 const int *map_grid_adjacent_offsets(int size)
 {
+    update_tables();
     return ADJACENT_OFFSETS[size];
 }
 
@@ -259,3 +297,11 @@ void map_grid_load_state_u16(uint16_t *grid, buffer *buf)
         grid[i] = buffer_read_u16(buf);
     }
 }
+
+int map_grid_pair_offset(int pair)
+{
+    int y = ((pair + 512 + 1024 * 64) >> 10) - 64;
+    int x = pair - 1024 * y;
+    return x + GRID_SIZE * y;
+}
+

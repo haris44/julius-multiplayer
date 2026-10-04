@@ -8,13 +8,16 @@
 #include "map/routing_data.h"
 #include "map/terrain.h"
 
-#define MAX_QUEUE GRID_SIZE * GRID_SIZE
+// circular queue as large as the grid: same wrap-around behaviour as the original on classic maps
+#define MAX_QUEUE (GRID_SIZE * GRID_SIZE)
 #define GUARD 50000
 
 #define UNTIL_STOP 0
 #define UNTIL_CONTINUE 1
 
-static const int ROUTE_OFFSETS[] = {-162, 1, 162, -1, -161, 163, 161, -163};
+// original order (-162, 1, 162, -1, -161, 163, 161, -163 on classic maps): it decides ties in the searches
+static const int ROUTE_XY[8][2] = {{0, -1}, {1, 0}, {0, 1}, {-1, 0}, {1, -1}, {1, 1}, {-1, 1}, {-1, -1}};
+#define ROUTE_OFFSETS(i) (ROUTE_XY[i][0] + GRID_SIZE * ROUTE_XY[i][1])
 
 static grid_i16 routing_distance;
 
@@ -26,7 +29,7 @@ static struct {
 static struct {
     int head;
     int tail;
-    int items[MAX_QUEUE];
+    int items[GRID_MAX_TILES];
 } queue;
 
 static grid_u8 water_drag;
@@ -66,8 +69,8 @@ static void route_queue(int source, int dest, void (*callback)(int next_offset, 
         }
         int dist = 1 + routing_distance.items[offset];
         for (int i = 0; i < 4; i++) {
-            if (valid_offset(offset + ROUTE_OFFSETS[i])) {
-                callback(offset + ROUTE_OFFSETS[i], dist);
+            if (valid_offset(offset + ROUTE_OFFSETS(i))) {
+                callback(offset + ROUTE_OFFSETS(i), dist);
             }
         }
         if (++queue.head >= MAX_QUEUE) {
@@ -85,8 +88,8 @@ static void route_queue_until(int source, int (*callback)(int next_offset, int d
         int offset = queue.items[queue.head];
         int dist = 1 + routing_distance.items[offset];
         for (int i = 0; i < 4; i++) {
-            if (valid_offset(offset + ROUTE_OFFSETS[i])) {
-                if (callback(offset + ROUTE_OFFSETS[i], dist) == UNTIL_STOP) {
+            if (valid_offset(offset + ROUTE_OFFSETS(i))) {
+                if (callback(offset + ROUTE_OFFSETS(i), dist) == UNTIL_STOP) {
                     break;
                 }
             }
@@ -109,8 +112,8 @@ static void route_queue_max(int source, int dest, int max_tiles, void (*callback
         if (++tiles > max_tiles) break;
         int dist = 1 + routing_distance.items[offset];
         for (int i = 0; i < 4; i++) {
-            if (valid_offset(offset + ROUTE_OFFSETS[i])) {
-                callback(offset + ROUTE_OFFSETS[i], dist);
+            if (valid_offset(offset + ROUTE_OFFSETS(i))) {
+                callback(offset + ROUTE_OFFSETS(i), dist);
             }
         }
         if (++queue.head >= MAX_QUEUE) {
@@ -140,8 +143,8 @@ static void route_queue_boat(int source, void (*callback)(int, int))
         } else {
             int dist = 1 + routing_distance.items[offset];
             for (int i = 0; i < 4; i++) {
-                if (valid_offset(offset + ROUTE_OFFSETS[i])) {
-                    callback(offset + ROUTE_OFFSETS[i], dist);
+                if (valid_offset(offset + ROUTE_OFFSETS(i))) {
+                    callback(offset + ROUTE_OFFSETS(i), dist);
                 }
             }
         }
@@ -164,8 +167,8 @@ static void route_queue_dir8(int source, void (*callback)(int, int))
         int offset = queue.items[queue.head];
         int dist = 1 + routing_distance.items[offset];
         for (int i = 0; i < 8; i++) {
-            if (valid_offset(offset + ROUTE_OFFSETS[i])) {
-                callback(offset + ROUTE_OFFSETS[i], dist);
+            if (valid_offset(offset + ROUTE_OFFSETS(i))) {
+                callback(offset + ROUTE_OFFSETS(i), dist);
             }
         }
         if (++queue.head >= MAX_QUEUE) {

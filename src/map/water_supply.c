@@ -20,7 +20,8 @@
 
 #define MAX_QUEUE 1000
 
-static const int ADJACENT_OFFSETS[] = {-GRID_SIZE, 1, GRID_SIZE, -1};
+// grid side only known at run time: up, right, down, left
+#define ADJACENT_OFFSETS(i) ((i) == 0 ? -GRID_SIZE : (i) == 1 ? 1 : (i) == 2 ? GRID_SIZE : -1)
 
 static struct {
     int items[MAX_QUEUE];
@@ -107,7 +108,7 @@ static void fill_aqueducts_from_offset(int grid_offset)
         }
         next_offset = -1;
         for (int i = 0; i < 4; i++) {
-            int new_offset = grid_offset + ADJACENT_OFFSETS[i];
+            int new_offset = grid_offset + ADJACENT_OFFSETS(i);
             building *b = building_get(map_building_at(new_offset));
             if (b->id && b->type == BUILDING_RESERVOIR) {
                 // check if aqueduct connects to reservoir --> doesn't connect to corner
@@ -165,7 +166,7 @@ void map_water_supply_update_reservoir_fountain(void)
     const int *reservoirs = building_list_large_items();
     // fill reservoirs from full ones
     int changed = 1;
-    static const int CONNECTOR_OFFSETS[] = {OFFSET(1,-1), OFFSET(3,1), OFFSET(1,3), OFFSET(-1,1)};
+    const int CONNECTOR_OFFSETS[] = {OFFSET(1,-1), OFFSET(3,1), OFFSET(1,3), OFFSET(-1,1)};
     while (changed == 1) {
         changed = 0;
         for (int i = 0; i < total_reservoirs; i++) {

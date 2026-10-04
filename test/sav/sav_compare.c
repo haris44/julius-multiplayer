@@ -4,6 +4,10 @@
 #include "../src/figure/type.h"
 #include "../src/map/grid.h"
 
+// classic saved games always use a 162 tile grid
+#undef GRID_SIZE
+#define GRID_SIZE 162
+
 #include <stdio.h>
 #include <string.h>
 

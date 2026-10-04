@@ -32,18 +32,19 @@ static const city_overlay *overlay = 0;
 
 #define OFFSET(x,y) (x + GRID_SIZE * y)
 
+// (x, y) pairs, see map_grid_pair_offset
 static const int ADJACENT_OFFSETS[2][4][7] = {
     {
-        {OFFSET(-1, 0), OFFSET(-1, -1), OFFSET(-1, -2), OFFSET(0, -2), OFFSET(1, -2)},
-        {OFFSET(0, -1), OFFSET(1, -1), OFFSET(2, -1), OFFSET(2, 0), OFFSET(2, 1)},
-        {OFFSET(1, 0), OFFSET(1, 1), OFFSET(1, 2), OFFSET(0, 2), OFFSET(-1, 2)},
-        {OFFSET(0, 1), OFFSET(-1, 1), OFFSET(-2, 1), OFFSET(-2, 0), OFFSET(-2, -1)}
+        {GRID_PAIR(-1, 0), GRID_PAIR(-1, -1), GRID_PAIR(-1, -2), GRID_PAIR(0, -2), GRID_PAIR(1, -2)},
+        {GRID_PAIR(0, -1), GRID_PAIR(1, -1), GRID_PAIR(2, -1), GRID_PAIR(2, 0), GRID_PAIR(2, 1)},
+        {GRID_PAIR(1, 0), GRID_PAIR(1, 1), GRID_PAIR(1, 2), GRID_PAIR(0, 2), GRID_PAIR(-1, 2)},
+        {GRID_PAIR(0, 1), GRID_PAIR(-1, 1), GRID_PAIR(-2, 1), GRID_PAIR(-2, 0), GRID_PAIR(-2, -1)}
     },
     {
-        {OFFSET(-1, 0), OFFSET(-1, -1), OFFSET(-1, -2), OFFSET(-1, -3), OFFSET(0, -3),  OFFSET(1, -3), OFFSET(2, -3)},
-        {OFFSET(0, -1), OFFSET(1, -1), OFFSET(2, -1), OFFSET(3, -1), OFFSET(3, 0),  OFFSET(3, 1), OFFSET(3, 2)},
-        {OFFSET(1, 0), OFFSET(1, 1), OFFSET(1, 2), OFFSET(1, 3), OFFSET(0, 3),  OFFSET(-1, 3), OFFSET(-2, 3)},
-        {OFFSET(0, 1), OFFSET(-1, 1), OFFSET(-2, 1), OFFSET(-3, 1), OFFSET(-3, 0),  OFFSET(-3, -1), OFFSET(-3, -2)}
+        {GRID_PAIR(-1, 0), GRID_PAIR(-1, -1), GRID_PAIR(-1, -2), GRID_PAIR(-1, -3), GRID_PAIR(0, -3),  GRID_PAIR(1, -3), GRID_PAIR(2, -3)},
+        {GRID_PAIR(0, -1), GRID_PAIR(1, -1), GRID_PAIR(2, -1), GRID_PAIR(3, -1), GRID_PAIR(3, 0),  GRID_PAIR(3, 1), GRID_PAIR(3, 2)},
+        {GRID_PAIR(1, 0), GRID_PAIR(1, 1), GRID_PAIR(1, 2), GRID_PAIR(1, 3), GRID_PAIR(0, 3),  GRID_PAIR(-1, 3), GRID_PAIR(-2, 3)},
+        {GRID_PAIR(0, 1), GRID_PAIR(-1, 1), GRID_PAIR(-2, 1), GRID_PAIR(-3, 1), GRID_PAIR(-3, 0),  GRID_PAIR(-3, -1), GRID_PAIR(-3, -2)}
     }
 };
 
@@ -173,10 +174,11 @@ static int has_adjacent_deletion(int grid_offset)
 {
     int size = map_property_multi_tile_size(grid_offset);
     int total_adjacent_offsets = size * 2 + 1;
-    const int *adjacent_offset = ADJACENT_OFFSETS[size - 2][city_view_orientation() / 2];
+    const int *adjacent_pair = ADJACENT_OFFSETS[size - 2][city_view_orientation() / 2];
     for (int i = 0; i < total_adjacent_offsets; ++i) {
-        if (map_property_is_deleted(grid_offset + adjacent_offset[i]) ||
-            draw_building_as_deleted(building_get(map_building_at(grid_offset + adjacent_offset[i])))) {
+        int adjacent_offset = map_grid_pair_offset(adjacent_pair[i]);
+        if (map_property_is_deleted(grid_offset + adjacent_offset) ||
+            draw_building_as_deleted(building_get(map_building_at(grid_offset + adjacent_offset)))) {
             return 1;
         }
     }

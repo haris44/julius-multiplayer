@@ -273,7 +273,7 @@ static void init(int grid_offset)
     for (int i = 0; i < 7; i++) {
         context.figure.figure_ids[i] = 0;
     }
-    static const int FIGURE_OFFSETS[] = {
+    const int FIGURE_OFFSETS[] = { // grid side known at run time
         OFFSET(0,0), OFFSET(0,-1), OFFSET(0,1), OFFSET(1,0), OFFSET(-1,0),
         OFFSET(-1,-1), OFFSET(1,-1), OFFSET(-1,1), OFFSET(1,1)
     };

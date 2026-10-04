@@ -12,13 +12,15 @@
 
 #define MAX_DIR 4
 
-#define OFFSET(x,y) (x + GRID_SIZE * y)
+#define OFFSET(x,y) ((x) + GRID_SIZE * (y))
 
-static const int HOUSE_TILE_OFFSETS[] = {
-    OFFSET(0,0), OFFSET(1,0), OFFSET(0,1), OFFSET(1,1), // 2x2
-    OFFSET(2,0), OFFSET(2,1), OFFSET(2,2), OFFSET(1,2), OFFSET(0,2), // 3x3
-    OFFSET(3,0), OFFSET(3,1), OFFSET(3,2), OFFSET(3,3), OFFSET(2,3), OFFSET(1,3), OFFSET(0,3) // 4x4
+static const int HOUSE_TILE_XY[][2] = {
+    {0,0}, {1,0}, {0,1}, {1,1}, // 2x2
+    {2,0}, {2,1}, {2,2}, {1,2}, {0,2}, // 3x3
+    {3,0}, {3,1}, {3,2}, {3,3}, {2,3}, {1,3}, {0,3} // 4x4
 };
+// the grid side is only known at run time
+#define HOUSE_TILE_OFFSET(i) OFFSET(HOUSE_TILE_XY[i][0], HOUSE_TILE_XY[i][1])
 
 static const struct {
     int group;
@@ -40,8 +42,8 @@ static const struct {
 static const struct {
     int x;
     int y;
-    int offset;
-} EXPAND_DIRECTION_DELTA[MAX_DIR] = {{0, 0, 0}, {-1, -1, -GRID_SIZE - 1}, {-1, 0, -1}, {0, -1, -GRID_SIZE}};
+} EXPAND_DIRECTION_DELTA[MAX_DIR] = {{0, 0}, {-1, -1}, {-1, 0}, {0, -1}};
+#define EXPAND_DIRECTION_OFFSET(dir) OFFSET(EXPAND_DIRECTION_DELTA[dir].x, EXPAND_DIRECTION_DELTA[dir].y)
 
 static struct {
     int x;
@@ -104,7 +106,7 @@ static void prepare_for_merge(int building_id, int num_tiles)
     merge_data.population = 0;
     int grid_offset = map_grid_offset(merge_data.x, merge_data.y);
     for (int i = 0; i < num_tiles; i++) {
-        int house_offset = grid_offset + HOUSE_TILE_OFFSETS[i];
+        int house_offset = grid_offset + HOUSE_TILE_OFFSET(i);
         if (map_terrain_is(house_offset, TERRAIN_BUILDING)) {
             building *house = building_get(map_building_at(house_offset));
             if (house->id != building_id && house->house_size) {
@@ -151,7 +153,7 @@ void building_house_merge(building *house)
     }
     int num_house_tiles = 0;
     for (int i = 0; i < 4; i++) {
-        int tile_offset = house->grid_offset + HOUSE_TILE_OFFSETS[i];
+        int tile_offset = house->grid_offset + HOUSE_TILE_OFFSET(i);
         if (map_terrain_is(tile_offset, TERRAIN_BUILDING)) {
             building *other_house = building_get(map_building_at(tile_offset));
             if (other_house->id == house->id) {
@@ -175,10 +177,10 @@ int building_house_can_expand(building *house, int num_tiles)
 {
     // merge with other houses
     for (int dir = 0; dir < MAX_DIR; dir++) {
-        int base_offset = EXPAND_DIRECTION_DELTA[dir].offset + house->grid_offset;
+        int base_offset = EXPAND_DIRECTION_OFFSET(dir) + house->grid_offset;
         int ok_tiles = 0;
         for (int i = 0; i < num_tiles; i++) {
-            int tile_offset = base_offset + HOUSE_TILE_OFFSETS[i];
+            int tile_offset = base_offset + HOUSE_TILE_OFFSET(i);
             if (map_terrain_is(tile_offset, TERRAIN_BUILDING)) {
                 building *other_house = building_get(map_building_at(tile_offset));
                 if (other_house->id == house->id) {
@@ -198,10 +200,10 @@ int building_house_can_expand(building *house, int num_tiles)
     }
     // merge with houses and empty terrain
     for (int dir = 0; dir < MAX_DIR; dir++) {
-        int base_offset = EXPAND_DIRECTION_DELTA[dir].offset + house->grid_offset;
+        int base_offset = EXPAND_DIRECTION_OFFSET(dir) + house->grid_offset;
         int ok_tiles = 0;
         for (int i = 0; i < num_tiles; i++) {
-            int tile_offset = base_offset + HOUSE_TILE_OFFSETS[i];
+            int tile_offset = base_offset + HOUSE_TILE_OFFSET(i);
             if (!map_terrain_is(tile_offset, TERRAIN_NOT_CLEAR)) {
                 ok_tiles++;
             } else if (map_terrain_is(tile_offset, TERRAIN_BUILDING)) {
@@ -223,10 +225,10 @@ int building_house_can_expand(building *house, int num_tiles)
     }
     // merge with houses, empty terrain and gardens
     for (int dir = 0; dir < MAX_DIR; dir++) {
-        int base_offset = EXPAND_DIRECTION_DELTA[dir].offset + house->grid_offset;
+        int base_offset = EXPAND_DIRECTION_OFFSET(dir) + house->grid_offset;
         int ok_tiles = 0;
         for (int i = 0; i < num_tiles; i++) {
-            int tile_offset = base_offset + HOUSE_TILE_OFFSETS[i];
+            int tile_offset = base_offset + HOUSE_TILE_OFFSET(i);
             if (!map_terrain_is(tile_offset, TERRAIN_NOT_CLEAR)) {
                 ok_tiles++;
             } else if (map_terrain_is(tile_offset, TERRAIN_BUILDING)) {
@@ -344,7 +346,7 @@ static void split(building *house, int num_tiles)
 {
     int grid_offset = map_grid_offset(merge_data.x, merge_data.y);
     for (int i = 0; i < num_tiles; i++) {
-        int tile_offset = grid_offset + HOUSE_TILE_OFFSETS[i];
+        int tile_offset = grid_offset + HOUSE_TILE_OFFSET(i);
         if (map_terrain_is(tile_offset, TERRAIN_BUILDING)) {
             building *other_house = building_get(map_building_at(tile_offset));
             if (other_house->id != house->id && other_house->house_size) {

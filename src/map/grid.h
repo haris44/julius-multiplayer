@@ -5,25 +5,47 @@
 
 #include <stdint.h>
 
-enum {
-    GRID_SIZE = 162
-};
+/**
+ * Largest grid side. Grids always hold this many tiles; only the first GRID_SIZE * GRID_SIZE are used.
+ */
+#define GRID_MAX_SIZE 512
+#define GRID_MAX_TILES (GRID_MAX_SIZE * GRID_MAX_SIZE)
+
+/**
+ * Side of the grid (stride between two rows of tiles), set when a map is loaded:
+ * 162 for every classic map and saved game, larger for multiplayer maps.
+ */
+extern int map_grid_stride;
+#define GRID_SIZE map_grid_stride
 
 typedef struct {
-    uint8_t items[GRID_SIZE * GRID_SIZE];
+    uint8_t items[GRID_MAX_TILES];
 } grid_u8;
 
 typedef struct {
-    int8_t items[GRID_SIZE * GRID_SIZE];
+    int8_t items[GRID_MAX_TILES];
 } grid_i8;
 
 typedef struct {
-    uint16_t items[GRID_SIZE * GRID_SIZE];
+    uint16_t items[GRID_MAX_TILES];
 } grid_u16;
 
 typedef struct {
-    int16_t items[GRID_SIZE * GRID_SIZE];
+    int16_t items[GRID_MAX_TILES];
 } grid_i16;
+
+/**
+ * Changes the grid side. All grids keep their tile indexes, so this is only valid before a map is loaded.
+ * @param stride New side, at most GRID_MAX_SIZE
+ */
+void map_grid_set_stride(int stride);
+
+/**
+ * Compile-time encoding of a small (x, y) tile delta, for constant tables of offsets:
+ * map_grid_pair_offset turns it into a grid offset for the current grid side
+ */
+#define GRID_PAIR(x, y) ((x) + 1024 * (y))
+int map_grid_pair_offset(int pair);
 
 void map_grid_init(int width, int height, int start_offset, int border_size);
 

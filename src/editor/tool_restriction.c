@@ -8,13 +8,14 @@
 
 #define OFFSET(x,y) (x + GRID_SIZE * y)
 
-static const int TILE_GRID_OFFSETS[] = {0, GRID_SIZE, 1, GRID_SIZE + 1};
+#define TILE_GRID_OFFSETS(i) ((i) == 0 ? 0 : (i) == 1 ? GRID_SIZE : (i) == 2 ? 1 : GRID_SIZE + 1)
 
+// (x, y) pairs, see map_grid_pair_offset
 static const int ACCESS_RAMP_TILE_OFFSETS_BY_ORIENTATION[4][6] = {
-    {OFFSET(0,1), OFFSET(1,1), OFFSET(0,2), OFFSET(1,2), OFFSET(0,0), OFFSET(1,0)},
-    {OFFSET(0,0), OFFSET(0,1), OFFSET(-1,0), OFFSET(-1,1), OFFSET(1,0), OFFSET(1,1)},
-    {OFFSET(0,0), OFFSET(1,0), OFFSET(0,-1), OFFSET(1,-1), OFFSET(0,1), OFFSET(1,1)},
-    {OFFSET(1,0), OFFSET(1,1), OFFSET(2,0), OFFSET(2,1), OFFSET(0,0), OFFSET(0,1)},
+    {GRID_PAIR(0,1), GRID_PAIR(1,1), GRID_PAIR(0,2), GRID_PAIR(1,2), GRID_PAIR(0,0), GRID_PAIR(1,0)},
+    {GRID_PAIR(0,0), GRID_PAIR(0,1), GRID_PAIR(-1,0), GRID_PAIR(-1,1), GRID_PAIR(1,0), GRID_PAIR(1,1)},
+    {GRID_PAIR(0,0), GRID_PAIR(1,0), GRID_PAIR(0,-1), GRID_PAIR(1,-1), GRID_PAIR(0,1), GRID_PAIR(1,1)},
+    {GRID_PAIR(1,0), GRID_PAIR(1,1), GRID_PAIR(2,0), GRID_PAIR(2,1), GRID_PAIR(0,0), GRID_PAIR(0,1)},
 };
 
 static int is_clear_terrain(const map_tile *tile, int *warning)
@@ -88,7 +89,7 @@ int editor_tool_can_place_access_ramp(const map_tile *tile, int *orientation_ind
         int wrong_tiles = 0;
         int top_elevation = 0;
         for (int index = 0; index < 6; index++) {
-            int tile_offset = tile->grid_offset + ACCESS_RAMP_TILE_OFFSETS_BY_ORIENTATION[orientation][index];
+            int tile_offset = tile->grid_offset + map_grid_pair_offset(ACCESS_RAMP_TILE_OFFSETS_BY_ORIENTATION[orientation][index]);
             int elevation = map_elevation_at(tile_offset);
             if (index < 2) {
                 if (map_terrain_is(tile_offset, TERRAIN_ELEVATION)) {
@@ -133,7 +134,7 @@ int editor_tool_can_place_building(const map_tile *tile, int num_tiles, int *blo
 {
     int blocked = 0;
     for (int i = 0; i < num_tiles; i++) {
-        int tile_offset = tile->grid_offset + TILE_GRID_OFFSETS[i];
+        int tile_offset = tile->grid_offset + TILE_GRID_OFFSETS(i);
         int forbidden_terrain = map_terrain_get(tile_offset) & TERRAIN_NOT_CLEAR;
         if (forbidden_terrain || map_has_figure_at(tile_offset)) {
             blocked = 1;
