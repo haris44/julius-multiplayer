@@ -33,6 +33,7 @@
 | E9 | **Suppression de la campagne** : uniquement du **jeu libre, en multijoueur**. |
 | E10 | Développement **autonome et structuré** par Claude, avec des **tests exécutables par Claude** (le jeu doit pouvoir être testé sans humain). |
 | E11 | On **construit partout**, comme dans AoE2, et les cités peuvent se **brancher** les unes sur les autres (routes, etc.). |
+| E13 | Les **statistiques** (population, finances, notes, conseillers…) sont **séparées par joueur** : chacun voit celles de sa propre cité (Alexandre, 2026-10-04, après le test du prototype). |
 | E12 | **Autorisations d'exploiter** les ressources, comme dans le jeu de base : chaque joueur démarre avec des autorisations **différentes selon son point d'arrivée**, pour forcer le commerce. Un **équilibrage** est à faire, en particulier sur les **armes**, ressource essentielle. |
 
 ## Interprétations retenues (hypothèses à confirmer par Alexandre)

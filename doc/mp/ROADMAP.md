@@ -1,10 +1,8 @@
 # Feuille de route
 
-> **Jalon en cours : M2P livré, en attente du test d'Alexandre (`tools/play-mp.sh`) ; puis reste de M2 (M2.6, M2.7,
-> M2.9 à M2.11), puis M3.**
-> Légende : `[x]` fait · `[~]` en cours · `[ ]` à faire. Une tâche n'est cochée que si ses critères sont vérifiés
-> par des tests automatisés (voir [TESTING.md](TESTING.md)). Chaque commit est préfixé par l'ID de sa tâche.
-> On suit l'ordre, sauf décision contraire consignée dans le JOURNAL.
+> **Jalon en cours : M3, moteur multi-cités** (priorité d'Alexandre : statistiques séparées par joueur, E13).
+> Ordre retenu : M3.4 → M3.5 → M3.6 → M3.7, puis M3.1 à M3.3 (grande grille), puis M3.8. Le reste de M2 (M2.6, M2.7,
+> M2.9 à M2.11) suit, car il ne bloque pas.
 
 ## M0 — Infrastructure de développement et de test ✅
 - [x] **M0.1** Environnement macOS : build, données `../donnees-c3`, branche `multiplayer`, tag `upstream-base`.
@@ -73,9 +71,10 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
   puis remis ; rotation de la vue
   bloquée en multijoueur (en attendant M2.10).
 - [x] **M2P.4** `tools/play-mp.sh` : lance l'hôte et un client (deux fenêtres) sur une sauvegarde, sur le Mac.
-- [~] **M2P.5** Test automatisé : deux instances sans fenêtre reliées en local, commandes scriptées, mêmes sommes de
+- [x] **M2P.5** Test automatisé : deux instances sans fenêtre reliées en local, commandes scriptées, mêmes sommes de
   contrôle. *Critère final* : Alexandre joue une partie à deux fenêtres sur son Mac sans désynchronisation.
-  *Fait* : `mp_lan_*` (ctest) et `tools/mp-real-test.sh` (vrai jeu). Reste : la partie d'Alexandre.
+  *Fait* : `mp_lan_*` (ctest), `tools/mp-real-test.sh` (vrai jeu), et testé par Alexandre le 2026-10-04 : les
+  constructions se synchronisent bien.
 
 ## M3 — Moteur multi-cités
 - [ ] **M3.1** Types élargis en mémoire (coordonnées 16 bits, offsets 32 bits). Le format classique est réécrit à
