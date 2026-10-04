@@ -137,6 +137,8 @@ int platform_parse_arguments(int argc, char **argv, julius_args *output_args)
                 print_log("Option --mp-players must be followed by a number of players from 1 to 4");
                 ok = 0;
             }
+        } else if (SDL_strcmp(argv[i], "--mp-shared-city") == 0) {
+            output_args->mp_shared_city = 1;
         } else if (SDL_strcmp(argv[i], "--mp-join") == 0 && i + 1 < argc) {
             output_args->mp_join = argv[++i];
         } else if (SDL_strcmp(argv[i], "--mp-port") == 0 && i + 1 < argc) {
@@ -176,8 +178,9 @@ int platform_parse_arguments(int argc, char **argv, julius_args *output_args)
         print_log("          Forces the game to start fullscreen");
         print_log("--display ID");
         print_log("          Forces the game to start on the specified display, numbered from 0");
-        print_log("--mp-host SAVE [--mp-players N] [--mp-port PORT]");
-        print_log("          Hosts a local network game for N players (default 2) starting from the saved game SAVE");
+        print_log("--mp-host SAVE [--mp-players N] [--mp-port PORT] [--mp-shared-city]");
+        print_log("          Hosts a local network game for N players (default 2): every player gets a copy of the");
+        print_log("          city of the saved game SAVE, or with --mp-shared-city all players build in that city");
         print_log("--mp-join ADDRESS[:PORT]");
         print_log("          Joins a local network game");
         print_log("--automation FILE");

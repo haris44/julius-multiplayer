@@ -26,9 +26,11 @@ typedef enum {
 
 /**
  * Hosts a game: waits for the other players, then starts from the saved game
+ * @param separate_cities 1: every player gets a copy of the city of the saved game, on a shared map
+ *                        (mp_compose_separate_cities); 0: all players share the city of the saved game
  * @return 1 when listening
  */
-int mp_lockstep_host(int port, int num_players, const char *saved_game);
+int mp_lockstep_host(int port, int num_players, const char *saved_game, int separate_cities);
 
 /**
  * Joins a hosted game; the game starts when the host sends the saved game

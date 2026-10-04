@@ -1,13 +1,17 @@
 #!/bin/sh
 # Network game test: one host and N-1 clients, headless, on this computer.
-# Usage: lan_test.sh SIMTOOL PORT PLAYERS SAVE TICKS [desync]
+# Usage: lan_test.sh SIMTOOL PORT PLAYERS SAVE TICKS [desync] [cities]
 # Without 'desync': every player must end with the same checksum and the host must verify every turn.
 # With 'desync': the last client changes its own state; host and client must detect it.
+# With 'cities': every player has its own copy of the city (separate cities) instead of a shared city.
 SIMTOOL=$1; PORT=$2; PLAYERS=$3; SAVE=$4; TICKS=$5; MODE=$6
+CITIES=""
+for arg in "$@"; do [ "$arg" = "cities" ] && CITIES="cities"; done
+[ "$MODE" = "cities" ] && MODE=""
 DIR=$(mktemp -d)
 HOST_ARGS=""
 [ "$MODE" = "desync" ] && HOST_ARGS="expect-desync"
-"$SIMTOOL" mpnode host "$PORT" "$PLAYERS" "$SAVE" "$TICKS" $HOST_ARGS > "$DIR/host.log" 2>&1 &
+"$SIMTOOL" mpnode host "$PORT" "$PLAYERS" "$SAVE" "$TICKS" $CITIES $HOST_ARGS > "$DIR/host.log" 2>&1 &
 HOST=$!
 sleep 0.3
 PIDS=""
@@ -33,5 +37,5 @@ if [ "$MODE" != "desync" ]; then
     COUNT=$(grep -h "checksum" "$DIR"/*.log | awk '{print $4}' | sort -u | wc -l | tr -d ' ')
     [ "$COUNT" = "1" ] || { echo "Final checksums differ"; FAILED=1; }
 fi
-rm -rf "$DIR" mp-session-"$PORT"-p*.sav mp-desync-"$PORT"-*.sav
+rm -rf "$DIR" mp-session-"$PORT"-p*.sav mp-session-"$PORT"-p*.mpsav mp-desync-"$PORT"-*.sav mp-desync-"$PORT"-*.mpsav
 exit $FAILED

@@ -238,3 +238,15 @@
 - L'état caché qu'un chargement classique recalcule (stocks des greniers hors « réception », curseurs…) est écrit
   explicitement dans l'état « extra » de chaque cité, car le recalcul ne redonne pas la valeur en cours. La copie
   brute de la mémoire de chaque cité sert seulement d'**oracle de test** (`mpresume`), jamais de format.
+
+### D-025 — Partie réseau provisoire : une copie de la cité de départ par joueur
+- 2026-10-04 · **adoptée, provisoire** (en attendant M4.4 et les cartes de M6) · *à valider* par Alexandre
+- Par défaut, une partie réseau donne à chaque joueur **sa propre cité** : l'hôte charge la sauvegarde classique,
+  la recopie une fois par joueur sur une grille de 512 (carré 2 × 2, 24 cases de roche entre les cités, joueurs 1 et 2
+  en diagonale), écrit le `.mpsav`, le recharge et l'envoie aux clients. Chaque machine affiche sa cité : trésorerie,
+  population, conseillers et notes sont ceux du joueur local (E13). `--mp-shared-city` garde l'ancien mode M2P.
+- Les cités ne se touchent pas (roche) : pas encore de commerce ni de guerre entre joueurs.
+- Les joueurs 3 et 4 ne sont pas en diagonale : un bogue d'origine (x passé pour y dans le choix d'un grenier,
+  D-023) y donne des choix de grenier légèrement différents de la cité d'origine. C'est le comportement de l'original
+  sur une carte décalée, sans effet sur le déterminisme.
+

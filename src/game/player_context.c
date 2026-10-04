@@ -151,6 +151,19 @@ void player_context_set_num_players(int num_players)
     player_context_current_player = 0;
 }
 
+int player_context_add_player(void)
+{
+    if (data.num_players >= PLAYER_CONTEXT_MAX_PLAYERS || !allocate_slots()) {
+        return -1;
+    }
+    save_live(data.current);
+    int player_id = data.num_players;
+    memcpy(data.slots[player_id], data.slots[0], data.total_size);
+    data.num_players++;
+    player_context_player_count = data.num_players;
+    return player_id;
+}
+
 int player_context_num_players(void)
 {
     return data.num_players;

@@ -75,6 +75,11 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
   contrôle. *Critère final* : Alexandre joue une partie à deux fenêtres sur son Mac sans désynchronisation.
   *Fait* : `mp_lan_*` (ctest), `tools/mp-real-test.sh` (vrai jeu), et testé par Alexandre le 2026-10-04 : les
   constructions se synchronisent bien.
+- [x] **M2P.6** Une cité par joueur (demande d'Alexandre : statistiques séparées, E13). L'hôte recopie la cité de
+  départ pour chaque joueur (D-025) et envoie le `.mpsav` ; chaque machine affiche sa cité.
+  *Fait* : `mp_lan_cities_*` (2 et 4 joueurs, désynchronisation détectée) : chaque commande ne change que la cité de
+  son joueur, et les sommes de contrôle sont identiques sur toutes les machines. `tools/mp-real-test.sh` : les deux
+  instances affichent chacune leur trésorerie. *À tester par Alexandre* avec `tools/play-mp.sh`.
 
 ## M3 — Moteur multi-cités
 - [x] **M3.1** Types élargis en mémoire (coordonnées 16 bits, offsets 32 bits). Le format classique est réécrit à

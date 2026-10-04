@@ -4,6 +4,8 @@
 # Usage: tools/play-mp.sh [PLAYERS] [SAVE]
 #   PLAYERS  number of windows/players, 2 to 4 (default 2)
 #   SAVE     saved game to start from (default test/data/request_start.sav)
+# Every player gets its own copy of the city of SAVE (doc/mp/DECISIONS.md D-025); add --mp-shared-city to the
+# host command below to build all together in one city instead.
 #
 # Playing on two Macs instead: on the host Mac
 #   build/julius.app/Contents/MacOS/julius --mp-host SAVE --mp-players 2 ../donnees-c3
@@ -25,4 +27,5 @@ for ((i = 2; i <= PLAYERS; i++)); do
 done
 echo "$PLAYERS game windows started (logs: build/mp-player*.log)."
 echo "The game starts when every player has joined. The black banner at the top left shows your player number."
+echo "Every player has its own city: the treasury, population and advisors of each window are those of its player."
 wait

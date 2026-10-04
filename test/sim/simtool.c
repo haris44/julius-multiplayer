@@ -73,7 +73,8 @@ static int usage(void)
     printf("  simtool clearequiv SAVE                same for clearing forts and bridges: answering the popup\n");
     printf("                                         equals sending the answer in the command\n");
     printf("  simtool actionequiv SAVE               same for city settings (taxes, wages, storage, trade...)\n");
-    printf("  simtool mpnode host PORT PLAYERS SAVE TICKS   network game host (headless)\n");
+    printf("  simtool mpnode host PORT PLAYERS SAVE TICKS [cities]  network game host (headless); with\n");
+    printf("                                         'cities' every player has a copy of the city\n");
     printf("  simtool mpnode join ADDRESS PORT TICKS [desync]  network game client (headless); with\n");
     printf("                                         'desync' it changes its own state to test detection\n");
     printf("                                         each player issues scripted commands; prints the\n");
@@ -451,8 +452,13 @@ static void mpnode_play(int tick_in_game)
     int player = mp_session_local_player_id();
     if (tick_in_game % 40 == 7 + player * 3) {
         int n = tick_in_game / 40;
-        int x = 20 + (n * 7 + player * 31) % 120;
-        int y = 20 + (n * 13 + player * 17) % 120;
+        // separate cities: in the city of the player
+        int x0 = 0, y0 = 0, size;
+        if (player_context_num_players() > 1) {
+            mp_compose_city_area(player, MP_COMPOSE_CITY_GAP, &x0, &y0, &size);
+        }
+        int x = x0 + 20 + (n * 7 + player * 31) % 120;
+        int y = y0 + 20 + (n * 13 + player * 17) % 120;
         mp_command command = { .type = MP_COMMAND_BUILD, .args = {
             n % 3 == 2 ? BUILDING_HOUSE_VACANT_LOT : BUILDING_ROAD, 0, x, y, x + 6, y + (n % 2) * 3, 0, 0
         } };
@@ -465,15 +471,19 @@ static void mpnode_play(int tick_in_game)
 
 static int command_mpnode(int argc, char **argv)
 {
-    // argv: mpnode host PORT PLAYERS SAVE TICKS | mpnode join ADDRESS PORT TICKS
+    // argv: mpnode host PORT PLAYERS SAVE TICKS [cities] | mpnode join ADDRESS PORT TICKS
     int is_host = argc >= 7 && strcmp(argv[2], "host") == 0;
+    int cities = 0;
+    for (int i = 7; i < argc; i++) {
+        cities |= strcmp(argv[i], "cities") == 0;
+    }
     int is_join = argc >= 6 && strcmp(argv[2], "join") == 0;
     if (!is_host && !is_join) {
         return usage();
     }
     int ticks = atoi(is_host ? argv[6] : argv[5]);
     int cheat = is_join && argc >= 7 && strcmp(argv[6], "desync") == 0;
-    int ok = is_host ? mp_lockstep_host(atoi(argv[3]), atoi(argv[4]), argv[5])
+    int ok = is_host ? mp_lockstep_host(atoi(argv[3]), atoi(argv[4]), argv[5], cities)
                      : mp_lockstep_join(argv[3], atoi(argv[4]));
     if (!ok) {
         printf("FAILED: %s\n", mp_lockstep_status());
@@ -482,6 +492,7 @@ static int command_mpnode(int argc, char **argv)
     setting_reset_speeds(500, setting_scroll_speed());
     time_t deadline = time(0) + 120;
     int start_tick = -1;
+    int start_tax = 0;
     int last_played = -1;
     while (time(0) < deadline) {
         mp_lockstep_state state = mp_lockstep_get_state();
@@ -490,6 +501,7 @@ static int command_mpnode(int argc, char **argv)
         }
         if (state == MP_LOCKSTEP_RUNNING && start_tick < 0) {
             start_tick = game_time_absolute_tick();
+            start_tax = city_finance_tax_percentage();
         }
         int before = game_time_absolute_tick();
         if (start_tick >= 0) {
@@ -530,6 +542,9 @@ static int command_mpnode(int argc, char **argv)
         // expected outcome: the desynchronisation is detected
         int detected = mp_lockstep_get_state() == MP_LOCKSTEP_DESYNC;
         printf("desync %s\n", detected ? "detected" : "NOT detected");
+        if (is_host) {
+            usleep(500 * 1000); // let the clients read the notice before the connection closes
+        }
         mp_lockstep_stop();
         return detected ? 0 : 1;
     }
@@ -537,6 +552,23 @@ static int command_mpnode(int argc, char **argv)
         mp_checksum_state());
     int result = mp_lockstep_get_state() == MP_LOCKSTEP_RUNNING && start_tick >= 0 &&
         game_time_absolute_tick() - start_tick == ticks;
+    if (player_context_num_players() > 1) {
+        // separate cities: the interface shows the local city, and every player changed only its own taxes
+        int local = mp_session_local_player_id();
+        if (player_context_current() != local) {
+            printf("WRONG CITY: the interface shows city %d instead of %d\n", player_context_current(), local);
+            result = 0;
+        }
+        for (int p = 0; p < player_context_num_players(); p++) {
+            player_context_switch(p);
+            int tax = city_finance_tax_percentage();
+            int expected = p % 2 ? tax > start_tax : tax < start_tax;
+            printf("city %d: tax %d%% (start %d%%), treasury %d%s\n", p, tax, start_tax, city_finance_treasury(),
+                expected ? "" : " UNEXPECTED");
+            result = result && expected;
+        }
+        player_context_switch(local);
+    }
     if (is_host) {
         result = result && mp_lockstep_last_verified_turn() == (ticks / 4) - 1;
     }
@@ -575,7 +607,7 @@ static int command_relocequiv(const char *file, int ticks, int stride, int dx, i
     return 0;
 }
 
-#define TWIN_GAP 24 // farther than desirability and herds reach
+#define TWIN_GAP MP_COMPOSE_CITY_GAP // farther than desirability and herds reach
 
 typedef struct {
     int count;
@@ -603,25 +635,15 @@ static void record_city_piece(const char *name, uint64_t checksum, void *userdat
 }
 
 // both cities on one large map: the city on top, the copy (if any) below, water and forest between
-static int setup_twin_map(const char *file, int with_twin, int *width, int *height)
+static int setup_twin_map(const char *file, int num_cities, int *width, int *height)
 {
     if (!load(file)) {
         return 0;
     }
     *width = map_data.width;
     *height = map_data.height;
-    // each city has the same surroundings: TWIN_GAP tiles of forest and water on every side.
-    // The twin is placed diagonally (same shift on x and y): an original bug passes x for y when choosing
-    // a granary (granary.c), so only such shifts keep distances identical.
-    int shift = (*width > *height ? *width : *height) + TWIN_GAP;
-    if (!mp_compose_relocate(512, TWIN_GAP, TWIN_GAP) ||
-        !mp_compose_extend_map(TWIN_GAP, TWIN_GAP, shift + TWIN_GAP, shift + TWIN_GAP)) {
-        return 0;
-    }
-    if (with_twin && !mp_compose_add_twin(TWIN_GAP, TWIN_GAP, *width, *height, shift, shift)) {
-        return 0;
-    }
-    return 1;
+    // each city has the same surroundings: TWIN_GAP tiles of rock on every side; the twin is on the diagonal
+    return mp_compose_separate_cities(num_cities, TWIN_GAP);
 }
 
 typedef struct {
@@ -656,7 +678,7 @@ static int command_twins(const char *file, int ticks)
     memset(&alone, 0, sizeof(alone));
     memset(&twin, 0, sizeof(twin));
 
-    if (!setup_twin_map(file, 0, &width, &height)) {
+    if (!setup_twin_map(file, 1, &width, &height)) {
         printf("Unable to prepare the map\n");
         return 2;
     }
@@ -667,7 +689,7 @@ static int command_twins(const char *file, int ticks)
     city_stats alone_stats;
     get_stats(&alone_stats);
 
-    if (!setup_twin_map(file, 1, &width, &height)) {
+    if (!setup_twin_map(file, 2, &width, &height)) {
         printf("Unable to create the twin city\n");
         return 2;
     }
@@ -776,7 +798,7 @@ static int find_twin_building_difference(const player_clone *c)
 static int command_twinfigures(const char *file, int ticks)
 {
     int width, height;
-    if (!setup_twin_map(file, 1, &width, &height)) {
+    if (!setup_twin_map(file, 2, &width, &height)) {
         return 2;
     }
     int shift = (width > height ? width : height) + TWIN_GAP;
@@ -832,13 +854,15 @@ static void record_piece(const char *name, uint64_t checksum, void *userdata)
 static int command_mpresume(const char *file, int ticks, int more)
 {
     int width, height;
-    if (!setup_twin_map(file, getenv("MPRESUME_ALONE") ? 0 : 1, &width, &height)) {
+    // MPRESUME_ALONE: one city on a large grid; MPRESUME_CITIES=N: N cities (default 2)
+    int num_cities = getenv("MPRESUME_ALONE") ? 1 : getenv("MPRESUME_CITIES") ? atoi(getenv("MPRESUME_CITIES")) : 2;
+    if (!setup_twin_map(file, num_cities, &width, &height)) {
         return 2;
     }
     run_trace(ticks, ticks, 0, 0);
     // one file per tested save: ctest runs the tests in parallel
     char mpsav[300];
-    snprintf(mpsav, sizeof(mpsav), "mpresume-%s%s.mpsav", file, getenv("MPRESUME_ALONE") ? "-alone" : "");
+    snprintf(mpsav, sizeof(mpsav), "mpresume-%s-%d.mpsav", file, num_cities);
     if (!mp_savegame_write(mpsav)) {
         printf("Unable to write the multiplayer saved game\n");
         return 2;
@@ -925,7 +949,7 @@ static int command_mpresume(const char *file, int ticks, int more)
 static int command_twinstats(const char *file, int ticks)
 {
     int width, height;
-    if (!setup_twin_map(file, 1, &width, &height)) {
+    if (!setup_twin_map(file, 2, &width, &height)) {
         return 2;
     }
     setting_reset_speeds(500, setting_scroll_speed());

@@ -3,10 +3,13 @@
 #include "core/buffer.h"
 #include "core/log.h"
 #include "game/file.h"
+#include "game/player_context.h"
 #include "game/rules.h"
 #include "game/time.h"
 #include "mp/checksum.h"
 #include "mp/command.h"
+#include "mp/compose.h"
+#include "mp/savegame.h"
 #include "mp/session.h"
 #include "platform/net.h"
 
@@ -14,12 +17,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define PROTOCOL_VERSION 1
+#define PROTOCOL_VERSION 2
 #define TURN_TICKS 4
 #define TURN_DELAY 2
 #define HISTORY 256
 #define MAX_PENDING 256
-#define MAX_SAVE_SIZE (8 * 1024 * 1024)
+#define MAX_SAVE_SIZE (32 * 1024 * 1024) // a multiplayer game of 4 cities is about 10 MB
 #define MAX_MESSAGE (MAX_SAVE_SIZE + 64)
 
 enum {
@@ -47,6 +50,7 @@ static struct {
     int port;
     int local_player;
     char saved_game[512];
+    int separate_cities;   // one city per player (a .mpsav is sent) instead of one shared city
     int base_tick;
     int last_known_turn;   // commands of all turns up to this one are known
     int done_turn[MP_LOCKSTEP_MAX_PLAYERS];
@@ -125,12 +129,7 @@ static void desync(int turn)
         return;
     }
     data.state = MP_LOCKSTEP_DESYNC;
-    char filename[64];
-    snprintf(filename, sizeof(filename), "mp-desync-%d-p%d-turn%d.sav", data.port, data.local_player, turn);
-    game_file_write_saved_game(filename);
-    char text[128];
-    snprintf(text, sizeof(text), "Désynchronisation au tour %d (état écrit dans %s)", turn, filename);
-    set_status(text);
+    // the clients are told first: writing the diagnostic save takes a while
     if (data.is_host) {
         uint8_t payload[8];
         buffer buf;
@@ -139,6 +138,18 @@ static void desync(int turn)
         buffer_write_i32(&buf, turn);
         send_to_clients(payload, buf.index);
     }
+    char filename[64];
+    int multiplayer_save = mp_savegame_is_needed();
+    snprintf(filename, sizeof(filename), "mp-desync-%d-p%d-turn%d.%s", data.port, data.local_player, turn,
+        multiplayer_save ? "mpsav" : "sav");
+    if (multiplayer_save) {
+        mp_savegame_write(filename);
+    } else {
+        game_file_write_saved_game(filename);
+    }
+    char text[128];
+    snprintf(text, sizeof(text), "Désynchronisation au tour %d (état écrit dans %s)", turn, filename);
+    set_status(text);
 }
 
 // Host: compares every client checksum known for this turn with its own
@@ -232,11 +243,27 @@ static void start_session(int player, int base_tick)
     }
 }
 
+// Host: the starting game of separate cities, written to a .mpsav and loaded back as the clients will
+static int host_compose_cities(void)
+{
+    if (!game_file_load_saved_game(data.saved_game) ||
+        !mp_compose_separate_cities(data.num_players, MP_COMPOSE_CITY_GAP)) {
+        return 0;
+    }
+    snprintf(data.saved_game, sizeof(data.saved_game), "mp-session-%d-p0.mpsav", data.port);
+    return mp_savegame_write(data.saved_game) && mp_savegame_read(data.saved_game);
+}
+
 static void host_start_game(void)
 {
+    if (data.separate_cities && !host_compose_cities()) {
+        set_status("Impossible de composer les cités des joueurs");
+        data.state = MP_LOCKSTEP_DISCONNECTED;
+        return;
+    }
     uint8_t *save;
     int save_size = read_file(data.saved_game, &save);
-    if (!save_size || !game_file_load_saved_game(data.saved_game)) {
+    if (!save_size || (!data.separate_cities && !game_file_load_saved_game(data.saved_game))) {
         set_status("Impossible de charger la sauvegarde de départ");
         data.state = MP_LOCKSTEP_DISCONNECTED;
         return;
@@ -255,6 +282,7 @@ static void host_start_game(void)
         buffer_write_i32(&buf, p);
         buffer_write_i32(&buf, data.num_players);
         buffer_write_i32(&buf, data.base_tick);
+        buffer_write_u8(&buf, data.separate_cities);
         buffer_write_u32(&buf, (uint32_t) checksum);
         buffer_write_u32(&buf, (uint32_t) (checksum >> 32));
         buffer_write_i32(&buf, save_size);
@@ -273,6 +301,7 @@ static void client_welcome(buffer *buf)
     int player = buffer_read_i32(buf);
     data.num_players = buffer_read_i32(buf);
     int base_tick = buffer_read_i32(buf);
+    data.separate_cities = buffer_read_u8(buf);
     uint64_t checksum = buffer_read_u32(buf);
     checksum |= ((uint64_t) buffer_read_u32(buf)) << 32;
     int save_size = buffer_read_i32(buf);
@@ -282,7 +311,8 @@ static void client_welcome(buffer *buf)
         return;
     }
     // the port keeps the files of several games on one computer apart (tests)
-    snprintf(data.saved_game, sizeof(data.saved_game), "mp-session-%d-p%d.sav", data.port, player);
+    snprintf(data.saved_game, sizeof(data.saved_game), "mp-session-%d-p%d.%s", data.port, player,
+        data.separate_cities ? "mpsav" : "sav");
     FILE *fp = fopen(data.saved_game, "wb");
     if (!fp || fwrite(&buf->data[buf->index], 1, save_size, fp) != (size_t) save_size) {
         if (fp) {
@@ -293,11 +323,14 @@ static void client_welcome(buffer *buf)
         return;
     }
     fclose(fp);
-    if (!game_file_load_saved_game(data.saved_game)) {
+    int loaded = data.separate_cities ? mp_savegame_read(data.saved_game) : game_file_load_saved_game(data.saved_game);
+    if (!loaded || (data.separate_cities && player >= player_context_num_players())) {
         set_status("Impossible de charger la sauvegarde reçue");
         data.state = MP_LOCKSTEP_DISCONNECTED;
         return;
     }
+    // the interface shows the city of this player
+    player_context_switch(data.separate_cities ? player : 0);
     start_session(player, base_tick);
     if (game_time_absolute_tick() != base_tick || mp_checksum_state() != checksum) {
         desync(-1);
@@ -414,7 +447,7 @@ static void reset(void)
     }
 }
 
-int mp_lockstep_host(int port, int num_players, const char *saved_game)
+int mp_lockstep_host(int port, int num_players, const char *saved_game, int separate_cities)
 {
     void (*callback)(void) = data.started_callback;
     reset();
@@ -425,6 +458,7 @@ int mp_lockstep_host(int port, int num_players, const char *saved_game)
     data.is_host = 1;
     data.num_players = num_players;
     data.port = port;
+    data.separate_cities = separate_cities;
     snprintf(data.saved_game, sizeof(data.saved_game), "%s", saved_game);
     if (num_players > 1) {
         data.listener = net_listen(port);

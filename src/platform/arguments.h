@@ -11,6 +11,7 @@ typedef struct {
     const char *automation_script;
     const char *mp_host_save;   /**< --mp-host SAVE: hosts a network game starting from this saved game */
     int mp_players;             /**< --mp-players N: number of players of the hosted game */
+    int mp_shared_city;         /**< --mp-shared-city: all players build in the same city */
     const char *mp_join;        /**< --mp-join ADDRESS[:PORT]: joins a network game */
     int mp_port;                /**< --mp-port PORT */
 } julius_args;

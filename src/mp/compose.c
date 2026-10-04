@@ -224,11 +224,12 @@ static void copy_region(int x_min, int y_min, int width, int height, const playe
 int mp_compose_add_twin(int x_min, int y_min, int width, int height, int dx, int dy)
 {
     int stride = GRID_SIZE;
-    if (player_context_num_players() != 1 || x_min + dx + width > map_data.width ||
-        y_min + dy + height > map_data.height) {
+    int new_player = player_context_num_players();
+    if (new_player >= PLAYER_CONTEXT_MAX_PLAYERS || x_min + dx < 0 || y_min + dy < 0 ||
+        x_min + dx + width > map_data.width || y_min + dy + height > map_data.height) {
         return 0;
     }
-    player_clone c = { 0, 1, dx, dy, dx + dy * stride };
+    player_clone c = { 0, new_player, dx, dy, dx + dy * stride };
     for (int g = 0; g < NUM_GRIDS; g++) {
         relocation.data[g] = malloc(GRID_MAX_TILES * ITEM_SIZE[g]);
     }
@@ -242,14 +243,16 @@ int mp_compose_add_twin(int x_min, int y_min, int width, int height, int dx, int
     }
 
     // the per-city state of the twin starts as a copy of the first city
-    player_context_set_num_players(2);
+    if (player_context_add_player() != new_player) {
+        return 0;
+    }
     building_clone_player(&c);
     figure_clone_player(&c);
     formation_clone_player(&c);
     building_storage_clone_player(&c);
     figure_route_clone_player(&c);
 
-    player_context_switch(1);
+    player_context_switch(new_player);
     city_data_clone_fixup(&c);
     building_clone_player_counters(&c);
     formation_clone_player_counters(&c);
@@ -263,32 +266,43 @@ int mp_compose_add_twin(int x_min, int y_min, int width, int height, int dx, int
     building_granary_clone_fixup(&c);
     player_context_switch(0);
 
+    // the road networks of the whole map are numbered again: the buildings keep the numbers of their
+    // network, the copy those of its own networks
+    static uint16_t old_networks[GRID_MAX_TILES];
+    static int renumbered[65536];
+    static int network_of_copy[65536];
+    for (int offset = 0; offset < GRID_SIZE * GRID_SIZE; offset++) {
+        old_networks[offset] = map_road_network_get(offset);
+    }
     map_routing_update_all();
     map_road_network_update_grid();
-    for (int p = 0; p < 2; p++) {
+    memset(renumbered, 0, sizeof(renumbered));
+    memset(network_of_copy, 0, sizeof(network_of_copy));
+    for (int offset = 0; offset < GRID_SIZE * GRID_SIZE; offset++) {
+        if (old_networks[offset]) {
+            renumbered[old_networks[offset]] = map_road_network_get(offset);
+        }
+    }
+    for (int y = y_min - 1; y <= y_min + height; y++) {
+        for (int x = x_min - 1; x <= x_min + width; x++) {
+            int offset = map_grid_offset(x, y);
+            if (old_networks[offset]) {
+                network_of_copy[old_networks[offset]] = map_road_network_get(offset + c.grid_delta);
+            }
+        }
+    }
+    for (int i = 1; i < (new_player + 1) * MAX_BUILDINGS; i++) {
+        building *b = building_get(i);
+        if (b->state != BUILDING_STATE_UNUSED && b->road_network_id) {
+            int *numbers = BUILDING_OWNER(i) == new_player ? network_of_copy : renumbered;
+            b->road_network_id = numbers[b->road_network_id];
+        }
+    }
+    for (int p = 0; p <= new_player; p++) {
         player_context_switch(p);
         map_road_network_update_largest();
     }
     player_context_switch(0);
-
-    // road network numbers kept in the buildings: those of the copy's own networks
-    static int network_of_copy[65536];
-    memset(network_of_copy, 0, sizeof(network_of_copy));
-    for (int y = y_min - 1; y <= y_min + height; y++) {
-        for (int x = x_min - 1; x <= x_min + width; x++) {
-            int offset = map_grid_offset(x, y);
-            int network = map_road_network_get(offset);
-            if (network) {
-                network_of_copy[network] = map_road_network_get(offset + c.grid_delta);
-            }
-        }
-    }
-    for (int i = MAX_BUILDINGS; i < 2 * MAX_BUILDINGS; i++) {
-        building *b = building_get(i);
-        if (b->state != BUILDING_STATE_UNUSED && b->road_network_id) {
-            b->road_network_id = network_of_copy[b->road_network_id];
-        }
-    }
     return 1;
 }
 
@@ -370,4 +384,42 @@ int mp_compose_extend_map(int left, int top, int right, int bottom)
     map_routing_update_all();
     map_road_network_update();
     return 1;
+}
+
+static const int CELL_X[PLAYER_CONTEXT_MAX_PLAYERS] = { 0, 1, 1, 0 };
+static const int CELL_Y[PLAYER_CONTEXT_MAX_PLAYERS] = { 0, 1, 0, 1 };
+
+int mp_compose_separate_cities(int num_players, int gap)
+{
+    if (num_players < 1 || num_players > PLAYER_CONTEXT_MAX_PLAYERS || player_context_num_players() != 1) {
+        return 0;
+    }
+    int width = map_data.width;
+    int height = map_data.height;
+    int shift = (width > height ? width : height) + gap;
+    if (2 * shift + gap > GRID_MAX_SIZE) {
+        return 0;
+    }
+    if (!mp_compose_relocate(GRID_MAX_SIZE, gap, gap) ||
+        !mp_compose_extend_map(gap, gap, shift + gap, shift + gap)) {
+        return 0;
+    }
+    for (int p = 1; p < num_players; p++) {
+        if (!mp_compose_add_twin(gap, gap, width, height, CELL_X[p] * shift, CELL_Y[p] * shift)) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+void mp_compose_city_area(int player_id, int gap, int *x, int *y, int *size)
+{
+    // the map is two cells wide, plus the gap after the last one
+    int shift = (map_data.width - gap) / 2;
+    if (player_id < 0 || player_id >= PLAYER_CONTEXT_MAX_PLAYERS) {
+        player_id = 0;
+    }
+    *x = gap + CELL_X[player_id] * shift;
+    *y = gap + CELL_Y[player_id] * shift;
+    *size = shift - gap;
 }

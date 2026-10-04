@@ -5,6 +5,29 @@
 
 ---
 
+## 2026-10-04 — Session 1 (suite) : une cité par joueur en réseau (M2P.6)
+
+**Fait** : une partie réseau donne maintenant à chaque joueur sa propre cité (D-025), ce qui sépare les statistiques
+(E13). La composition sait ajouter jusqu'à 3 copies (`mp_compose_separate_cities`), en renumérotant les réseaux
+routiers de toutes les cités. L'hôte envoie un `.mpsav` (protocole v2, jusqu'à 32 Mo ; 9 Mo pour 4 cités). Tests :
+reprise exacte à 3 et 4 cités, parties réseau sans tête à 2 et 4 cités séparées, désynchronisation détectée, vrai jeu
+à deux instances. 120 tests ctest.
+
+**Appris**
+- Deux tests ctest qui écrivent le même fichier échouent seulement en parallèle : chaque fichier de test porte
+  maintenant tout ce qui distingue le cas (sauvegarde, nombre de cités, port).
+- L'hôte qui détecte une désynchronisation doit prévenir les clients **avant** d'écrire la sauvegarde de
+  diagnostic, sinon ils voient seulement une connexion perdue.
+
+**Prochaine étape** : faire tester Alexandre (`tools/play-mp.sh`), puis M4.1 (neutraliser César : les messages
+« Rome augmente les salaires » arrivent encore) et M4.2 (point d'arrivée par joueur).
+
+**Points ouverts** : la vue de départ est centrée sur la cité locale, mais les cités étant des copies, les
+captures des deux joueurs se ressemblent ; la minicarte et l'interface ne distinguent pas encore les cités des
+autres joueurs (M7).
+
+---
+
 ## 2026-10-04 — Session 1 (suite) : sauvegarde multijoueur (M3.8)
 
 **Fait** : M3.8. Une partie à plusieurs cités sur grande grille s'enregistre dans un `.mpsav` (format classique élargi,

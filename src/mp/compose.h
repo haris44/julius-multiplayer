@@ -23,13 +23,29 @@ int mp_compose_relocate(int new_stride, int dx, int dy);
 int mp_compose_set_map_size(int width, int height);
 
 /**
- * Adds a second player whose city is a copy of the first one, shifted by (dx, dy) tiles
+ * Adds a player whose city is a copy of the city of player 0, shifted by (dx, dy) tiles
  * @param x_min First column of the copied area (map coordinates)
  * @param y_min First row of the copied area
  * @param width Width of the copied area
  * @param height Height of the copied area
  */
 int mp_compose_add_twin(int x_min, int y_min, int width, int height, int dx, int dy);
+
+/** Tiles of rock around the cities of mp_compose_separate_cities in a network game */
+#define MP_COMPOSE_CITY_GAP 24
+
+/**
+ * Turns the loaded classic city into a map of copies of it, one per player, on a 2 x 2 layout.
+ * Cities are separated by `gap` tiles of rock; players 0 and 1 are on the diagonal, where a copy
+ * runs exactly as the original city (doc/mp/DECISIONS.md D-023).
+ * @return 1 on success, 0 if the map is too large
+ */
+int mp_compose_separate_cities(int num_players, int gap);
+
+/**
+ * Area of the city of a player on a map made by mp_compose_separate_cities (map coordinates)
+ */
+void mp_compose_city_area(int player_id, int gap, int *x, int *y, int *size);
 
 /**
  * Checksum of every simulation grid in a map area (one tile of border included)

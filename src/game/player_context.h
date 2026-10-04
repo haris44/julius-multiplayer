@@ -35,6 +35,12 @@ void player_context_set_num_players(int num_players);
 
 int player_context_num_players(void);
 
+/**
+ * Adds a city whose state is a copy of the city of player 0, without changing the others
+ * @return the id of the new player, or -1 if there are already PLAYER_CONTEXT_MAX_PLAYERS
+ */
+int player_context_add_player(void);
+
 int player_context_current(void);
 
 /**
