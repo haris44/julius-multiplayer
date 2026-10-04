@@ -5,6 +5,41 @@
 
 ---
 
+## 2026-10-04 — Session 1 (suite) : jalon M4 complet, salon multijoueur
+
+**Demande d'Alexandre** : « continuer jusqu'à M8 ». Ordre suivi : M4.1, M4.2, salon (M5.4, avancé à sa demande),
+puis M4.3 à M4.7.
+
+**Fait** (commits 5530a854 à 33ae6110, 140 tests ctest environ)
+- M4.1 : plus de César en multijoueur (demandes, colère, invasions, batailles lointaines, salaire), D-026.
+- M4.2 : fuites entre cités trouvées par les jumelles longues et corrigées : coin (0, 0) propre à chaque cité,
+  recherches de cible des combats limitées à la cité (D-027). 13 sauvegardes exactes sur 12 000 ticks.
+- M5.4 : entrée « Multijoueur » du menu, salon (cartes `.map` du jeu libre ou sauvegardes, nombre de joueurs,
+  découverte des parties par UDP, adresse à la main), testé de bout en bout à la souris par `tools/mp-lobby-test.sh`.
+- M4.3 : propriété (D-028) : les infrastructures sont revendiquées par la commande qui les construit ; une cité n'agit
+  que sur ses propres bâtiments ; l'eau suit les aqueducs et les zones desservies de chaque cité. Tests « intrus »
+  (sans filtres, des dizaines de milliers d'effets chez le voisin ; avec, aucun) et « voisins branchés ».
+- M4.4 : la partie réseau ouvre la terre entre les cités : les joueurs peuvent s'y relier par des routes.
+- M4.5 et M4.6 : règles de l'hôte transmises aux clients (protocole v3) ; invasions IA en option ; fin au score
+  après 5, 10 ou 20 ans, écran de classement (D-029).
+- M4.7 : autorisations d'exploiter réparties entre les cités ; le fer et les armes chez un seul joueur (D-020).
+
+**Appris**
+- Deux fois le même piège : l'état « extra » mesuré dans un tampon trop petit. La mesure signale maintenant un
+  débordement dans le journal.
+- Revendiquer une case « au passage » dans `map_terrain_add` était faux : des mises à jour générales de la carte
+  tournent pendant le tour d'une autre cité. Seules les commandes revendiquent.
+- Un commit (9a2dde6e) a été fait alors que `check.sh` échouait (contrôle de déterminisme) ; corrigé juste après.
+  Toujours relire la dernière ligne de `check.sh` avant de commiter.
+
+**Prochaine étape** : M5.5 (pause, vitesse, déconnexion, sauvegarde coordonnée), M5.8 (salon complet), puis M6
+(cartes) et M7 (interface), avant M8 (commerce par routes).
+
+**Points ouverts, à valider par Alexandre** : formule du score et durées (D-029), répartition des autorisations
+(D-020), tribut et salaires de Rome gardés (D-026). M5.6 demande un dépôt GitHub ; M5.7 se joue avec lui.
+
+---
+
 ## 2026-10-04 — Session 1 (suite) : une cité par joueur en réseau (M2P.6)
 
 **Fait** : une partie réseau donne maintenant à chaque joueur sa propre cité (D-025), ce qui sépare les statistiques

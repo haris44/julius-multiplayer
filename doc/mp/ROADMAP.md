@@ -143,11 +143,14 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
   du fer à soi ou importable.
 
 ## M5 — Réseau local → premier prototype jouable en LAN
-- [ ] **M5.1** Couche sockets (TCP non bloquant, POSIX et Winsock). *Critère* : tests en boucle locale.
-- [ ] **M5.2** Protocole lockstep : tours, délai, relais, sommes de contrôle, détection des désynchronisations et
+- [x] **M5.1** Couche sockets (TCP non bloquant, POSIX et Winsock). *Critère* : tests en boucle locale.
+  *Fait avec M2P.1* (`platform/net`), plus l'UDP de découverte (M5.4). Winsock est écrit mais pas encore compilé.
+- [x] **M5.2** Protocole lockstep : tours, délai, relais, sommes de contrôle, détection des désynchronisations et
   sauvegardes de diagnostic.
-- [ ] **M5.3** Banc de test multi-processus sans tête (`tools/lan-test.sh`) : de 2 à 4 instances, commandes
+  *Fait avec M2P.2* (`mp/lockstep`), protocole v3 (cités séparées, règles de l'hôte).
+- [x] **M5.3** Banc de test multi-processus sans tête (`tools/lan-test.sh`) : de 2 à 4 instances, commandes
   scriptées, traces identiques.
+  *Fait avec M2P.5* : `test/sim/lan_test.sh` (ville partagée et cités séparées, 2 à 4 joueurs, désynchronisation).
 - [x] **M5.4** Salon minimal : héberger, rejoindre par IP ou par découverte UDP, vérifier les sommes de contrôle des
   données, choisir les règles, se déclarer prêt.
   *Fait* (demande d'Alexandre, avancé avant M4.3) : entrée « Multijoueur » du menu principal (`window/mp_lobby`).
