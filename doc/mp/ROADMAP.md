@@ -24,7 +24,7 @@ Prérequis à tout le reste : savoir prouver que deux simulations sont identique
 - [x] **M1.3** Remise à zéro de l'état caché à chaque démarrage ou chargement (D-015). *Critères* : nouveau test
   « idempotence » (même sauvegarde chargée deux fois dans un processus → mêmes traces), rouge avant, vert après ;
   parité verte.
-- [ ] **M1.4** `game_rules` (D-016) : mode de jeu (classique ou multijoueur), difficulté, dieux, correctifs. En
+- [x] **M1.4** `game_rules` (D-016) : mode de jeu (classique ou multijoueur), difficulté, dieux, correctifs. En
   classique, les valeurs viennent des réglages locaux. *Critères* : parité verte ; en multijoueur, modifier
   `c3.inf` ne change pas la trace.
 - [ ] **M1.5** Garde-fou dans `check.sh` : ni flottant, ni `rand`, ni horloge dans les dossiers de simulation.

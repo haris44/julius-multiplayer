@@ -7,9 +7,9 @@
 #include "city/message.h"
 #include "city/population.h"
 #include "core/calc.h"
-#include "core/config.h"
 #include "game/difficulty.h"
 #include "game/tutorial.h"
+#include "game/rules.h"
 
 static const int SENTIMENT_PER_TAX_RATE[26] = {
     3, 2, 2, 2, 1, 1, 1, 0, 0, -1,
@@ -195,7 +195,7 @@ void city_sentiment_update(void)
             b->sentiment.house_happiness = default_sentiment;
             if (city_data.population.population < 200) {
                 b->sentiment.house_happiness += 10;
-            } else if (default_sentiment < 50 && config_get(CONFIG_GP_FIX_IMMIGRATION_BUG)) {
+            } else if (default_sentiment < 50 && game_rules_fix_immigration_bug()) {
                 // Fix very hard immigration bug: give a boost for Very Hard difficulty so that
                 // immigration is not halted simply because you are between pop 200 and 300
                 b->sentiment.house_happiness += 50 - default_sentiment;

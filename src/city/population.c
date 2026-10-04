@@ -4,8 +4,8 @@
 #include "building/house_population.h"
 #include "city/data_private.h"
 #include "core/calc.h"
-#include "core/config.h"
 #include "core/random.h"
+#include "game/rules.h"
 
 static const int BIRTHS_PER_AGE_DECENNIUM[10] = {
     0, 3, 16, 9, 2, 0, 0, 0, 0, 0
@@ -272,7 +272,7 @@ static void yearly_advance_ages_and_calculate_deaths(void)
         int death_percentage = DEATHS_PER_HEALTH_PER_AGE_DECENNIUM[city_data.health.value / 10][decennium];
         int deaths = calc_adjust_with_percentage(people, death_percentage);
         int removed = house_population_remove_from_city(deaths + aged100);
-        if (config_get(CONFIG_GP_FIX_100_YEAR_GHOSTS)) {
+        if (game_rules_fix_100_year_ghosts()) {
             remove_from_census_in_age_decennium(decennium, deaths);
         } else {
             // Original C3 removes both deaths and aged100, which creates "ghosts".

@@ -3,6 +3,7 @@
 #include "core/time.h"
 #include "game/file.h"
 #include "game/game.h"
+#include "game/rules.h"
 #include "game/settings.h"
 #include "mp/checksum.h"
 
@@ -15,9 +16,20 @@
 
 static time_millis clock_millis;
 
+static struct {
+    int local_difficulty; // -1: keep the c3.inf value
+    int local_gods;       // -1: keep the c3.inf value
+    int multiplayer;      // apply the default multiplayer rules after each load
+} options = { -1, -1, 0 };
+
 static int usage(void)
 {
-    printf("Usage:\n");
+    printf("Usage: simtool [OPTIONS] COMMAND ...\n");
+    printf("Options (before the command):\n");
+    printf("  --difficulty N    local difficulty setting (0 very easy .. 4 very hard), as if set in c3.inf\n");
+    printf("  --gods 0|1        local gods setting, as if set in c3.inf\n");
+    printf("  --mp              play with the default multiplayer rules instead of the local settings\n");
+    printf("Commands:\n");
     printf("  simtool checksum SAVE                  checksum of a loaded saved game\n");
     printf("  simtool trace SAVE TICKS [STEP]        checksum every STEP ticks (default 1)\n");
     printf("  simtool pieces SAVE [TICKS]            checksum of every saved game piece after TICKS\n");
@@ -34,7 +46,27 @@ static int load(const char *file)
         printf("Unable to load saved game %s\n", file);
         return 0;
     }
+    if (options.multiplayer) {
+        game_rules_settings rules;
+        game_rules_default_multiplayer_settings(&rules);
+        game_rules_set_multiplayer(&rules);
+    }
     return 1;
+}
+
+static void apply_local_settings(void)
+{
+    if (options.local_difficulty >= 0) {
+        for (int i = 0; i < 5; i++) {
+            setting_decrease_difficulty();
+        }
+        for (int i = 0; i < options.local_difficulty; i++) {
+            setting_increase_difficulty();
+        }
+    }
+    if (options.local_gods >= 0 && setting_gods_enabled() != options.local_gods) {
+        setting_toggle_gods_enabled();
+    }
 }
 
 // Same stepping as test/sav/run.c: 2 ms per call at speed 500 gives exactly one tick per game_run().
@@ -193,6 +225,23 @@ static int command_idempotence(const char *file, int ticks, int step)
 
 int main(int argc, char **argv)
 {
+    int first = 1;
+    while (first < argc && strncmp(argv[first], "--", 2) == 0) {
+        if (strcmp(argv[first], "--mp") == 0) {
+            options.multiplayer = 1;
+            first++;
+        } else if (strcmp(argv[first], "--difficulty") == 0 && first + 1 < argc) {
+            options.local_difficulty = atoi(argv[first + 1]);
+            first += 2;
+        } else if (strcmp(argv[first], "--gods") == 0 && first + 1 < argc) {
+            options.local_gods = atoi(argv[first + 1]);
+            first += 2;
+        } else {
+            return usage();
+        }
+    }
+    argc -= first - 1;
+    argv += first - 1;
     if (argc < 3) {
         return usage();
     }
@@ -208,6 +257,7 @@ int main(int argc, char **argv)
         printf("Unable to initialize the game\n");
         return 2;
     }
+    apply_local_settings();
 
     int result;
     if (strcmp(command, "checksum") == 0) {
@@ -223,6 +273,7 @@ int main(int argc, char **argv)
     } else {
         result = usage();
     }
-    game_exit();
+    // Never write c3.inf or julius.ini: other tests in this directory depend on them
+    game_exit_without_saving_settings();
     return result;
 }

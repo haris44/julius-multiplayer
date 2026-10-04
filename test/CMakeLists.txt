@@ -169,3 +169,16 @@ foreach(save tower request_start kknight inv0 db-fort1 db-fort2 routing-full cur
         cicero-lugdunum-trade brugle-palacepeaks)
     add_test(NAME sim_idempotence_${save} COMMAND simtool idempotence ${save}.sav 1500 25)
 endforeach()
+
+# Game rules (M1.4): local settings change a classic game, but not a multiplayer one
+function(add_trace_comparison name args_a args_b expect)
+    add_test(NAME ${name}
+        COMMAND ${CMAKE_COMMAND} -DSIMTOOL=$<TARGET_FILE:simtool> "-DARGS_A=${args_a}" "-DARGS_B=${args_b}"
+            -DEXPECT=${expect} -P ${CMAKE_CURRENT_SOURCE_DIR}/sim/compare_traces.cmake)
+endfunction()
+add_trace_comparison(sim_rules_classic_reads_local_settings
+    "trace|brugle-massilia-start.sav|1000|50"
+    "--difficulty|0|--gods|0|trace|brugle-massilia-start.sav|1000|50" different)
+add_trace_comparison(sim_rules_multiplayer_ignores_local_settings
+    "trace|brugle-massilia-start.sav|1000|50"
+    "--difficulty|0|--gods|0|--mp|trace|brugle-massilia-start.sav|1000|50" same)
