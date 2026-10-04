@@ -40,6 +40,7 @@
 #include "game/undo.h"
 #include "map/figure.h"
 #include "map/water_supply.h"
+#include "map/owner.h"
 #include "mp/checksum.h"
 #include "game/time.h"
 #include "game/player_context.h"
@@ -1037,6 +1038,34 @@ static int command_intruders(const char *file, int ticks)
     return mp_audit_violations() ? 1 : 0;
 }
 
+// Network game map (M4.4): the copies of the city are separated by land, where a road can join them
+static int command_openland(const char *file)
+{
+    int width, height;
+    if (!setup_twin_map(file, 2, &width, &height)) {
+        return 2;
+    }
+    mp_compose_open_land_between_cities(TWIN_GAP);
+    int x0, y0, size;
+    mp_compose_city_area(0, TWIN_GAP, &x0, &y0, &size);
+    int x1, y1;
+    mp_compose_city_area(1, TWIN_GAP, &x1, &y1, &size);
+    // from the corner of the first city to the corner of the second one, through the land around them
+    int xa = x0 + size, ya = y0 + size, xb = x1 - 1, yb = y1 - 1;
+    player_context_switch(1);
+    city_finance_process_donation(100000);
+    player_context_switch(0);
+    mp_command command = { .type = MP_COMMAND_BUILD, .player_id = 1, .args = { BUILDING_ROAD, 0, xa, ya, xb, yb, 0, 0 } };
+    mp_command_execute(&command);
+    int built = map_terrain_is(map_grid_offset(xa, ya), TERRAIN_ROAD) &&
+        map_terrain_is(map_grid_offset(xb, yb), TERRAIN_ROAD);
+    int owner = map_owner_get_claimed(map_grid_offset(xa, ya));
+    printf("road from (%d, %d) to (%d, %d) between the cities: %s, owned by player %d\n", xa, ya, xb, yb,
+        built ? "built" : "NOT built", owner + 1);
+    player_context_set_num_players(1);
+    return built && owner == 1 ? 0 : 1;
+}
+
 // Diagnosis: one figure of city 0, tick by tick, on a map of CITIES composed cities
 static int command_figtrace(const char *file, int num_cities, int id, int from, int to)
 {
@@ -1423,6 +1452,8 @@ int main(int argc, char **argv)
         result = command_twinfigures(file, ticks);
     } else if (strcmp(command, "twinstats") == 0 && argc > 3) {
         result = command_twinstats(file, ticks);
+    } else if (strcmp(command, "openland") == 0 && argc > 2) {
+        result = command_openland(file);
     } else if (strcmp(command, "intruders") == 0 && argc > 3) {
         result = command_intruders(file, ticks);
     } else if (strcmp(command, "neighbours") == 0 && argc > 3) {

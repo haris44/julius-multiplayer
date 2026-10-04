@@ -34,6 +34,7 @@
 #include "map/soldier_strength.h"
 #include "map/sprite.h"
 #include "map/terrain.h"
+#include "map/tiles.h"
 #include "scenario/map.h"
 
 #include <stdlib.h>
@@ -428,3 +429,28 @@ void mp_compose_city_area(int player_id, int gap, int *x, int *y, int *size)
     *y = gap + CELL_Y[player_id] * shift;
     *size = shift - gap;
 }
+
+void mp_compose_open_land_between_cities(int gap)
+{
+    int x, y, size;
+    mp_compose_city_area(0, gap, &x, &y, &size);
+    for (int yy = 0; yy < map_data.height; yy++) {
+        for (int xx = 0; xx < map_data.width; xx++) {
+            // the rock added by mp_compose_extend_map: outside the area of every city
+            int in_city = 0;
+            for (int p = 0; p < player_context_num_players() && !in_city; p++) {
+                mp_compose_city_area(p, gap, &x, &y, &size);
+                in_city = xx >= x && xx < x + size && yy >= y && yy < y + size;
+            }
+            int grid_offset = map_grid_offset(xx, yy);
+            if (!in_city && map_terrain_get(grid_offset) == TERRAIN_ROCK) {
+                map_terrain_set(grid_offset, 0);
+            }
+        }
+    }
+    map_tiles_update_all_rocks();
+    map_tiles_update_all_empty_land();
+    map_routing_update_all();
+    map_road_network_update();
+}
+

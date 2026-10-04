@@ -246,6 +246,9 @@
   en diagonale), écrit le `.mpsav`, le recharge et l'envoie aux clients. Chaque machine affiche sa cité : trésorerie,
   population, conseillers et notes sont ceux du joueur local (E13). `--mp-shared-city` garde l'ancien mode M2P.
 - Les cités ne se touchent pas (roche) : pas encore de commerce ni de guerre entre joueurs.
+  *Mis à jour le 2026-10-04 (M4.4)* : en partie réseau, la roche entre les cités devient de la terre
+  constructible (`mp_compose_open_land_between_cities`). Les joueurs peuvent y bâtir et relier leurs cités par des
+  routes (D-018, D-028). Les tests d'isolement gardent la roche.
 - Les joueurs 3 et 4 ne sont pas en diagonale : un bogue d'origine (x passé pour y dans le choix d'un grenier,
   D-023) y donne des choix de grenier légèrement différents de la cité d'origine. C'est le comportement de l'original
   sur une carte décalée, sans effet sur le déterminisme.

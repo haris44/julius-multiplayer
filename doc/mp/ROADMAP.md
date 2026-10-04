@@ -124,8 +124,11 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
   `simtool intruders` (les marcheurs de la jumelle déplacés dans la première cité : sans les filtres, des dizaines
   de milliers d'effets sur ses bâtiments ; avec, aucun, sur 13 sauvegardes). Les recherches de bâtiments ne voyaient
   déjà que la tranche de la cité (M3). Les jumelles restent exactes.
-- [ ] **M4.4** Démarrage d'une partie multijoueur depuis une carte, de 1 à 4 joueurs, par un chemin déterministe.
+- [x] **M4.4** Démarrage d'une partie multijoueur depuis une carte, de 1 à 4 joueurs, par un chemin déterministe.
   La partie libre solo est jouable (menu provisoire). *Critère* : scénario d'automatisation avec captures.
+  *Fait* : le salon (M5.4) démarre depuis une carte `.map` ou une sauvegarde. L'hôte compose une copie par joueur,
+  ouvre la terre entre les cités, écrit le `.mpsav` et l'envoie : un seul calcul, donc aucun risque de divergence.
+  Tests : `tools/mp-lobby-test.sh` (captures), `simtool openland` (route entre deux cités).
 - [ ] **M4.5** Entités neutres (indigènes, animaux, menaces IA) et leurs options.
 - [ ] **M4.6** Fin de partie multijoueur : sans fin, conquête, score.
 - [ ] **M4.7** Autorisations d'exploiter par point d'arrivée (D-020) : la règle d'origine est évaluée par cité,

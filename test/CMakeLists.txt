@@ -254,4 +254,8 @@ foreach(save brugle-lugdunum valentia57 request_start kknight earthquake)
     add_test(NAME mp_intruders_${save} COMMAND simtool intruders ${save}.sav 1500)
 endforeach()
 add_test(NAME mp_neighbours_brugle-lugdunum COMMAND simtool neighbours brugle-lugdunum.sav 3000)
+# network game maps (M4.4): land between the cities, where a road built by a player joins them
+foreach(save brugle-lugdunum tower)
+    add_test(NAME mp_open_land_${save} COMMAND simtool openland ${save}.sav)
+endforeach()
 

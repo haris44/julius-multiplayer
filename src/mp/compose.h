@@ -43,6 +43,12 @@ int mp_compose_add_twin(int x_min, int y_min, int width, int height, int dx, int
 int mp_compose_separate_cities(int num_players, int gap);
 
 /**
+ * Turns the rock around the cities of mp_compose_separate_cities into land where every player may build,
+ * so that cities can be joined by roads (network games; the isolation tests keep the rock)
+ */
+void mp_compose_open_land_between_cities(int gap);
+
+/**
  * Area of the city of a player on a map made by mp_compose_separate_cities (map coordinates)
  */
 void mp_compose_city_area(int player_id, int gap, int *x, int *y, int *size);

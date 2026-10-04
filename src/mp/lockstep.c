@@ -266,6 +266,8 @@ static int host_compose_cities(void)
         !mp_compose_separate_cities(data.num_players, MP_COMPOSE_CITY_GAP)) {
         return 0;
     }
+    // players may build between their cities and join them (D-018)
+    mp_compose_open_land_between_cities(MP_COMPOSE_CITY_GAP);
     snprintf(data.saved_game, sizeof(data.saved_game), "mp-session-%d-p0.mpsav", data.port);
     return mp_savegame_write(data.saved_game) && mp_savegame_read(data.saved_game);
 }
