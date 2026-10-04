@@ -17,6 +17,8 @@ if [ "${FREE_MB:-0}" -lt 300 ]; then
     exit 2
 fi
 
+tools/check-determinism.sh
+
 if [ ! -f "$BUILD_DIR/CMakeCache.txt" ]; then
     cmake -S . -B "$BUILD_DIR" -DCMAKE_BUILD_TYPE=RelWithDebInfo
 fi

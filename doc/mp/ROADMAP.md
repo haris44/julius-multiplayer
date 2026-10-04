@@ -1,6 +1,6 @@
 # Feuille de route
 
-> **Jalon en cours : M1, déterminisme et outils de vérification.**
+> **Jalon en cours : M2, couche de commandes et séparation interface / simulation.**
 > Légende : `[x]` fait · `[~]` en cours · `[ ]` à faire. Une tâche n'est cochée que si ses critères sont vérifiés
 > par des tests automatisés (voir [TESTING.md](TESTING.md)). Chaque commit est préfixé par l'ID de sa tâche.
 > On suit l'ordre, sauf décision contraire consignée dans le JOURNAL.
@@ -27,8 +27,9 @@ Prérequis à tout le reste : savoir prouver que deux simulations sont identique
 - [x] **M1.4** `game_rules` (D-016) : mode de jeu (classique ou multijoueur), difficulté, dieux, correctifs. En
   classique, les valeurs viennent des réglages locaux. *Critères* : parité verte ; en multijoueur, modifier
   `c3.inf` ne change pas la trace.
-- [ ] **M1.5** Garde-fou dans `check.sh` : ni flottant, ni `rand`, ni horloge dans les dossiers de simulation.
-- [ ] **M1.6** Aligner la commande d'automatisation `ticks` sur le comportement de l'autopilot (code-map/01 §2.1).
+- [x] **M1.5** Garde-fou dans `check.sh` : ni flottant, ni `rand`, ni horloge dans les dossiers de simulation.
+- [x] **M1.6** Aligner la commande d'automatisation `ticks` sur le comportement de l'autopilot (code-map/01 §2.1).
+  Plus la vérification croisée `tools/cross-check.sh` : vrai jeu et `simtool` donnent les mêmes sommes de contrôle.
 
 ## M2 — Couche de commandes et séparation interface / simulation
 - [ ] **M2.1** Infrastructure de commandes : structure, sérialisation petit-boutiste, file, exécuteur, numéro de
@@ -50,6 +51,7 @@ Prérequis à tout le reste : savoir prouver que deux simulations sont identique
 - [ ] **M2.10** Orientation canonique de la simulation en multijoueur (D-009). *Critère* : même trace quelle que
   soit l'orientation locale.
 - [ ] **M2.11** Messages adressés à un joueur, popups locales, pas de victoire « classique » en multijoueur.
+  *Critère* : `tools/cross-check.sh` identique aussi sur `brugle-massilia-start` et `brugle-lugdunum`.
 
 ## M3 — Moteur multi-cités
 - [ ] **M3.1** Types élargis en mémoire (coordonnées 16 bits, offsets 32 bits). Le format classique est réécrit à

@@ -49,6 +49,15 @@ cd build/test
 Méthode pour trouver un état caché : `idempotence` donne le premier tick divergent, `diffpieces` la partie de la
 sauvegarde concernée, et `compare` l'enregistrement et l'octet. On remonte ensuite au code qui écrit ce champ.
 
+`run SAVE TICKS SORTIE` écrit l'état après N ticks dans une sauvegarde, à comparer avec `compare`.
+`--mp`, `--difficulty N` et `--gods 0|1`, placés avant la commande, choisissent les règles et les réglages locaux.
+
+**Vérification croisée avec le vrai jeu** : `tools/cross-check.sh tower.sav 3000 100` fait tourner la même sauvegarde
+dans le vrai jeu (vraies données) et dans `simtool` (bouchons), puis compare les sommes de contrôle tous les 100
+ticks. Constaté en M1.6 : résultats identiques sur 3 000 ticks pour `tower` et `valentia57`. Seul écart connu : quand
+une cité atteint la victoire classique, le bouchon d'interface « continue de gouverner » tout seul, alors que le
+vrai jeu attend la réponse du joueur (`massilia`, `lugdunum`). Cet écart disparaîtra avec M2.11.
+
 Tests ctest associés :
 - `sim_trace_deterministic` : deux processus produisent la même trace ;
 - `sim_idempotence_*` : 17 sauvegardes rechargées dans le même processus se comportent pareil.
@@ -85,6 +94,10 @@ répertoire courant (lancer depuis la racine du dépôt).
 | `speed N` | vitesse de jeu (10 à 500) |
 | `screenshot F.png` | capture de l'écran courant |
 | `cityshot F.png` | capture de toute la ville (fichier lourd : ~10 Mo pour 162×162) |
+| `checksum` | écrit la somme de contrôle de l'état dans le journal |
+| `pieces` | écrit la somme de contrôle de chaque partie de la sauvegarde |
+| `pause` / `unpause` | met en pause la boucle de jeu : seul `ticks` fait alors avancer la simulation, au tick près |
+| `rules mp` / `rules classic` | règles multijoueur par défaut, ou réglages locaux |
 | `log TEXTE` | écrit un repère dans le journal |
 | `quit` | quitte ; c'est aussi automatique en fin de script |
 

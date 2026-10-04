@@ -1,16 +1,20 @@
 #include "automation.h"
 
 #include "game/file.h"
+#include "game/rules.h"
 #include "game/settings.h"
+#include "game/state.h"
 #include "game/tick.h"
 #include "game/time.h"
 #include "graphics/screen.h"
 #include "graphics/screenshot.h"
 #include "input/mouse.h"
+#include "mp/checksum.h"
 #include "window/city.h"
 
 #include "SDL.h"
 
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -263,6 +267,11 @@ static int total_ticks(void)
     return ((game_time_year() * 12 + game_time_month()) * 16 + game_time_day()) * 50 + game_time_tick();
 }
 
+static void log_piece_checksum(const char *name, uint64_t checksum, void *userdata)
+{
+    SDL_Log("[automation] piece %-34s %016" PRIx64, name, checksum);
+}
+
 static void request_screenshot(const char *filename, int full_city)
 {
     data.screenshot.requested = 1;
@@ -359,7 +368,8 @@ static int execute(char *line)
         }
         window_city_show();
         log_message("loaded", path);
-        return 1;
+        // Following commands still see the state as loaded, before the game runs its first tick
+        return 0;
     } else if (strcmp(command, "save") == 0) {
         const char *path = resolve_path(rest);
         if (!game_file_write_saved_game(path)) {
@@ -373,8 +383,10 @@ static int execute(char *line)
             fail("invalid ticks:", rest);
             return 1;
         }
+        // Same simulation steps as one game_run() call per tick in the autopilot test driver
         for (int i = 0; i < n; i++) {
             game_tick_run();
+            game_file_write_mission_saved_game();
         }
         return 1;
     } else if (strcmp(command, "run") == 0) {
@@ -401,6 +413,33 @@ static int execute(char *line)
         }
         request_screenshot(rest, command[0] == 'c');
         return 1;
+    } else if (strcmp(command, "checksum") == 0) {
+        char value[32];
+        snprintf(value, sizeof(value), "%016" PRIx64, mp_checksum_state());
+        log_message("checksum:", value);
+        return 0;
+    } else if (strcmp(command, "pause") == 0 || strcmp(command, "unpause") == 0) {
+        // While paused, the game loop runs no tick: only "ticks" advances the simulation
+        int pause = command[0] == 'p';
+        if (game_state_is_paused() != pause) {
+            game_state_toggle_paused();
+        }
+        return 0;
+    } else if (strcmp(command, "rules") == 0) {
+        if (strcmp(rest, "mp") == 0) {
+            game_rules_settings rules;
+            game_rules_default_multiplayer_settings(&rules);
+            game_rules_set_multiplayer(&rules);
+        } else if (strcmp(rest, "classic") == 0) {
+            game_rules_set_classic();
+        } else {
+            fail("invalid rules (mp or classic):", rest);
+            return 1;
+        }
+        return 0;
+    } else if (strcmp(command, "pieces") == 0) {
+        mp_checksum_state_pieces(log_piece_checksum, 0);
+        return 0;
     } else if (strcmp(command, "log") == 0) {
         log_message("log:", rest);
         return 0;

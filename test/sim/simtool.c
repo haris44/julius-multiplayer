@@ -31,6 +31,7 @@ static int usage(void)
     printf("  --mp              play with the default multiplayer rules instead of the local settings\n");
     printf("Commands:\n");
     printf("  simtool checksum SAVE                  checksum of a loaded saved game\n");
+    printf("  simtool run SAVE TICKS OUTPUT          runs TICKS ticks and writes the saved game OUTPUT\n");
     printf("  simtool trace SAVE TICKS [STEP]        checksum every STEP ticks (default 1)\n");
     printf("  simtool pieces SAVE [TICKS]            checksum of every saved game piece after TICKS\n");
     printf("  simtool idempotence SAVE TICKS [STEP]  loads and runs SAVE twice in one process,\n");
@@ -114,6 +115,20 @@ static void print_piece(const char *name, uint64_t checksum, void *userdata)
 static int command_checksum(const char *file)
 {
     if (!load(file)) {
+        return 2;
+    }
+    printf("%016" PRIx64 "\n", mp_checksum_state());
+    return 0;
+}
+
+static int command_run(const char *file, int ticks, const char *output)
+{
+    if (!load(file)) {
+        return 2;
+    }
+    run_trace(ticks, ticks > 0 ? ticks : 1, 0, 0);
+    if (!game_file_write_saved_game(output)) {
+        printf("Unable to write %s\n", output);
         return 2;
     }
     printf("%016" PRIx64 "\n", mp_checksum_state());
@@ -262,6 +277,8 @@ int main(int argc, char **argv)
     int result;
     if (strcmp(command, "checksum") == 0) {
         result = command_checksum(file);
+    } else if (strcmp(command, "run") == 0 && argc > 4) {
+        result = command_run(file, ticks, argv[4]);
     } else if (strcmp(command, "trace") == 0 && argc > 3) {
         result = command_trace(file, ticks, step);
     } else if (strcmp(command, "pieces") == 0) {
