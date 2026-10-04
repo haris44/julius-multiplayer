@@ -180,7 +180,7 @@ void building_maintenance_check_fire_collapse(void)
     int recalculate_terrain = 0;
     int random_global = random_byte() & 7;
     int max_id = building_get_highest_id();
-    for (int i = 1; i <= max_id; i++) {
+    for (int i = BUILDING_FIRST; i <= max_id; i++) {
         building *b = building_get(i);
         if (b->state != BUILDING_STATE_IN_USE || b->fire_proof) {
             continue;

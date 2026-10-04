@@ -61,7 +61,7 @@ void figure_indigenous_native_action(figure *f)
                         f->destination_y = GRID_COORD(y_tile);
                     }
                 } else {
-                    const formation *m = formation_get(0);
+                    const formation *m = formation_get(FORMATION_BASE); // local id 0: native attack
                     f->action_state = FIGURE_ACTION_159_NATIVE_ATTACKING;
                     f->destination_x = GRID_COORD(m->destination_x);
                     f->destination_y = GRID_COORD(m->destination_y);

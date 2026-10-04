@@ -270,7 +270,7 @@ int formation_legion_curse(void)
 {
     formation *best_legion = 0;
     int best_legion_weight = 0;
-    for (int i = 1; i <= 6; i++) { // BUG assumes no legions beyond index 6
+    for (int i = FORMATION_FIRST; i <= FORMATION_BASE + 6; i++) { // BUG assumes no legions beyond index 6
         formation *m = formation_get(i);
         if (m->in_use == 1 && m->is_legion) {
             int weight = m->num_figures;
@@ -370,7 +370,7 @@ void formation_legion_update(void)
 
 void formation_legion_decrease_damage(void)
 {
-    for (int i = 1; i < FIGURE_ALL_END; i++) {
+    for (int i = FIGURE_FIRST; i < FIGURE_END; i++) {
         figure *f = figure_get(i);
         if (f->state == FIGURE_STATE_ALIVE && figure_is_legion(f)) {
             if (f->action_state == FIGURE_ACTION_80_SOLDIER_AT_REST) {

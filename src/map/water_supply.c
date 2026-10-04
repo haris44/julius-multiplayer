@@ -13,6 +13,7 @@
 #include "map/property.h"
 #include "map/terrain.h"
 #include "scenario/property.h"
+#include "game/player_context.h"
 
 #include <string.h>
 
@@ -38,7 +39,7 @@ static void mark_well_access(int well_id, int radius)
     for (int yy = y_min; yy <= y_max; yy++) {
         for (int xx = x_min; xx <= x_max; xx++) {
             int building_id = map_building_at(map_grid_offset(xx, yy));
-            if (building_id) {
+            if (building_id && BUILDING_OWNER(building_id) == player_context_current_player) {
                 building_get(building_id)->has_well_access = 1;
             }
         }

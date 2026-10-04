@@ -1174,7 +1174,7 @@ void building_figure_generate(void)
     int patrician_generated = 0;
     building_barracks_decay_tower_sentry_request();
     int max_id = building_get_highest_id();
-    for (int i = 1; i <= max_id; i++) {
+    for (int i = BUILDING_FIRST; i <= max_id; i++) {
         building *b = building_get(i);
         if (b->state != BUILDING_STATE_IN_USE) {
             continue;

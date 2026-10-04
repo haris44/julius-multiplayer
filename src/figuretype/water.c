@@ -302,7 +302,8 @@ void figure_fishing_boat_action(figure *f)
 
 void figure_sink_all_ships(void)
 {
-    for (int i = 1; i < FIGURE_ALL_END; i++) {
+    // Neptune's curse sinks the ships of the cursed city only
+    for (int i = FIGURE_FIRST; i < FIGURE_END; i++) {
         figure *f = figure_get(i);
         if (f->state != FIGURE_STATE_ALIVE) {
             continue;

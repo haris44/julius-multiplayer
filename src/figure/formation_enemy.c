@@ -591,5 +591,5 @@ void formation_enemy_update(void)
             }
         }
     }
-    set_native_target_building(formation_get(0));
+    set_native_target_building(formation_get(FORMATION_BASE)); // local id 0: native attack
 }
