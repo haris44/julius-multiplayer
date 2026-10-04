@@ -67,4 +67,11 @@ void building_construction_remove_preview(void);
  */
 void building_construction_execute(const building_construction_placement *placement);
 
+/**
+ * Network game: takes the local preview off the shared map before the simulation runs,
+ * and puts it back afterwards
+ */
+void building_construction_suspend_preview(void);
+void building_construction_resume_preview(void);
+
 #endif // BUILDING_CONSTRUCTION_H

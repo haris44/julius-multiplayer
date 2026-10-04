@@ -602,6 +602,8 @@ set(MP_FILES
     ${PROJECT_SOURCE_DIR}/src/mp/actions.c
     ${PROJECT_SOURCE_DIR}/src/mp/checksum.c
     ${PROJECT_SOURCE_DIR}/src/mp/command.c
+    ${PROJECT_SOURCE_DIR}/src/mp/lockstep.c
+    ${PROJECT_SOURCE_DIR}/src/platform/net.c
     ${PROJECT_SOURCE_DIR}/src/mp/session.c
 )
 set(TRANSLATION_FILES

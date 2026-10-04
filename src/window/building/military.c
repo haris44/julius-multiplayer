@@ -12,6 +12,7 @@
 #include "graphics/text.h"
 #include "sound/speech.h"
 #include "window/city.h"
+#include "mp/actions.h"
 
 static void button_return_to_fort(int param1, int param2);
 static void button_layout(int index, int param2);
@@ -391,7 +392,7 @@ static void button_return_to_fort(int param1, int param2)
 {
     formation *m = formation_get(data.context_for_callback->formation_id);
     if (!m->in_distant_battle && m->is_at_fort != 1) {
-        formation_legion_return_home(m);
+        mp_action_legion_return_home(m->id);
         window_city_show();
     }
 }
@@ -427,7 +428,7 @@ static void button_layout(int index, int param2)
             case 4: new_layout = FORMATION_MOP_UP; break;
         }
     }
-    formation_legion_change_layout(m, new_layout);
+    mp_action_legion_change_layout(m->id, new_layout);
     switch (index) {
         case 0: sound_speech_play_file("wavs/cohort1.wav"); break;
         case 1: sound_speech_play_file("wavs/cohort2.wav"); break;

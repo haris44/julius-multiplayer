@@ -29,6 +29,8 @@
 #include "window/editor/map.h"
 #include "window/logo.h"
 #include "window/main_menu.h"
+#include "building/construction.h"
+#include "mp/lockstep.h"
 
 static void errlog(const char *msg)
 {
@@ -165,9 +167,32 @@ int game_reload_language(void)
     return reload_language(0, 1);
 }
 
+static void run_multiplayer(void)
+{
+    mp_lockstep_poll();
+    int num_ticks = game_speed_get_elapsed_ticks_multiplayer();
+    int preview_suspended = 0;
+    for (int i = 0; i < num_ticks && mp_lockstep_can_run_tick(); i++) {
+        if (!preview_suspended) {
+            // the local construction preview is drawn on the shared map: never simulate with it
+            building_construction_suspend_preview();
+            preview_suspended = 1;
+        }
+        game_tick_run();
+        mp_lockstep_after_tick();
+    }
+    if (preview_suspended) {
+        building_construction_resume_preview();
+    }
+}
+
 void game_run(void)
 {
     game_animation_update();
+    if (mp_lockstep_is_active()) {
+        run_multiplayer();
+        return;
+    }
     int num_ticks = game_speed_get_elapsed_ticks();
     for (int i = 0; i < num_ticks; i++) {
         game_tick_run();

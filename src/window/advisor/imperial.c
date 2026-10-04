@@ -20,6 +20,8 @@
 #include "window/gift_to_emperor.h"
 #include "window/popup_dialog.h"
 #include "window/set_salary.h"
+#include "mp/actions.h"
+#include "mp/session.h"
 
 #define ADVISOR_HEIGHT 27
 
@@ -89,7 +91,9 @@ static void draw_request(int index, const scenario_request *request)
 
 static int draw_background(void)
 {
-    city_emperor_calculate_gift_costs();
+    if (!mp_session_is_networked()) {
+        city_emperor_calculate_gift_costs();
+    }
 
     outer_panel_draw(0, 0, 40, ADVISOR_HEIGHT);
     image_draw(image_group(GROUP_ADVISOR_ICONS) + 2, 10, 10);
@@ -230,7 +234,7 @@ static void confirm_nothing(int accepted)
 static void confirm_send_troops(int accepted)
 {
     if (accepted) {
-        formation_legions_dispatch_to_distant_battle();
+        mp_action_dispatch_distant_battle();
         window_empire_show();
     }
 }
@@ -238,7 +242,7 @@ static void confirm_send_troops(int accepted)
 static void confirm_send_goods(int accepted)
 {
     if (accepted) {
-        scenario_request_dispatch(selected_request_id);
+        mp_action_send_request(selected_request_id);
     }
 }
 
@@ -246,7 +250,7 @@ static void button_request(int index, int param2)
 {
     int status = get_request_status(index);
     if (status) {
-        city_military_clear_empire_service_legions();
+        mp_action_clear_empire_service_legions();
         switch (status) {
             case STATUS_NO_LEGIONS_AVAILABLE:
                 window_popup_dialog_show(POPUP_DIALOG_NO_LEGIONS_AVAILABLE, confirm_nothing, 0);

@@ -11,11 +11,21 @@
 #include "city/resource.h"
 #include "empire/city.h"
 #include "mp/session.h"
+#include "city/military.h"
+#include "figure/formation.h"
+#include "figure/formation_legion.h"
+#include "map/grid.h"
+#include "scenario/request.h"
+
+static void submit3(int action, int arg1, int arg2, int arg3)
+{
+    mp_command command = { .type = MP_COMMAND_CITY_ACTION, .args = { action, arg1, arg2, arg3 } };
+    mp_command_submit(&command);
+}
 
 static void submit(int action, int arg1, int arg2)
 {
-    mp_command command = { .type = MP_COMMAND_CITY_ACTION, .args = { action, arg1, arg2 } };
-    mp_command_submit(&command);
+    submit3(action, arg1, arg2, 0);
 }
 
 void mp_action_change_taxes(int delta)
@@ -93,6 +103,54 @@ void mp_action_toggle_mothballed(int resource)
     submit(MP_ACTION_TOGGLE_MOTHBALLED, resource, 0);
 }
 
+void mp_action_legion_move(int formation_id, int x, int y)
+{
+    submit3(MP_ACTION_LEGION_MOVE, formation_id, x, y);
+}
+
+void mp_action_legion_return_home(int formation_id)
+{
+    submit(MP_ACTION_LEGION_RETURN_HOME, formation_id, 0);
+}
+
+void mp_action_legion_change_layout(int formation_id, int layout)
+{
+    submit(MP_ACTION_LEGION_CHANGE_LAYOUT, formation_id, layout);
+}
+
+void mp_action_legion_toggle_empire_service(int formation_id)
+{
+    submit(MP_ACTION_LEGION_TOGGLE_EMPIRE_SERVICE, formation_id, 0);
+}
+
+void mp_action_dispatch_distant_battle(void)
+{
+    submit(MP_ACTION_DISPATCH_DISTANT_BATTLE, 0, 0);
+}
+
+void mp_action_clear_empire_service_legions(void)
+{
+    submit(MP_ACTION_CLEAR_EMPIRE_SERVICE_LEGIONS, 0, 0);
+}
+
+void mp_action_send_request(int request_id)
+{
+    submit(MP_ACTION_SEND_REQUEST, request_id, 0);
+}
+
+// Legion that can receive orders; the user interface made the same checks before
+static formation *legion_of(int formation_id)
+{
+    if (formation_id <= 0 || formation_id >= MAX_FORMATIONS) {
+        return 0;
+    }
+    formation *m = formation_get(formation_id);
+    if (!m->in_use || !m->is_legion || m->in_distant_battle) {
+        return 0;
+    }
+    return m;
+}
+
 static int valid_resource(int resource)
 {
     return resource > RESOURCE_NONE && resource < RESOURCE_MAX;
@@ -114,7 +172,9 @@ void mp_actions_execute(const mp_command *command)
 {
     int arg1 = command->args[1];
     int arg2 = command->args[2];
+    int arg3 = command->args[3];
     int storage_id;
+    formation *m;
     // Each case makes the same calls as the user interface button it replaces
     switch (command->args[0]) {
         case MP_ACTION_CHANGE_TAXES:
@@ -195,6 +255,44 @@ void mp_actions_execute(const mp_command *command)
             if (valid_resource(arg1) && building_count_industry_total(arg1) > 0) {
                 city_resource_toggle_mothballed(arg1);
             }
+            break;
+        case MP_ACTION_LEGION_MOVE:
+            m = legion_of(arg1);
+            if (m && !m->cursed_by_mars && arg2 >= 0 && arg3 >= 0 && arg2 < GRID_SIZE && arg3 < GRID_SIZE) {
+                int other_formation_id = formation_legion_at_building(map_grid_offset(arg2, arg3));
+                if (other_formation_id && other_formation_id == arg1) {
+                    formation_legion_return_home(m);
+                } else {
+                    formation_legion_move_to(m, arg2, arg3);
+                }
+            }
+            break;
+        case MP_ACTION_LEGION_RETURN_HOME:
+            m = legion_of(arg1);
+            if (m) {
+                formation_legion_return_home(m);
+            }
+            break;
+        case MP_ACTION_LEGION_CHANGE_LAYOUT:
+            m = legion_of(arg1);
+            if (m) {
+                formation_legion_change_layout(m, arg2);
+            }
+            break;
+        case MP_ACTION_LEGION_TOGGLE_EMPIRE_SERVICE:
+            if (arg1 > 0 && arg1 < MAX_FORMATIONS) {
+                formation_toggle_empire_service(arg1);
+                formation_calculate_figures();
+            }
+            break;
+        case MP_ACTION_DISPATCH_DISTANT_BATTLE:
+            formation_legions_dispatch_to_distant_battle();
+            break;
+        case MP_ACTION_CLEAR_EMPIRE_SERVICE_LEGIONS:
+            city_military_clear_empire_service_legions();
+            break;
+        case MP_ACTION_SEND_REQUEST:
+            scenario_request_dispatch(arg1);
             break;
         default:
             break;

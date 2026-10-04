@@ -81,3 +81,34 @@ int game_speed_get_elapsed_ticks(void)
         return MAX_TICKS_PER_FRAME;
     }
 }
+
+int game_speed_get_elapsed_ticks_multiplayer(void)
+{
+    // In a network game, time does not stop because one player opens a window or drags a road
+    static time_millis last_update;
+    static int started;
+    time_millis now = time_get_millis();
+    if (game_state_is_paused() || !started) {
+        last_update = now;
+        started = 1;
+        return 0;
+    }
+    int speed = setting_game_speed();
+    time_millis millis_per_tick;
+    if (speed < 10) {
+        return 0;
+    } else if (speed <= 100) {
+        millis_per_tick = MILLIS_PER_TICK_PER_SPEED[speed / 10];
+    } else {
+        millis_per_tick = MILLIS_PER_HYPER_SPEED[(speed > 500 ? 500 : speed) / 100];
+    }
+    time_millis diff = now - last_update;
+    int ticks = diff / millis_per_tick;
+    if (ticks > MAX_TICKS_PER_FRAME) {
+        last_update = now;
+        return MAX_TICKS_PER_FRAME;
+    }
+    last_update = now - (diff % millis_per_tick);
+    return ticks;
+}
+

@@ -12,6 +12,7 @@
 #include "sound/music.h"
 #include "window/mission_end.h"
 #include "window/victory_dialog.h"
+#include "game/rules.h"
 
 static struct {
     int state;
@@ -105,7 +106,7 @@ static int determine_victory_state(void)
 
 void city_victory_check(void)
 {
-    if (scenario_is_open_play()) {
+    if (scenario_is_open_play() || game_rules_is_multiplayer()) {
         return;
     }
     data.state = determine_victory_state();

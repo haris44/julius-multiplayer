@@ -13,6 +13,7 @@
 #include "map/grid.h"
 #include "scenario/invasion.h"
 #include "window/city.h"
+#include "mp/actions.h"
 
 #define ADVISOR_HEIGHT 26
 
@@ -175,7 +176,7 @@ static void button_return_to_fort(int legion_id, int param2)
 {
     formation *m = formation_get(formation_for_legion(legion_id));
     if (!m->in_distant_battle) {
-        formation_legion_return_home(m);
+        mp_action_legion_return_home(m->id);
         window_invalidate();
     }
 }
@@ -183,8 +184,7 @@ static void button_return_to_fort(int legion_id, int param2)
 static void button_empire_service(int legion_id, int param2)
 {
     int formation_id = formation_for_legion(legion_id);
-    formation_toggle_empire_service(formation_id);
-    formation_calculate_figures();
+    mp_action_legion_toggle_empire_service(formation_id);
     window_invalidate();
 }
 

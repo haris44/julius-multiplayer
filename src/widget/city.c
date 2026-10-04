@@ -32,6 +32,7 @@
 #include "mp/session.h"
 #include "window/popup_dialog.h"
 #include "building/construction_clear.h"
+#include "mp/actions.h"
 
 static struct {
     map_tile current_tile;
@@ -567,10 +568,8 @@ static void military_map_click(int legion_formation_id, const map_tile *tile)
         return;
     }
     int other_formation_id = formation_legion_at_building(tile->grid_offset);
-    if (other_formation_id && other_formation_id == legion_formation_id) {
-        formation_legion_return_home(m);
-    } else {
-        formation_legion_move_to(m, tile->x, tile->y);
+    mp_action_legion_move(legion_formation_id, tile->x, tile->y);
+    if (!other_formation_id || other_formation_id != legion_formation_id) {
         sound_speech_play_file("wavs/cohort5.wav");
     }
     window_city_show();

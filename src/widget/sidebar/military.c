@@ -24,6 +24,7 @@
 #include "widget/sidebar/slide.h"
 #include "window/city.h"
 #include "window/military_menu.h"
+#include "mp/actions.h"
 
 #define LAYOUTS_PER_LEGION 5
 
@@ -580,7 +581,7 @@ static void button_select_formation_layout(int index, int param2)
     } else {
         layout_indexes = LAYOUT_BUTTON_INDEXES_AUXILIARY[swap_lines];
     }
-    formation_legion_change_layout(m, layout_indexes[index]);
+    mp_action_legion_change_layout(m->id, layout_indexes[index]);
     switch (index) {
         case 0: sound_speech_play_file("wavs/cohort1.wav"); break;
         case 1: sound_speech_play_file("wavs/cohort2.wav"); break;
@@ -600,12 +601,11 @@ static void button_return_to_fort(int param1, int param2)
 {
     formation *m = formation_get(data.active_legion.formation_id);
     if (!m->in_distant_battle) {
-        formation_legion_return_home(m);
+        mp_action_legion_return_home(m->id);
     }
 }
 
 static void button_empire_service(int param1, int param2)
 {
-    formation_toggle_empire_service(data.active_legion.formation_id);
-    formation_calculate_figures();
+    mp_action_legion_toggle_empire_service(data.active_legion.formation_id);
 }

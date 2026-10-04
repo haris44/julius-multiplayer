@@ -13,6 +13,7 @@
 #include "graphics/text.h"
 #include "graphics/window.h"
 #include "window/hold_festival.h"
+#include "mp/session.h"
 
 #define ADVISOR_HEIGHT 23
 
@@ -80,8 +81,11 @@ static void draw_festival_info(void)
 
 static int draw_background(void)
 {
-    city_gods_calculate_moods(0);
-    city_culture_calculate();
+    if (!mp_session_is_networked()) {
+        // changes the simulation: only when this computer is the only one simulating
+        city_gods_calculate_moods(0);
+        city_culture_calculate();
+    }
 
     outer_panel_draw(0, 0, 40, ADVISOR_HEIGHT);
     image_draw(image_group(GROUP_ADVISOR_ICONS) + 8, 10, 10);

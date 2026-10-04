@@ -34,6 +34,7 @@
 #include "window/advisor/ratings.h"
 #include "window/advisor/religion.h"
 #include "window/advisor/trade.h"
+#include "mp/session.h"
 
 static void button_change_advisor(int advisor, int param2);
 static void button_help(int param1, int param2);
@@ -114,6 +115,12 @@ static void set_advisor(int advisor)
 
 static void init(void)
 {
+    if (mp_session_is_networked()) {
+        // these recalculations change the simulation: in a network game they would run on one
+        // computer only. The figures shown are at most one day old (M2.6)
+        set_advisor_window();
+        return;
+    }
     city_labor_allocate_workers();
 
     city_finance_estimate_taxes();

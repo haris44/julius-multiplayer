@@ -719,6 +719,40 @@ void building_construction_remove_preview(void)
     data.cost_preview = 0;
 }
 
+static struct {
+    int suspended;
+    map_tile start;
+    map_tile end;
+} suspended_preview;
+
+void building_construction_suspend_preview(void)
+{
+    if (!data.in_progress || suspended_preview.suspended) {
+        return;
+    }
+    suspended_preview.suspended = 1;
+    suspended_preview.start = data.start;
+    suspended_preview.end = data.end;
+    building_construction_remove_preview();
+}
+
+void building_construction_resume_preview(void)
+{
+    if (!suspended_preview.suspended) {
+        return;
+    }
+    suspended_preview.suspended = 0;
+    if (data.type == BUILDING_NONE) {
+        return;
+    }
+    building_construction_start(suspended_preview.start.x, suspended_preview.start.y,
+        suspended_preview.start.grid_offset);
+    if (data.in_progress) {
+        building_construction_update(suspended_preview.end.x, suspended_preview.end.y,
+            suspended_preview.end.grid_offset);
+    }
+}
+
 void building_construction_execute(const building_construction_placement *placement)
 {
     // Keep what the local player is doing with the construction tool

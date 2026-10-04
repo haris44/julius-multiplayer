@@ -6,6 +6,7 @@
 #include "input/keys.h"
 #include "input/keyboard.h"
 #include "input/mouse.h"
+#include "mp/session.h"
 
 static int is_alt_down(SDL_KeyboardEvent *event)
 {
@@ -288,7 +289,7 @@ void platform_handle_key_down(SDL_KeyboardEvent *event)
     hotkey_key_pressed(key, mod, event->repeat);
 
     // handle cheats: special case since they ARE layout dependent
-    if (!event->repeat && is_alt_down(event)) {
+    if (!event->repeat && is_alt_down(event) && !mp_session_is_networked()) {
         switch (event->keysym.sym) {
             case SDLK_k:
                 game_cheat_activate();

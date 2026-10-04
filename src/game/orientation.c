@@ -5,9 +5,13 @@
 #include "core/direction.h"
 #include "map/orientation.h"
 #include "widget/minimap.h"
+#include "mp/session.h"
 
 void game_orientation_rotate_left(void)
 {
+    if (mp_session_is_networked()) {
+        return; // the simulation depends on the view orientation: same for everybody (M2.10)
+    }
     city_view_rotate_left();
     map_orientation_change(0);
     widget_minimap_invalidate();
@@ -16,6 +20,9 @@ void game_orientation_rotate_left(void)
 
 void game_orientation_rotate_right(void)
 {
+    if (mp_session_is_networked()) {
+        return; // the simulation depends on the view orientation: same for everybody (M2.10)
+    }
     city_view_rotate_right();
     map_orientation_change(1);
     widget_minimap_invalidate();
@@ -24,6 +31,9 @@ void game_orientation_rotate_right(void)
 
 void game_orientation_rotate_north(void)
 {
+    if (mp_session_is_networked()) {
+        return; // the simulation depends on the view orientation: same for everybody (M2.10)
+    }
     switch (city_view_orientation()) {
         case DIR_2_RIGHT:
             city_view_rotate_right();

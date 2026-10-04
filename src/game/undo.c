@@ -18,6 +18,7 @@
 #include "map/sprite.h"
 #include "map/terrain.h"
 #include "scenario/earthquake.h"
+#include "mp/session.h"
 
 #include <string.h>
 
@@ -35,7 +36,8 @@ static struct {
 
 int game_can_undo(void)
 {
-    return data.ready && data.available;
+    // undo restores whole map grids: it would erase what other players built (D-010)
+    return data.ready && data.available && !mp_session_is_networked();
 }
 
 void game_undo_disable(void)
@@ -199,6 +201,9 @@ static void add_building_to_terrain(building *b)
 
 void game_undo_perform(void)
 {
+    if (mp_session_is_networked()) {
+        return;
+    }
     if (!game_can_undo()) {
         return;
     }

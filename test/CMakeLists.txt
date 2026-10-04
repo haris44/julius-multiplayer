@@ -181,7 +181,7 @@ add_trace_comparison(sim_rules_classic_reads_local_settings
     "trace|brugle-massilia-start.sav|1000|50"
     "--difficulty|0|--gods|0|trace|brugle-massilia-start.sav|1000|50" different)
 add_trace_comparison(sim_rules_multiplayer_ignores_local_settings
-    "trace|brugle-massilia-start.sav|1000|50"
+    "--mp|trace|brugle-massilia-start.sav|1000|50"
     "--difficulty|0|--gods|0|--mp|trace|brugle-massilia-start.sav|1000|50" same)
 
 # Unit tests of the multiplayer modules

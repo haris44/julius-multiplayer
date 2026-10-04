@@ -28,6 +28,13 @@ typedef enum {
     MP_ACTION_CHANGE_EXPORT_OVER = 13,    /**< resource, delta */
     MP_ACTION_TOGGLE_STOCKPILED = 14,     /**< resource */
     MP_ACTION_TOGGLE_MOTHBALLED = 15,     /**< resource */
+    MP_ACTION_LEGION_MOVE = 16,           /**< formation id, x, y (back to the fort when clicking it) */
+    MP_ACTION_LEGION_RETURN_HOME = 17,    /**< formation id */
+    MP_ACTION_LEGION_CHANGE_LAYOUT = 18,  /**< formation id, layout */
+    MP_ACTION_LEGION_TOGGLE_EMPIRE_SERVICE = 19, /**< formation id */
+    MP_ACTION_DISPATCH_DISTANT_BATTLE = 20,
+    MP_ACTION_CLEAR_EMPIRE_SERVICE_LEGIONS = 21,
+    MP_ACTION_SEND_REQUEST = 22,          /**< request id */
     MP_ACTION_MAX
 } mp_action_type;
 
@@ -46,6 +53,13 @@ void mp_action_cycle_trade_status(int resource);
 void mp_action_change_export_over(int resource, int delta);
 void mp_action_toggle_stockpiled(int resource);
 void mp_action_toggle_mothballed(int resource);
+void mp_action_legion_move(int formation_id, int x, int y);
+void mp_action_legion_return_home(int formation_id);
+void mp_action_legion_change_layout(int formation_id, int layout);
+void mp_action_legion_toggle_empire_service(int formation_id);
+void mp_action_dispatch_distant_battle(void);
+void mp_action_clear_empire_service_legions(void);
+void mp_action_send_request(int request_id);
 
 /**
  * Applies an MP_COMMAND_CITY_ACTION command to the simulation
