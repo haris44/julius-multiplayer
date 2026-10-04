@@ -141,7 +141,7 @@ typedef struct {
     signed char desirability;
     unsigned char is_deleted;
     unsigned char is_adjacent_to_water;
-    unsigned char storage_id;
+    unsigned short storage_id; // 8 bits in classic saved games
     union {
         signed char house_happiness;
         signed char native_anger;
