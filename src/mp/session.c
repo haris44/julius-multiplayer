@@ -2,6 +2,7 @@
 
 #include "building/construction.h"
 #include "game/time.h"
+#include "mp/actions.h"
 
 #include <stddef.h>
 #include <stdint.h>
@@ -83,6 +84,9 @@ void mp_command_execute(const mp_command *command)
     switch (command->type) {
         case MP_COMMAND_BUILD:
             execute_build(command);
+            break;
+        case MP_COMMAND_CITY_ACTION:
+            mp_actions_execute(command);
             break;
         default:
             break;

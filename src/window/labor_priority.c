@@ -7,6 +7,7 @@
 #include "graphics/panel.h"
 #include "graphics/window.h"
 #include "input/input.h"
+#include "mp/actions.h"
 
 #define MIN_DIALOG_WIDTH 320
 
@@ -108,7 +109,7 @@ static void handle_input(const mouse *m, const hotkeys *h)
 
 static void button_set_priority(int new_priority, int param2)
 {
-    city_labor_set_priority(data.category, new_priority);
+    mp_action_set_labor_priority(data.category, new_priority);
     window_go_back();
 }
 

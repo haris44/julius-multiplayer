@@ -599,6 +599,7 @@ set(EDITOR_FILES
     ${PROJECT_SOURCE_DIR}/src/editor/tool_restriction.c
 )
 set(MP_FILES
+    ${PROJECT_SOURCE_DIR}/src/mp/actions.c
     ${PROJECT_SOURCE_DIR}/src/mp/checksum.c
     ${PROJECT_SOURCE_DIR}/src/mp/command.c
     ${PROJECT_SOURCE_DIR}/src/mp/session.c

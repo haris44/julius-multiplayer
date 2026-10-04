@@ -9,6 +9,7 @@
 #include "graphics/panel.h"
 #include "graphics/text.h"
 #include "graphics/window.h"
+#include "mp/actions.h"
 
 #define ADVISOR_HEIGHT 26
 
@@ -110,9 +111,7 @@ static int handle_mouse(const mouse *m)
 
 static void button_change_taxes(int is_down, int param2)
 {
-    city_finance_change_tax_percentage(is_down ? -1 : 1);
-    city_finance_estimate_taxes();
-    city_finance_calculate_totals();
+    mp_action_change_taxes(is_down ? -1 : 1);
     window_invalidate();
 }
 

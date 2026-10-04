@@ -19,6 +19,7 @@
 #include "scenario/building.h"
 #include "window/advisor/trade.h"
 #include "window/message_dialog.h"
+#include "mp/actions.h"
 
 static void button_help(int param1, int param2);
 static void button_ok(int param1, int param2);
@@ -208,24 +209,24 @@ static void button_ok(int param1, int param2)
 
 static void button_export_up_down(int is_down, int param2)
 {
-    city_resource_change_export_over(data.resource, is_down ? -1 : 1);
+    mp_action_change_export_over(data.resource, is_down ? -1 : 1);
 }
 
 static void button_toggle_industry(int param1, int param2)
 {
     if (building_count_industry_total(data.resource) > 0) {
-        city_resource_toggle_mothballed(data.resource);
+        mp_action_toggle_mothballed(data.resource);
     }
 }
 
 static void button_toggle_trade(int param1, int param2)
 {
-    city_resource_cycle_trade_status(data.resource);
+    mp_action_cycle_trade_status(data.resource);
 }
 
 static void button_toggle_stockpile(int param1, int param2)
 {
-    city_resource_toggle_stockpiled(data.resource);
+    mp_action_toggle_stockpiled(data.resource);
 }
 
 void window_resource_settings_show(resource_type resource)

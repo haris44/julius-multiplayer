@@ -15,6 +15,7 @@
 #include "graphics/window.h"
 #include "scenario/property.h"
 #include "window/building_info.h"
+#include "mp/actions.h"
 
 static void go_to_orders(int param1, int param2);
 static void toggle_resource_state(int index, int param2);
@@ -478,17 +479,16 @@ static void toggle_resource_state(int index, int param2)
     } else {
         resource = city_resource_get_available_foods()->items[index-1];
     }
-    building_storage_cycle_resource_state(b->storage_id, resource);
+    mp_action_storage_cycle_resource(data.building_id, resource);
     window_invalidate();
 }
 
 static void granary_orders(int index, int param2)
 {
-    int storage_id = building_get(data.building_id)->storage_id;
     if (index == 0) {
-        building_storage_toggle_empty_all(storage_id);
+        mp_action_storage_toggle_empty_all(data.building_id);
     } else if (index == 1) {
-        building_storage_accept_none(storage_id);
+        mp_action_storage_accept_none(data.building_id);
     }
     window_invalidate();
 }
@@ -496,13 +496,11 @@ static void granary_orders(int index, int param2)
 static void warehouse_orders(int index, int param2)
 {
     if (index == 0) {
-        int storage_id = building_get(data.building_id)->storage_id;
-        building_storage_toggle_empty_all(storage_id);
+        mp_action_storage_toggle_empty_all(data.building_id);
     } else if (index == 1) {
-        city_buildings_set_trade_center(data.building_id);
+        mp_action_set_trade_center(data.building_id);
     } else if (index == 2) {
-        int storage_id = building_get(data.building_id)->storage_id;
-        building_storage_accept_none(storage_id);
+        mp_action_storage_accept_none(data.building_id);
     }
     window_invalidate();
 }

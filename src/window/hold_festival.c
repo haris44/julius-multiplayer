@@ -16,6 +16,7 @@
 #include "input/input.h"
 #include "window/advisors.h"
 #include "window/message_dialog.h"
+#include "mp/actions.h"
 
 static void button_god(int god, int param2);
 static void button_size(int size, int param2);
@@ -119,16 +120,15 @@ static void handle_input(const mouse *m, const hotkeys *h)
 
 static void button_god(int god, int param2)
 {
-    city_festival_select_god(god);
+    mp_action_festival_select_god(god);
     window_invalidate();
 }
 
 static void button_size(int size, int param2)
 {
     if (!city_finance_out_of_money()) {
-        if (city_festival_select_size(size)) {
-            window_invalidate();
-        }
+        mp_action_festival_select_size(size);
+        window_invalidate();
     }
 }
 
@@ -147,7 +147,7 @@ static void button_hold_festival(int param1, int param2)
     if (city_finance_out_of_money()) {
         return;
     }
-    city_festival_schedule();
+    mp_action_festival_hold();
     window_advisors_show();
 }
 

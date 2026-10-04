@@ -28,6 +28,7 @@
 #include "window/popup_dialog.h"
 #include "window/resource_settings.h"
 #include "window/trade_opened.h"
+#include "mp/actions.h"
 
 #define MAX_WIDTH 2032
 #define MAX_HEIGHT 1136
@@ -655,8 +656,7 @@ static void button_show_resource_window(int resource, int param2)
 static void confirmed_open_trade(int accepted)
 {
     if (accepted) {
-        empire_city_open_trade(data.selected_city);
-        building_menu_update();
+        mp_action_open_trade_route(data.selected_city);
         window_trade_opened_show(data.selected_city);
     }
 }

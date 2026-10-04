@@ -42,8 +42,10 @@ Prérequis à tout le reste : savoir prouver que deux simulations sont identique
 - [x] **M2.3** Démolition en commande : la question « détruire le fort / le pont ? » est posée avant l'envoi et la
   réponse voyage dans la commande. Test `mp_clear_equivalence_*` (fenêtre puis réponse = réponse dans la commande).
   L'aperçu de l'effacement qui marque les vrais bâtiments est traité avec M2P.3 / M2.9.
-- [ ] **M2.4** Réglages de la cité en commandes : impôts, salaires, priorités, fêtes, entrepôts et greniers, commerce
-  (routes, importation et exportation, seuils), industries à l'arrêt.
+- [x] **M2.4** Réglages de la cité en commandes : impôts, salaires, priorités, fêtes, entrepôts et greniers, centre
+  de commerce, ouverture de route, import/export, seuils, stockage, industries à l'arrêt (`mp/actions`). Chaque
+  commande refait exactement les appels du bouton d'origine (y compris les « +1 » relatifs). Test
+  `mp_action_equivalence_*`.
 - [ ] **M2.5** Ordres militaires en commandes : déplacer, retour au fort, formation, service.
 - [ ] **M2.6** Recalculs déclenchés par l'interface (conseillers) transformés en commandes ; phrases des figures
   calculées localement.

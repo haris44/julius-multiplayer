@@ -24,6 +24,7 @@ typedef enum {
     /** type, sub_type, x_start, y_start, x_end, y_end, road_orientation,
      *  answers to clear land questions: (uint8) fort | (uint8) bridge << 8, each 1 yes, -1 no, 0 not asked */
     MP_COMMAND_BUILD = 1,
+    MP_COMMAND_CITY_ACTION = 2,  /**< mp_action_type, then its arguments (mp/actions.h) */
     MP_COMMAND_TEST = 99,        /**< for tests only: no effect */
     MP_COMMAND_MAX
 } mp_command_type;

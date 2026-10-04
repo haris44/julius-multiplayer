@@ -4,7 +4,16 @@
 #include "building/construction.h"
 #include "building/construction_clear.h"
 #include "building/type.h"
+#include "building/count.h"
+#include "building/menu.h"
+#include "building/storage.h"
+#include "city/buildings.h"
+#include "city/festival.h"
 #include "city/finance.h"
+#include "city/labor.h"
+#include "city/resource.h"
+#include "empire/city.h"
+#include "empire/type.h"
 #include "core/time.h"
 #include "game/file.h"
 #include "game/game.h"
@@ -14,6 +23,7 @@
 #include "map/terrain.h"
 #include "map/grid.h"
 #include "mp/checksum.h"
+#include "mp/actions.h"
 #include "mp/session.h"
 
 #include <inttypes.h>
@@ -47,6 +57,7 @@ static int usage(void)
     printf("                                         state as the former direct user interface calls\n");
     printf("  simtool clearequiv SAVE                same for clearing forts and bridges: answering the popup\n");
     printf("                                         equals sending the answer in the command\n");
+    printf("  simtool actionequiv SAVE               same for city settings (taxes, wages, storage, trade...)\n");
     printf("  simtool idempotence SAVE TICKS [STEP]  loads and runs SAVE twice in one process,\n");
     printf("                                         fails if the two traces differ\n");
     printf("  simtool diffpieces SAVE TICKS [CHECK]  runs SAVE for TICKS, reloads it and runs CHECK ticks\n");
@@ -297,6 +308,117 @@ static int command_clearequiv(const char *file)
     return failures || !asked ? 1 : 0;
 }
 
+static int find_building(building_type type)
+{
+    for (int i = 1; i < MAX_BUILDINGS; i++) {
+        building *b = building_get(i);
+        if (b->state == BUILDING_STATE_IN_USE && b->type == type) {
+            return i;
+        }
+    }
+    return 0;
+}
+
+static int find_closed_trade_city(void)
+{
+    for (int i = 1; i < 41; i++) {
+        empire_city *c = empire_city_get(i);
+        if (c->in_use && c->type == EMPIRE_CITY_TRADE && !c->is_open) {
+            return i;
+        }
+    }
+    return 0;
+}
+
+// Same calls as the user interface buttons before M2.4
+static void action_directly(int action, int a, int b)
+{
+    switch (action) {
+        case MP_ACTION_CHANGE_TAXES:
+            city_finance_change_tax_percentage(a); city_finance_estimate_taxes(); city_finance_calculate_totals();
+            break;
+        case MP_ACTION_CHANGE_WAGES:
+            city_labor_change_wages(a); city_finance_estimate_wages(); city_finance_calculate_totals();
+            break;
+        case MP_ACTION_SET_LABOR_PRIORITY: city_labor_set_priority(a, b); break;
+        case MP_ACTION_FESTIVAL_SELECT_GOD: city_festival_select_god(a); break;
+        case MP_ACTION_FESTIVAL_SELECT_SIZE: city_festival_select_size(a); break;
+        case MP_ACTION_FESTIVAL_HOLD: city_festival_schedule(); break;
+        case MP_ACTION_STORAGE_CYCLE_RESOURCE: building_storage_cycle_resource_state(building_get(a)->storage_id, b); break;
+        case MP_ACTION_STORAGE_TOGGLE_EMPTY_ALL: building_storage_toggle_empty_all(building_get(a)->storage_id); break;
+        case MP_ACTION_STORAGE_ACCEPT_NONE: building_storage_accept_none(building_get(a)->storage_id); break;
+        case MP_ACTION_SET_TRADE_CENTER: city_buildings_set_trade_center(a); break;
+        case MP_ACTION_OPEN_TRADE_ROUTE: empire_city_open_trade(a); building_menu_update(); break;
+        case MP_ACTION_CYCLE_TRADE_STATUS: city_resource_cycle_trade_status(a); break;
+        case MP_ACTION_CHANGE_EXPORT_OVER: city_resource_change_export_over(a, b); break;
+        case MP_ACTION_TOGGLE_STOCKPILED: city_resource_toggle_stockpiled(a); break;
+        case MP_ACTION_TOGGLE_MOTHBALLED: city_resource_toggle_mothballed(a); break;
+    }
+}
+
+static int command_actionequiv(const char *file)
+{
+    if (!load(file)) {
+        return 2;
+    }
+    int warehouse = find_building(BUILDING_WAREHOUSE);
+    int granary = find_building(BUILDING_GRANARY);
+    int trade_city = find_closed_trade_city();
+    int industry = 0;
+    for (int r = RESOURCE_MIN; r < RESOURCE_MAX && !industry; r++) {
+        if (building_count_industry_total(r) > 0) {
+            industry = r;
+        }
+    }
+    struct { int action, a, b; } cases[] = {
+        {MP_ACTION_CHANGE_TAXES, 1, 0}, {MP_ACTION_CHANGE_TAXES, -1, 0},
+        {MP_ACTION_CHANGE_WAGES, 1, 0}, {MP_ACTION_CHANGE_WAGES, -1, 0},
+        {MP_ACTION_SET_LABOR_PRIORITY, 2, 1}, {MP_ACTION_SET_LABOR_PRIORITY, 5, 3},
+        {MP_ACTION_FESTIVAL_SELECT_GOD, 3, 0}, {MP_ACTION_FESTIVAL_SELECT_SIZE, 2, 0}, {MP_ACTION_FESTIVAL_HOLD, 0, 0},
+        {MP_ACTION_STORAGE_CYCLE_RESOURCE, warehouse, RESOURCE_POTTERY},
+        {MP_ACTION_STORAGE_CYCLE_RESOURCE, granary, RESOURCE_WHEAT},
+        {MP_ACTION_STORAGE_TOGGLE_EMPTY_ALL, warehouse, 0}, {MP_ACTION_STORAGE_ACCEPT_NONE, granary, 0},
+        {MP_ACTION_SET_TRADE_CENTER, warehouse, 0},
+        {MP_ACTION_OPEN_TRADE_ROUTE, trade_city, 0},
+        {MP_ACTION_CYCLE_TRADE_STATUS, RESOURCE_OIL, 0}, {MP_ACTION_CYCLE_TRADE_STATUS, RESOURCE_WEAPONS, 0},
+        {MP_ACTION_CHANGE_EXPORT_OVER, RESOURCE_OIL, 1}, {MP_ACTION_TOGGLE_STOCKPILED, RESOURCE_WHEAT, 0},
+        {MP_ACTION_TOGGLE_MOTHBALLED, industry, 0}
+    };
+    int num_cases = sizeof(cases) / sizeof(cases[0]);
+    int failures = 0, effective = 0, tested = 0;
+    for (int i = 0; i < num_cases; i++) {
+        if (!cases[i].a && cases[i].action >= MP_ACTION_STORAGE_CYCLE_RESOURCE &&
+            cases[i].action != MP_ACTION_FESTIVAL_HOLD && cases[i].action <= MP_ACTION_OPEN_TRADE_ROUTE) {
+            continue; // nothing to act on in this saved game
+        }
+        if (cases[i].action == MP_ACTION_TOGGLE_MOTHBALLED && !industry) {
+            continue;
+        }
+        load(file);
+        uint64_t before = mp_checksum_state();
+        action_directly(cases[i].action, cases[i].a, cases[i].b);
+        uint64_t direct = mp_checksum_state();
+        run_trace(25, 25, 0, 0);
+        uint64_t direct_later = mp_checksum_state();
+
+        load(file);
+        mp_command command = { .type = MP_COMMAND_CITY_ACTION, .args = { cases[i].action, cases[i].a, cases[i].b } };
+        mp_command_submit(&command);
+        uint64_t via_command = mp_checksum_state();
+        run_trace(25, 25, 0, 0);
+        uint64_t command_later = mp_checksum_state();
+
+        tested++;
+        effective += direct != before;
+        if (direct != via_command || direct_later != command_later) {
+            printf("DIFFERENT: action %d (%d, %d)\n", cases[i].action, cases[i].a, cases[i].b);
+            failures++;
+        }
+    }
+    printf("%d actions tested, %d changed the city, %d different\n", tested, effective, failures);
+    return failures || effective < tested / 2 ? 1 : 0;
+}
+
 static int command_trace(const char *file, int ticks, int step)
 {
     if (!load(file)) {
@@ -439,6 +561,8 @@ int main(int argc, char **argv)
     int result;
     if (strcmp(command, "checksum") == 0) {
         result = command_checksum(file);
+    } else if (strcmp(command, "actionequiv") == 0) {
+        result = command_actionequiv(file);
     } else if (strcmp(command, "clearequiv") == 0) {
         result = command_clearequiv(file);
     } else if (strcmp(command, "buildequiv") == 0) {
