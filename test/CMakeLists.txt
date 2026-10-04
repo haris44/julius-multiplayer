@@ -212,7 +212,9 @@ if(UNIX)
     add_test(NAME mp_lan_player_leaves COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/sim/lan_test.sh $<TARGET_FILE:simtool> 27438 3 brugle-lugdunum.sav 800 leave cities)
     # a network game goes on from a multiplayer saved game (its number of cities sets the number of players)
     add_test(NAME mp_lan_resume_mpsav COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/sim/lan_resume_test.sh $<TARGET_FILE:simtool> 27439)
-    set_tests_properties(mp_lan_pause mp_lan_player_leaves mp_lan_resume_mpsav PROPERTIES TIMEOUT 120)
+    add_test(NAME mp_lan_other_game_data_refused COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/sim/lan_test.sh $<TARGET_FILE:simtool> 27440 2 tower.sav 400 baddata)
+    set_tests_properties(mp_lan_pause mp_lan_player_leaves mp_lan_resume_mpsav mp_lan_other_game_data_refused
+        PROPERTIES TIMEOUT 120)
     set_tests_properties(mp_lan_2_players mp_lan_4_players mp_lan_desync_detected mp_lan_cities_2_players
         mp_lan_cities_4_players mp_lan_cities_desync_detected PROPERTIES TIMEOUT 120)
 endif()

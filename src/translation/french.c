@@ -140,6 +140,14 @@ static translation_string all_strings[] = {
     {TR_MP_WATCH, "Regarder la carte"},
     {TR_MP_MAIN_MENU, "Menu principal"},
     {TR_MP_SCORE_RULE, "Score : culture + prospérité + paix + population / 100"},
+    {TR_MP_DIFFICULTY, "Difficulté : "},
+    {TR_MP_DIFFICULTY_0, "très facile"},
+    {TR_MP_DIFFICULTY_1, "facile"},
+    {TR_MP_DIFFICULTY_2, "normale"},
+    {TR_MP_DIFFICULTY_3, "difficile"},
+    {TR_MP_DIFFICULTY_4, "très difficile"},
+    {TR_MP_GODS, "Dieux : "},
+    {TR_MP_START, "Lancer la partie"},
 };
 
 void translation_french(const translation_string **strings, int *num_strings)

@@ -58,6 +58,11 @@ static struct {
         int target;
         int frames_left;
     } mpwait;
+    struct {
+        int active;
+        int target;
+        int frames_left;
+    } mpplayers;
     char *script;
     char **lines;
     int num_lines;
@@ -421,6 +426,16 @@ static int execute(char *line)
         data.mpwait.target = n;
         data.mpwait.frames_left = 60 * 60 * 3; // three virtual minutes
         return 1;
+    } else if (strcmp(command, "mpplayers") == 0) {
+        // host: waits until N players (the host included) are connected
+        if (sscanf(rest, "%d", &n) != 1 || n < 1) {
+            fail("invalid mpplayers:", rest);
+            return 1;
+        }
+        data.mpplayers.active = 1;
+        data.mpplayers.target = n;
+        data.mpplayers.frames_left = 60 * 60 * 3;
+        return 1;
     } else if (strcmp(command, "mpcheck") == 0) {
         char value[160];
         snprintf(value, sizeof(value), "state %d, verified turns %d: %s", mp_lockstep_get_state(),
@@ -497,6 +512,15 @@ void platform_automation_before_frame(void)
     }
     if (handle_pending()) {
         return;
+    }
+    if (data.mpplayers.active) {
+        if (mp_lockstep_connected_players() < data.mpplayers.target) {
+            if (--data.mpplayers.frames_left <= 0) {
+                fail("mpplayers timed out:", mp_lockstep_status());
+            }
+            return;
+        }
+        data.mpplayers.active = 0;
     }
     if (data.mpwait.active) {
         // ticks are counted from the start of the network game (the date may be negative: BC years)

@@ -167,8 +167,12 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
 - [ ] **M5.6** Intégration continue multiplateforme (macOS arm64, Windows x64, Linux) qui compare les traces de
   rejeu. *Nécessite un dépôt GitHub : à demander à Alexandre.*
 - [ ] **M5.7** Première vraie partie en LAN avec Alexandre (Mac et PC) et retour d'expérience.
-- [ ] **M5.8** Salon complet : choix des règles (difficulté, dieux), joueurs « prêts » avant le lancement par l'hôte,
+- [x] **M5.8** Salon complet : choix des règles (difficulté, dieux), joueurs « prêts » avant le lancement par l'hôte,
   vérification que tous ont les mêmes données du jeu.
+  *Fait* : difficulté, dieux, fin de partie et invasions IA dans le salon ; l'hôte lance la partie quand tout le
+  monde est là (« Lancer la partie ») ; un client dont la version du protocole ou les données qui changent la
+  simulation (`c3_model.txt`, empires) diffèrent est refusé avec la raison. Tests : `tools/mp-lobby-test.sh`,
+  `mp_lan_other_game_data_refused`.
 
 ## M6 — Grandes cartes
 - [ ] **M6.1** Format `.mpmap` : taille, points d'arrivée et leurs autorisations.

@@ -515,6 +515,12 @@ static int command_mpnode(int argc, char **argv)
     // 'pause': this client pauses the game at half time and resumes it a second later;
     // 'leave': this client leaves the game at half time
     int pauser = is_join && argc >= 7 && strcmp(argv[6], "pause") == 0;
+    // 'baddata': this client has other game data; the host must refuse it
+    int bad_data = is_join && argc >= 7 && strcmp(argv[6], "baddata") == 0;
+    int expect_reject = is_host && strcmp(argv[argc - 1], "expect-reject") == 0;
+    if (bad_data) {
+        mp_lockstep_test_alter_game_data();
+    }
     int leaver = is_join && argc >= 7 && strcmp(argv[6], "leave") == 0;
     time_t pause_start = 0;
     int paused_seen = 0, ticks_while_paused = 0, tick_at_pause = -1;
@@ -533,6 +539,11 @@ static int command_mpnode(int argc, char **argv)
         mp_lockstep_state state = mp_lockstep_get_state();
         if (state == MP_LOCKSTEP_DESYNC || state == MP_LOCKSTEP_DISCONNECTED) {
             break;
+        }
+        if (expect_reject && strstr(mp_lockstep_status(), "refusé")) {
+            printf("status: %s\n", mp_lockstep_status());
+            mp_lockstep_stop();
+            return 0;
         }
         if (state == MP_LOCKSTEP_RUNNING && start_tick < 0) {
             start_tick = mp_lockstep_base_tick();
@@ -603,6 +614,10 @@ static int command_mpnode(int argc, char **argv)
         }
         mp_lockstep_stop();
         return detected ? 0 : 1;
+    }
+    if (bad_data) {
+        printf("status: %s\n", mp_lockstep_status());
+        return strstr(mp_lockstep_status(), "Refusé") ? 0 : 1;
     }
     if (leaver) {
         printf("left the game at tick %d\n", game_time_absolute_tick() - start_tick);

@@ -140,6 +140,14 @@ static translation_string all_strings[] = {
     {TR_MP_WATCH, "Watch the map"},
     {TR_MP_MAIN_MENU, "Main menu"},
     {TR_MP_SCORE_RULE, "Score: culture + prosperity + peace + population / 100"},
+    {TR_MP_DIFFICULTY, "Difficulty: "},
+    {TR_MP_DIFFICULTY_0, "very easy"},
+    {TR_MP_DIFFICULTY_1, "easy"},
+    {TR_MP_DIFFICULTY_2, "normal"},
+    {TR_MP_DIFFICULTY_3, "hard"},
+    {TR_MP_DIFFICULTY_4, "very hard"},
+    {TR_MP_GODS, "Gods: "},
+    {TR_MP_START, "Start the game"},
 };
 
 void translation_english(const translation_string **strings, int *num_strings)

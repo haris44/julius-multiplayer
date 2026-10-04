@@ -40,6 +40,18 @@ int mp_lockstep_host(int port, int num_players, const char *saved_game, int sepa
 void mp_lockstep_set_rules(const game_rules_settings *rules);
 
 /**
+ * Host: with a manual start (lobby), the game starts on mp_lockstep_start_game once every player is there;
+ * otherwise as soon as they are all there
+ */
+void mp_lockstep_set_manual_start(int manual);
+
+/**
+ * Tests: this computer pretends to have other game data than the host, which must refuse it
+ */
+void mp_lockstep_test_alter_game_data(void);
+void mp_lockstep_start_game(void);
+
+/**
  * Joins a hosted game; the game starts when the host sends the saved game
  * @return 1 when connected
  */

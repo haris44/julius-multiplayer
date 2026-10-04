@@ -1,6 +1,8 @@
 #include "lockstep.h"
 
 #include "core/buffer.h"
+#include "core/dir.h"
+#include "core/io.h"
 #include "core/log.h"
 #include "game/file.h"
 #include "game/player_context.h"
@@ -36,7 +38,13 @@ enum {
     MSG_DONE = 5,
     MSG_DESYNC = 6,
     MSG_PAUSE_REQUEST = 7, // client to host: pause or resume the game
-    MSG_PAUSED = 8         // host to clients: the game is paused (1) or running (0)
+    MSG_PAUSED = 8,        // host to clients: the game is paused (1) or running (0)
+    MSG_REJECT = 9         // host to a client: refused (reason), the connection closes
+};
+
+enum {
+    REJECT_PROTOCOL = 1,
+    REJECT_GAME_DATA = 2
 };
 
 typedef struct {
@@ -64,6 +72,9 @@ static struct {
     int paused;                // the host issues no turn while paused: every computer stops at the same tick
     int dropped[MP_LOCKSTEP_MAX_PLAYERS]; // host: players who left a running game, no longer waited for
     int tick_limit;            // tests: no tick runs from this absolute tick on (0: no limit)
+    int accepted[MP_LOCKSTEP_MAX_PLAYERS]; // host: the client said hello with the same protocol and game data
+    int manual_start;          // host: the game starts when the host asks (lobby), not as soon as all are there
+    int start_requested;
     int base_tick;
     int last_known_turn;   // commands of all turns up to this one are known
     int done_turn[MP_LOCKSTEP_MAX_PLAYERS];
@@ -416,13 +427,63 @@ static void client_welcome(buffer *buf)
 
 // ---------- receiving ----------
 
+// Game data that changes the simulation: buildings (c3_model.txt) and empires. Players must have the same.
+static uint64_t altered_fingerprint; // tests: game data different from the host's
+
+static uint64_t game_data_fingerprint(void)
+{
+    static const char *FILES[] = { "c3_model.txt", "c3.emp", "c32.emp" };
+    static uint64_t fingerprint;
+    if (altered_fingerprint) {
+        return altered_fingerprint;
+    }
+    if (fingerprint) {
+        return fingerprint;
+    }
+    uint64_t hash = 0xcbf29ce484222325ULL;
+    int capacity = 2 * 1024 * 1024;
+    uint8_t *bytes = malloc(capacity);
+    for (int f = 0; f < 3 && bytes; f++) {
+        int size = io_read_file_into_buffer(FILES[f], NOT_LOCALIZED, bytes, capacity);
+        hash = (hash ^ (uint64_t) size) * 0x100000001b3ULL;
+        for (int i = 0; i < size; i++) {
+            hash = (hash ^ bytes[i]) * 0x100000001b3ULL;
+        }
+    }
+    free(bytes);
+    fingerprint = hash ? hash : 1;
+    return fingerprint;
+}
+
+static void reject(int player, int reason)
+{
+    uint8_t payload[2] = { MSG_REJECT, (uint8_t) reason };
+    send_message(data.sockets[player], payload, 2);
+    net_close(data.sockets[player]);
+    data.sockets[player] = NET_INVALID_SOCKET;
+    data.accepted[player] = 0;
+    set_status(reason == REJECT_GAME_DATA ? "Joueur refusé : données du jeu différentes" :
+        "Joueur refusé : version du jeu différente");
+}
+
 static void handle_message(int from, uint8_t *payload, int size)
 {
     buffer buf;
     buffer_init(&buf, payload, size);
     int type = buffer_read_u8(&buf);
     if (data.is_host) {
-        if (type == MSG_COMMAND) {
+        if (type == MSG_HELLO && data.state == MP_LOCKSTEP_WAITING_FOR_PLAYERS) {
+            int version = buffer_read_i32(&buf);
+            uint64_t fingerprint = buffer_read_u32(&buf);
+            fingerprint |= ((uint64_t) buffer_read_u32(&buf)) << 32;
+            if (version != PROTOCOL_VERSION) {
+                reject(from, REJECT_PROTOCOL);
+            } else if (fingerprint != game_data_fingerprint()) {
+                reject(from, REJECT_GAME_DATA);
+            } else {
+                data.accepted[from] = 1;
+            }
+        } else if (type == MSG_COMMAND) {
             mp_command command;
             if (mp_command_read(&command, &buf) && data.num_pending < MAX_PENDING) {
                 command.player_id = from; // never trust the sender about who it is
@@ -460,6 +521,11 @@ static void handle_message(int from, uint8_t *payload, int size)
             desync(buffer_read_i32(&buf));
         } else if (type == MSG_PAUSED) {
             set_paused(buffer_read_u8(&buf));
+        } else if (type == MSG_REJECT) {
+            data.state = MP_LOCKSTEP_DISCONNECTED;
+            set_status(buffer_read_u8(&buf) == REJECT_GAME_DATA ?
+                "Refusé par l'hôte : données du jeu différentes (c3_model.txt, empire)" :
+                "Refusé par l'hôte : version du jeu différente");
         }
     }
 }
@@ -509,7 +575,8 @@ static void receive_from(int player)
     }
     memmove(rb->data, rb->data + offset, rb->size - offset);
     rb->size -= offset;
-    if (closed && data.state != MP_LOCKSTEP_DESYNC) {
+    // a desynchronisation or a refusal already says why the connection ends
+    if (closed && data.state != MP_LOCKSTEP_DESYNC && data.state != MP_LOCKSTEP_DISCONNECTED) {
         if (data.is_host && data.state == MP_LOCKSTEP_RUNNING) {
             drop_player(player);
         } else if (data.is_host) {
@@ -531,6 +598,21 @@ static void reset(void)
     for (int p = 0; p < MP_LOCKSTEP_MAX_PLAYERS; p++) {
         data.sockets[p] = NET_INVALID_SOCKET;
     }
+}
+
+void mp_lockstep_test_alter_game_data(void)
+{
+    altered_fingerprint = game_data_fingerprint() ^ 0x5a5a5a5a5a5a5a5aULL;
+}
+
+void mp_lockstep_set_manual_start(int manual)
+{
+    data.manual_start = manual;
+}
+
+void mp_lockstep_start_game(void)
+{
+    data.start_requested = 1;
 }
 
 void mp_lockstep_set_rules(const game_rules_settings *rules)
@@ -589,11 +671,14 @@ int mp_lockstep_join(const char *address, int port)
         set_status("Impossible de joindre l'hôte");
         return 0;
     }
-    uint8_t payload[8];
+    uint8_t payload[32];
     buffer buf;
     buffer_init(&buf, payload, sizeof(payload));
     buffer_write_u8(&buf, MSG_HELLO);
     buffer_write_i32(&buf, PROTOCOL_VERSION);
+    uint64_t fingerprint = game_data_fingerprint();
+    buffer_write_u32(&buf, (uint32_t) fingerprint);
+    buffer_write_u32(&buf, (uint32_t) (fingerprint >> 32));
     send_message(data.sockets[0], payload, buf.index);
     data.state = MP_LOCKSTEP_WAITING_FOR_PLAYERS;
     set_status("Connecté, en attente du lancement par l'hôte");
@@ -611,19 +696,11 @@ void mp_lockstep_poll(void)
         return;
     }
     if (data.is_host && data.state == MP_LOCKSTEP_WAITING_FOR_PLAYERS) {
-        int connected = 1;
         for (int p = 1; p < data.num_players; p++) {
             if (data.sockets[p] == NET_INVALID_SOCKET) {
+                data.accepted[p] = 0;
                 data.sockets[p] = net_accept(data.listener);
             }
-            connected += data.sockets[p] != NET_INVALID_SOCKET;
-        }
-        if (connected == data.num_players) {
-            host_start_game();
-        } else {
-            // players looking for a game on the local network see this one (mp/discovery)
-            const char *name = strrchr(data.saved_game, '/');
-            mp_discovery_announce(data.port, data.num_players, connected, name ? name + 1 : data.saved_game);
         }
     }
     int first = data.is_host ? 1 : 0;
@@ -631,6 +708,16 @@ void mp_lockstep_poll(void)
     for (int p = first; p < last; p++) {
         if (data.sockets[p] != NET_INVALID_SOCKET) {
             receive_from(p);
+        }
+    }
+    if (data.is_host && data.state == MP_LOCKSTEP_WAITING_FOR_PLAYERS) {
+        int connected = mp_lockstep_connected_players();
+        if (connected == data.num_players && (!data.manual_start || data.start_requested)) {
+            host_start_game();
+        } else {
+            // players looking for a game on the local network see this one (mp/discovery)
+            const char *name = strrchr(data.saved_game, '/');
+            mp_discovery_announce(data.port, data.num_players, connected, name ? name + 1 : data.saved_game);
         }
     }
 }
@@ -753,7 +840,7 @@ int mp_lockstep_connected_players(void)
     }
     int connected = 1;
     for (int p = 1; p < data.num_players; p++) {
-        connected += data.sockets[p] != NET_INVALID_SOCKET;
+        connected += data.sockets[p] != NET_INVALID_SOCKET && (data.accepted[p] || data.state != MP_LOCKSTEP_WAITING_FOR_PLAYERS);
     }
     return connected;
 }

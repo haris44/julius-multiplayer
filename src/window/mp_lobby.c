@@ -35,7 +35,7 @@
 
 #define MAX_FILES 200
 #define FILE_NAME_LENGTH 64
-#define FILES_IN_VIEW 12
+#define FILES_IN_VIEW 10
 #define GAMES_IN_VIEW 6
 #define ADDRESS_LENGTH 40
 
@@ -48,6 +48,8 @@ static void button_back(int param1, int param2);
 static void on_scroll(void);
 static void button_end(int param1, int param2);
 static void button_invasions(int param1, int param2);
+static void button_difficulty(int param1, int param2);
+static void button_gods(int param1, int param2);
 
 static generic_button file_buttons[] = {
     {24, 104, 264, 16, button_select_file, button_none, 0, 0},
@@ -60,8 +62,6 @@ static generic_button file_buttons[] = {
     {24, 216, 264, 16, button_select_file, button_none, 7, 0},
     {24, 232, 264, 16, button_select_file, button_none, 8, 0},
     {24, 248, 264, 16, button_select_file, button_none, 9, 0},
-    {24, 264, 264, 16, button_select_file, button_none, 10, 0},
-    {24, 280, 264, 16, button_select_file, button_none, 11, 0},
 };
 
 #define BUTTON_LESS 0
@@ -71,15 +71,19 @@ static generic_button file_buttons[] = {
 #define BUTTON_BACK 4
 #define BUTTON_END 5
 #define BUTTON_INVASIONS 6
-#define NUM_ACTION_BUTTONS 7
+#define BUTTON_DIFFICULTY 7
+#define BUTTON_GODS 8
+#define NUM_ACTION_BUTTONS 9
 static generic_button action_buttons[] = {
-    {176, 310, 24, 20, button_players, button_none, -1, 0},
-    {208, 310, 24, 20, button_players, button_none, 1, 0},
-    {64, 382, 192, 25, button_host, button_none, 0, 0},
+    {176, 280, 24, 20, button_players, button_none, -1, 0},
+    {208, 280, 24, 20, button_players, button_none, 1, 0},
+    {64, 394, 192, 25, button_host, button_none, 0, 0},
     {384, 348, 192, 25, button_join, button_none, 0, 0},
     {432, 440, 176, 25, button_back, button_none, 0, 0},
-    {16, 334, 296, 20, button_end, button_none, 0, 0},
-    {16, 356, 296, 20, button_invasions, button_none, 0, 0},
+    {16, 326, 296, 20, button_end, button_none, 0, 0},
+    {16, 348, 296, 20, button_invasions, button_none, 0, 0},
+    {16, 304, 188, 20, button_difficulty, button_none, 0, 0},
+    {208, 304, 104, 20, button_gods, button_none, 0, 0},
 };
 
 // end of the game: none, or by score after these years
@@ -95,7 +99,7 @@ static generic_button game_buttons[] = {
     {336, 204, 280, 20, button_select_game, button_none, 5, 0},
 };
 
-static scrollbar_type scrollbar = {296, 96, 208, 264, FILES_IN_VIEW, on_scroll, 1};
+static scrollbar_type scrollbar = {296, 96, 176, 264, FILES_IN_VIEW, on_scroll, 1};
 
 static struct {
     char files[MAX_FILES][FILE_NAME_LENGTH];
@@ -104,6 +108,8 @@ static struct {
     int num_players;
     int end_choice;
     int ai_invasions;
+    int difficulty;
+    int gods;
     int rules_initialized;
     uint8_t address[ADDRESS_LENGTH];
     char local_address[16];
@@ -140,7 +146,11 @@ static void init(void)
     }
     if (!data.rules_initialized) {
         data.rules_initialized = 1;
-        data.ai_invasions = 1;
+        game_rules_settings rules;
+        game_rules_default_multiplayer_settings(&rules);
+        data.ai_invasions = rules.ai_invasions;
+        data.difficulty = rules.difficulty;
+        data.gods = rules.gods_enabled;
     }
     scrollbar_init(&scrollbar, 0, data.num_files);
     net_local_address(data.local_address);
@@ -169,7 +179,7 @@ static void draw_background(void)
 static void draw_files(void)
 {
     text_draw(translation_for(TR_MP_MAP), 16, 80, FONT_NORMAL_BLACK, 0);
-    inner_panel_draw(16, 96, 18, 13);
+    inner_panel_draw(16, 96, 18, 11);
     if (!data.num_files) {
         text_draw(translation_for(TR_MP_NO_MAP), 24, 106, FONT_NORMAL_WHITE, 0);
     }
@@ -228,24 +238,33 @@ static void draw_foreground(void)
     // hosting
     text_draw(translation_for(TR_MP_HOST_TITLE), 16, 56, FONT_NORMAL_BLACK, 0);
     draw_files();
-    int width = text_draw(translation_for(TR_MP_PLAYERS), 16, 315, FONT_NORMAL_BLACK, 0);
-    text_draw_number(data.num_players, 0, "", 16 + width, 315, FONT_NORMAL_BLACK);
+    int width = text_draw(translation_for(TR_MP_PLAYERS), 16, 285, FONT_NORMAL_BLACK, 0);
+    text_draw_number(data.num_players, 0, "", 16 + width, 285, FONT_NORMAL_BLACK);
+    font_t difficulty_font = data.focus_action == BUTTON_DIFFICULTY + 1 ? FONT_NORMAL_WHITE : FONT_NORMAL_BLACK;
+    width = text_draw(translation_for(TR_MP_DIFFICULTY), 16, 308, difficulty_font, 0);
+    text_draw(translation_for(TR_MP_DIFFICULTY_0 + data.difficulty), 16 + width, 308, difficulty_font, 0);
+    font_t gods_font = data.focus_action == BUTTON_GODS + 1 ? FONT_NORMAL_WHITE : FONT_NORMAL_BLACK;
+    width = text_draw(translation_for(TR_MP_GODS), 212, 308, gods_font, 0);
+    text_draw(translation_for(data.gods ? TR_MP_YES : TR_MP_NO), 212 + width, 308, gods_font, 0);
     font_t end_font = data.focus_action == BUTTON_END + 1 ? FONT_NORMAL_WHITE : FONT_NORMAL_BLACK;
-    width = text_draw(translation_for(TR_MP_END), 16, 338, end_font, 0);
+    width = text_draw(translation_for(TR_MP_END), 16, 330, end_font, 0);
     if (END_YEARS[data.end_choice]) {
-        width += text_draw(translation_for(TR_MP_END_SCORE), 16 + width, 338, end_font, 0);
-        width += text_draw_number(END_YEARS[data.end_choice], 0, "", 16 + width, 338, end_font);
-        text_draw(translation_for(TR_MP_YEARS), 16 + width, 338, end_font, 0);
+        width += text_draw(translation_for(TR_MP_END_SCORE), 16 + width, 330, end_font, 0);
+        width += text_draw_number(END_YEARS[data.end_choice], 0, "", 16 + width, 330, end_font);
+        text_draw(translation_for(TR_MP_YEARS), 16 + width, 330, end_font, 0);
     } else {
-        text_draw(translation_for(TR_MP_END_NONE), 16 + width, 338, end_font, 0);
+        text_draw(translation_for(TR_MP_END_NONE), 16 + width, 330, end_font, 0);
     }
     font_t invasions_font = data.focus_action == BUTTON_INVASIONS + 1 ? FONT_NORMAL_WHITE : FONT_NORMAL_BLACK;
-    width = text_draw(translation_for(TR_MP_INVASIONS), 16, 360, invasions_font, 0);
-    text_draw(translation_for(data.ai_invasions ? TR_MP_YES : TR_MP_NO), 16 + width, 360, invasions_font, 0);
+    width = text_draw(translation_for(TR_MP_INVASIONS), 16, 352, invasions_font, 0);
+    text_draw(translation_for(data.ai_invasions ? TR_MP_YES : TR_MP_NO), 16 + width, 352, invasions_font, 0);
     draw_button(&action_buttons[BUTTON_LESS], string_from_ascii("-"), data.focus_action == BUTTON_LESS + 1);
     draw_button(&action_buttons[BUTTON_MORE], string_from_ascii("+"), data.focus_action == BUTTON_MORE + 1);
-    draw_button(&action_buttons[BUTTON_HOST], translation_for(TR_MP_HOST_BUTTON), data.focus_action == BUTTON_HOST + 1);
-    text_draw(translation_for(TR_MP_SEPARATE_CITIES), 16, 412, FONT_SMALL_PLAIN, 0);
+    // once hosting, the same button starts the game when every player is there
+    int hosting = mp_lockstep_get_state() == MP_LOCKSTEP_WAITING_FOR_PLAYERS && mp_lockstep_is_host();
+    draw_button(&action_buttons[BUTTON_HOST], translation_for(hosting ? TR_MP_START : TR_MP_HOST_BUTTON),
+        data.focus_action == BUTTON_HOST + 1);
+    text_draw(translation_for(TR_MP_SEPARATE_CITIES), 16, 374, FONT_SMALL_PLAIN, 0);
 
     // joining
     text_draw(translation_for(TR_MP_JOIN_TITLE), 336, 56, FONT_NORMAL_BLACK, 0);
@@ -320,19 +339,39 @@ static void button_invasions(int param1, int param2)
     data.ai_invasions = !data.ai_invasions;
 }
 
+static void button_difficulty(int param1, int param2)
+{
+    data.difficulty = (data.difficulty + 1) % 5;
+}
+
+static void button_gods(int param1, int param2)
+{
+    data.gods = !data.gods;
+}
+
 static void button_host(int param1, int param2)
 {
+    if (mp_lockstep_get_state() == MP_LOCKSTEP_WAITING_FOR_PLAYERS && mp_lockstep_is_host()) {
+        if (mp_lockstep_connected_players() == data.num_players) {
+            mp_lockstep_start_game();
+        }
+        return;
+    }
     if (!data.num_files || mp_lockstep_get_state() != MP_LOCKSTEP_OFF) {
         return;
     }
     game_rules_settings rules;
     game_rules_default_multiplayer_settings(&rules);
     rules.ai_invasions = data.ai_invasions;
+    rules.difficulty = data.difficulty;
+    rules.gods_enabled = data.gods;
     rules.end_condition = END_YEARS[data.end_choice] ? GAME_END_SCORE : GAME_END_NONE;
     rules.score_years = END_YEARS[data.end_choice] ? END_YEARS[data.end_choice] : rules.score_years;
     mp_lockstep_set_rules(&rules);
     mp_lockstep_set_started_callback(window_mp_lobby_show_started_game);
-    mp_lockstep_host(MP_LOCKSTEP_DEFAULT_PORT, data.num_players, data.files[data.selected_file], 1);
+    if (mp_lockstep_host(MP_LOCKSTEP_DEFAULT_PORT, data.num_players, data.files[data.selected_file], 1)) {
+        mp_lockstep_set_manual_start(1);
+    }
 }
 
 static void join(const char *address, int port)
