@@ -1,0 +1,11 @@
+# Smoke test: main menu, load a saved game from the test corpus, fast-forward, screenshots.
+# Run from the repository root: tools/run-automation.sh test/automation/smoke.txt
+wait 10
+screenshot build/automation/smoke-1-menu.png
+load test/data/brugle-massilia-start.sav
+wait 5
+screenshot build/automation/smoke-2-city.png
+ticks 400
+wait 2
+screenshot build/automation/smoke-3-after-400-ticks.png
+quit

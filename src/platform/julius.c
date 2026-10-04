@@ -13,6 +13,7 @@
 #include "input/mouse.h"
 #include "input/touch.h"
 #include "platform/arguments.h"
+#include "platform/automation.h"
 #include "platform/file_manager.h"
 #include "platform/file_manager_cache.h"
 #include "platform/joystick.h"
@@ -177,7 +178,8 @@ static struct {
 static void run_and_draw(void)
 {
     time_millis time_before_run = SDL_GetTicks();
-    time_set_millis(time_before_run);
+    time_set_millis(platform_automation_is_active() ? platform_automation_time() : time_before_run);
+    platform_automation_before_frame();
 
     game_run();
     Uint32 time_between_run_and_draw = SDL_GetTicks();
@@ -201,16 +203,23 @@ static void run_and_draw(void)
         text_draw_number_colored(time_after_draw - time_between_run_and_draw,
             'd', "", 70, y_offset_text, FONT_NORMAL_PLAIN, COLOR_FONT_RED);
     }
+    platform_automation_after_frame();
     platform_screen_update();
     platform_screen_render();
 }
 #else
 static void run_and_draw(void)
 {
-    time_set_millis(SDL_GetTicks());
+    if (platform_automation_is_active()) {
+        platform_automation_before_frame();
+        time_set_millis(platform_automation_time());
+    } else {
+        time_set_millis(SDL_GetTicks());
+    }
 
     game_run();
     game_draw();
+    platform_automation_after_frame();
 
     platform_screen_update();
     platform_screen_render();
@@ -364,7 +373,11 @@ static void handle_event(SDL_Event *event)
 static void teardown(void)
 {
     SDL_Log("Exiting game");
-    game_exit();
+    if (platform_automation_is_active()) {
+        game_exit_without_saving_settings();
+    } else {
+        game_exit();
+    }
     platform_screen_destroy();
     SDL_Quit();
     teardown_logging();
@@ -397,7 +410,7 @@ static void main_loop(void)
 #endif
         return;
     }
-    if (data.active) {
+    if (data.active || platform_automation_is_active()) {
         run_and_draw();
     } else {
         SDL_WaitEvent(NULL);
@@ -623,7 +636,7 @@ static void setup(const julius_args *args)
     platform_init_callback();
 #endif
 
-    time_set_millis(SDL_GetTicks());
+    time_set_millis(platform_automation_is_active() ? platform_automation_time() : SDL_GetTicks());
 
     if (!game_init()) {
         SDL_Log("Exiting: game init failed");
@@ -644,6 +657,10 @@ int main(int argc, char **argv)
 #endif
     }
 
+    if (args.automation_script && !platform_automation_init(args.automation_script)) {
+        exit_with_status(3);
+    }
+
     setup(&args);
 
     mouse_set_inside_window(1);
@@ -658,5 +675,5 @@ int main(int argc, char **argv)
     }
 #endif
 
-    return 0;
+    return platform_automation_exit_code();
 }

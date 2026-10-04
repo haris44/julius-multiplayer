@@ -8,6 +8,7 @@
 #define DISPLAY_SCALE_ERROR_MESSAGE "Option --display-scale must be followed by a scale value between 0.5 and 5"
 #define WINDOWED_AND_FULLSCREEN_ERROR_MESSAGE "Option --windowed and --fullscreen cannot both be specified"
 #define DISPLAY_ID_ERROR_MESSAGE "Option --display must be followed by a number indicating the display, starting from 0"
+#define AUTOMATION_ERROR_MESSAGE "Option --automation must be followed by a script file"
 #define UNKNOWN_OPTION_ERROR_MESSAGE "Option %s not recognized"
 
 static void print_log(const char *message)
@@ -71,6 +72,7 @@ int platform_parse_arguments(int argc, char **argv, julius_args *output_args)
     output_args->force_windowed = 0;
     output_args->force_fullscreen = 0;
     output_args->display_id = 0;
+    output_args->automation_script = 0;
 
     for (int i = 1; i < argc; i++) {
         // we ignore "-psn" arguments, this is needed to launch the app
@@ -115,6 +117,14 @@ int platform_parse_arguments(int argc, char **argv, julius_args *output_args)
                 print_log(DISPLAY_ID_ERROR_MESSAGE);
                 ok = 0;
             }
+        } else if (SDL_strcmp(argv[i], "--automation") == 0) {
+            if (i + 1 < argc) {
+                output_args->automation_script = argv[i + 1];
+                i++;
+            } else {
+                print_log(AUTOMATION_ERROR_MESSAGE);
+                ok = 0;
+            }
         } else if (SDL_strcmp(argv[i], "--windowed") == 0) {
             output_args->force_windowed = 1;
         } else if (SDL_strcmp(argv[i], "--fullscreen") == 0) {
@@ -150,6 +160,8 @@ int platform_parse_arguments(int argc, char **argv, julius_args *output_args)
         print_log("          Forces the game to start fullscreen");
         print_log("--display ID");
         print_log("          Forces the game to start on the specified display, numbered from 0");
+        print_log("--automation FILE");
+        print_log("          Runs the automation script FILE (synthetic input, screenshots), see doc/mp/TESTING.md");
         print_log("The last argument, if present, is interpreted as data directory for the Caesar 3 installation");
     }
     return ok;

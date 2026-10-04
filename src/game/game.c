@@ -192,3 +192,9 @@ void game_exit(void)
     config_save();
     sound_system_shutdown();
 }
+
+void game_exit_without_saving_settings(void)
+{
+    video_shutdown();
+    sound_system_shutdown();
+}

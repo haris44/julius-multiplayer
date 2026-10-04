@@ -8,6 +8,7 @@ typedef struct {
     int force_windowed;
     int force_fullscreen;
     int display_id;
+    const char *automation_script;
 } julius_args;
 
 int platform_parse_arguments(int argc, char **argv, julius_args *output_args);

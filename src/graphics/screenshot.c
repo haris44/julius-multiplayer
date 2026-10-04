@@ -191,39 +191,41 @@ static void show_saved_notice(const char *filename)
     city_warning_show_custom(notice_text);
 }
 
-static void create_window_screenshot(void)
+static int create_window_screenshot(const char *filename, int show_notice)
 {
     int width = screen_width();
     int height = screen_height();
 
     if (!image_create(width, height, 1)) {
         log_error("Unable to create memory for screenshot", 0, 0);
-        return;
+        return 0;
     }
 
-    const char *filename = generate_filename(DISPLAY_SCREENSHOT);
     if (!image_begin_io(filename) || !image_write_header()) {
         log_error("Unable to write screenshot to:", filename, 0);
         image_free();
-        return;
+        return 0;
     }
 
     if (!image_write_canvas()) {
         log_error("Error writing image", 0, 0);
         image_free();
-        return;
+        return 0;
     }
 
     image_finish();
     log_info("Saved screenshot:", filename, 0);
-    show_saved_notice(filename);
+    if (show_notice) {
+        show_saved_notice(filename);
+    }
     image_free();
+    return 1;
 }
 
-static void create_full_city_screenshot(void)
+static int create_full_city_screenshot(const char *filename, int show_notice)
 {
     if (!window_is(WINDOW_CITY) && !window_is(WINDOW_CITY_MILITARY)) {
-        return;
+        return 0;
     }
     pixel_offset original_camera_pixels;
     city_view_get_camera_in_pixels(&original_camera_pixels.x, &original_camera_pixels.y);
@@ -235,13 +237,12 @@ static void create_full_city_screenshot(void)
 
     if (!image_create(city_width_pixels, city_height_pixels + TILE_Y_SIZE, IMAGE_HEIGHT_CHUNK)) {
         log_error("Unable to set memory for full city screenshot", 0, 0);
-        return;
+        return 0;
     }
-    const char *filename = generate_filename(FULL_CITY_SCREENSHOT);
     if (!image_begin_io(filename) || !image_write_header()) {
         log_error("Unable to write screenshot to:", filename, 0);
         image_free();
-        return;
+        return 0;
     }
 
     int canvas_width = city_width_pixels + (city_view_is_sidebar_collapsed() ? 40 : 160);
@@ -272,16 +273,28 @@ static void create_full_city_screenshot(void)
     if (!error) {
         image_finish();
         log_info("Saved full city screenshot:", filename, 0);
-        show_saved_notice(filename);
+        if (show_notice) {
+            show_saved_notice(filename);
+        }
     }
     image_free();
+    return !error;
 }
 
 void graphics_save_screenshot(int full_city)
 {
     if (full_city) {
-        create_full_city_screenshot();
+        create_full_city_screenshot(generate_filename(FULL_CITY_SCREENSHOT), 1);
     } else {
-        create_window_screenshot();
+        create_window_screenshot(generate_filename(DISPLAY_SCREENSHOT), 1);
+    }
+}
+
+int graphics_save_screenshot_to_file(const char *filename, int full_city)
+{
+    if (full_city) {
+        return create_full_city_screenshot(filename, 0);
+    } else {
+        return create_window_screenshot(filename, 0);
     }
 }

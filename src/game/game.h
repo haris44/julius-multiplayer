@@ -17,4 +17,9 @@ void game_exit_editor(void);
 
 void game_exit(void);
 
+/**
+ * Exits the game without persisting settings, used by automated runs
+ */
+void game_exit_without_saving_settings(void);
+
 #endif // GAME_GAME_H
