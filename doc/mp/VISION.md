@@ -49,6 +49,8 @@ Claude a tranché ces points pour pouvoir avancer. Chacun peut être remis en ca
 | H8 | Les villes de l'empire (non-joueurs) restent des partenaires commerciaux ; s'y ajoute le **commerce entre joueurs**. | — |
 | H9 | LAN = un joueur **héberge**, les autres rejoignent par découverte automatique ou adresse IP. Pas d'Internet, pas de serveur dédié. | — |
 | H10 | Parties **mixtes Mac / PC** : la simulation doit être déterministe sur toutes les plateformes. | — |
+| H11 | Chaque joueur a un **territoire** autour de son point d'arrivée et ne construit que dessus. Une bande neutre sépare les territoires, ce qui empêche les cités de se « brancher » l'une sur l'autre (DECISIONS D-006). | Construction libre partout, comme dans AoE2 : beaucoup plus de travail d'isolement. |
+| H12 | En multijoueur, le temps ne s'arrête pas quand un joueur ouvre une fenêtre, et l'annulation n'existe plus (D-010). | — |
 
 ## Hors périmètre (pour l'instant)
 

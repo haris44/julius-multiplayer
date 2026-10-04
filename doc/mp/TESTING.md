@@ -1,0 +1,95 @@
+# Tester le projet (sans humain)
+
+> Comment Claude vérifie lui-même que tout marche. Toute nouvelle fonctionnalité arrive avec au
+> moins un test de cette page ; une tâche de la roadmap n'est « faite » que si ses tests passent.
+
+## 1. Vérification standard : `tools/check.sh`
+
+```sh
+tools/check.sh          # build + tous les tests ctest ; doit être vert avant CHAQUE commit
+```
+
+- Compile le jeu (`build/julius.app`) et les outils de test.
+- Lance `ctest`, qui exécute en particulier les **tests de parité** (§2).
+- Refuse de tourner si le disque a moins de 300 Mo libres.
+
+## 2. Tests de parité avec le Caesar III original (existants, hérités de Julius)
+
+`test/CMakeLists.txt` → exécutable `autopilot` (sans graphismes, sans données du jeu, grâce aux
+stubs de `test/stub/`). Chaque test charge une sauvegarde de `test/data/`, simule N ticks et compare
+le résultat **octet par octet** (via `test/sav/sav_compare.c`) à une sauvegarde produite par le jeu
+original au même moment.
+
+Ces 36 scénarios couvrent invasions, légions de César, batailles lointaines, séismes, colères des
+dieux, demandes impériales, grandes cités, indigènes, commerce… C'est **la preuve que le gameplay
+intérieur reste celui de l'original** (exigence E7). Règles :
+
+- Ils tournent en **mode classique** (un joueur, César actif, format de sauvegarde d'origine). Tout
+  code multijoueur doit être inactif dans ce mode.
+- Un test rouge = régression à corriger, **jamais** un test à modifier ou à désactiver.
+- Durée : ~1,3 s. On les lance tout le temps.
+
+## 3. Pilotage du vrai jeu : `--automation` (captures d'écran)
+
+Le jeu tourne **sans fenêtre** (pilotes SDL `dummy`) en suivant un script, avec une horloge virtuelle
+(16 ms par frame), donc de façon reproductible. Claude regarde les PNG produits avec l'outil `Read`.
+
+```sh
+tools/run-automation.sh test/automation/smoke.txt [TIMEOUT_S]
+# → build/automation/*.png ; code de sortie 0 si OK, 3 si une commande a échoué, 142 si timeout
+```
+
+Données du jeu : `C3_DATA_DIR` (par défaut `../donnees-c3`). Les chemins du script sont relatifs au
+répertoire courant (lancer depuis la racine du dépôt).
+
+### Syntaxe des scripts (une commande par ligne, `#` = commentaire)
+
+| Commande | Effet |
+|----------|-------|
+| `wait N` | laisse passer N frames |
+| `mouse X Y` | déplace la souris (coordonnées écran, fenêtre 800×600) |
+| `click X Y` / `rclick X Y` | clic gauche / droit (appui puis relâchement sur 2 frames) |
+| `drag X1 Y1 X2 Y2` | glisser (ex. tracer une route) |
+| `key NOM` | touche SDL, avec modificateurs : `key Escape`, `key ctrl+S`, `key F1` |
+| `text TEXTE` | saisie de texte |
+| `load FICHIER.sav` | charge une sauvegarde et affiche la ville |
+| `save FICHIER.sav` | écrit une sauvegarde |
+| `ticks N` | avance la simulation de N ticks d'un coup, en appelant directement `game_tick_run` (ignore les pauses dues à l'interface) |
+| `run N` | laisse la boucle normale du jeu avancer de N ticks, pauses d'interface comprises ; échoue si le jeu reste bloqué |
+| `speed N` | vitesse de jeu (10 à 500) |
+| `screenshot F.png` | capture de l'écran courant |
+| `cityshot F.png` | capture de toute la ville (fichier lourd : ~10 Mo pour 162×162) |
+| `log TEXTE` | écrit un repère dans le journal |
+| `quit` | quitte ; c'est aussi automatique en fin de script |
+
+Les réglages (`c3.inf`, `julius.ini`) ne sont **pas** sauvegardés à la sortie d'un run automatisé.
+
+Bon à savoir :
+- La souris démarre au centre de l'écran. En (0,0), la vue défilerait toute seule par les bords, ce qui gèle aussi la simulation.
+- Un événement injecté n'est traité qu'à la frame suivante. Un clic s'étale donc sur 2 à 3 frames.
+- Deux clics au même endroit à moins de 300 ms, soit environ 18 frames virtuelles, comptent comme un double-clic. Mettre un `wait 20` entre deux clics.
+- La simulation n'avance que dans la vue de la ville : elle est figée pendant un glisser de construction ou quand une fenêtre est ouverte.
+- Pour voir si quelque chose bouge, comparer deux captures plutôt que de les regarder une par une. Par exemple, une caméra stable donne environ 2 % de pixels différents, dus aux animations.
+
+### Garde-fous
+
+- Ne **jamais** lancer `julius` sans `SDL_VIDEODRIVER=dummy` : une vraie fenêtre s'ouvrirait chez
+  Alexandre. `--help` ne quitte pas sur macOS : il lance le jeu.
+- Pas d'enregistrement d'images frame par frame (`SDL_VIDEO_DUMMY_SAVE_FRAMES`) : ~2 Mo par frame,
+  et le disque est presque plein.
+- Les PNG vont dans `build/automation/` (ignoré par git). Faire le ménage après usage.
+
+## 4. Tests à construire (voir ROADMAP)
+
+| Test | Ce qu'il prouve | Jalon |
+|------|-----------------|-------|
+| **Trace de sommes de contrôle** (`simtool`) : hachage stable de tout l'état de simulation, à chaque tick | base de la détection des désynchronisations ; trouve le premier tick fautif | M1.1–M1.2 |
+| **Idempotence** : une même sauvegarde chargée deux fois dans un processus donne la même trace | plus d'état caché qui fuit d'une partie à l'autre | M1.3 |
+| **Rejeu** : sauvegarde + journal de commandes → même trace à chaque exécution | déterminisme de la couche de commandes | M2.7 |
+| **Équivalence interface / rejeu** : une partie jouée par script d'automatisation, puis rejouée sans tête, donne la même somme de contrôle | les commandes capturent fidèlement les actions du joueur | M2.7 |
+| **Invariance par translation** : une sauvegarde classique recopiée dans une grille plus grande, avec un décalage, évolue exactement pareil (comparaison après extraction) | grandes cartes sans changement de gameplay | M3.3 |
+| **Isolement « jumeaux »** : la même sauvegarde classique placée deux fois sur une même carte (cités 0 et 1) redonne, pour chaque cité, la référence du jeu original | E7 pour le moteur multi-cités : les cités ne s'influencent pas | M3.7 |
+| **Reprise exacte** : continuer une partie = la sauvegarder (`.mpsav`) puis la recharger | état caché complet dans la sauvegarde multijoueur | M3.8 |
+| **Lockstep multi-processus** : 2 à 4 instances sans tête reliées en local, commandes scriptées, traces identiques | réseau et synchronisation | M5.3 |
+| **Multiplateforme** : mêmes rejeux sur macOS arm64, Windows x64 et Linux (CI), mêmes traces | parties mixtes Mac / PC | M5.6 |
+| **Scénarios visuels** (`test/automation/*.txt`) : captures aux étapes clés, relues par Claude | rendu, interface, propriété des bâtiments | chaque jalon UI |
