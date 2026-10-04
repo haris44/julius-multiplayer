@@ -1,11 +1,16 @@
 #ifndef CITY_VIEW_H
 #define CITY_VIEW_H
 
+#include "map/grid.h"
+
 #include "core/buffer.h"
 
 // TODO get rid of these
-#define VIEW_X_MAX 165
-#define VIEW_Y_MAX 325
+// isometric view table: sized for the largest grid, used up to the size of the current one
+#define VIEW_X_CAPACITY (GRID_MAX_SIZE + 3)
+#define VIEW_Y_CAPACITY (2 * GRID_MAX_SIZE + 1)
+#define VIEW_X_MAX (GRID_SIZE + 3)
+#define VIEW_Y_MAX (2 * GRID_SIZE + 1)
 
 typedef struct {
     int x;

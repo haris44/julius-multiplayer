@@ -93,8 +93,12 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
   *Fait* : `simtool twins` et `twinfigures`, 16 sauvegardes identiques sur 3 000 ticks (et 12 000 pour 4 d'entre
   elles), dont la jumelle copie exacte personnage par personnage (D-023). Seul écart connu : les sans-abri d'une carte
   sans point de sortie visent tous la case (0, 0) de la carte (inv0, après 4 300 ticks) ; réglé par M4.2.
-- [ ] **M3.8** Sauvegarde multijoueur `.mpsav` (monde, cités, état caché). *Critère* : test de reprise exacte
+- [x] **M3.8** Sauvegarde multijoueur `.mpsav` (monde, cités, état caché). *Critère* : test de reprise exacte
   (continuer la partie = sauvegarder puis recharger).
+  *Fait* : `mp/savegame` (D-024), `simtool mpresume`. Sur 13 sauvegardes, en jumelles (1 500 + 400 ticks) et en cité
+  seule sur grande grille (700 + 300), l'état rechargé a la même somme de contrôle et la partie reprise reste identique
+  tick par tick. Un oracle compare en plus toute la mémoire enregistrée de chaque cité (hors messages, qui relèvent de
+  l'interface). 16 cas dans ctest.
 
 ## M4 — Règles du jeu libre multijoueur
 - [ ] **M4.1** Neutralisation de César en multijoueur (liste : code-map/04 §3). *Critères* : en multijoueur, une

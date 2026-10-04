@@ -37,7 +37,7 @@ static struct {
     } selected_tile;
 } data;
 
-static int view_to_grid_offset_lookup[VIEW_X_MAX][VIEW_Y_MAX];
+static int view_to_grid_offset_lookup[VIEW_X_CAPACITY][VIEW_Y_CAPACITY];
 
 static void check_camera_boundaries(void)
 {

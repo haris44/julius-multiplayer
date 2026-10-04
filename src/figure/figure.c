@@ -11,6 +11,7 @@
 #include "map/grid.h"
 #include "figure/formation.h"
 #include "game/player_clone.h"
+#include "game/save_format.h"
 
 #include <string.h>
 
@@ -164,20 +165,25 @@ static void figure_save(buffer *buf, const figure *f)
     buffer_write_i8(buf, f->direction);
     buffer_write_i8(buf, f->previous_tile_direction);
     buffer_write_i8(buf, f->attack_direction);
-    buffer_write_u8(buf, f->x);
-    buffer_write_u8(buf, f->y);
-    buffer_write_u8(buf, f->previous_tile_x);
-    buffer_write_u8(buf, f->previous_tile_y);
+    save_write_coord(buf, f->x);
+    save_write_coord(buf, f->y);
+    save_write_coord(buf, f->previous_tile_x);
+    save_write_coord(buf, f->previous_tile_y);
     buffer_write_u8(buf, f->missile_damage);
     buffer_write_u8(buf, f->damage);
-    buffer_write_i16(buf, f->grid_offset);
-    buffer_write_u8(buf, f->destination_x);
-    buffer_write_u8(buf, f->destination_y);
-    buffer_write_i16(buf, f->destination_grid_offset);
-    buffer_write_u8(buf, f->source_x);
-    buffer_write_u8(buf, f->source_y);
-    buffer_write_u8(buf, f->formation_position_x.soldier);
-    buffer_write_u8(buf, f->formation_position_y.soldier);
+    save_write_offset(buf, f->grid_offset);
+    save_write_coord(buf, f->destination_x);
+    save_write_coord(buf, f->destination_y);
+    save_write_offset(buf, f->destination_grid_offset);
+    save_write_coord(buf, f->source_x);
+    save_write_coord(buf, f->source_y);
+    if (save_format_wide) {
+        buffer_write_i16(buf, f->formation_position_x.enemy); // same bits as the soldier position
+        buffer_write_i16(buf, f->formation_position_y.enemy);
+    } else {
+        buffer_write_u8(buf, (uint8_t) f->formation_position_x.soldier);
+        buffer_write_u8(buf, (uint8_t) f->formation_position_y.soldier);
+    }
     buffer_write_i16(buf, f->__unused_24);
     buffer_write_i16(buf, f->wait_ticks);
     buffer_write_u8(buf, f->action_state);
@@ -264,20 +270,23 @@ static void figure_load(buffer *buf, figure *f)
     f->direction = buffer_read_i8(buf);
     f->previous_tile_direction = buffer_read_i8(buf);
     f->attack_direction = buffer_read_i8(buf);
-    f->x = GRID_COORD(buffer_read_u8(buf));
-    f->y = GRID_COORD(buffer_read_u8(buf));
-    f->previous_tile_x = GRID_COORD(buffer_read_u8(buf));
-    f->previous_tile_y = GRID_COORD(buffer_read_u8(buf));
+    f->x = GRID_COORD(save_read_coord(buf));
+    f->y = GRID_COORD(save_read_coord(buf));
+    f->previous_tile_x = GRID_COORD(save_read_coord(buf));
+    f->previous_tile_y = GRID_COORD(save_read_coord(buf));
     f->missile_damage = buffer_read_u8(buf);
     f->damage = buffer_read_u8(buf);
-    f->grid_offset = buffer_read_i16(buf);
-    f->destination_x = GRID_COORD(buffer_read_u8(buf));
-    f->destination_y = GRID_COORD(buffer_read_u8(buf));
-    f->destination_grid_offset = buffer_read_i16(buf);
-    f->source_x = GRID_COORD(buffer_read_u8(buf));
-    f->source_y = GRID_COORD(buffer_read_u8(buf));
+    f->grid_offset = save_read_offset(buf);
+    f->destination_x = GRID_COORD(save_read_coord(buf));
+    f->destination_y = GRID_COORD(save_read_coord(buf));
+    f->destination_grid_offset = save_read_offset(buf);
+    f->source_x = GRID_COORD(save_read_coord(buf));
+    f->source_y = GRID_COORD(save_read_coord(buf));
     // one byte in classic saved games: signed for enemies, unsigned for soldiers
-    if (figure_is_enemy(f)) {
+    if (save_format_wide) {
+        f->formation_position_x.enemy = buffer_read_i16(buf);
+        f->formation_position_y.enemy = buffer_read_i16(buf);
+    } else if (figure_is_enemy(f)) {
         f->formation_position_x.enemy = buffer_read_i8(buf);
         f->formation_position_y.enemy = buffer_read_i8(buf);
     } else {
@@ -355,8 +364,10 @@ void figure_save_state(buffer *list, buffer *seq)
 {
     buffer_write_i32(seq, data.created_sequence);
 
+    // the slice of the current player: the whole array in a classic game
+    int base = FIGURE_FIRST - 1;
     for (int i = 0; i < MAX_FIGURES; i++) {
-        figure_save(list, &data.figures[i]);
+        figure_save(list, &data.figures[base + i]);
     }
 }
 
@@ -364,9 +375,10 @@ void figure_load_state(buffer *list, buffer *seq)
 {
     data.created_sequence = buffer_read_i32(seq);
 
+    int base = FIGURE_FIRST - 1;
     for (int i = 0; i < MAX_FIGURES; i++) {
-        figure_load(list, &data.figures[i]);
-        data.figures[i].id = i;
+        figure_load(list, &data.figures[base + i]);
+        data.figures[base + i].id = base + i;
     }
 }
 
@@ -442,4 +454,9 @@ void figure_clone_player(const player_clone *c)
         figure source = data.figures[c->from * MAX_FIGURES + i];
         figure_clone_record(&data.figures[c->to * MAX_FIGURES + i], &source, c->to * MAX_FIGURES + i, c);
     }
+}
+
+void figure_save_record(buffer *buf, const figure *f)
+{
+    figure_save(buf, f);
 }

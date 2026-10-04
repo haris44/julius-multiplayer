@@ -1,10 +1,12 @@
 #include "extra_state.h"
 
 #include "building/count.h"
+#include "building/granary.h"
 #include "building/list.h"
 #include "building/maintenance.h"
 #include "city/labor.h"
 #include "core/random.h"
+#include "map/grid.h"
 #include "map/image_context.h"
 #include "map/point.h"
 #include "map/soldier_strength.h"
@@ -21,6 +23,7 @@ void game_extra_state_reset(void)
     map_point_reset_last_result();
     building_list_reset_extra_state();
     city_labor_reset_extra_state();
+    building_granary_reset_extra_state();
 }
 
 void game_extra_state_save(buffer *buf)
@@ -33,6 +36,7 @@ void game_extra_state_save(buffer *buf)
     map_point_save_state(buf);
     building_list_save_extra_state(buf);
     city_labor_save_extra_state(buf);
+    building_granary_save_extra_state(buf);
 }
 
 void game_extra_state_load(buffer *buf)
@@ -45,23 +49,25 @@ void game_extra_state_load(buffer *buf)
     map_point_load_state(buf);
     building_list_load_extra_state(buf);
     city_labor_load_extra_state(buf);
+    building_granary_load_extra_state(buf);
 }
 
 int game_extra_state_size(void)
 {
-    static int size = 0;
-    if (!size) {
-        // Measure by saving into a buffer large enough for every part
-        int capacity = 64 * 1024;
-        void *data = malloc(capacity);
+    // depends on the size of the grid (soldier strength): measured on every call
+    static void *data;
+    static int capacity;
+    int needed = 64 * 1024 + GRID_MAX_TILES;
+    if (capacity < needed) {
+        free(data);
+        data = malloc(needed);
+        capacity = data ? needed : 0;
         if (!data) {
             return 0;
         }
-        buffer buf;
-        buffer_init(&buf, data, capacity);
-        game_extra_state_save(&buf);
-        size = buf.index;
-        free(data);
     }
-    return size;
+    buffer buf;
+    buffer_init(&buf, data, capacity);
+    game_extra_state_save(&buf);
+    return buf.index;
 }

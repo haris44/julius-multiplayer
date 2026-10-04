@@ -107,7 +107,8 @@ void building_storage_accept_none(int storage_id)
 
 void building_storage_save_state(buffer *buf)
 {
-    for (int i = 0; i < MAX_STORAGES; i++) {
+    // slice of the current player
+    for (int i = STORAGE_FIRST - 1; i < STORAGE_END; i++) {
         buffer_write_i32(buf, 0); // unused integer
         buffer_write_i32(buf, data.storages[i].building_id);
         buffer_write_u8(buf, (uint8_t) data.storages[i].in_use);
@@ -123,7 +124,7 @@ void building_storage_save_state(buffer *buf)
 
 void building_storage_load_state(buffer *buf)
 {
-    for (int i = 0; i < MAX_STORAGES; i++) {
+    for (int i = STORAGE_FIRST - 1; i < STORAGE_END; i++) {
         buffer_skip(buf, 4); // unused integer
         data.storages[i].building_id = buffer_read_i32(buf);
         data.storages[i].in_use = buffer_read_u8(buf);

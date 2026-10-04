@@ -173,4 +173,9 @@ void figure_clone_player(const player_clone *c);
  */
 void figure_clone_record(figure *f, const figure *source, int new_id, const player_clone *c);
 
+/**
+ * Writes one figure record as saved games do (used to locate fields in checksums)
+ */
+void figure_save_record(buffer *buf, const figure *f);
+
 #endif // FIGURE_FIGURE_H

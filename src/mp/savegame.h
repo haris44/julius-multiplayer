@@ -1,0 +1,28 @@
+#ifndef MP_SAVEGAME_H
+#define MP_SAVEGAME_H
+
+#include <stdint.h>
+
+/**
+ * @file
+ * Multiplayer saved games (.mpsav): the whole simulation of every city, with wide fields
+ * (doc/mp/DECISIONS.md D-011, D-024). Loading one continues the game exactly.
+ */
+
+/**
+ * Visits every piece of the multiplayer state in a fixed order: the world, then each city
+ * @param visitor Called with the name, data and size of every piece
+ */
+typedef void (*mp_savegame_visitor)(const char *name, const unsigned char *data, int size, void *userdata);
+void mp_savegame_visit(mp_savegame_visitor visitor, void *userdata);
+
+int mp_savegame_write(const char *filename);
+
+int mp_savegame_read(const char *filename);
+
+/**
+ * @return Whether the current game needs the multiplayer format (several cities or a large grid)
+ */
+int mp_savegame_is_needed(void);
+
+#endif // MP_SAVEGAME_H

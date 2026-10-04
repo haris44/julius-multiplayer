@@ -13,6 +13,8 @@
 #include "game/player_context.h"
 #include "game/player_clone.h"
 
+#include <string.h>
+
 #define MAX_GRANARIES 100
 #define ONE_LOAD 100
 #define UNITS_PER_LOAD 100
@@ -166,6 +168,35 @@ int building_granary_determine_worker_task(building *granary)
         return GRANARY_TASK_GETTING;
     }
     return GRANARY_TASK_NONE;
+}
+
+void building_granary_reset_extra_state(void)
+{
+    memset(&non_getting_granaries, 0, sizeof(non_getting_granaries));
+}
+
+void building_granary_save_extra_state(buffer *buf)
+{
+    for (int i = 0; i < MAX_GRANARIES; i++) {
+        buffer_write_i32(buf, non_getting_granaries.building_ids[i]);
+    }
+    buffer_write_i32(buf, non_getting_granaries.num_items);
+    buffer_write_i32(buf, non_getting_granaries.total_storage_wheat);
+    buffer_write_i32(buf, non_getting_granaries.total_storage_vegetables);
+    buffer_write_i32(buf, non_getting_granaries.total_storage_fruit);
+    buffer_write_i32(buf, non_getting_granaries.total_storage_meat);
+}
+
+void building_granary_load_extra_state(buffer *buf)
+{
+    for (int i = 0; i < MAX_GRANARIES; i++) {
+        non_getting_granaries.building_ids[i] = buffer_read_i32(buf);
+    }
+    non_getting_granaries.num_items = buffer_read_i32(buf);
+    non_getting_granaries.total_storage_wheat = buffer_read_i32(buf);
+    non_getting_granaries.total_storage_vegetables = buffer_read_i32(buf);
+    non_getting_granaries.total_storage_fruit = buffer_read_i32(buf);
+    non_getting_granaries.total_storage_meat = buffer_read_i32(buf);
 }
 
 void building_granaries_calculate_stocks(void)

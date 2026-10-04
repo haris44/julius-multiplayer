@@ -60,6 +60,14 @@ int player_context_state_size(void);
 const unsigned char *player_context_slot(int player_id);
 
 /**
+ * Name of the first registered state, apart from the ignored ones (0-terminated list), that differs
+ * between two copies of a slot, or 0 if none:
+ * tests use it to check that loading a saved game restores every city exactly
+ */
+const char *player_context_first_difference(const unsigned char *a, const unsigned char *b,
+    const char **ignored_names);
+
+/**
  * Replaces the stored state of a player (not the current one)
  */
 void player_context_set_slot(int player_id, const unsigned char *state);

@@ -2,6 +2,7 @@
 #define BUILDING_GRANARY_H
 
 #include "building/building.h"
+#include "core/buffer.h"
 #include "map/point.h"
 
 enum {
@@ -18,6 +19,13 @@ int building_granary_remove_for_getting_deliveryman(building *src, building *dst
 int building_granary_determine_worker_task(building *granary);
 
 void building_granaries_calculate_stocks(void);
+
+/**
+ * Stocks computed every 50 ticks and not stored in saved games (game/extra_state.h)
+ */
+void building_granary_reset_extra_state(void);
+void building_granary_save_extra_state(buffer *buf);
+void building_granary_load_extra_state(buffer *buf);
 
 int building_granary_for_storing(int x, int y, int resource, int distance_from_entry, int road_network_id,
                                  int force_on_stockpile, int *understaffed, map_point *dst);

@@ -5,6 +5,10 @@
 #include "city/ratings.h"
 #include "core/buffer.h"
 #include "game/extra_state.h"
+#include "mp/savegame.h"
+#include "game/save_format.h"
+#include "game/player_context.h"
+#include "figure/figure.h"
 #include "game/file_io.h"
 
 #include <stdlib.h>
@@ -13,10 +17,8 @@
 #define FNV_OFFSET_BASIS 0xcbf29ce484222325ULL
 #define FNV_PRIME 0x100000001b3ULL
 
-#define RECORD_SIZE 128
 
 // Figure record: phrase_sequence_exact, phrase_id and phrase_sequence_city, set by the building info window
-#define FIGURE_PHRASE_OFFSET 106
 #define FIGURE_PHRASE_SIZE 3
 
 // Bitfields grid: BIT_CONSTRUCTION (0x10) and BIT_DELETED (0x40) are written by construction previews
@@ -43,13 +45,21 @@ static const char *EXCLUDED_PIECES[] = {
     0
 };
 
+// Where the fields written by the user interface are, in classic and in wide records (D-024)
+typedef struct {
+    int building_size;
+    int building_overlay;
+    int building_type;
+    int building_evolve_text;
+    int figure_size;
+    int figure_phrase;
+} record_layout;
+
 typedef struct {
     uint64_t total;
     mp_checksum_piece_callback callback;
     void *userdata;
-    int overlay_flag_offset;
-    int type_offset;
-    int evolve_text_offset;
+    record_layout layout;
 } checksum_context;
 
 static int is_excluded(const char *name)
@@ -67,52 +77,80 @@ static uint64_t hash_byte(uint64_t hash, uint8_t value)
     return (hash ^ value) * FNV_PRIME;
 }
 
-enum {
-    FIELD_OVERLAY_FLAG,
-    FIELD_TYPE,
-    FIELD_EVOLVE_TEXT,
-    FIELD_MAX
-};
-
-static void set_field(building *b, int field, int value)
+static int serialize_building(uint8_t *data, building *b)
 {
-    switch (field) {
-        case FIELD_OVERLAY_FLAG: b->show_on_problem_overlay = value; break;
-        case FIELD_TYPE: b->type = value ? BUILDING_HOUSE_LARGE_TENT : BUILDING_HOUSE_SMALL_TENT; break;
-        case FIELD_EVOLVE_TEXT: b->type = BUILDING_HOUSE_SMALL_TENT; b->data.house.evolve_text_id = value; break;
-    }
+    buffer buf;
+    buffer_init(&buf, data, 512);
+    building_state_save_to_buffer(&buf, b);
+    return buf.index;
 }
 
-/**
- * Finds where a field is stored in a building record: positions depend on the type-specific
- * data written before them, so we let the real serializer tell us.
- */
-static int find_field_offset(int field)
+static int first_difference(const uint8_t *a, const uint8_t *b, int size)
 {
-    static int offsets[FIELD_MAX] = { -2, -2, -2 };
-    if (offsets[field] != -2) {
-        return offsets[field];
-    }
-    uint8_t first[RECORD_SIZE];
-    uint8_t second[RECORD_SIZE];
-    buffer buf;
-    building b;
-    memset(&b, 0, sizeof(b));
-    set_field(&b, field, 0);
-    buffer_init(&buf, first, RECORD_SIZE);
-    building_state_save_to_buffer(&buf, &b);
-    set_field(&b, field, 1);
-    buffer_init(&buf, second, RECORD_SIZE);
-    building_state_save_to_buffer(&buf, &b);
-
-    offsets[field] = -1;
-    for (int i = 0; i < RECORD_SIZE; i++) {
-        if (first[i] != second[i]) {
-            offsets[field] = i;
-            break;
+    for (int i = 0; i < size; i++) {
+        if (a[i] != b[i]) {
+            return i;
         }
     }
-    return offsets[field];
+    return -1;
+}
+
+static int building_field_offset(int size, void (*set)(building *b, int value))
+{
+    uint8_t first[512], second[512];
+    building b;
+    memset(&b, 0, sizeof(b));
+    set(&b, 0);
+    serialize_building(first, &b);
+    set(&b, 1);
+    serialize_building(second, &b);
+    return first_difference(first, second, size);
+}
+
+static void set_overlay(building *b, int value)
+{
+    b->show_on_problem_overlay = value;
+}
+
+static void set_type(building *b, int value)
+{
+    b->type = value ? BUILDING_HOUSE_LARGE_TENT : BUILDING_HOUSE_SMALL_TENT;
+}
+
+static void set_evolve_text(building *b, int value)
+{
+    b->type = BUILDING_HOUSE_SMALL_TENT;
+    b->data.house.evolve_text_id = value;
+}
+
+static const record_layout *get_layout(void)
+{
+    static record_layout layouts[2];
+    static int known[2];
+    int mode = save_format_wide ? 1 : 0;
+    if (!known[mode]) {
+        record_layout *l = &layouts[mode];
+        uint8_t first[512], second[512];
+        building b;
+        memset(&b, 0, sizeof(b));
+        l->building_size = serialize_building(first, &b);
+        l->building_overlay = building_field_offset(l->building_size, set_overlay);
+        l->building_type = building_field_offset(l->building_size, set_type);
+        l->building_evolve_text = building_field_offset(l->building_size, set_evolve_text);
+
+        figure f;
+        memset(&f, 0, sizeof(f));
+        buffer buf;
+        buffer_init(&buf, first, 512);
+        figure_save_record(&buf, &f);
+        l->figure_size = buf.index;
+        f.phrase_sequence_exact = 1;
+        buffer_init(&buf, second, 512);
+        figure_save_record(&buf, &f);
+        l->figure_phrase = first_difference(first, second, l->figure_size);
+        known[mode] = 1;
+    }
+    return &layouts[mode];
 }
 
 static int record_type(const uint8_t *record, int type_offset)
@@ -123,26 +161,28 @@ static int record_type(const uint8_t *record, int type_offset)
 
 static uint64_t hash_piece(const char *name, const uint8_t *data, int size, const checksum_context *ctx)
 {
+    const record_layout *l = &ctx->layout;
     uint64_t hash = FNV_OFFSET_BASIS;
     if (strcmp(name, "figures") == 0) {
         for (int i = 0; i < size; i++) {
-            int field = i % RECORD_SIZE;
-            // record 0 is the null figure: a scratch record written to when no figure exists, shared by all cities
-            int masked = i < RECORD_SIZE ||
-                (field >= FIGURE_PHRASE_OFFSET && field < FIGURE_PHRASE_OFFSET + FIGURE_PHRASE_SIZE);
+            int field = i % l->figure_size;
+            // record 0 is the null figure: a scratch record written to when no figure exists, shared by all cities;
+            // phrases are chosen by the building info window
+            int masked = i < l->figure_size ||
+                (field >= l->figure_phrase && field < l->figure_phrase + FIGURE_PHRASE_SIZE);
             hash = hash_byte(hash, masked ? 0 : data[i]);
         }
     } else if (strcmp(name, "buildings") == 0) {
         int is_house = 0;
         for (int i = 0; i < size; i++) {
-            int field = i % RECORD_SIZE;
+            int field = i % l->building_size;
             if (field == 0) {
-                is_house = building_is_house(record_type(&data[i], ctx->type_offset));
+                is_house = building_is_house(record_type(&data[i], l->building_type));
             }
-            // Record 0 is the null building, whose fields are scribbled on by the user interface;
+            // record 0 is the null building, whose fields are scribbled on by the user interface;
             // the overlay flag and the evolution text of houses are set by windows
-            int masked = i < RECORD_SIZE || field == ctx->overlay_flag_offset ||
-                (is_house && field == ctx->evolve_text_offset);
+            int masked = i < l->building_size || field == l->building_overlay ||
+                (is_house && field == l->building_evolve_text);
             hash = hash_byte(hash, masked ? 0 : data[i]);
         }
     } else if (strcmp(name, "bitfields_grid") == 0) {
@@ -177,10 +217,13 @@ static void visit_piece(const char *name, const unsigned char *data, int size, v
 static void visit_extra_state(checksum_context *ctx)
 {
     static uint8_t *data;
-    static int size;
-    if (!data) {
-        size = game_extra_state_size();
+    static int capacity;
+    // its size follows the size of the grid
+    int size = game_extra_state_size();
+    if (capacity < size) {
+        free(data);
         data = malloc(size);
+        capacity = data ? size : 0;
         if (!data) {
             return;
         }
@@ -193,14 +236,32 @@ static void visit_extra_state(checksum_context *ctx)
 
 uint64_t mp_checksum_state_pieces(mp_checksum_piece_callback callback, void *userdata)
 {
-    checksum_context ctx = { FNV_OFFSET_BASIS, callback, userdata,
-        find_field_offset(FIELD_OVERLAY_FLAG), find_field_offset(FIELD_TYPE), find_field_offset(FIELD_EVOLVE_TEXT) };
+    checksum_context ctx = { FNV_OFFSET_BASIS, callback, userdata };
     // the rating selected in the ratings advisor is a choice of the local player
-    selected_rating rating = city_rating_selected();
-    city_rating_select(SELECTED_RATING_NONE);
-    game_file_io_visit_saved_game(visit_piece, &ctx);
-    city_rating_select(rating);
-    visit_extra_state(&ctx);
+    int previous = player_context_current();
+    selected_rating ratings[PLAYER_CONTEXT_MAX_PLAYERS];
+    for (int p = 0; p < player_context_num_players(); p++) {
+        player_context_switch(p);
+        ratings[p] = city_rating_selected();
+        city_rating_select(SELECTED_RATING_NONE);
+    }
+    player_context_switch(previous);
+    if (mp_savegame_is_needed()) {
+        // several cities or a large map: every city, wide fields
+        save_format_wide = 1;
+        ctx.layout = *get_layout();
+        save_format_wide = 0;
+        mp_savegame_visit(visit_piece, &ctx);
+    } else {
+        ctx.layout = *get_layout();
+        game_file_io_visit_saved_game(visit_piece, &ctx);
+        visit_extra_state(&ctx);
+    }
+    for (int p = 0; p < player_context_num_players(); p++) {
+        player_context_switch(p);
+        city_rating_select(ratings[p]);
+    }
+    player_context_switch(previous);
     return ctx.total;
 }
 

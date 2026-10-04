@@ -1,5 +1,8 @@
 #include "file_io.h"
 
+#include "game/save_format.h"
+#include "map/grid.h"
+
 #include "building/barracks.h"
 #include "building/count.h"
 #include "building/list.h"
@@ -168,11 +171,16 @@ typedef struct {
     buffer *end_marker;
 } savegame_state;
 
-static struct {
+typedef struct {
     int num_pieces;
     file_piece pieces[100];
     savegame_state state;
-} savegame_data = {0};
+} savegame_pieces;
+
+static savegame_pieces savegame_data = {0};
+// multiplayer state: same pieces, wide fields and variable sizes (doc/mp/DECISIONS.md D-024)
+static savegame_pieces wide_savegame_data = {0};
+static savegame_pieces *active_savegame = &savegame_data;
 
 static void init_file_piece(file_piece *piece, int size, int compressed)
 {
@@ -191,7 +199,11 @@ static buffer *create_scenario_piece(int size)
 
 static buffer *create_savegame_piece(int size, int compressed, const char *name)
 {
-    file_piece *piece = &savegame_data.pieces[savegame_data.num_pieces++];
+    file_piece *piece = &active_savegame->pieces[active_savegame->num_pieces++];
+    if (active_savegame == &wide_savegame_data) {
+        // wide fields need more room; grids hold up to GRID_MAX_SIZE * GRID_MAX_SIZE tiles
+        size = 2 * size + (strstr(name, "grid") ? 2 * GRID_MAX_TILES : 0);
+    }
     init_file_piece(piece, size, compressed);
     piece->name = name;
     return &piece->buf;
@@ -218,15 +230,15 @@ static void init_scenario_data(void)
     state->end_marker = create_scenario_piece(4);
 }
 
-static void init_savegame_data(void)
+static void init_savegame_pieces(void)
 {
-    if (savegame_data.num_pieces > 0) {
-        for (int i = 0; i < savegame_data.num_pieces; i++) {
-            buffer_reset(&savegame_data.pieces[i].buf);
+    if (active_savegame->num_pieces > 0) {
+        for (int i = 0; i < active_savegame->num_pieces; i++) {
+            buffer_reset(&active_savegame->pieces[i].buf);
         }
         return;
     }
-    savegame_state *state = &savegame_data.state;
+    savegame_state *state = &active_savegame->state;
     state->scenario_campaign_mission = create_savegame_piece(4, 0, "scenario_campaign_mission");
     state->file_version = create_savegame_piece(4, 0, "file_version");
     state->image_grid = create_savegame_piece(52488, 1, "image_grid");
@@ -310,6 +322,19 @@ static void init_savegame_data(void)
     state->tutorial_part3 = create_savegame_piece(4, 0, "tutorial_part3");
     state->city_entry_exit_grid_offset = create_savegame_piece(8, 0, "city_entry_exit_grid_offset");
     state->end_marker = create_savegame_piece(284, 0, "end_marker"); // 71x 4-bytes emptiness
+}
+
+static void init_savegame_data(void)
+{
+    active_savegame = &savegame_data;
+    init_savegame_pieces();
+}
+
+static void init_wide_savegame_data(void)
+{
+    active_savegame = &wide_savegame_data;
+    init_savegame_pieces();
+    active_savegame = &savegame_data;
 }
 
 static void scenario_load_from_state(scenario_state *file)
@@ -695,4 +720,49 @@ int game_file_io_delete_saved_game(const char *filename)
         log_error("Unable to delete game", 0, 0);
     }
     return result;
+}
+
+// shared map grids are named "..._grid"; "city_entry_exit_grid_offset" belongs to the city
+static int is_map_grid(const char *name)
+{
+    size_t length = strlen(name);
+    return length >= 5 && strcmp(name + length - 5, "_grid") == 0;
+}
+
+void game_file_io_visit_wide_state(game_file_io_piece_visitor visitor, void *userdata, int include_grids)
+{
+    init_wide_savegame_data();
+    savegame_pieces *data = &wide_savegame_data;
+    for (int i = 0; i < data->num_pieces; i++) {
+        memset(data->pieces[i].buf.data, 0, data->pieces[i].buf.size);
+    }
+    save_format_wide = 1;
+    savegame_version = SAVE_GAME_VERSION;
+    savegame_save_to_state(&data->state);
+    save_format_wide = 0;
+    for (int i = 0; i < data->num_pieces; i++) {
+        file_piece *piece = &data->pieces[i];
+        if (!include_grids && is_map_grid(piece->name)) {
+            continue;
+        }
+        visitor(piece->name, piece->buf.data, piece->buf.index, userdata);
+    }
+}
+
+int game_file_io_load_wide_state(game_file_io_piece_provider provider, void *userdata)
+{
+    init_wide_savegame_data();
+    savegame_pieces *data = &wide_savegame_data;
+    for (int i = 0; i < data->num_pieces; i++) {
+        file_piece *piece = &data->pieces[i];
+        memset(piece->buf.data, 0, piece->buf.size);
+        if (!provider(piece->name, piece->buf.data, piece->buf.size, userdata)) {
+            return 0;
+        }
+        buffer_reset(&piece->buf);
+    }
+    save_format_wide = 1;
+    savegame_load_from_state(&data->state);
+    save_format_wide = 0;
+    return 1;
 }

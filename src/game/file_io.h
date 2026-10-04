@@ -22,4 +22,22 @@ typedef void (*game_file_io_piece_visitor)(const char *name, const unsigned char
  */
 void game_file_io_visit_saved_game(game_file_io_piece_visitor visitor, void *userdata);
 
+/**
+ * Serializes the state of the current player with wide fields (multiplayer saved games, checksums),
+ * passing the bytes actually written for every piece
+ * @param include_grids Whether to include the map grids, shared by all players
+ */
+void game_file_io_visit_wide_state(game_file_io_piece_visitor visitor, void *userdata, int include_grids);
+
+/**
+ * Fills a piece of a wide state when loading
+ * @return 1 when the piece was found
+ */
+typedef int (*game_file_io_piece_provider)(const char *name, unsigned char *data, int capacity, void *userdata);
+
+/**
+ * Loads the state of the current player from wide pieces
+ */
+int game_file_io_load_wide_state(game_file_io_piece_provider provider, void *userdata);
+
 #endif // GAME_FILE_IO_H

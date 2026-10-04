@@ -13,6 +13,7 @@
 #include "game/player_context.h"
 #include "building/building.h"
 #include "game/player_clone.h"
+#include "game/save_format.h"
 
 #include <string.h>
 
@@ -618,7 +619,7 @@ void formation_update_all(int second_time)
 void formations_save_state(buffer *buf, buffer *totals)
 {
     for (int i = 0; i < MAX_FORMATIONS; i++) {
-        formation *f = &formations[i];
+        formation *f = &formations[FORMATION_BASE + i]; // slice of the current player
         buffer_write_u8(buf, f->in_use);
         buffer_write_u8(buf, f->faction_id);
         buffer_write_u8(buf, f->legion_id);
@@ -632,14 +633,14 @@ void formations_save_state(buffer *buf, buffer *totals)
         buffer_write_u8(buf, f->max_figures);
         buffer_write_i16(buf, f->layout);
         buffer_write_i16(buf, f->morale);
-        buffer_write_u8(buf, f->x_home);
-        buffer_write_u8(buf, f->y_home);
-        buffer_write_u8(buf, f->standard_x);
-        buffer_write_u8(buf, f->standard_y);
-        buffer_write_u8(buf, f->x);
-        buffer_write_u8(buf, f->y);
-        buffer_write_u8(buf, f->destination_x);
-        buffer_write_u8(buf, f->destination_y);
+        save_write_coord(buf, f->x_home);
+        save_write_coord(buf, f->y_home);
+        save_write_coord(buf, f->standard_x);
+        save_write_coord(buf, f->standard_y);
+        save_write_coord(buf, f->x);
+        save_write_coord(buf, f->y);
+        save_write_coord(buf, f->destination_x);
+        save_write_coord(buf, f->destination_y);
         buffer_write_i16(buf, f->destination_building_id);
         buffer_write_i16(buf, f->standard_figure_id);
         buffer_write_u8(buf, f->is_legion);
@@ -667,8 +668,8 @@ void formations_save_state(buffer *buf, buffer *totals)
         buffer_write_u8(buf, f->is_herd);
         buffer_write_u8(buf, f->enemy_type);
         buffer_write_u8(buf, f->direction);
-        buffer_write_u8(buf, f->prev.x_home);
-        buffer_write_u8(buf, f->prev.y_home);
+        save_write_coord(buf, f->prev.x_home);
+        save_write_coord(buf, f->prev.y_home);
         buffer_write_u8(buf, f->unknown_fired);
         buffer_write_u8(buf, f->orientation);
         buffer_write_u8(buf, f->months_from_home);
@@ -691,8 +692,8 @@ void formations_load_state(buffer *buf, buffer *totals)
     data.num_legions = buffer_read_i32(totals);
     data.selected_formation = 0;
     for (int i = 0; i < MAX_FORMATIONS; i++) {
-        formation *f = &formations[i];
-        f->id = i;
+        formation *f = &formations[FORMATION_BASE + i]; // slice of the current player
+        f->id = FORMATION_BASE + i;
         f->in_use = buffer_read_u8(buf);
         f->faction_id = buffer_read_u8(buf);
         f->legion_id = buffer_read_u8(buf);
@@ -706,14 +707,14 @@ void formations_load_state(buffer *buf, buffer *totals)
         f->max_figures = buffer_read_u8(buf);
         f->layout = buffer_read_i16(buf);
         f->morale = buffer_read_i16(buf);
-        f->x_home = buffer_read_u8(buf);
-        f->y_home = buffer_read_u8(buf);
-        f->standard_x = buffer_read_u8(buf);
-        f->standard_y = buffer_read_u8(buf);
-        f->x = GRID_COORD(buffer_read_u8(buf));
-        f->y = GRID_COORD(buffer_read_u8(buf));
-        f->destination_x = GRID_COORD(buffer_read_u8(buf));
-        f->destination_y = GRID_COORD(buffer_read_u8(buf));
+        f->x_home = save_read_coord(buf);
+        f->y_home = save_read_coord(buf);
+        f->standard_x = save_read_coord(buf);
+        f->standard_y = save_read_coord(buf);
+        f->x = GRID_COORD(save_read_coord(buf));
+        f->y = GRID_COORD(save_read_coord(buf));
+        f->destination_x = GRID_COORD(save_read_coord(buf));
+        f->destination_y = GRID_COORD(save_read_coord(buf));
         f->destination_building_id = buffer_read_i16(buf);
         f->standard_figure_id = buffer_read_i16(buf);
         f->is_legion = buffer_read_u8(buf);
@@ -741,8 +742,8 @@ void formations_load_state(buffer *buf, buffer *totals)
         f->is_herd = buffer_read_u8(buf);
         f->enemy_type = buffer_read_u8(buf);
         f->direction = buffer_read_u8(buf);
-        f->prev.x_home = buffer_read_u8(buf);
-        f->prev.y_home = buffer_read_u8(buf);
+        f->prev.x_home = save_read_coord(buf);
+        f->prev.y_home = save_read_coord(buf);
         f->unknown_fired = buffer_read_u8(buf);
         f->orientation = buffer_read_u8(buf);
         f->months_from_home = buffer_read_u8(buf);

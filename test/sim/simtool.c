@@ -33,6 +33,7 @@
 #include "map/data.h"
 #include "mp/actions.h"
 #include "mp/compose.h"
+#include "mp/savegame.h"
 #include "mp/lockstep.h"
 #include "mp/session.h"
 
@@ -81,6 +82,8 @@ static int usage(void)
     printf("                                         (DX, DY), runs TICKS exactly as on its original grid\n");
     printf("  simtool twins SAVE TICKS               the city with a twin city below it on a large map runs\n");
     printf("                                         exactly as alone, and the twin gets the same statistics\n");
+    printf("  simtool mpresume SAVE TICKS MORE       twin cities: saving after TICKS (.mpsav), then loading it and\n");
+    printf("                                         running MORE ticks equals running on without saving\n");
     printf("  simtool idempotence SAVE TICKS [STEP]  loads and runs SAVE twice in one process,\n");
     printf("                                         fails if the two traces differ\n");
     printf("  simtool diffpieces SAVE TICKS [CHECK]  runs SAVE for TICKS, reloads it and runs CHECK ticks\n");
@@ -576,6 +579,7 @@ static int command_relocequiv(const char *file, int ticks, int stride, int dx, i
 
 typedef struct {
     int count;
+    int done;
     uint64_t hash[MAX_PIECES];
     const char *name[MAX_PIECES];
 } fingerprint;
@@ -583,8 +587,13 @@ typedef struct {
 static void record_city_piece(const char *name, uint64_t checksum, void *userdata)
 {
     fingerprint *fp = userdata;
-    // grids are compared on the area of the city; the image variants are shared by all cities
-    if (strstr(name, "grid") || strcmp(name, "extra_state") == 0) {
+    // the pieces of the first city come first and end with its extra state
+    if (fp->done || strcmp(name, "extra_state") == 0) {
+        fp->done = 1;
+        return;
+    }
+    // grids are compared on the area of the city; the header holds the number of cities
+    if (strstr(name, "grid") || strcmp(name, "mp_header") == 0) {
         return;
     }
     if (fp->count < MAX_PIECES) {
@@ -804,6 +813,114 @@ static int command_twinfigures(const char *file, int ticks)
     return 0;
 }
 
+typedef struct {
+    int count;
+    const char *names[MAX_PIECES];
+    uint64_t checksums[MAX_PIECES];
+} piece_list;
+
+static void record_piece(const char *name, uint64_t checksum, void *userdata)
+{
+    piece_list *list = userdata;
+    if (list->count < MAX_PIECES) {
+        list->names[list->count] = name;
+        list->checksums[list->count] = checksum;
+        list->count++;
+    }
+}
+
+static int command_mpresume(const char *file, int ticks, int more)
+{
+    int width, height;
+    if (!setup_twin_map(file, getenv("MPRESUME_ALONE") ? 0 : 1, &width, &height)) {
+        return 2;
+    }
+    run_trace(ticks, ticks, 0, 0);
+    // one file per tested save: ctest runs the tests in parallel
+    char mpsav[300];
+    snprintf(mpsav, sizeof(mpsav), "mpresume-%s%s.mpsav", file, getenv("MPRESUME_ALONE") ? "-alone" : "");
+    if (!mp_savegame_write(mpsav)) {
+        printf("Unable to write the multiplayer saved game\n");
+        return 2;
+    }
+    // every registered per-city state, to check that loading restores it exactly
+    static unsigned char *saved_slots[PLAYER_CONTEXT_MAX_PLAYERS];
+    int num_players = player_context_num_players();
+    player_context_flush();
+    for (int p = 0; p < num_players; p++) {
+        free(saved_slots[p]);
+        saved_slots[p] = malloc(player_context_state_size());
+        memcpy(saved_slots[p], player_context_slot(p), player_context_state_size());
+    }
+    static piece_list saved_pieces, loaded_pieces;
+    saved_pieces.count = loaded_pieces.count = 0;
+    uint64_t saved = mp_checksum_state_pieces(record_piece, &saved_pieces);
+    static uint64_t continued[MAX_SAMPLES];
+    // diagnosis: MPRESUME_DIFF_AT=K lists the pieces that differ K ticks after the save in both runs
+    int diff_at = getenv("MPRESUME_DIFF_AT") ? atoi(getenv("MPRESUME_DIFF_AT")) : 0;
+    static piece_list continued_pieces, resumed_pieces;
+    continued_pieces.count = resumed_pieces.count = 0;
+    if (diff_at > 0 && diff_at < more) {
+        run_trace(diff_at, diff_at, 0, 0);
+        mp_checksum_state_pieces(record_piece, &continued_pieces);
+        more -= diff_at;
+    }
+    int n = run_trace(more, 1, continued, 0);
+
+    if (!mp_savegame_read(mpsav)) {
+        printf("Unable to read the multiplayer saved game\n");
+        return 2;
+    }
+    player_context_flush();
+    int restored = 1;
+    for (int p = 0; p < num_players; p++) {
+        // messages: their popup queue, real-time sound delays and scrolling belong to the interface
+        static const char *interface_state[] = { "messages", "message_sound", 0 };
+        const char *region = player_context_first_difference(saved_slots[p], player_context_slot(p), interface_state);
+        if (region) {
+            printf("  city %d: state \"%s\" differs after loading\n", p, region);
+            restored = 0;
+        }
+    }
+    uint64_t loaded = mp_checksum_state_pieces(record_piece, &loaded_pieces);
+    for (int i = 0; i < saved_pieces.count && i < loaded_pieces.count; i++) {
+        if (saved_pieces.checksums[i] != loaded_pieces.checksums[i]) {
+            printf("  piece %d differs after loading: %s\n", i, saved_pieces.names[i]);
+        }
+    }
+    if (continued_pieces.count) {
+        run_trace(diff_at, diff_at, 0, 0);
+        mp_checksum_state_pieces(record_piece, &resumed_pieces);
+        for (int i = 0; i < continued_pieces.count && i < resumed_pieces.count; i++) {
+            if (continued_pieces.checksums[i] != resumed_pieces.checksums[i]) {
+                printf("  piece %d differs %d ticks after loading: %s\n", i, diff_at, continued_pieces.names[i]);
+            }
+        }
+        return 1;
+    }
+    static uint64_t resumed[MAX_SAMPLES];
+    run_trace(more, 1, resumed, 0);
+    player_context_switch(0);
+    player_context_set_num_players(1);
+    if (!restored) {
+        printf("DIFFERENT: loading does not restore the state of every city\n");
+        return 1;
+    }
+    if (saved != loaded) {
+        printf("DIFFERENT: the loaded state is not the saved one (%016" PRIx64 " != %016" PRIx64 ")\n", saved, loaded);
+        return 1;
+    }
+    for (int i = 0; i < n && i < MAX_SAMPLES; i++) {
+        if (continued[i] != resumed[i]) {
+            printf("DIFFERENT: the resumed game diverges at tick %d after loading\n", i);
+            return 1;
+        }
+    }
+    remove(mpsav);
+    printf("Identical: loading after %d ticks and running %d more equals running on\n", ticks, more);
+    return 0;
+}
+
 // first tick at which the twin city's statistics differ from the first city's
 static int command_twinstats(const char *file, int ticks)
 {
@@ -873,21 +990,6 @@ static int command_pieces(const char *file, int ticks)
     return 0;
 }
 
-typedef struct {
-    int count;
-    const char *names[MAX_PIECES];
-    uint64_t checksums[MAX_PIECES];
-} piece_list;
-
-static void record_piece(const char *name, uint64_t checksum, void *userdata)
-{
-    piece_list *list = userdata;
-    if (list->count < MAX_PIECES) {
-        list->names[list->count] = name;
-        list->checksums[list->count] = checksum;
-        list->count++;
-    }
-}
 
 static int command_diffpieces(const char *file, int ticks, int check_tick)
 {
@@ -993,6 +1095,8 @@ int main(int argc, char **argv)
         result = command_checksum(file);
     } else if (strcmp(command, "relocequiv") == 0 && argc > 6) {
         result = command_relocequiv(file, ticks, atoi(argv[4]), atoi(argv[5]), atoi(argv[6]));
+    } else if (strcmp(command, "mpresume") == 0 && argc > 4) {
+        result = command_mpresume(file, ticks, atoi(argv[4]));
     } else if (strcmp(command, "twinfigures") == 0 && argc > 3) {
         result = command_twinfigures(file, ticks);
     } else if (strcmp(command, "twinstats") == 0 && argc > 3) {

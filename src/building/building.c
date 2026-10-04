@@ -330,8 +330,10 @@ void building_clear_all(void)
 void building_save_state(buffer *buf, buffer *highest_id, buffer *highest_id_ever,
                          buffer *sequence, buffer *corrupt_houses)
 {
+    // the slice of the current player: the whole array in a classic game
+    int base = BUILDING_FIRST - 1;
     for (int i = 0; i < MAX_BUILDINGS; i++) {
-        building_state_save_to_buffer(buf, &all_buildings[i]);
+        building_state_save_to_buffer(buf, &all_buildings[base + i]);
     }
     buffer_write_i32(highest_id, extra.highest_id_in_use);
     buffer_write_i32(highest_id_ever, extra.highest_id_ever);
@@ -345,9 +347,10 @@ void building_save_state(buffer *buf, buffer *highest_id, buffer *highest_id_eve
 void building_load_state(buffer *buf, buffer *highest_id, buffer *highest_id_ever,
                          buffer *sequence, buffer *corrupt_houses)
 {
+    int base = BUILDING_FIRST - 1;
     for (int i = 0; i < MAX_BUILDINGS; i++) {
-        building_state_load_from_buffer(buf, &all_buildings[i]);
-        all_buildings[i].id = i;
+        building_state_load_from_buffer(buf, &all_buildings[base + i]);
+        all_buildings[base + i].id = base + i;
     }
     extra.highest_id_in_use = buffer_read_i32(highest_id);
     extra.highest_id_ever = buffer_read_i32(highest_id_ever);

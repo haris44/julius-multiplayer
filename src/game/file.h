@@ -50,4 +50,9 @@ int game_file_delete_saved_game(const char *filename);
  */
 void game_file_write_mission_saved_game(void);
 
+/**
+ * After a multiplayer state was loaded: recomputes the derived data of every city
+ */
+void game_file_initialize_multiplayer_state(void);
+
 #endif // GAME_FILE_H

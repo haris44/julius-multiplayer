@@ -384,6 +384,7 @@ set(GAME_FILES
     ${PROJECT_SOURCE_DIR}/src/game/extra_state.c
     ${PROJECT_SOURCE_DIR}/src/game/rules.c
     ${PROJECT_SOURCE_DIR}/src/game/player_context.c
+    ${PROJECT_SOURCE_DIR}/src/game/save_format.c
     ${PROJECT_SOURCE_DIR}/src/game/game.c
     ${PROJECT_SOURCE_DIR}/src/game/mission.c
     ${PROJECT_SOURCE_DIR}/src/game/orientation.c
@@ -607,6 +608,7 @@ set(MP_FILES
     ${PROJECT_SOURCE_DIR}/src/mp/command.c
     ${PROJECT_SOURCE_DIR}/src/mp/compose.c
     ${PROJECT_SOURCE_DIR}/src/mp/lockstep.c
+    ${PROJECT_SOURCE_DIR}/src/mp/savegame.c
     ${PROJECT_SOURCE_DIR}/src/platform/net.c
     ${PROJECT_SOURCE_DIR}/src/mp/session.c
 )

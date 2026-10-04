@@ -32,6 +32,7 @@
 #include "game/difficulty.h"
 #include "game/extra_state.h"
 #include "game/rules.h"
+#include "game/player_context.h"
 #include "mp/command.h"
 #include "game/file_io.h"
 #include "game/settings.h"
@@ -399,4 +400,29 @@ void game_file_write_mission_saved_game(void)
     if (city_mission_should_save_start() && !file_exists(filename, NOT_LOCALIZED)) {
         game_file_io_write_saved_game(filename);
     }
+}
+
+void game_file_initialize_multiplayer_state(void)
+{
+    // what loading a saved game recomputes without changing the simulation, for every city
+    int previous = player_context_current();
+    for (int p = 0; p < player_context_num_players(); p++) {
+        player_context_switch(p);
+        load_empire_data(scenario_is_custom(), scenario_empire_id());
+    }
+    player_context_switch(previous);
+    map_routing_update_all();
+    map_road_network_update_grid();
+    for (int p = 0; p < player_context_num_players(); p++) {
+        player_context_switch(p);
+        map_road_network_update_largest();
+    }
+    player_context_switch(previous);
+    city_view_init();
+    image_load_climate(scenario_property_climate(), 0, 0);
+    image_load_enemy(scenario_property_enemy());
+    building_construction_clear_type();
+    game_undo_disable();
+    game_state_reset_overlay();
+    game_state_unpause();
 }

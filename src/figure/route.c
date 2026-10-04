@@ -154,7 +154,8 @@ int figure_route_get_direction(int path_id, int index)
 
 void figure_route_save_state(buffer *figures, buffer *paths)
 {
-    for (int i = 0; i < MAX_ROUTES; i++) {
+    // slice of the current player
+    for (int i = ROUTE_FIRST - 1; i < ROUTE_END; i++) {
         buffer_write_i16(figures, data.figure_ids[i]);
         buffer_write_raw(paths, data.direction_paths[i], MAX_PATH_LENGTH);
     }
@@ -162,7 +163,7 @@ void figure_route_save_state(buffer *figures, buffer *paths)
 
 void figure_route_load_state(buffer *figures, buffer *paths)
 {
-    for (int i = 0; i < MAX_ROUTES; i++) {
+    for (int i = ROUTE_FIRST - 1; i < ROUTE_END; i++) {
         data.figure_ids[i] = buffer_read_i16(figures);
         buffer_read_raw(paths, data.direction_paths[i], MAX_PATH_LENGTH);
     }

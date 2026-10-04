@@ -5,6 +5,30 @@
 
 ---
 
+## 2026-10-04 — Session 1 (suite) : sauvegarde multijoueur (M3.8)
+
+**Fait** : M3.8. Une partie à plusieurs cités sur grande grille s'enregistre dans un `.mpsav` (format classique élargi,
+D-024) et se recharge exactement : `simtool mpresume` vérifie, sur 13 sauvegardes, que l'état rechargé a la même somme
+de contrôle et que la partie reprise reste identique tick par tick à la partie continuée. 115 tests ctest.
+
+**Appris** (quatre pièges trouvés par le test de reprise)
+- `city_view_init` remplissait une table écran ↔ case dimensionnée pour 162 cases : débordement sur une grille de
+  512, qui écrasait les compteurs de bâtiments. La table est maintenant à la taille maximale.
+- La taille de l'état « extra » (qui contient la grille des forces militaires) était mesurée une seule fois dans un
+  tampon de 64 Ko : fausse dès que la grille grandit. Elle est mesurée à chaque appel.
+- Le filtre des grilles partagées retenait tout nom contenant « grid », y compris `city_entry_exit_grid_offset`,
+  propre à chaque cité : la deuxième cité rechargeait les points d'entrée de la première.
+- Le cache des greniers (`non_getting_granaries`), recalculé tous les 50 ticks, n'était pas sauvegardé : une
+  reprise entre deux recalculs divergeait. Il entre dans l'état « extra ».
+
+**Prochaine étape** : partie réseau avec une cité par joueur (cités jumelles ou composées, l'hôte envoie le
+`.mpsav`), pour que chaque joueur voie ses propres statistiques (E13).
+
+**Points ouverts** : la somme de contrôle ignore les messages (interface) ; la zone `messages` contient aussi la file
+des popups, à séparer par joueur avec l'interface (M7).
+
+---
+
 ## 2026-10-04 — Session 1 (suite) : décisions d'Alexandre, commandes, premier multijoueur sur Mac
 
 **Décisions d'Alexandre** : construction partout avec branchements (D-018, remplace les territoires), commerce sur

@@ -220,3 +220,11 @@ foreach(save tower request_start kknight inv0 routing-full curses earthquake edg
     add_test(NAME mp_twins_${save} COMMAND simtool twins ${save}.sav 1500)
     add_test(NAME mp_twin_copy_${save} COMMAND simtool twinfigures ${save}.sav 1500)
 endforeach()
+
+# Multiplayer saved games (M3.8): saving every city, loading and running on equals running on, with twin
+# cities and with one city on a large grid
+foreach(save tower kknight inv0 curses earthquake brugle-lugdunum cicero-lugdunum-trade valentia57)
+    add_test(NAME mp_resume_twins_${save} COMMAND simtool mpresume ${save}.sav 1500 400)
+    add_test(NAME mp_resume_alone_${save} COMMAND simtool mpresume ${save}.sav 700 300)
+    set_tests_properties(mp_resume_alone_${save} PROPERTIES ENVIRONMENT MPRESUME_ALONE=1)
+endforeach()

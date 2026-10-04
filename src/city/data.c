@@ -8,6 +8,7 @@
 #include "game/player_context.h"
 #include "building/building.h"
 #include "game/player_clone.h"
+#include "game/save_format.h"
 
 #include <string.h>
 
@@ -120,15 +121,15 @@ static void save_main_data(buffer *main)
     for (int i = 0; i < 18; i++) {
         buffer_write_i16(main, city_data.unused.unknown_27f4[i]);
     }
-    buffer_write_u8(main, city_data.map.entry_point.x);
-    buffer_write_u8(main, city_data.map.entry_point.y);
-    buffer_write_i16(main, city_data.map.entry_point.grid_offset);
-    buffer_write_u8(main, city_data.map.exit_point.x);
-    buffer_write_u8(main, city_data.map.exit_point.y);
-    buffer_write_i16(main, city_data.map.exit_point.grid_offset);
+    save_write_coord(main, city_data.map.entry_point.x);
+    save_write_coord(main, city_data.map.entry_point.y);
+    save_write_offset(main, city_data.map.entry_point.grid_offset);
+    save_write_coord(main, city_data.map.exit_point.x);
+    save_write_coord(main, city_data.map.exit_point.y);
+    save_write_offset(main, city_data.map.exit_point.grid_offset);
     buffer_write_u8(main, city_data.building.senate_x);
     buffer_write_u8(main, city_data.building.senate_y);
-    buffer_write_i16(main, city_data.building.senate_grid_offset);
+    save_write_offset(main, city_data.building.senate_grid_offset);
     buffer_write_i32(main, city_data.building.senate_building_id);
     buffer_write_i16(main, city_data.unused.unknown_2828);
     for (int i = 0; i < RESOURCE_MAX; i++) {
@@ -364,7 +365,7 @@ static void save_main_data(buffer *main)
     buffer_write_i32(main, city_data.finance.cheated_money);
     buffer_write_i8(main, city_data.building.barracks_x);
     buffer_write_i8(main, city_data.building.barracks_y);
-    buffer_write_i16(main, city_data.building.barracks_grid_offset);
+    save_write_offset(main, city_data.building.barracks_grid_offset);
     buffer_write_i32(main, city_data.building.barracks_building_id);
     buffer_write_i32(main, city_data.building.barracks_placed);
     for (int i = 0; i < 5; i++) {
@@ -447,7 +448,7 @@ static void save_main_data(buffer *main)
     buffer_write_i32(main, city_data.mission.tutorial_senate_built);
     buffer_write_i8(main, city_data.building.distribution_center_x);
     buffer_write_i8(main, city_data.building.distribution_center_y);
-    buffer_write_i16(main, city_data.building.distribution_center_grid_offset);
+    save_write_offset(main, city_data.building.distribution_center_grid_offset);
     buffer_write_i32(main, city_data.building.distribution_center_building_id);
     buffer_write_i32(main, city_data.building.distribution_center_placed);
     for (int i = 0; i < 11; i++) {
@@ -597,15 +598,15 @@ static void load_main_data(buffer *main)
     for (int i = 0; i < 18; i++) {
         city_data.unused.unknown_27f4[i] = buffer_read_i16(main);
     }
-    city_data.map.entry_point.x = buffer_read_u8(main);
-    city_data.map.entry_point.y = buffer_read_u8(main);
-    city_data.map.entry_point.grid_offset = buffer_read_i16(main);
-    city_data.map.exit_point.x = buffer_read_u8(main);
-    city_data.map.exit_point.y = buffer_read_u8(main);
-    city_data.map.exit_point.grid_offset = buffer_read_i16(main);
+    city_data.map.entry_point.x = save_read_coord(main);
+    city_data.map.entry_point.y = save_read_coord(main);
+    city_data.map.entry_point.grid_offset = save_read_offset(main);
+    city_data.map.exit_point.x = save_read_coord(main);
+    city_data.map.exit_point.y = save_read_coord(main);
+    city_data.map.exit_point.grid_offset = save_read_offset(main);
     city_data.building.senate_x = buffer_read_u8(main);
     city_data.building.senate_y = buffer_read_u8(main);
-    city_data.building.senate_grid_offset = buffer_read_i16(main);
+    city_data.building.senate_grid_offset = save_read_offset(main);
     city_data.building.senate_building_id = buffer_read_i32(main);
     city_data.unused.unknown_2828 = buffer_read_i16(main);
     for (int i = 0; i < RESOURCE_MAX; i++) {
@@ -841,7 +842,7 @@ static void load_main_data(buffer *main)
     city_data.finance.cheated_money = buffer_read_i32(main);
     city_data.building.barracks_x = buffer_read_i8(main);
     city_data.building.barracks_y = buffer_read_i8(main);
-    city_data.building.barracks_grid_offset = buffer_read_i16(main);
+    city_data.building.barracks_grid_offset = save_read_offset(main);
     city_data.building.barracks_building_id = buffer_read_i32(main);
     city_data.building.barracks_placed = buffer_read_i32(main);
     for (int i = 0; i < 5; i++) {
@@ -924,7 +925,7 @@ static void load_main_data(buffer *main)
     city_data.mission.tutorial_senate_built = buffer_read_i32(main);
     city_data.building.distribution_center_x = buffer_read_i8(main);
     city_data.building.distribution_center_y = buffer_read_i8(main);
-    city_data.building.distribution_center_grid_offset = buffer_read_i16(main);
+    city_data.building.distribution_center_grid_offset = save_read_offset(main);
     city_data.building.distribution_center_building_id = buffer_read_i32(main);
     city_data.building.distribution_center_placed = buffer_read_i32(main);
     for (int i = 0; i < 11; i++) {

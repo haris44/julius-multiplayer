@@ -189,6 +189,30 @@ const unsigned char *player_context_slot(int player_id)
     return data.slots[player_id];
 }
 
+static int is_ignored(const char *name, const char **ignored_names)
+{
+    for (int i = 0; ignored_names && ignored_names[i]; i++) {
+        if (strcmp(name, ignored_names[i]) == 0) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+const char *player_context_first_difference(const unsigned char *a, const unsigned char *b,
+    const char **ignored_names)
+{
+    for (int i = 0; i < data.num_regions; i++) {
+        if (is_ignored(data.regions[i].name, ignored_names)) {
+            continue;
+        }
+        if (memcmp(a + data.regions[i].offset, b + data.regions[i].offset, data.regions[i].size) != 0) {
+            return data.regions[i].name;
+        }
+    }
+    return 0;
+}
+
 void player_context_set_slot(int player_id, const unsigned char *state)
 {
     if (player_id == data.current || !allocate_slots()) {

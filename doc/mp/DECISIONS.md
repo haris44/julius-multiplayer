@@ -223,3 +223,18 @@
   pas une fuite entre cités.
 - Effet de voisinage voulu (DESIGN §3.4) : à moins de 24 cases, la désirabilité et l'errance des troupeaux traversent
   d'une cité à l'autre.
+
+### D-024 — Sauvegarde et somme de contrôle multijoueur : le format classique, élargi
+- 2026-10-04 · **adoptée** (M3.8)
+- Une partie multijoueur s'enregistre avec les fonctions de sauvegarde **existantes**, dans un mode « large » où la
+  quinzaine de champs étroits passent à 16 ou 32 bits : coordonnées, offsets de grille, numéros de stockage et de réseau.
+  On y trouve les grilles au pas de la carte, toutes les tranches d'entités, puis l'état de chaque cité, joueur par
+  joueur.
+- La somme de contrôle se calcule sur cette même sérialisation. Elle couvre donc toutes les cités, alors que la
+  version classique ne voyait que le joueur 1.
+- Rejeté : la copie brute de la mémoire. Plus simple, mais les octets de bourrage des structures et les
+  différences possibles d'agencement entre compilateurs (Mac clang, Windows MSVC) la rendraient non portable.
+  L'écriture explicite petit-boutiste l'est.
+- L'état caché qu'un chargement classique recalcule (stocks des greniers hors « réception », curseurs…) est écrit
+  explicitement dans l'état « extra » de chaque cité, car le recalcul ne redonne pas la valeur en cours. La copie
+  brute de la mémoire de chaque cité sert seulement d'**oracle de test** (`mpresume`), jamais de format.
