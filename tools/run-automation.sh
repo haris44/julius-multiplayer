@@ -2,14 +2,15 @@
 # Runs the real game without any window, driven by an automation script
 # (synthetic input, fast-forward, screenshots). See doc/mp/TESTING.md.
 #
-# Usage: tools/run-automation.sh SCRIPT [TIMEOUT_SECONDS]
+# Usage: tools/run-automation.sh SCRIPT [TIMEOUT_SECONDS [JULIUS_OPTIONS...]]
 #   Relative paths inside SCRIPT are resolved against the current directory.
 # Env:   C3_DATA_DIR  original game data (default: ../donnees-c3 next to the repo)
 #        BUILD_DIR    build directory (default: build)
 set -euo pipefail
 
-SCRIPT=${1:?usage: tools/run-automation.sh SCRIPT [TIMEOUT_SECONDS]}
+SCRIPT=${1:?usage: tools/run-automation.sh SCRIPT [TIMEOUT_SECONDS [JULIUS_OPTIONS...]]}
 TIMEOUT=${2:-120}
+shift; [ $# -gt 0 ] && shift
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 BUILD_DIR=${BUILD_DIR:-$ROOT/build}
 DATA_DIR=${C3_DATA_DIR:-$ROOT/../donnees-c3}
@@ -30,4 +31,4 @@ mkdir -p "$BUILD_DIR/automation"
 export SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy
 # perl's alarm survives exec: kills the game if it hangs (macOS has no `timeout`).
 exec perl -e 'alarm shift @ARGV; exec @ARGV or die "exec failed: $!"' \
-    "$TIMEOUT" "$BIN" --windowed --automation "$SCRIPT" "$DATA_DIR"
+    "$TIMEOUT" "$BIN" --windowed "$@" --automation "$SCRIPT" "$DATA_DIR"

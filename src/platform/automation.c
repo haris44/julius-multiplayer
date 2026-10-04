@@ -10,6 +10,7 @@
 #include "graphics/screenshot.h"
 #include "input/mouse.h"
 #include "mp/checksum.h"
+#include "mp/lockstep.h"
 #include "window/city.h"
 
 #include "SDL.h"
@@ -50,6 +51,13 @@ static struct {
         int target_tick;
         int frames_left;
     } run;
+    struct {
+        int active;
+        int started;
+        int start_tick;
+        int target;
+        int frames_left;
+    } mpwait;
     char *script;
     char **lines;
     int num_lines;
@@ -399,6 +407,29 @@ static int execute(char *line)
         data.run.target_tick = total_ticks() + n;
         data.run.frames_left = n * RUN_FRAMES_PER_TICK + RUN_EXTRA_FRAMES;
         return 1;
+    } else if (strcmp(command, "mpwait") == 0) {
+        // waits until the network game has started and run N ticks
+        if (sscanf(rest, "%d", &n) != 1 || n < 0) {
+            fail("invalid mpwait:", rest);
+            return 1;
+        }
+        if (!mp_lockstep_is_active()) {
+            fail("mpwait: no network game", 0);
+            return 1;
+        }
+        data.mpwait.active = 1;
+        data.mpwait.target = n;
+        data.mpwait.frames_left = 60 * 60 * 3; // three virtual minutes
+        return 1;
+    } else if (strcmp(command, "mpcheck") == 0) {
+        char value[160];
+        snprintf(value, sizeof(value), "state %d, verified turns %d: %s", mp_lockstep_get_state(),
+            mp_lockstep_last_verified_turn() + 1, mp_lockstep_status());
+        log_message("mpcheck:", value);
+        if (mp_lockstep_get_state() != MP_LOCKSTEP_RUNNING) {
+            fail("network game is not running", 0);
+        }
+        return 0;
     } else if (strcmp(command, "speed") == 0) {
         if (sscanf(rest, "%d", &n) != 1 || n < 10 || n > 500) {
             fail("invalid speed (10-500):", rest);
@@ -466,6 +497,24 @@ void platform_automation_before_frame(void)
     }
     if (handle_pending()) {
         return;
+    }
+    if (data.mpwait.active) {
+        // ticks are counted from the start of the network game (the date may be negative: BC years)
+        if (mp_lockstep_get_state() == MP_LOCKSTEP_RUNNING && !data.mpwait.started) {
+            data.mpwait.started = 1;
+            data.mpwait.start_tick = game_time_absolute_tick();
+        }
+        int done = data.mpwait.started && game_time_absolute_tick() - data.mpwait.start_tick >= data.mpwait.target;
+        if (!done) {
+            int state = mp_lockstep_get_state();
+            if (state == MP_LOCKSTEP_DESYNC || state == MP_LOCKSTEP_DISCONNECTED) {
+                fail("network game stopped:", mp_lockstep_status());
+            } else if (--data.mpwait.frames_left <= 0) {
+                fail("mpwait timed out:", mp_lockstep_status());
+            }
+            return;
+        }
+        data.mpwait.active = 0;
     }
     if (data.run.active) {
         if (total_ticks() < data.run.target_tick) {

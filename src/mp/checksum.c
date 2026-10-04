@@ -2,6 +2,7 @@
 
 #include "building/building.h"
 #include "building/building_state.h"
+#include "city/ratings.h"
 #include "core/buffer.h"
 #include "game/extra_state.h"
 #include "game/file_io.h"
@@ -47,6 +48,8 @@ typedef struct {
     mp_checksum_piece_callback callback;
     void *userdata;
     int overlay_flag_offset;
+    int type_offset;
+    int evolve_text_offset;
 } checksum_context;
 
 static int is_excluded(const char *name)
@@ -64,39 +67,61 @@ static uint64_t hash_byte(uint64_t hash, uint8_t value)
     return (hash ^ value) * FNV_PRIME;
 }
 
-/**
- * Finds where show_on_problem_overlay is stored in a building record: its position depends
- * on the type-specific data written before it, so we let the real serializer tell us.
- */
-static int find_overlay_flag_offset(void)
+enum {
+    FIELD_OVERLAY_FLAG,
+    FIELD_TYPE,
+    FIELD_EVOLVE_TEXT,
+    FIELD_MAX
+};
+
+static void set_field(building *b, int field, int value)
 {
-    static int offset = -2;
-    if (offset != -2) {
-        return offset;
+    switch (field) {
+        case FIELD_OVERLAY_FLAG: b->show_on_problem_overlay = value; break;
+        case FIELD_TYPE: b->type = value ? BUILDING_HOUSE_LARGE_TENT : BUILDING_HOUSE_SMALL_TENT; break;
+        case FIELD_EVOLVE_TEXT: b->type = BUILDING_HOUSE_SMALL_TENT; b->data.house.evolve_text_id = value; break;
+    }
+}
+
+/**
+ * Finds where a field is stored in a building record: positions depend on the type-specific
+ * data written before them, so we let the real serializer tell us.
+ */
+static int find_field_offset(int field)
+{
+    static int offsets[FIELD_MAX] = { -2, -2, -2 };
+    if (offsets[field] != -2) {
+        return offsets[field];
     }
     uint8_t first[RECORD_SIZE];
     uint8_t second[RECORD_SIZE];
     buffer buf;
     building b;
     memset(&b, 0, sizeof(b));
-
+    set_field(&b, field, 0);
     buffer_init(&buf, first, RECORD_SIZE);
     building_state_save_to_buffer(&buf, &b);
-    b.show_on_problem_overlay = 1;
+    set_field(&b, field, 1);
     buffer_init(&buf, second, RECORD_SIZE);
     building_state_save_to_buffer(&buf, &b);
 
-    offset = -1;
+    offsets[field] = -1;
     for (int i = 0; i < RECORD_SIZE; i++) {
         if (first[i] != second[i]) {
-            offset = i;
+            offsets[field] = i;
             break;
         }
     }
-    return offset;
+    return offsets[field];
 }
 
-static uint64_t hash_piece(const char *name, const uint8_t *data, int size, int overlay_flag_offset)
+static int record_type(const uint8_t *record, int type_offset)
+{
+    // building types are written as 16 bit little endian values
+    return type_offset >= 0 ? record[type_offset] | (record[type_offset + 1] << 8) : 0;
+}
+
+static uint64_t hash_piece(const char *name, const uint8_t *data, int size, const checksum_context *ctx)
 {
     uint64_t hash = FNV_OFFSET_BASIS;
     if (strcmp(name, "figures") == 0) {
@@ -106,9 +131,16 @@ static uint64_t hash_piece(const char *name, const uint8_t *data, int size, int 
             hash = hash_byte(hash, masked ? 0 : data[i]);
         }
     } else if (strcmp(name, "buildings") == 0) {
+        int is_house = 0;
         for (int i = 0; i < size; i++) {
-            // Record 0 is the null building, whose fields are scribbled on by the user interface
-            int masked = i < RECORD_SIZE || i % RECORD_SIZE == overlay_flag_offset;
+            int field = i % RECORD_SIZE;
+            if (field == 0) {
+                is_house = building_is_house(record_type(&data[i], ctx->type_offset));
+            }
+            // Record 0 is the null building, whose fields are scribbled on by the user interface;
+            // the overlay flag and the evolution text of houses are set by windows
+            int masked = i < RECORD_SIZE || field == ctx->overlay_flag_offset ||
+                (is_house && field == ctx->evolve_text_offset);
             hash = hash_byte(hash, masked ? 0 : data[i]);
         }
     } else if (strcmp(name, "bitfields_grid") == 0) {
@@ -129,7 +161,7 @@ static void visit_piece(const char *name, const unsigned char *data, int size, v
     if (is_excluded(name)) {
         return;
     }
-    uint64_t piece_hash = hash_piece(name, data, size, ctx->overlay_flag_offset);
+    uint64_t piece_hash = hash_piece(name, data, size, ctx);
     if (ctx->callback) {
         ctx->callback(name, piece_hash, ctx->userdata);
     }
@@ -159,8 +191,13 @@ static void visit_extra_state(checksum_context *ctx)
 
 uint64_t mp_checksum_state_pieces(mp_checksum_piece_callback callback, void *userdata)
 {
-    checksum_context ctx = { FNV_OFFSET_BASIS, callback, userdata, find_overlay_flag_offset() };
+    checksum_context ctx = { FNV_OFFSET_BASIS, callback, userdata,
+        find_field_offset(FIELD_OVERLAY_FLAG), find_field_offset(FIELD_TYPE), find_field_offset(FIELD_EVOLVE_TEXT) };
+    // the rating selected in the ratings advisor is a choice of the local player
+    selected_rating rating = city_rating_selected();
+    city_rating_select(SELECTED_RATING_NONE);
     game_file_io_visit_saved_game(visit_piece, &ctx);
+    city_rating_select(rating);
     visit_extra_state(&ctx);
     return ctx.total;
 }

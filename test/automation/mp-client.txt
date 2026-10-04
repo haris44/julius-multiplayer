@@ -1,0 +1,16 @@
+# Real game, network game client (see tools/mp-real-test.sh)
+mpwait 0
+speed 300
+click 668 312
+wait 3
+mouse 300 260
+wait 2
+drag 300 260 340 280
+mpwait 200
+key 9
+wait 40
+key Escape
+mpwait 600
+screenshot build/automation/mp-client.png
+mpcheck
+quit

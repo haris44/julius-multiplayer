@@ -5,6 +5,48 @@
 
 ---
 
+## 2026-10-04 — Session 1 (suite) : décisions d'Alexandre, commandes, premier multijoueur sur Mac
+
+**Décisions d'Alexandre** : construction partout avec branchements (D-018, remplace les territoires), commerce sur
+routes construites et interceptable (D-019), autorisations d'exploiter par point d'arrivée avec armes rares (D-020).
+Priorité : pouvoir lancer le multijoueur sur son Mac au plus vite, d'où le nouveau jalon **M2P** (ville partagée).
+
+**Fait** (commits 03e873f6 à aujourd'hui ; 66 tests ctest)
+- M2.1 à M2.5 : toutes les actions du joueur passent par des commandes : construction, démolition (la réponse
+  fort/pont voyage dans la commande), réglages de la cité, ordres militaires. Chaque commande refait exactement les
+  appels de l'interface d'origine. Des tests d'équivalence le prouvent : 234 constructions, 204 confirmations et
+  19 réglages identiques à l'ancien chemin direct.
+- M2P :
+  - réseau TCP (`platform/net`) ;
+  - lockstep (`mp/lockstep`) : tours de 4 ticks, exécution au tour +2, somme de contrôle comparée à chaque tour,
+    sauvegarde de diagnostic en cas de désynchronisation ;
+  - cadence indépendante des fenêtres ;
+  - aperçu de construction retiré pendant les ticks ;
+  - rotation, annulation, triches et victoire classique désactivées en réseau ;
+  - bandeau d'état ;
+  - options `--mp-host`, `--mp-join` et `--mp-players`.
+- Tests réseau : 2 et 4 joueurs sans tête, désynchronisation provoquée et détectée, vrai jeu à deux instances
+  (150 tours vérifiés pendant que les joueurs construisent à la souris et ouvrent des conseillers).
+
+**Appris**
+- Les dates avant J.-C. donnent un compteur de ticks négatif : ne jamais utiliser -1 comme valeur « non initialisé »
+  pour un tick. `game_time_absolute_tick()` est toujours positif.
+- Le texte d'évolution des maisons (panneau d'info) et la note sélectionnée sont écrits par l'interface dans des
+  données sauvegardées. Ils sont exclus de la somme de contrôle.
+
+**Prochaine étape** : retour d'Alexandre sur `tools/play-mp.sh`. Ensuite :
+- M2.6 : recalculs des conseillers, pour l'instant simplement sautés en réseau ;
+- M2.7 : enregistrement et rejeu ;
+- M2.9 à M2.11 ;
+- puis M3, le moteur multi-cités.
+
+**Limites connues du prototype**
+- Les cadeaux, dons et salaire de César appellent encore directement la simulation. Ils seront neutralisés en M4.1 ;
+  ne pas les utiliser en réseau d'ici là.
+- Chaque joueur règle sa propre vitesse : la partie avance à la vitesse du plus lent, et la pause d'un joueur
+  bloque tout le monde.
+- Pas de sauvegarde ni de reprise d'une partie en réseau (M3.8). Pas de salon : on lance en ligne de commande.
+
 ## 2026-10-04 — Session 1 : mise en place (M0) puis déterminisme (M1)
 
 **Fait**

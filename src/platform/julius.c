@@ -14,6 +14,9 @@
 #include "input/touch.h"
 #include "platform/arguments.h"
 #include "platform/automation.h"
+#include "window/city.h"
+#include "widget/mp_status.h"
+#include "mp/lockstep.h"
 #include "platform/file_manager.h"
 #include "platform/file_manager_cache.h"
 #include "platform/joystick.h"
@@ -26,6 +29,12 @@
 #include "tinyfiledialogs/tinyfiledialogs.h"
 
 #include <signal.h>
+#ifdef _WIN32
+#include <direct.h>
+#define getcwd _getcwd
+#else
+#include <unistd.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -203,6 +212,7 @@ static void run_and_draw(void)
         text_draw_number_colored(time_after_draw - time_between_run_and_draw,
             'd', "", 70, y_offset_text, FONT_NORMAL_PLAIN, COLOR_FONT_RED);
     }
+    widget_mp_status_draw();
     platform_automation_after_frame();
     platform_screen_update();
     platform_screen_render();
@@ -219,6 +229,7 @@ static void run_and_draw(void)
 
     game_run();
     game_draw();
+    widget_mp_status_draw();
     platform_automation_after_frame();
 
     platform_screen_update();
@@ -410,7 +421,8 @@ static void main_loop(void)
 #endif
         return;
     }
-    if (data.active || platform_automation_is_active()) {
+    // a network game must keep running when the window is hidden: the other players wait for us
+    if (data.active || platform_automation_is_active() || mp_lockstep_is_active()) {
         run_and_draw();
     } else {
         SDL_WaitEvent(NULL);
@@ -647,6 +659,46 @@ static void setup(const julius_args *args)
     data.active = 1;
 }
 
+static void resolve_path(const char *path, char *resolved, size_t size)
+{
+    char cwd[512];
+    if (path[0] == '/' || path[0] == '\\' || (path[0] && path[1] == ':') || !getcwd(cwd, sizeof(cwd))) {
+        snprintf(resolved, size, "%s", path);
+    } else {
+        snprintf(resolved, size, "%s/%s", cwd, path);
+    }
+}
+
+static void show_city_when_started(void)
+{
+    window_city_show();
+}
+
+static void start_network_game(const julius_args *args, const char *host_save)
+{
+    if (!args->mp_host_save && !args->mp_join) {
+        return;
+    }
+    mp_lockstep_set_started_callback(show_city_when_started);
+    int port = args->mp_port ? args->mp_port : MP_LOCKSTEP_DEFAULT_PORT;
+    if (args->mp_host_save) {
+        if (!mp_lockstep_host(port, args->mp_players, host_save)) {
+            SDL_Log("Unable to host the network game: %s", mp_lockstep_status());
+        }
+    } else {
+        char address[256];
+        snprintf(address, sizeof(address), "%s", args->mp_join);
+        char *colon = strchr(address, ':');
+        if (colon) {
+            *colon = 0;
+            port = atoi(colon + 1);
+        }
+        if (!mp_lockstep_join(address, port)) {
+            SDL_Log("Unable to join the network game: %s", mp_lockstep_status());
+        }
+    }
+}
+
 int main(int argc, char **argv)
 {
     julius_args args;
@@ -661,7 +713,14 @@ int main(int argc, char **argv)
         exit_with_status(3);
     }
 
+    char mp_save_path[1024];
+    if (args.mp_host_save) {
+        // the game changes directory to the data directory: resolve the path first
+        resolve_path(args.mp_host_save, mp_save_path, sizeof(mp_save_path));
+    }
+
     setup(&args);
+    start_network_game(&args, mp_save_path);
 
     mouse_set_inside_window(1);
     mouse_set_window_focus(1);

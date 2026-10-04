@@ -98,6 +98,8 @@ répertoire courant (lancer depuis la racine du dépôt).
 | `pieces` | écrit la somme de contrôle de chaque partie de la sauvegarde |
 | `pause` / `unpause` | met en pause la boucle de jeu : seul `ticks` fait alors avancer la simulation, au tick près |
 | `rules mp` / `rules classic` | règles multijoueur par défaut, ou réglages locaux |
+| `mpwait N` | partie en réseau : attend qu'elle ait démarré et tourné N ticks ; échoue en cas de désynchronisation ou de déconnexion |
+| `mpcheck` | partie en réseau : écrit l'état et le nombre de tours vérifiés ; échoue si la partie ne tourne plus |
 | `log TEXTE` | écrit un repère dans le journal |
 | `quit` | quitte ; c'est aussi automatique en fin de script |
 
@@ -117,6 +119,20 @@ Bon à savoir :
 - Pas d'enregistrement d'images frame par frame (`SDL_VIDEO_DUMMY_SAVE_FRAMES`) : ~2 Mo par frame,
   et le disque est presque plein.
 - Les PNG vont dans `build/automation/` (ignoré par git). Faire le ménage après usage.
+
+## 3 bis. Parties en réseau
+
+- **Sans tête, dans ctest** : `test/sim/lan_test.sh` lance un hôte et des clients `simtool mpnode` sur la machine,
+  qui envoient des commandes scriptées (routes, maisons, impôts). Tests `mp_lan_2_players`, `mp_lan_4_players`
+  (sommes de contrôle finales identiques et tous les tours vérifiés) et `mp_lan_desync_detected` (un client modifie
+  son état en local : tous détectent la désynchronisation au même tour).
+- **Vrai jeu** : `tools/mp-real-test.sh` lance deux instances du jeu sans fenêtre, hôte et client, pilotées par
+  `test/automation/mp-host.txt` et `mp-client.txt`. Elles construisent à la souris et ouvrent des conseillers
+  pendant que le jeu tourne. Constaté : 150 tours vérifiés, sans désynchronisation.
+- **À la main, pour Alexandre** : `tools/play-mp.sh [JOUEURS] [SAUVEGARDE]` ouvre une vraie fenêtre par joueur sur le
+  Mac. Ne jamais le lancer soi-même.
+- En cas de désynchronisation, chaque machine écrit `mp-desync-pN-turnT.sav` dans le dossier des données : à comparer
+  avec `build/test/compare`.
 
 ## 4. Tests à construire (voir ROADMAP)
 

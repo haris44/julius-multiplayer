@@ -1,7 +1,7 @@
 # Feuille de route
 
-> **Jalon en cours : M2 (commandes), en visant au plus vite M2P (premier multijoueur jouable sur Mac).**
-> Ordre : M2.1 → M2.2 → M2.3 → M2.4 → M2.8 → M2P → reste de M2 → M3…
+> **Jalon en cours : M2P livré, en attente du test d'Alexandre (`tools/play-mp.sh`) ; puis reste de M2 (M2.6, M2.7,
+> M2.9 à M2.11), puis M3.**
 > Légende : `[x]` fait · `[~]` en cours · `[ ]` à faire. Une tâche n'est cochée que si ses critères sont vérifiés
 > par des tests automatisés (voir [TESTING.md](TESTING.md)). Chaque commit est préfixé par l'ID de sa tâche.
 > On suit l'ordre, sauf décision contraire consignée dans le JOURNAL.
@@ -46,12 +46,13 @@ Prérequis à tout le reste : savoir prouver que deux simulations sont identique
   de commerce, ouverture de route, import/export, seuils, stockage, industries à l'arrêt (`mp/actions`). Chaque
   commande refait exactement les appels du bouton d'origine (y compris les « +1 » relatifs). Test
   `mp_action_equivalence_*`.
-- [ ] **M2.5** Ordres militaires en commandes : déplacer, retour au fort, formation, service.
+- [x] **M2.5** Ordres militaires en commandes : déplacer, retour au fort, formation, service (et, pour la ville
+  classique partagée, bataille lointaine et demandes impériales).
 - [ ] **M2.6** Recalculs déclenchés par l'interface (conseillers) transformés en commandes ; phrases des figures
   calculées localement.
 - [ ] **M2.7** Enregistrement et rejeu (`.mprec`). *Critères* : un rejeu donne deux fois la même trace ; une partie
   jouée par script d'automatisation, une fois rejouée sans tête, donne la même somme de contrôle finale.
-- [ ] **M2.8** `sim_step` : en multijoueur, la cadence de la simulation ne dépend plus de l'interface (pas de pause
+- [~] **M2.8** `sim_step` : en multijoueur, la cadence de la simulation ne dépend plus de l'interface (pas de pause
   liée aux fenêtres, aux tracés ou au défilement, pas de perte de ticks). Le classique ne change pas.
 - [ ] **M2.9** En multijoueur, l'aperçu de construction et le rendu n'écrivent plus dans l'état pendant les ticks
   (D-010).
@@ -65,15 +66,16 @@ Priorité d'Alexandre : pouvoir lancer une partie multijoueur sur son Mac le plu
 « coopératif » : 2 joueurs (2 fenêtres sur le même Mac, ou 2 Mac en réseau local) construisent **la même cité**
 classique. Il valide en vrai la couche de commandes, le lockstep et la détection de désynchronisation, avant le moteur
 multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
-- [ ] **M2P.1** Réseau TCP minimal (`src/platform/net.c`) : `--host PORT` / `--join IP:PORT` en ligne de commande.
-- [ ] **M2P.2** Lockstep : tours de K ticks, commandes exécutées au tour T+2, somme de contrôle par tour, pause et
+- [x] **M2P.1** Réseau TCP minimal (`src/platform/net.c`) : `--host PORT` / `--join IP:PORT` en ligne de commande.
+- [x] **M2P.2** Lockstep : tours de K ticks, commandes exécutées au tour T+2, somme de contrôle par tour, pause et
   sauvegarde de diagnostic en cas de désynchronisation.
-- [ ] **M2P.3** Pendant les ticks, l'aperçu de construction (y compris celui de l'effacement) est retiré de la carte
+- [x] **M2P.3** Pendant les ticks, l'aperçu de construction (y compris celui de l'effacement) est retiré de la carte
   puis remis ; rotation de la vue
   bloquée en multijoueur (en attendant M2.10).
-- [ ] **M2P.4** `tools/play-mp.sh` : lance l'hôte et un client (deux fenêtres) sur une sauvegarde, sur le Mac.
-- [ ] **M2P.5** Test automatisé : deux instances sans fenêtre reliées en local, commandes scriptées, mêmes sommes de
+- [x] **M2P.4** `tools/play-mp.sh` : lance l'hôte et un client (deux fenêtres) sur une sauvegarde, sur le Mac.
+- [~] **M2P.5** Test automatisé : deux instances sans fenêtre reliées en local, commandes scriptées, mêmes sommes de
   contrôle. *Critère final* : Alexandre joue une partie à deux fenêtres sur son Mac sans désynchronisation.
+  *Fait* : `mp_lan_*` (ctest) et `tools/mp-real-test.sh` (vrai jeu). Reste : la partie d'Alexandre.
 
 ## M3 — Moteur multi-cités
 - [ ] **M3.1** Types élargis en mémoire (coordonnées 16 bits, offsets 32 bits). Le format classique est réécrit à

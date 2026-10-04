@@ -73,6 +73,10 @@ int platform_parse_arguments(int argc, char **argv, julius_args *output_args)
     output_args->force_fullscreen = 0;
     output_args->display_id = 0;
     output_args->automation_script = 0;
+    output_args->mp_host_save = 0;
+    output_args->mp_players = 2;
+    output_args->mp_join = 0;
+    output_args->mp_port = 0;
 
     for (int i = 1; i < argc; i++) {
         // we ignore "-psn" arguments, this is needed to launch the app
@@ -125,6 +129,18 @@ int platform_parse_arguments(int argc, char **argv, julius_args *output_args)
                 print_log(AUTOMATION_ERROR_MESSAGE);
                 ok = 0;
             }
+        } else if (SDL_strcmp(argv[i], "--mp-host") == 0 && i + 1 < argc) {
+            output_args->mp_host_save = argv[++i];
+        } else if (SDL_strcmp(argv[i], "--mp-players") == 0 && i + 1 < argc) {
+            output_args->mp_players = SDL_atoi(argv[++i]);
+            if (output_args->mp_players < 1 || output_args->mp_players > 4) {
+                print_log("Option --mp-players must be followed by a number of players from 1 to 4");
+                ok = 0;
+            }
+        } else if (SDL_strcmp(argv[i], "--mp-join") == 0 && i + 1 < argc) {
+            output_args->mp_join = argv[++i];
+        } else if (SDL_strcmp(argv[i], "--mp-port") == 0 && i + 1 < argc) {
+            output_args->mp_port = SDL_atoi(argv[++i]);
         } else if (SDL_strcmp(argv[i], "--windowed") == 0) {
             output_args->force_windowed = 1;
         } else if (SDL_strcmp(argv[i], "--fullscreen") == 0) {
@@ -160,6 +176,10 @@ int platform_parse_arguments(int argc, char **argv, julius_args *output_args)
         print_log("          Forces the game to start fullscreen");
         print_log("--display ID");
         print_log("          Forces the game to start on the specified display, numbered from 0");
+        print_log("--mp-host SAVE [--mp-players N] [--mp-port PORT]");
+        print_log("          Hosts a local network game for N players (default 2) starting from the saved game SAVE");
+        print_log("--mp-join ADDRESS[:PORT]");
+        print_log("          Joins a local network game");
         print_log("--automation FILE");
         print_log("          Runs the automation script FILE (synthetic input, screenshots), see doc/mp/TESTING.md");
         print_log("The last argument, if present, is interpreted as data directory for the Caesar 3 installation");

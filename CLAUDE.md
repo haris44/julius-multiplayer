@@ -34,6 +34,9 @@ La commande `/suite` enchaîne tout cela, puis les tâches du jalon.
 | Un test de parité précis | `cd build && ctest -R sav_caesar1 --output-on-failure` |
 | Comparer deux sauvegardes | `build/test/compare attendu.sav obtenu.sav` |
 | Lancer le vrai jeu sans fenêtre, piloté par un script | `tools/run-automation.sh test/automation/smoke.txt` (captures dans `build/automation/`, à regarder avec `Read`) |
+| Partie en réseau du vrai jeu, sans fenêtre (hôte + client scriptés) | `tools/mp-real-test.sh` |
+| Partie en réseau dans de vraies fenêtres, **pour Alexandre uniquement** | `tools/play-mp.sh [JOUEURS] [SAUVEGARDE]` |
+| Vrai jeu contre simulation de test (mêmes sommes de contrôle ?) | `tools/cross-check.sh SAVE TICKS PAS` |
 | Reconfigurer après un ajout de fichier dans CMakeLists | `cmake -S . -B build` |
 
 Syntaxe des scripts d'automatisation et pièges : `doc/mp/TESTING.md` §3.

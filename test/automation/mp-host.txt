@@ -1,0 +1,23 @@
+# Real game, network game host (see tools/mp-real-test.sh). Builds with the mouse and opens windows
+# while the game runs: nothing done through the user interface may desynchronise the players.
+mpwait 0
+speed 300
+click 768 312
+wait 3
+mouse 250 120
+wait 2
+drag 250 120 420 200
+mpwait 150
+key 1
+wait 30
+key Escape
+mpwait 300
+click 718 312
+wait 3
+drag 300 150 330 170
+mpwait 600
+screenshot build/automation/mp-host.png
+mpcheck
+# keep the game running a little so that the client reaches its own check
+wait 120
+quit
