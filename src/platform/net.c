@@ -189,6 +189,89 @@ void net_close(int socket)
     }
 }
 
+int net_udp_open(int port)
+{
+    if (!init()) {
+        return NET_INVALID_SOCKET;
+    }
+    int s = (int) socket(AF_INET, SOCK_DGRAM, 0);
+    if (s < 0) {
+        return NET_INVALID_SOCKET;
+    }
+    int one = 1;
+    setsockopt(s, SOL_SOCKET, SO_BROADCAST, (const char *) &one, sizeof(one));
+    setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (const char *) &one, sizeof(one));
+#ifdef SO_REUSEPORT
+    setsockopt(s, SOL_SOCKET, SO_REUSEPORT, (const char *) &one, sizeof(one));
+#endif
+    if (port) {
+        struct sockaddr_in addr;
+        memset(&addr, 0, sizeof(addr));
+        addr.sin_family = AF_INET;
+        addr.sin_addr.s_addr = htonl(INADDR_ANY);
+        addr.sin_port = htons((unsigned short) port);
+        if (bind(s, (struct sockaddr *) &addr, sizeof(addr)) != 0) {
+            CLOSE_SOCKET(s);
+            return NET_INVALID_SOCKET;
+        }
+    }
+    set_non_blocking(s);
+    return s;
+}
+
+static void send_datagram(int socket, unsigned long address, int port, const void *data, int length)
+{
+    struct sockaddr_in addr;
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = htonl(address);
+    addr.sin_port = htons((unsigned short) port);
+    sendto(socket, data, length, 0, (struct sockaddr *) &addr, sizeof(addr));
+}
+
+void net_udp_broadcast(int socket, int port, const void *data, int length)
+{
+    send_datagram(socket, INADDR_BROADCAST, port, data, length);
+    // broadcasts do not always come back to this computer: other windows of the game listen here too
+    send_datagram(socket, INADDR_LOOPBACK, port, data, length);
+}
+
+int net_udp_receive(int socket, void *data, int max_length, char *from_address)
+{
+    struct sockaddr_in addr;
+    socklen_t len = sizeof(addr);
+    int received = (int) recvfrom(socket, data, max_length, 0, (struct sockaddr *) &addr, &len);
+    if (received <= 0) {
+        return 0;
+    }
+    snprintf(from_address, 16, "%s", inet_ntoa(addr.sin_addr));
+    return received;
+}
+
+void net_local_address(char *address)
+{
+    snprintf(address, 16, "?");
+    if (!init()) {
+        return;
+    }
+    // "connecting" a UDP socket sends nothing: it only selects the interface towards the network
+    int s = (int) socket(AF_INET, SOCK_DGRAM, 0);
+    if (s < 0) {
+        return;
+    }
+    struct sockaddr_in addr;
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = htonl(0x0a000001); // 10.0.0.1, never contacted
+    addr.sin_port = htons(9);
+    socklen_t len = sizeof(addr);
+    if (connect(s, (struct sockaddr *) &addr, sizeof(addr)) == 0 &&
+        getsockname(s, (struct sockaddr *) &addr, &len) == 0 && addr.sin_addr.s_addr != 0) {
+        snprintf(address, 16, "%s", inet_ntoa(addr.sin_addr));
+    }
+    CLOSE_SOCKET(s);
+}
+
 void net_sleep(int milliseconds)
 {
 #ifdef _WIN32

@@ -9,8 +9,10 @@
 #include "mp/checksum.h"
 #include "mp/command.h"
 #include "mp/compose.h"
+#include "mp/discovery.h"
 #include "mp/savegame.h"
 #include "mp/session.h"
+#include "scenario/property.h"
 #include "platform/net.h"
 
 #include <stdio.h>
@@ -244,9 +246,23 @@ static void start_session(int player, int base_tick)
 }
 
 // Host: the starting game of separate cities, written to a .mpsav and loaded back as the clients will
+static int is_scenario(const char *filename)
+{
+    size_t length = strlen(filename);
+    return length > 4 && (strcmp(filename + length - 4, ".map") == 0 || strcmp(filename + length - 4, ".MAP") == 0);
+}
+
 static int host_compose_cities(void)
 {
-    if (!game_file_load_saved_game(data.saved_game) ||
+    // a map of the free game (.map) starts a new city; a saved game (.sav) goes on with its city
+    int loaded;
+    if (is_scenario(data.saved_game)) {
+        scenario_set_custom(2); // a map of the free game, not a mission of the campaign
+        loaded = game_file_start_scenario(data.saved_game);
+    } else {
+        loaded = game_file_load_saved_game(data.saved_game);
+    }
+    if (!loaded ||
         !mp_compose_separate_cities(data.num_players, MP_COMPOSE_CITY_GAP)) {
         return 0;
     }
@@ -523,6 +539,10 @@ void mp_lockstep_poll(void)
         }
         if (connected == data.num_players) {
             host_start_game();
+        } else {
+            // players looking for a game on the local network see this one (mp/discovery)
+            const char *name = strrchr(data.saved_game, '/');
+            mp_discovery_announce(data.port, data.num_players, connected, name ? name + 1 : data.saved_game);
         }
     }
     int first = data.is_host ? 1 : 0;
@@ -584,6 +604,18 @@ void mp_lockstep_after_tick(void)
             set_status("Connexion à l'hôte perdue");
         }
     }
+}
+
+int mp_lockstep_connected_players(void)
+{
+    if (!data.is_host) {
+        return data.state == MP_LOCKSTEP_OFF ? 0 : data.num_players;
+    }
+    int connected = 1;
+    for (int p = 1; p < data.num_players; p++) {
+        connected += data.sockets[p] != NET_INVALID_SOCKET;
+    }
+    return connected;
 }
 
 int mp_lockstep_is_active(void)

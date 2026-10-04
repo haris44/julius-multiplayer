@@ -110,6 +110,21 @@ static translation_string all_strings[] = {
     {TR_HOTKEY_DUPLICATE_TITLE, "Raccourci déjà utilisé"},
     {TR_HOTKEY_DUPLICATE_MESSAGE, "Cette combinaison de touches est déjà affectée à l'action suivante :"},
     {TR_WARNING_SCREENSHOT_SAVED, "Capture d'écran enregistrée : "},
+    {TR_MP_MENU, "Multijoueur"},
+    {TR_MP_LOBBY_TITLE, "Partie en réseau local"},
+    {TR_MP_HOST_TITLE, "Héberger une partie"},
+    {TR_MP_MAP, "Carte ou sauvegarde de départ :"},
+    {TR_MP_PLAYERS, "Joueurs : "},
+    {TR_MP_HOST_BUTTON, "Héberger"},
+    {TR_MP_JOIN_TITLE, "Rejoindre une partie"},
+    {TR_MP_FOUND_GAMES, "Parties trouvées sur le réseau :"},
+    {TR_MP_NO_GAME_FOUND, "Aucune partie pour l'instant"},
+    {TR_MP_ADDRESS, "Ou adresse de l'hôte :"},
+    {TR_MP_JOIN_BUTTON, "Rejoindre"},
+    {TR_MP_YOUR_ADDRESS, "Votre adresse sur le réseau : "},
+    {TR_MP_BACK, "Retour"},
+    {TR_MP_NO_MAP, "Aucune carte ni sauvegarde trouvée"},
+    {TR_MP_SEPARATE_CITIES, "Chaque joueur reçoit une copie de la cité de départ."},
 };
 
 void translation_french(const translation_string **strings, int *num_strings)

@@ -110,6 +110,21 @@ static translation_string all_strings[] = {
     {TR_HOTKEY_DUPLICATE_TITLE, "Hotkey already used"},
     {TR_HOTKEY_DUPLICATE_MESSAGE, "This key combination is already assigned to the following action:"},
     {TR_WARNING_SCREENSHOT_SAVED, "Screenshot saved: "},
+    {TR_MP_MENU, "Multiplayer"},
+    {TR_MP_LOBBY_TITLE, "Local network game"},
+    {TR_MP_HOST_TITLE, "Host a game"},
+    {TR_MP_MAP, "Starting map or saved game:"},
+    {TR_MP_PLAYERS, "Players: "},
+    {TR_MP_HOST_BUTTON, "Host"},
+    {TR_MP_JOIN_TITLE, "Join a game"},
+    {TR_MP_FOUND_GAMES, "Games found on the network:"},
+    {TR_MP_NO_GAME_FOUND, "No game yet"},
+    {TR_MP_ADDRESS, "Or address of the host:"},
+    {TR_MP_JOIN_BUTTON, "Join"},
+    {TR_MP_YOUR_ADDRESS, "Your network address: "},
+    {TR_MP_BACK, "Back"},
+    {TR_MP_NO_MAP, "No map or saved game found"},
+    {TR_MP_SEPARATE_CITIES, "Every player gets a copy of the starting city."},
 };
 
 void translation_english(const translation_string **strings, int *num_strings)

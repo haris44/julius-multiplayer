@@ -16,6 +16,7 @@
 #include "city/population.h"
 #include "city/ratings.h"
 #include "scenario/data.h"
+#include "scenario/property.h"
 #include "scenario/request.h"
 #include "city/data_private.h"
 #include "city/resource.h"
@@ -100,7 +101,12 @@ static int usage(void)
 
 static int load(const char *file)
 {
-    if (!game_file_load_saved_game(file)) {
+    size_t length = strlen(file);
+    int is_map = length > 4 && strcmp(file + length - 4, ".map") == 0;
+    if (is_map) {
+        scenario_set_custom(2); // a map of the free game
+    }
+    if (!(is_map ? game_file_start_scenario(file) : game_file_load_saved_game(file))) {
         printf("Unable to load saved game %s\n", file);
         return 0;
     }

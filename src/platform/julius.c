@@ -21,6 +21,7 @@
 #include "map/grid.h"
 #include "mp/compose.h"
 #include "mp/lockstep.h"
+#include "window/mp_lobby.h"
 #include "mp/session.h"
 #include "platform/file_manager.h"
 #include "platform/file_manager_cache.h"
@@ -674,23 +675,12 @@ static void resolve_path(const char *path, char *resolved, size_t size)
     }
 }
 
-static void show_city_when_started(void)
-{
-    // separate cities: the view starts on the city of this player
-    if (player_context_num_players() > 1) {
-        int x, y, size;
-        mp_compose_city_area(mp_session_local_player_id(), MP_COMPOSE_CITY_GAP, &x, &y, &size);
-        city_view_go_to_grid_offset(map_grid_offset(x + size / 2, y + size / 2));
-    }
-    window_city_show();
-}
-
 static void start_network_game(const julius_args *args, const char *host_save)
 {
     if (!args->mp_host_save && !args->mp_join) {
         return;
     }
-    mp_lockstep_set_started_callback(show_city_when_started);
+    mp_lockstep_set_started_callback(window_mp_lobby_show_started_game);
     int port = args->mp_port ? args->mp_port : MP_LOCKSTEP_DEFAULT_PORT;
     if (args->mp_host_save) {
         if (!mp_lockstep_host(port, args->mp_players, host_save, !args->mp_shared_city)) {

@@ -576,6 +576,7 @@ set(WINDOW_FILES
     ${PROJECT_SOURCE_DIR}/src/window/labor_priority.c
     ${PROJECT_SOURCE_DIR}/src/window/logo.c
     ${PROJECT_SOURCE_DIR}/src/window/main_menu.c
+    ${PROJECT_SOURCE_DIR}/src/window/mp_lobby.c
     ${PROJECT_SOURCE_DIR}/src/window/message_dialog.c
     ${PROJECT_SOURCE_DIR}/src/window/message_list.c
     ${PROJECT_SOURCE_DIR}/src/window/military_menu.c
@@ -607,6 +608,7 @@ set(MP_FILES
     ${PROJECT_SOURCE_DIR}/src/mp/checksum.c
     ${PROJECT_SOURCE_DIR}/src/mp/command.c
     ${PROJECT_SOURCE_DIR}/src/mp/compose.c
+    ${PROJECT_SOURCE_DIR}/src/mp/discovery.c
     ${PROJECT_SOURCE_DIR}/src/mp/lockstep.c
     ${PROJECT_SOURCE_DIR}/src/mp/savegame.c
     ${PROJECT_SOURCE_DIR}/src/platform/net.c

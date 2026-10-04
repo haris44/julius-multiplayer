@@ -60,6 +60,11 @@ void mp_lockstep_after_tick(void);
 
 int mp_lockstep_is_active(void);
 
+/**
+ * Host: players connected so far, the host included
+ */
+int mp_lockstep_connected_players(void);
+
 mp_lockstep_state mp_lockstep_get_state(void);
 
 /**

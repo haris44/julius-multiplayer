@@ -134,12 +134,19 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
   sauvegardes de diagnostic.
 - [ ] **M5.3** Banc de test multi-processus sans tête (`tools/lan-test.sh`) : de 2 à 4 instances, commandes
   scriptées, traces identiques.
-- [ ] **M5.4** Salon minimal : héberger, rejoindre par IP ou par découverte UDP, vérifier les sommes de contrôle des
+- [x] **M5.4** Salon minimal : héberger, rejoindre par IP ou par découverte UDP, vérifier les sommes de contrôle des
   données, choisir les règles, se déclarer prêt.
+  *Fait* (demande d'Alexandre, avancé avant M4.3) : entrée « Multijoueur » du menu principal (`window/mp_lobby`).
+  L'hôte choisit une carte du jeu libre (`.map`) ou une sauvegarde et le nombre de joueurs ; les autres trouvent la
+  partie sur le réseau local (annonce UDP, `mp/discovery`) ou tapent l'adresse. Test : `tools/mp-lobby-test.sh`
+  (deux instances du vrai jeu, tout à la souris). Reste pour M5.8 : choix des règles, « prêt », vérification des
+  données du jeu.
 - [ ] **M5.5** Pause, vitesse, déconnexion ; sauvegarde coordonnée par l'hôte.
 - [ ] **M5.6** Intégration continue multiplateforme (macOS arm64, Windows x64, Linux) qui compare les traces de
   rejeu. *Nécessite un dépôt GitHub : à demander à Alexandre.*
 - [ ] **M5.7** Première vraie partie en LAN avec Alexandre (Mac et PC) et retour d'expérience.
+- [ ] **M5.8** Salon complet : choix des règles (difficulté, dieux), joueurs « prêts » avant le lancement par l'hôte,
+  vérification que tous ont les mêmes données du jeu.
 
 ## M6 — Grandes cartes
 - [ ] **M6.1** Format `.mpmap` : taille, points d'arrivée et leurs autorisations.

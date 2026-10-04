@@ -44,6 +44,32 @@ int net_receive(int socket, void *data, int max_length);
 void net_close(int socket);
 
 /**
+ * Opens a non-blocking UDP socket that can send and receive broadcasts: several programs of the same
+ * computer can listen on the same port (game discovery on the local network)
+ * @param port Port to receive on, or 0 to only send
+ * @return Socket, or NET_INVALID_SOCKET
+ */
+int net_udp_open(int port);
+
+/**
+ * Sends a datagram to every computer of the local network, and to this computer
+ */
+void net_udp_broadcast(int socket, int port, const void *data, int length);
+
+/**
+ * Receives a waiting datagram without blocking
+ * @param from_address Filled with the IP address of the sender (at least 16 characters)
+ * @return Number of bytes received, 0 when nothing is waiting
+ */
+int net_udp_receive(int socket, void *data, int max_length, char *from_address);
+
+/**
+ * IP address of this computer on the local network, to tell the other players
+ * @param address Filled with the address (at least 16 characters), "?" if unknown
+ */
+void net_local_address(char *address);
+
+/**
  * Waits without using the processor
  */
 void net_sleep(int milliseconds);

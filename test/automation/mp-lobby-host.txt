@@ -1,0 +1,20 @@
+# Real game, network game started from the lobby only (see tools/mp-lobby-test.sh): host
+wait 10
+click 400 500
+wait 10
+# main menu: Multiplayer
+click 400 292
+wait 10
+# first map of the list, then Host
+click 180 170
+wait 2
+click 240 420
+wait 10
+screenshot build/automation/mp-lobby-host-waiting.png
+mpwait 0
+speed 300
+mpwait 400
+screenshot build/automation/mp-lobby-host.png
+mpcheck
+wait 120
+quit

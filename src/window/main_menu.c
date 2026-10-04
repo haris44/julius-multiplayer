@@ -14,14 +14,16 @@
 #include "graphics/screen.h"
 #include "graphics/window.h"
 #include "sound/music.h"
+#include "translation/translation.h"
 #include "window/cck_selection.h"
 #include "window/config.h"
 #include "window/file_dialog.h"
+#include "window/mp_lobby.h"
 #include "window/new_career.h"
 #include "window/plain_message_dialog.h"
 #include "window/popup_dialog.h"
 
-#define MAX_BUTTONS 6
+#define MAX_BUTTONS 7
 
 static void button_click(int type, int param2);
 
@@ -34,6 +36,7 @@ static generic_button buttons[] = {
     {192, 220, 256, 25, button_click, button_none, 4, 0},
     {192, 260, 256, 25, button_click, button_none, 5, 0},
     {192, 300, 256, 25, button_click, button_none, 6, 0},
+    {192, 340, 256, 25, button_click, button_none, 7, 0},
 };
 
 static void draw_version_string(void)
@@ -77,9 +80,10 @@ static void draw_foreground(void)
     lang_text_draw_centered(30, 1, 192, 107, 256, FONT_NORMAL_GREEN);
     lang_text_draw_centered(30, 2, 192, 147, 256, FONT_NORMAL_GREEN);
     lang_text_draw_centered(30, 3, 192, 187, 256, FONT_NORMAL_GREEN);
-    lang_text_draw_centered(9, 8, 192, 227, 256, FONT_NORMAL_GREEN);
-    lang_text_draw_centered(2, 0, 192, 267, 256, FONT_NORMAL_GREEN);
-    lang_text_draw_centered(30, 5, 192, 307, 256, FONT_NORMAL_GREEN);
+    text_draw_centered(translation_for(TR_MP_MENU), 192, 227, 256, FONT_NORMAL_GREEN, 0);
+    lang_text_draw_centered(9, 8, 192, 267, 256, FONT_NORMAL_GREEN);
+    lang_text_draw_centered(2, 0, 192, 307, 256, FONT_NORMAL_GREEN);
+    lang_text_draw_centered(30, 5, 192, 347, 256, FONT_NORMAL_GREEN);
 
     graphics_reset_dialog();
 }
@@ -114,15 +118,17 @@ static void button_click(int type, int param2)
     } else if (type == 3) {
         window_cck_selection_show();
     } else if (type == 4) {
+        window_mp_lobby_show();
+    } else if (type == 5) {
         if (!editor_is_present() || !game_init_editor()) {
             window_plain_message_dialog_show(
                 TR_NO_EDITOR_TITLE, TR_NO_EDITOR_MESSAGE);
         } else {
             sound_music_play_editor();
         }
-    } else if (type == 5) {
-        window_config_show();
     } else if (type == 6) {
+        window_config_show();
+    } else if (type == 7) {
         window_popup_dialog_show(POPUP_DIALOG_QUIT, confirm_exit, 1);
     }
 }
