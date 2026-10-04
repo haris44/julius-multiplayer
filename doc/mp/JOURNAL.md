@@ -5,7 +5,7 @@
 
 ---
 
-## 2026-10-04 — Session 1 : mise en place (jalon M0)
+## 2026-10-04 — Session 1 : mise en place (M0) puis déterminisme (M1)
 
 **Fait**
 - Analyse des fichiers d'origine. L'installeur PC (Inno Setup, repack Abandonware France) contient le jeu complet avec
@@ -35,8 +35,34 @@
 - Il n'existe pas de vrai mode « jeu libre », seulement l'option d'éditeur *open play*, avec laquelle César reste
   actif.
 
-**Prochaine étape** : M1.1, l'outil `simtool` (sans tête, scriptable, avec une trace de sommes de contrôle), puis
-M1.2 et M1.3.
+**Jalon M1 terminé** (commits 1811e6b6 à 531b2e2b ; 56 tests ctest en 3 s)
+- `mp/checksum` : somme de contrôle de tout l'état de simulation, calculée sur la sérialisation de la sauvegarde
+  (donc identique sur toutes les plateformes). Les parties écrites par l'interface en sont exclues.
+- `simtool` : `checksum`, `trace`, `run`, `pieces`, `idempotence`, `diffpieces`, plus les options `--mp`,
+  `--difficulty` et `--gods`.
+- `game/extra_state` : l'état caché est remis à zéro **avant** chaque chargement ou démarrage de partie. Les
+  17 sauvegardes de test sont maintenant identiques quand on les recharge dans le même processus. Avant :
+  7 sur 17 divergeaient.
+- `game/rules` : en multijoueur, la difficulté, les dieux et les correctifs viennent des règles de la partie, plus
+  de `c3.inf`. Testé dans les deux sens.
+- `tools/check-determinism.sh` : ni flottant, ni horloge, ni `rand()` dans la simulation.
+- Automatisation : commandes `checksum`, `pieces`, `pause`, `rules`. `tools/cross-check.sh` vérifie que le vrai
+  jeu et `simtool` donnent les mêmes sommes de contrôle : c'est le cas sur 3 000 ticks.
+
+**Appris pendant M1**
+- Il existait un autre état caché, non repéré par la cartographie : les compteurs de bâtiments ne sont sauvegardés
+  que pour certains types. Les forums et le sénat repartaient avec les valeurs de la partie précédente, ce qui
+  faussait la distribution du trésor. D'où la remise à zéro *avant* la lecture du fichier.
+- Pour retrouver un champ divergent :
+  1. `simtool idempotence` donne le tick ;
+  2. `simtool diffpieces` donne la partie de la sauvegarde ;
+  3. `compare` donne l'enregistrement et l'octet ;
+  4. on calcule ensuite la position des champs en déroulant `save_main_data`.
+- Le bouchon d'interface des tests « continue de gouverner » automatiquement à la victoire, alors que le vrai jeu
+  attend le joueur. C'est la seule différence observée entre les bouchons et le vrai jeu (à traiter en M2.11).
+
+**Prochaine étape** : M2.1, l'infrastructure de la couche de commandes. Ensuite la conversion des actions du joueur,
+famille par famille (inventaire : code-map/05 §4).
 
 **Points ouverts pour Alexandre** (décisions « à valider »)
 - D-006 : des territoires fixes par joueur plutôt que la construction libre partout.
