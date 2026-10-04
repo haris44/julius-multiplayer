@@ -5,6 +5,8 @@
 #include "core/string.h"
 #include "core/time.h"
 #include "game/settings.h"
+#include "game/player_context.h"
+#include "mp/session.h"
 
 #define MAX_WARNINGS 5
 #define MAX_TEXT 100
@@ -41,7 +43,9 @@ void city_warning_show(warning_type type)
 
 void city_warning_show_custom(const uint8_t *text)
 {
-    if (!setting_warnings()) {
+    // the commands of the other players run here too: their warnings are theirs
+    if (!setting_warnings() ||
+        (player_context_num_players() > 1 && player_context_current() != mp_session_local_player_id())) {
         return;
     }
     struct warning *w = new_warning();

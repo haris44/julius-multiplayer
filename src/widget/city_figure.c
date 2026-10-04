@@ -6,6 +6,7 @@
 #include "figuretype/editor.h"
 #include "graphics/image.h"
 #include "graphics/text.h"
+#include "mp/colors.h"
 
 static void draw_figure_with_cart(const figure *f, int x, int y)
 {
@@ -258,14 +259,15 @@ static void draw_figure(const figure *f, int x, int y, int highlight)
                 draw_map_flag(f, x, y);
                 break;
             default:
-                image_draw(f->image_id, x, y);
+                image_draw_masked(f->image_id, x, y, mp_colors_tint_for_figure(f->id));
                 break;
         }
     } else {
         if (f->is_enemy_image) {
             image_draw_enemy(f->image_id, x, y);
         } else {
-            image_draw(f->image_id, x, y);
+            // the walkers and soldiers of the other players wear their color
+            image_draw_masked(f->image_id, x, y, mp_colors_tint_for_figure(f->id));
             if (highlight) {
                 image_draw_blend_alpha(f->image_id, x, y, COLOR_MASK_LEGION_HIGHLIGHT);
             }

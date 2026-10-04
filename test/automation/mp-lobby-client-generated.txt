@@ -2,7 +2,7 @@
 wait 10
 click 400 500
 wait 10
-click 400 292
+click 400 172
 # the hosted game appears in the list within a second or two
 wait 150
 screenshot build/automation/mp-lobby-gen-client-found.png

@@ -77,6 +77,9 @@ int platform_parse_arguments(int argc, char **argv, julius_args *output_args)
     output_args->mp_players = 2;
     output_args->mp_join = 0;
     output_args->mp_port = 0;
+    output_args->mp_shared_city = 0;
+    output_args->mp_score_years = 0;
+    output_args->mp_generate = 0;
 
     for (int i = 1; i < argc; i++) {
         // we ignore "-psn" arguments, this is needed to launch the app

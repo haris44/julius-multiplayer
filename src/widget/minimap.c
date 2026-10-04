@@ -13,6 +13,7 @@
 #include "map/random.h"
 #include "map/terrain.h"
 #include "scenario/property.h"
+#include "mp/colors.h"
 
 #include <stdlib.h>
 
@@ -141,6 +142,15 @@ static int draw_figure(int x_view, int y_view, int grid_offset)
     return 1;
 }
 
+static void draw_tinted(int image_id, int x, int y, color_t tint)
+{
+    if (tint) {
+        image_draw_masked(image_id, x, y, tint);
+    } else {
+        image_draw(image_id, x, y);
+    }
+}
+
 static void draw_minimap_tile(int x_view, int y_view, int grid_offset)
 {
     if (grid_offset < 0) {
@@ -171,12 +181,14 @@ static void draw_minimap_tile(int x_view, int y_view, int grid_offset)
             } else {
                 image_id = image_group(GROUP_MINIMAP_BUILDING);
             }
+            // the buildings of the other players in their color
+            color_t tint = mp_colors_tint_for_building(b->id);
             switch (map_property_multi_tile_size(grid_offset)) {
-                case 1: image_draw(image_id, x_view, y_view); break;
-                case 2: image_draw(image_id + 1, x_view, y_view - 1); break;
-                case 3: image_draw(image_id + 2, x_view, y_view - 2); break;
-                case 4: image_draw(image_id + 3, x_view, y_view - 3); break;
-                case 5: image_draw(image_id + 4, x_view, y_view - 4); break;
+                case 1: draw_tinted(image_id, x_view, y_view, tint); break;
+                case 2: draw_tinted(image_id + 1, x_view, y_view - 1, tint); break;
+                case 3: draw_tinted(image_id + 2, x_view, y_view - 2, tint); break;
+                case 4: draw_tinted(image_id + 3, x_view, y_view - 3, tint); break;
+                case 5: draw_tinted(image_id + 4, x_view, y_view - 4, tint); break;
             }
         }
     } else {
@@ -199,7 +211,7 @@ static void draw_minimap_tile(int x_view, int y_view, int grid_offset)
         } else {
             image_id = image_group(GROUP_MINIMAP_EMPTY_LAND) + (rand & 7);
         }
-        image_draw(image_id, x_view, y_view);
+        draw_tinted(image_id, x_view, y_view, mp_colors_tint_for_tile(grid_offset));
     }
 }
 

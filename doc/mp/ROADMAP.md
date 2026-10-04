@@ -190,11 +190,20 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
   nécessaire.
 
 ## M7 — Interface multijoueur
-- [ ] **M7.1** Menu principal sans campagne ; écrans du salon.
-- [ ] **M7.2** Couleurs des joueurs : frontières, minicarte, marques sur les bâtiments et les soldats.
-- [ ] **M7.3** Tableau des scores, messages par joueur, écran de fin.
-- [ ] **M7.4** Interface de César masquée ; traductions françaises des nouveaux textes.
+- [x] **M7.1** Menu principal sans campagne ; écrans du salon.
+  *Fait* (D-031) : « Multijoueur » en tête du menu ; la campagne reste accessible plus bas (invariant I2, à valider).
+- [x] **M7.2** Couleurs des joueurs : frontières, minicarte, marques sur les bâtiments et les soldats.
+  *Fait* : `mp/colors` (1 bleu, 2 rouge, 3 vert, 4 jaune) ; bâtiments, infrastructures et personnages des autres
+  joueurs teintés dans la vue et sur la minicarte. Pas de frontières (pas de territoire, D-018). Capture :
+  commande d'automatisation `gotocity`.
+- [x] **M7.3** Tableau des scores, messages par joueur, écran de fin.
+  *Fait* : scores de chaque joueur dans le bandeau, dans sa couleur, et « PAUSE » ; messages déjà propres à chaque
+  cité ; avertissements des commandes des autres joueurs plus affichés chez soi ; écran de fin (M4.6).
+- [x] **M7.4** Interface de César masquée ; traductions françaises des nouveaux textes.
+  *Fait* : conseiller impérial inaccessible en multijoueur (demandes, cadeaux, salaire) ; tous les nouveaux textes
+  en français et en anglais.
 - [ ] **M7.5** Discussion entre joueurs (optionnelle).
+  *Non faite* (optionnelle).
 
 ## M8 — Commerce entre joueurs
 - [ ] **M8.1** Conception détaillée (D-019) ; routes commerciales par joueur avec les villes de l'empire.

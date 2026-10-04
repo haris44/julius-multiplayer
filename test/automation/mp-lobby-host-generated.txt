@@ -3,7 +3,7 @@ wait 10
 click 400 500
 wait 10
 # main menu: Multiplayer
-click 400 292
+click 400 172
 wait 10
 # first map of the list, then Host
 click 180 170

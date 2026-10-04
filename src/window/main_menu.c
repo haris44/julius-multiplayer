@@ -77,10 +77,11 @@ static void draw_foreground(void)
         large_label_draw(buttons[i].x, buttons[i].y, buttons[i].width / BLOCK_SIZE, focus_button_id == i + 1 ? 1 : 0);
     }
 
-    lang_text_draw_centered(30, 1, 192, 107, 256, FONT_NORMAL_GREEN);
-    lang_text_draw_centered(30, 2, 192, 147, 256, FONT_NORMAL_GREEN);
-    lang_text_draw_centered(30, 3, 192, 187, 256, FONT_NORMAL_GREEN);
-    text_draw_centered(translation_for(TR_MP_MENU), 192, 227, 256, FONT_NORMAL_GREEN, 0);
+    // the multiplayer game comes first; the campaign stays for the classic game (doc/mp/DECISIONS.md D-031)
+    text_draw_centered(translation_for(TR_MP_MENU), 192, 107, 256, FONT_NORMAL_GREEN, 0);
+    lang_text_draw_centered(30, 3, 192, 147, 256, FONT_NORMAL_GREEN);
+    lang_text_draw_centered(30, 2, 192, 187, 256, FONT_NORMAL_GREEN);
+    lang_text_draw_centered(30, 1, 192, 227, 256, FONT_NORMAL_GREEN);
     lang_text_draw_centered(9, 8, 192, 267, 256, FONT_NORMAL_GREEN);
     lang_text_draw_centered(2, 0, 192, 307, 256, FONT_NORMAL_GREEN);
     lang_text_draw_centered(30, 5, 192, 347, 256, FONT_NORMAL_GREEN);
@@ -112,13 +113,13 @@ static void confirm_exit(int accepted)
 static void button_click(int type, int param2)
 {
     if (type == 1) {
-        window_new_career_show();
-    } else if (type == 2) {
-        window_file_dialog_show(FILE_TYPE_SAVED_GAME, FILE_DIALOG_LOAD);
-    } else if (type == 3) {
-        window_cck_selection_show();
-    } else if (type == 4) {
         window_mp_lobby_show();
+    } else if (type == 2) {
+        window_cck_selection_show();
+    } else if (type == 3) {
+        window_file_dialog_show(FILE_TYPE_SAVED_GAME, FILE_DIALOG_LOAD);
+    } else if (type == 4) {
+        window_new_career_show();
     } else if (type == 5) {
         if (!editor_is_present() || !game_init_editor()) {
             window_plain_message_dialog_show(

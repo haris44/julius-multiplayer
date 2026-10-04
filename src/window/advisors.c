@@ -35,6 +35,7 @@
 #include "window/advisor/religion.h"
 #include "window/advisor/trade.h"
 #include "mp/session.h"
+#include "game/rules.h"
 
 static void button_change_advisor(int advisor, int param2);
 static void button_help(int param1, int param2);
@@ -99,6 +100,9 @@ static int advisor_height;
 
 static void set_advisor_window(void)
 {
+    if (current_advisor == ADVISOR_IMPERIAL && game_rules_is_multiplayer()) {
+        current_advisor = ADVISOR_RATINGS; // no Caesar in multiplayer (D-026): no requests, gifts nor salary
+    }
     if (sub_advisors[current_advisor]) {
         current_advisor_window = sub_advisors[current_advisor]();
     } else {
@@ -213,6 +217,9 @@ static void handle_input(const mouse *m, const hotkeys *h)
 
 static void button_change_advisor(int advisor, int param2)
 {
+    if (advisor == ADVISOR_IMPERIAL && game_rules_is_multiplayer()) {
+        return;
+    }
     if (advisor) {
         set_advisor(advisor);
         window_invalidate();

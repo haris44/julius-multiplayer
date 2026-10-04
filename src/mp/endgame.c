@@ -13,7 +13,21 @@ static struct {
     int scores[PLAYER_CONTEXT_MAX_PLAYERS];
     int notified;
     void (*over_callback)(void);
+    int live_scores[PLAYER_CONTEXT_MAX_PLAYERS]; // interface only, every game day: not saved, never read back
 } data;
+
+static void update_live_scores(void)
+{
+    if (game_time_absolute_tick() % 50 != 0 && data.live_scores[0]) {
+        return;
+    }
+    int previous = player_context_current();
+    for (int p = 0; p < player_context_num_players(); p++) {
+        player_context_switch(p);
+        data.live_scores[p] = mp_endgame_city_score();
+    }
+    player_context_switch(previous);
+}
 
 int mp_endgame_city_score(void)
 {
@@ -22,6 +36,9 @@ int mp_endgame_city_score(void)
 
 void mp_endgame_check(void)
 {
+    if (game_rules_is_multiplayer() && player_context_num_players() > 1) {
+        update_live_scores();
+    }
     if (data.over || !game_rules_is_multiplayer() || game_rules_end_condition() != GAME_END_SCORE) {
         return;
     }
@@ -43,6 +60,11 @@ void mp_endgame_check(void)
     }
     player_context_switch(previous);
     data.over = 1;
+}
+
+int mp_endgame_live_score(int player_id)
+{
+    return player_id >= 0 && player_id < PLAYER_CONTEXT_MAX_PLAYERS ? data.live_scores[player_id] : 0;
 }
 
 int mp_endgame_is_over(void)
@@ -77,6 +99,9 @@ void mp_endgame_notify(void)
 
 void mp_endgame_reset(void)
 {
+    for (int p = 0; p < PLAYER_CONTEXT_MAX_PLAYERS; p++) {
+        data.live_scores[p] = 0;
+    }
     data.end_year = 0;
     data.over = 0;
     data.winner = 0;

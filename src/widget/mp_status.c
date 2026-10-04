@@ -4,6 +4,9 @@
 #include "graphics/graphics.h"
 #include "graphics/screen.h"
 #include "graphics/text.h"
+#include "game/player_context.h"
+#include "mp/colors.h"
+#include "mp/endgame.h"
 #include "mp/lockstep.h"
 #include "mp/session.h"
 
@@ -33,7 +36,34 @@ void widget_mp_status_draw(void)
     uint8_t encoded[200];
     encoding_from_utf8(text, encoded, sizeof(encoded));
     int width = text_get_width(encoded, FONT_NORMAL_PLAIN) + 16;
+    // the scores of the players, each in its color, and the pause
+    int num_players = player_context_num_players();
+    int scores_width = 0;
+    uint8_t scores[PLAYER_CONTEXT_MAX_PLAYERS][32];
+    if (state == MP_LOCKSTEP_RUNNING && num_players > 1) {
+        for (int p = 0; p < num_players; p++) {
+            char score[32];
+            snprintf(score, sizeof(score), "J%d %d", p + 1, mp_endgame_live_score(p));
+            encoding_from_utf8(score, scores[p], sizeof(scores[p]));
+            scores_width += text_get_width(scores[p], FONT_NORMAL_PLAIN) + 12;
+        }
+    }
+    uint8_t paused[32];
+    int paused_width = 0;
+    if (state == MP_LOCKSTEP_RUNNING && mp_lockstep_is_paused()) {
+        encoding_from_utf8("PAUSE", paused, sizeof(paused));
+        paused_width = text_get_width(paused, FONT_NORMAL_PLAIN) + 12;
+    }
     int x = state == MP_LOCKSTEP_RUNNING ? 4 : (screen_width() - width) / 2;
-    graphics_fill_rect(x, BANNER_Y, width, BANNER_HEIGHT, COLOR_BLACK);
+    graphics_fill_rect(x, BANNER_Y, width + scores_width + paused_width, BANNER_HEIGHT, COLOR_BLACK);
     text_draw(encoded, x + 8, BANNER_Y + 6, FONT_NORMAL_PLAIN, color);
+    int x_score = x + width;
+    if (scores_width) {
+        for (int p = 0; p < num_players; p++) {
+            x_score += text_draw(scores[p], x_score, BANNER_Y + 6, FONT_NORMAL_PLAIN, mp_colors_player(p)) + 12;
+        }
+    }
+    if (paused_width) {
+        text_draw(paused, x_score, BANNER_Y + 6, FONT_NORMAL_PLAIN, COLOR_FONT_YELLOW);
+    }
 }

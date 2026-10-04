@@ -14,6 +14,10 @@
 #include "window/city.h"
 
 #include "SDL.h"
+#include "mp/compose.h"
+#include "city/view.h"
+#include "map/grid.h"
+#include "game/player_context.h"
 
 #include <inttypes.h>
 #include <stdio.h>
@@ -436,6 +440,16 @@ static int execute(char *line)
         data.mpplayers.target = n;
         data.mpplayers.frames_left = 60 * 60 * 3;
         return 1;
+    } else if (strcmp(command, "gotocity") == 0) {
+        // the view goes to the city of player N (1 = first), on a map of copied cities
+        if (sscanf(rest, "%d", &n) != 1 || n < 1 || n > player_context_num_players()) {
+            fail("invalid gotocity:", rest);
+            return 1;
+        }
+        int x, y, size;
+        mp_compose_city_area(n - 1, MP_COMPOSE_CITY_GAP, &x, &y, &size);
+        city_view_go_to_grid_offset(map_grid_offset(x + size / 2, y + size / 2));
+        return 0;
     } else if (strcmp(command, "mpcheck") == 0) {
         char value[160];
         snprintf(value, sizeof(value), "state %d, verified turns %d: %s", mp_lockstep_get_state(),

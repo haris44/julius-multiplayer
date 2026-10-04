@@ -316,3 +316,9 @@
   autorisations y sont. Le salon les liste ; le nombre de joueurs est celui de la carte. Pas d'éditeur pour
   l'instant : le générateur et `simtool mapgen` (variable `MAPGEN_OUTPUT`) les produisent.
 
+### D-031 — Menu principal : le multijoueur d'abord, la campagne gardée
+- 2026-10-04 · **adoptée, provisoire** · *à valider* par Alexandre
+- Le menu principal commence par « Multijoueur », puis le jeu libre (Mode Bâtisseur), le chargement, et seulement
+  ensuite « Nouvelle carrière ». La campagne n'est pas retirée : l'invariant I2 la neutralise par le mode, et le
+  jeu classique sert de référence aux tests de parité. La retirer du menu reste possible si Alexandre le souhaite.
+

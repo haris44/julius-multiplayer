@@ -23,6 +23,11 @@ void mp_endgame_check(void);
 int mp_endgame_is_over(void);
 
 /**
+ * Score of a player now, updated every game day, for the interface
+ */
+int mp_endgame_live_score(int player_id);
+
+/**
  * Player with the best score (the lowest id on a tie), once the game is over
  */
 int mp_endgame_winner(void);

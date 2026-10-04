@@ -98,6 +98,7 @@ répertoire courant (lancer depuis la racine du dépôt).
 | `pieces` | écrit la somme de contrôle de chaque partie de la sauvegarde |
 | `pause` / `unpause` | met en pause la boucle de jeu : seul `ticks` fait alors avancer la simulation, au tick près |
 | `rules mp` / `rules classic` | règles multijoueur par défaut, ou réglages locaux |
+| `gotocity P` | place la vue sur la cité du joueur P (cités recopiées) |
 | `mpplayers N` | partie en réseau, hôte : attend que N joueurs (hôte compris) soient connectés |
 | `mpwait N` | partie en réseau : attend qu'elle ait démarré et tourné N ticks ; échoue en cas de désynchronisation ou de déconnexion |
 | `mpcheck` | partie en réseau : écrit l'état et le nombre de tours vérifiés ; échoue si la partie ne tourne plus |
