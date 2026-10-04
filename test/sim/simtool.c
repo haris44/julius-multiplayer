@@ -23,10 +23,14 @@
 #include "map/terrain.h"
 #include "map/grid.h"
 #include "mp/checksum.h"
+#include "game/time.h"
 #include "mp/actions.h"
+#include "mp/lockstep.h"
 #include "mp/session.h"
 
 #include <inttypes.h>
+#include <time.h>
+#include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -58,6 +62,11 @@ static int usage(void)
     printf("  simtool clearequiv SAVE                same for clearing forts and bridges: answering the popup\n");
     printf("                                         equals sending the answer in the command\n");
     printf("  simtool actionequiv SAVE               same for city settings (taxes, wages, storage, trade...)\n");
+    printf("  simtool mpnode host PORT PLAYERS SAVE TICKS   network game host (headless)\n");
+    printf("  simtool mpnode join ADDRESS PORT TICKS [desync]  network game client (headless); with\n");
+    printf("                                         'desync' it changes its own state to test detection\n");
+    printf("                                         each player issues scripted commands; prints the\n");
+    printf("                                         final checksum, fails on desynchronisation\n");
     printf("  simtool idempotence SAVE TICKS [STEP]  loads and runs SAVE twice in one process,\n");
     printf("                                         fails if the two traces differ\n");
     printf("  simtool diffpieces SAVE TICKS [CHECK]  runs SAVE for TICKS, reloads it and runs CHECK ticks\n");
@@ -419,6 +428,105 @@ static int command_actionequiv(const char *file)
     return failures || effective < tested / 2 ? 1 : 0;
 }
 
+// Scripted player: builds roads and changes taxes, differently for each player
+static void mpnode_play(int tick_in_game)
+{
+    int player = mp_session_local_player_id();
+    if (tick_in_game % 40 == 7 + player * 3) {
+        int n = tick_in_game / 40;
+        int x = 20 + (n * 7 + player * 31) % 120;
+        int y = 20 + (n * 13 + player * 17) % 120;
+        mp_command command = { .type = MP_COMMAND_BUILD, .args = {
+            n % 3 == 2 ? BUILDING_HOUSE_VACANT_LOT : BUILDING_ROAD, 0, x, y, x + 6, y + (n % 2) * 3, 0, 0
+        } };
+        mp_command_submit(&command);
+    }
+    if (tick_in_game % 100 == 50 + player) {
+        mp_action_change_taxes(player % 2 ? 1 : -1);
+    }
+}
+
+static int command_mpnode(int argc, char **argv)
+{
+    // argv: mpnode host PORT PLAYERS SAVE TICKS | mpnode join ADDRESS PORT TICKS
+    int is_host = argc >= 7 && strcmp(argv[2], "host") == 0;
+    int is_join = argc >= 6 && strcmp(argv[2], "join") == 0;
+    if (!is_host && !is_join) {
+        return usage();
+    }
+    int ticks = atoi(is_host ? argv[6] : argv[5]);
+    int cheat = is_join && argc >= 7 && strcmp(argv[6], "desync") == 0;
+    int ok = is_host ? mp_lockstep_host(atoi(argv[3]), atoi(argv[4]), argv[5])
+                     : mp_lockstep_join(argv[3], atoi(argv[4]));
+    if (!ok) {
+        printf("FAILED: %s\n", mp_lockstep_status());
+        return 1;
+    }
+    setting_reset_speeds(500, setting_scroll_speed());
+    time_t deadline = time(0) + 120;
+    int start_tick = -1;
+    int last_played = -1;
+    while (time(0) < deadline) {
+        mp_lockstep_state state = mp_lockstep_get_state();
+        if (state == MP_LOCKSTEP_DESYNC || state == MP_LOCKSTEP_DISCONNECTED) {
+            break;
+        }
+        if (state == MP_LOCKSTEP_RUNNING && start_tick < 0) {
+            start_tick = game_time_absolute_tick();
+        }
+        int before = game_time_absolute_tick();
+        if (start_tick >= 0) {
+            int tick_in_game = before - start_tick;
+            if (tick_in_game >= ticks) {
+                break;
+            }
+            if (tick_in_game != last_played) {
+                mpnode_play(tick_in_game);
+                if (cheat && tick_in_game == ticks / 2) {
+                    city_finance_change_tax_percentage(3); // changed on this computer only
+                }
+                last_played = tick_in_game;
+            }
+        }
+        clock_millis += 2;
+        time_set_millis(clock_millis);
+        game_run();
+        if (game_time_absolute_tick() == before) {
+            usleep(500);
+        }
+    }
+    // the host keeps listening a little to verify the last turns of the clients
+    if (is_host) {
+        time_t end = time(0) + 3;
+        int last_turn = (ticks / 4) - 1;
+        while (time(0) < end && mp_lockstep_last_verified_turn() < last_turn &&
+            mp_lockstep_get_state() == MP_LOCKSTEP_RUNNING) {
+            mp_lockstep_poll();
+            usleep(1000);
+        }
+        printf("verified turns: %d / %d\n", mp_lockstep_last_verified_turn() + 1, last_turn + 1);
+    } else {
+        usleep(300 * 1000); // let the last checksums reach the host
+    }
+    printf("status: %s\n", mp_lockstep_status());
+    if (cheat || strcmp(argv[argc - 1], "expect-desync") == 0) {
+        // expected outcome: the desynchronisation is detected
+        int detected = mp_lockstep_get_state() == MP_LOCKSTEP_DESYNC;
+        printf("desync %s\n", detected ? "detected" : "NOT detected");
+        mp_lockstep_stop();
+        return detected ? 0 : 1;
+    }
+    printf("tick %d checksum %016" PRIx64 "\n", start_tick >= 0 ? game_time_absolute_tick() - start_tick : -1,
+        mp_checksum_state());
+    int result = mp_lockstep_get_state() == MP_LOCKSTEP_RUNNING && start_tick >= 0 &&
+        game_time_absolute_tick() - start_tick == ticks;
+    if (is_host) {
+        result = result && mp_lockstep_last_verified_turn() == (ticks / 4) - 1;
+    }
+    mp_lockstep_stop();
+    return result ? 0 : 1;
+}
+
 static int command_trace(const char *file, int ticks, int step)
 {
     if (!load(file)) {
@@ -561,6 +669,8 @@ int main(int argc, char **argv)
     int result;
     if (strcmp(command, "checksum") == 0) {
         result = command_checksum(file);
+    } else if (strcmp(command, "mpnode") == 0) {
+        result = command_mpnode(argc, argv);
     } else if (strcmp(command, "actionequiv") == 0) {
         result = command_actionequiv(file);
     } else if (strcmp(command, "clearequiv") == 0) {

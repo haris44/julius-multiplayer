@@ -198,3 +198,11 @@ endforeach()
 foreach(save brugle-lugdunum cicero-lugdunum-trade)
     add_test(NAME mp_action_equivalence_${save} COMMAND simtool actionequiv ${save}.sav)
 endforeach()
+
+# Network games (M2P.5): headless host and clients on this computer
+if(UNIX)
+    add_test(NAME mp_lan_2_players COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/sim/lan_test.sh $<TARGET_FILE:simtool> 27431 2 brugle-lugdunum.sav 800)
+    add_test(NAME mp_lan_4_players COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/sim/lan_test.sh $<TARGET_FILE:simtool> 27432 4 valentia57.sav 1200)
+    add_test(NAME mp_lan_desync_detected COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/sim/lan_test.sh $<TARGET_FILE:simtool> 27433 3 brugle-lugdunum.sav 400 desync)
+    set_tests_properties(mp_lan_2_players mp_lan_4_players mp_lan_desync_detected PROPERTIES TIMEOUT 120)
+endif()
