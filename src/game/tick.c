@@ -54,6 +54,7 @@
 #include "scenario/request.h"
 #include "sound/music.h"
 #include "widget/minimap.h"
+#include "mp/session.h"
 
 static void advance_year(void)
 {
@@ -172,6 +173,8 @@ void game_tick_run(void)
         figure_action_handle(); // just update the flag figures
         return;
     }
+    // Commands of all players scheduled for this tick run first, identically on every computer
+    mp_command_run_scheduled();
     random_generate_next();
     game_undo_reduce_time_available();
     advance_tick();

@@ -695,6 +695,61 @@ void building_construction_place(void)
     }
 }
 
+void building_construction_get_placement(building_construction_placement *placement)
+{
+    placement->type = data.type;
+    placement->sub_type = data.sub_type;
+    placement->x_start = data.start.x;
+    placement->y_start = data.start.y;
+    placement->x_end = data.end.x;
+    placement->y_end = data.end.y;
+    placement->road_orientation = data.road_orientation;
+}
+
+void building_construction_remove_preview(void)
+{
+    map_property_clear_constructing_and_deleted();
+    if (data.in_progress && building_construction_is_updatable()) {
+        game_undo_restore_building_state();
+        game_undo_restore_map(1);
+    }
+    data.in_progress = 0;
+    data.cost_preview = 0;
+}
+
+void building_construction_execute(const building_construction_placement *placement)
+{
+    // Keep what the local player is doing with the construction tool
+    building_type local_type = data.type;
+    building_type local_sub_type = data.sub_type;
+    if (data.in_progress) {
+        building_construction_remove_preview();
+    }
+
+    // Same steps as dragging with the mouse from start to end, then releasing the button
+    building_construction_set_type(placement->type);
+    data.sub_type = placement->sub_type;
+    data.road_orientation = placement->road_orientation;
+    building_construction_start(placement->x_start, placement->y_start,
+        map_grid_offset(placement->x_start, placement->y_start));
+    if (data.in_progress) {
+        building_construction_update(placement->x_end, placement->y_end,
+            map_grid_offset(placement->x_end, placement->y_end));
+        building_type type = data.sub_type ? data.sub_type : data.type;
+        if (type == BUILDING_LOW_BRIDGE || type == BUILDING_SHIP_BRIDGE) {
+            // the bridge length is otherwise computed while drawing the building ghost
+            int length, direction;
+            map_bridge_calculate_length_direction(placement->x_end, placement->y_end, &length, &direction);
+        }
+        building_construction_place();
+    }
+
+    // Temples cycle through gods after each placement
+    building_type next_sub_type = data.sub_type;
+    building_construction_set_type(local_type);
+    data.sub_type = local_type == placement->type ? next_sub_type : local_sub_type;
+}
+
 static void set_warning(int *warning_id, int warning)
 {
     if (warning_id) {

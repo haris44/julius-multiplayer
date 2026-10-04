@@ -22,6 +22,11 @@ int game_time_tick(void)
     return data.tick;
 }
 
+int game_time_absolute_tick(void)
+{
+    return data.total_days * 50 + data.tick;
+}
+
 int game_time_day(void)
 {
     return data.day;

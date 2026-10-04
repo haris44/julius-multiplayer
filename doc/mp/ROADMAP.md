@@ -1,6 +1,7 @@
 # Feuille de route
 
-> **Jalon en cours : M2, couche de commandes et séparation interface / simulation.**
+> **Jalon en cours : M2 (commandes), en visant au plus vite M2P (premier multijoueur jouable sur Mac).**
+> Ordre : M2.1 → M2.2 → M2.3 → M2.4 → M2.8 → M2P → reste de M2 → M3…
 > Légende : `[x]` fait · `[~]` en cours · `[ ]` à faire. Une tâche n'est cochée que si ses critères sont vérifiés
 > par des tests automatisés (voir [TESTING.md](TESTING.md)). Chaque commit est préfixé par l'ID de sa tâche.
 > On suit l'ordre, sauf décision contraire consignée dans le JOURNAL.
@@ -32,10 +33,12 @@ Prérequis à tout le reste : savoir prouver que deux simulations sont identique
   Plus la vérification croisée `tools/cross-check.sh` : vrai jeu et `simtool` donnent les mêmes sommes de contrôle.
 
 ## M2 — Couche de commandes et séparation interface / simulation
-- [ ] **M2.1** Infrastructure de commandes : structure, sérialisation petit-boutiste, file, exécuteur, numéro de
+- [x] **M2.1** Infrastructure de commandes : structure, sérialisation petit-boutiste, file, exécuteur, numéro de
   séquence. *Critère* : tests unitaires d'aller-retour.
-- [ ] **M2.2** Construction en commandes à paramètres absolus : bâtiments, tracés de routes, murs et aqueducs,
+- [x] **M2.2** Construction en commandes à paramètres absolus : bâtiments, tracés de routes, murs et aqueducs,
   maisons, ponts, forts, portes, temples. Inventaire : code-map/05 §4.
+  *Fait* : `MP_COMMAND_BUILD` rejoue « appuyer, glisser, relâcher » ; test `mp_build_equivalence_*` (234 placements
+  identiques à l'ancien chemin, y compris 25 ticks après) et `test/automation/build-road.txt` dans le vrai jeu.
 - [ ] **M2.3** Démolition en commande ; l'aperçu de l'effacement ne marque plus les vrais bâtiments.
 - [ ] **M2.4** Réglages de la cité en commandes : impôts, salaires, priorités, fêtes, entrepôts et greniers, commerce
   (routes, importation et exportation, seuils), industries à l'arrêt.
@@ -52,6 +55,20 @@ Prérequis à tout le reste : savoir prouver que deux simulations sont identique
   soit l'orientation locale.
 - [ ] **M2.11** Messages adressés à un joueur, popups locales, pas de victoire « classique » en multijoueur.
   *Critère* : `tools/cross-check.sh` identique aussi sur `brugle-massilia-start` et `brugle-lugdunum`.
+
+## M2P — Premier multijoueur jouable sur Mac (ville partagée)
+Priorité d'Alexandre : pouvoir lancer une partie multijoueur sur son Mac le plus tôt possible, pour tester. Prototype
+« coopératif » : 2 joueurs (2 fenêtres sur le même Mac, ou 2 Mac en réseau local) construisent **la même cité**
+classique. Il valide en vrai la couche de commandes, le lockstep et la détection de désynchronisation, avant le moteur
+multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
+- [ ] **M2P.1** Réseau TCP minimal (`src/platform/net.c`) : `--host PORT` / `--join IP:PORT` en ligne de commande.
+- [ ] **M2P.2** Lockstep : tours de K ticks, commandes exécutées au tour T+2, somme de contrôle par tour, pause et
+  sauvegarde de diagnostic en cas de désynchronisation.
+- [ ] **M2P.3** Pendant les ticks, l'aperçu de construction est retiré de la carte puis remis ; rotation de la vue
+  bloquée en multijoueur (en attendant M2.10).
+- [ ] **M2P.4** `tools/play-mp.sh` : lance l'hôte et un client (deux fenêtres) sur une sauvegarde, sur le Mac.
+- [ ] **M2P.5** Test automatisé : deux instances sans fenêtre reliées en local, commandes scriptées, mêmes sommes de
+  contrôle. *Critère final* : Alexandre joue une partie à deux fenêtres sur son Mac sans désynchronisation.
 
 ## M3 — Moteur multi-cités
 - [ ] **M3.1** Types élargis en mémoire (coordonnées 16 bits, offsets 32 bits). Le format classique est réécrit à

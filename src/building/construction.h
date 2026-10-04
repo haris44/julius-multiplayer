@@ -39,4 +39,30 @@ int building_construction_get_start_grid_offset(void);
 void building_construction_reset_draw_as_constructing(void);
 int building_construction_draw_as_constructing(void);
 
+typedef struct {
+    int type;
+    int sub_type;
+    int x_start;
+    int y_start;
+    int x_end;
+    int y_end;
+    int road_orientation;
+} building_construction_placement;
+
+/**
+ * Everything needed to replay the construction the local player is placing
+ */
+void building_construction_get_placement(building_construction_placement *placement);
+
+/**
+ * Removes the construction preview from the map
+ */
+void building_construction_remove_preview(void);
+
+/**
+ * Places a construction exactly as if it had been dragged from start to end with the mouse.
+ * The construction tool of the local player is kept.
+ */
+void building_construction_execute(const building_construction_placement *placement);
+
 #endif // BUILDING_CONSTRUCTION_H

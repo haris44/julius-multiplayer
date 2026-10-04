@@ -63,6 +63,7 @@ add_executable(autopilot
     ${SCENARIO_FILES}
     ${SOUND_FILES}
     ${EDITOR_FILES}
+    ${MP_FILES}
 )
 
 # Headless simulation tool: checksums, traces, idempotence (doc/mp/TESTING.md)
@@ -182,3 +183,12 @@ add_trace_comparison(sim_rules_classic_reads_local_settings
 add_trace_comparison(sim_rules_multiplayer_ignores_local_settings
     "trace|brugle-massilia-start.sav|1000|50"
     "--difficulty|0|--gods|0|--mp|trace|brugle-massilia-start.sav|1000|50" same)
+
+# Unit tests of the multiplayer modules
+add_executable(mp_test_command mp/test_command.c ${PROJECT_SOURCE_DIR}/src/core/buffer.c ${PROJECT_SOURCE_DIR}/src/mp/command.c)
+add_test(NAME mp_command COMMAND mp_test_command)
+
+# Commands (M2.2): placing buildings through commands equals the former direct user interface calls
+foreach(save brugle-lugdunum valentia57)
+    add_test(NAME mp_build_equivalence_${save} COMMAND simtool buildequiv ${save}.sav)
+endforeach()

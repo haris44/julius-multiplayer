@@ -39,6 +39,12 @@ int game_time_day(void);
 int game_time_tick(void);
 
 /**
+ * Number of ticks since the start of the game: increases by one every tick, stored in saved games
+ * @return Absolute tick
+ */
+int game_time_absolute_tick(void);
+
+/**
  * Increases tick
  * @return True if the tick overflows
  */

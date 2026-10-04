@@ -600,6 +600,8 @@ set(EDITOR_FILES
 )
 set(MP_FILES
     ${PROJECT_SOURCE_DIR}/src/mp/checksum.c
+    ${PROJECT_SOURCE_DIR}/src/mp/command.c
+    ${PROJECT_SOURCE_DIR}/src/mp/session.c
 )
 set(TRANSLATION_FILES
     ${PROJECT_SOURCE_DIR}/src/translation/czech.c

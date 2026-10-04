@@ -1,11 +1,17 @@
 // Headless simulation tool: loads saved games, runs ticks exactly like the autopilot and
 // prints state checksums. See doc/mp/TESTING.md.
+#include "building/construction.h"
+#include "building/type.h"
+#include "city/finance.h"
 #include "core/time.h"
 #include "game/file.h"
 #include "game/game.h"
 #include "game/rules.h"
 #include "game/settings.h"
+#include "map/bridge.h"
+#include "map/grid.h"
 #include "mp/checksum.h"
+#include "mp/session.h"
 
 #include <inttypes.h>
 #include <stdio.h>
@@ -34,6 +40,8 @@ static int usage(void)
     printf("  simtool run SAVE TICKS OUTPUT          runs TICKS ticks and writes the saved game OUTPUT\n");
     printf("  simtool trace SAVE TICKS [STEP]        checksum every STEP ticks (default 1)\n");
     printf("  simtool pieces SAVE [TICKS]            checksum of every saved game piece after TICKS\n");
+    printf("  simtool buildequiv SAVE                placing buildings through commands gives the same\n");
+    printf("                                         state as the former direct user interface calls\n");
     printf("  simtool idempotence SAVE TICKS [STEP]  loads and runs SAVE twice in one process,\n");
     printf("                                         fails if the two traces differ\n");
     printf("  simtool diffpieces SAVE TICKS [CHECK]  runs SAVE for TICKS, reloads it and runs CHECK ticks\n");
@@ -133,6 +141,83 @@ static int command_run(const char *file, int ticks, const char *output)
     }
     printf("%016" PRIx64 "\n", mp_checksum_state());
     return 0;
+}
+
+// Former user interface path (widget/city.c before M2.2): select the type, press, drag, release
+static void build_directly(const building_construction_placement *p)
+{
+    building_construction_set_type(p->type);
+    building_construction_start(p->x_start, p->y_start, map_grid_offset(p->x_start, p->y_start));
+    if (!building_construction_in_progress()) {
+        return;
+    }
+    building_construction_update(p->x_end, p->y_end, map_grid_offset(p->x_end, p->y_end));
+    if (p->type == BUILDING_LOW_BRIDGE) {
+        int length, direction;
+        map_bridge_calculate_length_direction(p->x_end, p->y_end, &length, &direction);
+    }
+    building_construction_place();
+    building_construction_clear_type();
+}
+
+static void build_with_command(const building_construction_placement *p)
+{
+    mp_command command = { .type = MP_COMMAND_BUILD, .args = {
+        p->type, p->sub_type, p->x_start, p->y_start, p->x_end, p->y_end, p->road_orientation
+    } };
+    mp_command_submit(&command);
+    building_construction_clear_type();
+}
+
+static int command_buildequiv(const char *file)
+{
+    static const int types[] = {
+        BUILDING_ROAD, BUILDING_HOUSE_VACANT_LOT, BUILDING_WELL, BUILDING_PREFECTURE, BUILDING_CLEAR_LAND,
+        BUILDING_WALL, BUILDING_AQUEDUCT, BUILDING_GARDENS, BUILDING_PLAZA, BUILDING_MARKET,
+        BUILDING_WAREHOUSE, BUILDING_DRAGGABLE_RESERVOIR, BUILDING_GATEHOUSE, BUILDING_LOW_BRIDGE
+    };
+    int num_types = sizeof(types) / sizeof(types[0]);
+    int tested = 0, effective = 0, failures = 0;
+    for (int y = 12; y < 150; y += 17) {
+        for (int x = 12; x < 150; x += 11) {
+            building_construction_placement p = {
+                .type = types[tested % num_types],
+                .x_start = x, .y_start = y,
+                .x_end = x + (tested % 5), .y_end = y + (tested % 3),
+                .road_orientation = types[tested % num_types] == BUILDING_GATEHOUSE ? 1 : 0
+            };
+            if (!load(file)) {
+                return 2;
+            }
+            uint64_t before = mp_checksum_state();
+            build_directly(&p);
+            uint64_t direct = mp_checksum_state();
+            int treasury_direct = city_finance_treasury();
+            run_trace(25, 25, 0, 0);
+            uint64_t direct_later = mp_checksum_state();
+
+            if (!load(file)) {
+                return 2;
+            }
+            build_with_command(&p);
+            uint64_t via_command = mp_checksum_state();
+            int treasury_command = city_finance_treasury();
+            run_trace(25, 25, 0, 0);
+            uint64_t command_later = mp_checksum_state();
+
+            tested++;
+            if (direct != before) {
+                effective++;
+            }
+            if (direct != via_command || direct_later != command_later || treasury_direct != treasury_command) {
+                failures++;
+                printf("DIFFERENT: type %d from (%d,%d) to (%d,%d)\n", p.type, p.x_start, p.y_start, p.x_end, p.y_end);
+            }
+        }
+    }
+    printf("%d placements tested, %d changed the city, %d different\n", tested, effective, failures);
+    // at least some placements must succeed, otherwise the test proves nothing
+    return failures || effective < 10 ? 1 : 0;
 }
 
 static int command_trace(const char *file, int ticks, int step)
@@ -277,6 +362,8 @@ int main(int argc, char **argv)
     int result;
     if (strcmp(command, "checksum") == 0) {
         result = command_checksum(file);
+    } else if (strcmp(command, "buildequiv") == 0) {
+        result = command_buildequiv(file);
     } else if (strcmp(command, "run") == 0 && argc > 4) {
         result = command_run(file, ticks, argv[4]);
     } else if (strcmp(command, "trace") == 0 && argc > 3) {

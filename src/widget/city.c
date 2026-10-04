@@ -29,6 +29,7 @@
 #include "widget/minimap.h"
 #include "window/building_info.h"
 #include "window/city.h"
+#include "mp/session.h"
 
 static struct {
     map_tile current_tile;
@@ -234,7 +235,14 @@ static void build_end(void)
         if (building_construction_type() != BUILDING_NONE) {
             sound_effect_play(SOUND_EFFECT_BUILD);
         }
-        building_construction_place();
+        building_construction_placement placement;
+        building_construction_get_placement(&placement);
+        building_construction_remove_preview();
+        mp_command command = { .type = MP_COMMAND_BUILD, .args = {
+            placement.type, placement.sub_type, placement.x_start, placement.y_start,
+            placement.x_end, placement.y_end, placement.road_orientation
+        } };
+        mp_command_submit(&command);
         widget_minimap_invalidate();
     }
 }
