@@ -1,6 +1,20 @@
 #include "trade.h"
 
+#include "building/building.h"
+#include "building/warehouse.h"
+#include "city/finance.h"
+#include "city/resource.h"
 #include "city/warning.h"
+#include "core/image.h"
+#include "figure/action.h"
+#include "figure/figure.h"
+#include "figure/image.h"
+#include "figure/movement.h"
+#include "figure/route.h"
+#include "game/time.h"
+#include "map/road_access.h"
+#include "map/grid.h"
+#include "building/storage.h"
 #include "core/lang.h"
 #include "core/string.h"
 #include "empire/trade_prices.h"
@@ -18,6 +32,12 @@ static int16_t asked_prices[PLAYER_CONTEXT_MAX_PLAYERS][PLAYER_CONTEXT_MAX_PLAYE
 static uint8_t buys[PLAYER_CONTEXT_MAX_PLAYERS][PLAYER_CONTEXT_MAX_PLAYERS][RESOURCE_MAX];
 
 static int notifications;
+
+// state of each city: the players it proposed a trade route to; a route is open when both proposed it
+static uint8_t proposed[PLAYER_CONTEXT_MAX_PLAYERS][PLAYER_CONTEXT_MAX_PLAYERS];
+
+#define MAX_CARAVAN_LOADS 8
+#define ACTION_GOING FIGURE_ACTION_222_MP_CARAVAN_GOING
 
 static int is_player(int player_id)
 {
@@ -107,6 +127,7 @@ void mp_trade_reset_extra_state(void)
 {
     memset(asked_prices, 0, sizeof(asked_prices));
     memset(buys, 0, sizeof(buys));
+    memset(proposed, 0, sizeof(proposed));
 }
 
 void mp_trade_save_extra_state(buffer *buf)
@@ -118,6 +139,7 @@ void mp_trade_save_extra_state(buffer *buf)
         }
     }
     buffer_write_raw(buf, buys[p], sizeof(buys[p]));
+    buffer_write_raw(buf, proposed[p], sizeof(proposed[p]));
 }
 
 void mp_trade_load_extra_state(buffer *buf)
@@ -129,4 +151,213 @@ void mp_trade_load_extra_state(buffer *buf)
         }
     }
     buffer_read_raw(buf, buys[p], sizeof(buys[p]));
+    buffer_read_raw(buf, proposed[p], sizeof(proposed[p]));
+}
+
+// ---------- trade routes ----------
+
+int mp_trade_route_is_open(int a, int b)
+{
+    return is_player(a) && is_player(b) && a != b && proposed[a][b] && proposed[b][a];
+}
+
+int mp_trade_route_is_proposed(int from, int to)
+{
+    return is_player(from) && is_player(to) && proposed[from][to];
+}
+
+void mp_trade_propose_route(int other, int propose)
+{
+    int self = player_context_current_player;
+    if (!is_player(other) || other == self || proposed[self][other] == (propose ? 1 : 0)) {
+        return;
+    }
+    proposed[self][other] = propose ? 1 : 0;
+    if (other == mp_session_local_player_id()) {
+        notifications++;
+        uint8_t text[200] = { 0 };
+        append(text, translation_for(TR_MP_PRICE_CHANGED_PLAYER));
+        append_number(text, self + 1);
+        append(text, translation_for(!propose ? TR_MP_ROUTE_CLOSED :
+            proposed[other][self] ? TR_MP_ROUTE_OPENED : TR_MP_ROUTE_PROPOSED));
+        city_warning_show_to_local_player(text);
+    }
+}
+
+// ---------- caravans ----------
+
+typedef struct {
+    int treasury;
+    int warehouse_id;
+    int road_x;
+    int road_y;
+    int road_network_id;
+} buyer_view;
+
+// what the seller may know of a buyer: his money, a warehouse of his that takes the resource
+static void look_at_buyer(int buyer, int resource, buyer_view *v)
+{
+    int previous = player_context_current();
+    player_context_switch(buyer);
+    v->treasury = city_finance_treasury();
+    v->warehouse_id = 0;
+    for (int i = BUILDING_FIRST; i < BUILDING_END && !v->warehouse_id; i++) {
+        building *b = building_get(i);
+        if (b->state != BUILDING_STATE_IN_USE || b->type != BUILDING_WAREHOUSE || !b->has_road_access) {
+            continue;
+        }
+        const building_storage *storage = building_storage_get(b->storage_id);
+        if (storage->resource_state[resource] == BUILDING_STORAGE_STATE_NOT_ACCEPTING || storage->empty_all) {
+            continue;
+        }
+        map_point road;
+        if (map_has_road_access(b->x, b->y, b->size, &road)) {
+            v->warehouse_id = i;
+            v->road_x = road.x;
+            v->road_y = road.y;
+            v->road_network_id = b->road_network_id;
+        }
+    }
+    player_context_switch(previous);
+}
+
+static int has_caravan_to(int buyer)
+{
+    for (int i = FIGURE_FIRST; i < FIGURE_END; i++) {
+        figure *f = figure_get(i);
+        if (f->state == FIGURE_STATE_ALIVE && mp_trade_is_caravan(f) && BUILDING_OWNER(f->destination_building_id) == buyer) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static building *seller_warehouse(int road_network_id, map_point *road)
+{
+    for (int i = BUILDING_FIRST; i < BUILDING_END; i++) {
+        building *b = building_get(i);
+        if (b->state == BUILDING_STATE_IN_USE && b->type == BUILDING_WAREHOUSE && b->has_road_access &&
+            b->road_network_id == road_network_id && map_has_road_access(b->x, b->y, b->size, road)) {
+            return b;
+        }
+    }
+    return 0;
+}
+
+static void dispatch_to(int buyer)
+{
+    if (has_caravan_to(buyer)) {
+        return; // one caravan at a time on a route
+    }
+    int seller = player_context_current_player;
+    for (int resource = RESOURCE_NONE + 1; resource < RESOURCE_MAX; resource++) {
+        // the settings of the empire do not apply: a buyer says what he buys from whom, a seller sells beyond his
+        // export threshold what he does not stockpile
+        if (!buys[buyer][seller][resource] || city_resource_is_stockpiled(resource)) {
+            continue;
+        }
+        int available = city_resource_count(resource) - city_resource_export_over(resource);
+        if (available <= 0) {
+            continue;
+        }
+        buyer_view v;
+        look_at_buyer(buyer, resource, &v);
+        int price = mp_trade_price(seller, buyer, resource);
+        int affordable = price > 0 ? v.treasury / price : 0;
+        int loads = available < MAX_CARAVAN_LOADS ? available : MAX_CARAVAN_LOADS;
+        loads = loads < affordable ? loads : affordable;
+        if (!v.warehouse_id || loads <= 0) {
+            continue;
+        }
+        map_point road;
+        building *from = seller_warehouse(v.road_network_id, &road);
+        if (!from) {
+            continue; // no road between the two cities
+        }
+        loads = building_warehouses_remove_resource(resource, loads);
+        if (loads <= 0) {
+            continue;
+        }
+        figure *f = figure_create(FIGURE_TRADE_CARAVAN, road.x, road.y, DIR_0_TOP);
+        f->action_state = ACTION_GOING;
+        f->building_id = from->id;
+        f->destination_building_id = v.warehouse_id;
+        f->destination_x = v.road_x;
+        f->destination_y = v.road_y;
+        f->destination_grid_offset = map_grid_offset(v.road_x, v.road_y);
+        f->resource_id = resource;
+        f->loads_sold_or_carrying = loads;
+        f->terrain_usage = TERRAIN_USAGE_ROADS;
+        return; // one resource per caravan
+    }
+}
+
+void mp_trade_dispatch_caravans(void)
+{
+    if (player_context_num_players() <= 1 || game_time_day() != 0) {
+        return; // once a month
+    }
+    int seller = player_context_current_player;
+    for (int buyer = 0; buyer < player_context_num_players(); buyer++) {
+        if (mp_trade_route_is_open(seller, buyer)) {
+            dispatch_to(buyer);
+        }
+    }
+}
+
+int mp_trade_is_caravan(const figure *f)
+{
+    return f->type == FIGURE_TRADE_CARAVAN && f->action_state == ACTION_GOING;
+}
+
+// the caravan reached the warehouse of the buyer: he stores what he can and pays for it, the rest goes back
+static void deliver(figure *f)
+{
+    int seller = player_context_current_player;
+    int buyer = BUILDING_OWNER(f->destination_building_id);
+    int resource = f->resource_id;
+    int price = mp_trade_price(seller, buyer, resource);
+    int loads = f->loads_sold_or_carrying;
+    int stored = 0;
+    player_context_switch(buyer);
+    for (int i = BUILDING_FIRST; i < BUILDING_END && stored < loads; i++) {
+        building *b = building_get(i);
+        if (b->state == BUILDING_STATE_IN_USE && b->type == BUILDING_WAREHOUSE) {
+            while (stored < loads && building_warehouse_add_resource(b, resource)) {
+                stored++;
+            }
+        }
+    }
+    for (int i = 0; i < stored; i++) {
+        city_finance_process_import(price);
+    }
+    player_context_switch(seller);
+    for (int i = 0; i < stored; i++) {
+        city_finance_process_export(price);
+    }
+    if (stored < loads) {
+        building_warehouses_add_resource(resource, loads - stored);
+    }
+    f->loads_sold_or_carrying = 0;
+}
+
+void mp_trade_caravan_action(figure *f)
+{
+    f->is_ghost = 0;
+    f->terrain_usage = TERRAIN_USAGE_ROADS;
+    f->use_cross_country = 0;
+    figure_image_increase_offset(f, 12);
+    f->cart_image_id = 0;
+    figure_movement_move_ticks(f, 1);
+    if (f->direction == DIR_FIGURE_AT_DESTINATION) {
+        deliver(f);
+        f->state = FIGURE_STATE_DEAD;
+    } else if (f->direction == DIR_FIGURE_REROUTE) {
+        figure_route_remove(f);
+    } else if (f->direction == DIR_FIGURE_LOST) {
+        // the road was cut: the goods go back to the warehouses of the seller
+        building_warehouses_add_resource(f->resource_id, f->loads_sold_or_carrying);
+        f->state = FIGURE_STATE_DEAD;
+    }
+    figure_image_update(f, image_group(GROUP_FIGURE_TRADE_CARAVAN));
 }

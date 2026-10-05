@@ -60,6 +60,7 @@
 #include "mp/session.h"
 #include "mp/fog.h"
 #include "mp/territory.h"
+#include "mp/trade.h"
 #include "game/player_context.h"
 
 // Every city runs the original tick in turn, in its own context (doc/mp/code-map/06): the parts that
@@ -135,7 +136,7 @@ static void advance_day(void)
 static void advance_tick(void)
 {
     // NB: these ticks are noop:
-    // 0, 9, 11, 15, 26, 41, 42, 47 (13: territories, 14: fog of war, multiplayer only)
+    // 0, 9, 11, 26, 41, 42, 47 (13: territories, 14: fog of war, 15: caravans between players: multiplayer only)
     switch (game_time_tick()) {
         case 1: city_gods_calculate_moods(1); break;
         case 2:
@@ -163,6 +164,7 @@ static void advance_tick(void)
         case 12: house_service_decay_houses_covered(); break;
         case 13: mp_territory_update_city(); break; // no-op in a classic game
         case 14: mp_fog_update_city(); break; // no-op in a classic game
+        case 15: mp_trade_dispatch_caravans(); break; // no-op in a classic game
         case 16: city_resource_calculate_warehouse_stocks(); break;
         case 17: city_resource_calculate_food_stocks_and_supply_wheat(); break;
         case 18: city_resource_calculate_workshop_stocks(); break;

@@ -125,6 +125,11 @@ void mp_action_set_buys_from(int seller, int resource, int buys)
     submit3(MP_ACTION_SET_BUYS_FROM, seller, resource, buys);
 }
 
+void mp_action_propose_route(int other, int propose)
+{
+    submit(MP_ACTION_PROPOSE_ROUTE, other, propose);
+}
+
 void mp_action_legion_move(int formation_id, int x, int y)
 {
     submit3(MP_ACTION_LEGION_MOVE, formation_id, x, y);
@@ -325,6 +330,9 @@ void mp_actions_execute(const mp_command *command)
             break;
         case MP_ACTION_SET_BUYS_FROM:
             mp_trade_set_buys_from(arg1, arg2, arg3);
+            break;
+        case MP_ACTION_PROPOSE_ROUTE:
+            mp_trade_propose_route(arg1, arg2);
             break;
         case MP_ACTION_SEND_REQUEST:
             scenario_request_dispatch(arg1);

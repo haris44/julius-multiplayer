@@ -310,6 +310,8 @@ add_test(NAME mp_empire_import_price COMMAND simtool importprice brugle-massilia
 
 # Prices between players, notice to the buyer (M8.3, D-043)
 add_test(NAME mp_trade_prices COMMAND simtool tradeprices brugle-massilia-start.sav)
+# Trade routes and caravans between players (M8.4, M8.5): open by both, delivered by road, paid at the seller's price
+add_test(NAME mp_trade_caravans COMMAND simtool caravans brugle-massilia-start.sav)
 
 # T1.5 (D-034): the roads of Caesar stay, untinted, and serve every city
 add_test(NAME mp_caesar_roads COMMAND simtool caesarroads brugle-massilia-start.sav)

@@ -1,4 +1,5 @@
 #include "trader.h"
+#include "mp/trade.h"
 
 #include "building/building.h"
 #include "building/dock.h"
@@ -326,6 +327,10 @@ static void go_to_next_warehouse(figure *f, int x_src, int y_src, int distance_t
 
 void figure_trade_caravan_action(figure *f)
 {
+    if (mp_trade_is_caravan(f)) {
+        mp_trade_caravan_action(f); // a caravan between players
+        return;
+    }
     f->is_ghost = 0;
     f->terrain_usage = TERRAIN_USAGE_PREFER_ROADS;
     figure_image_increase_offset(f, 12);

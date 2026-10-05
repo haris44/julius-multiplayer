@@ -439,3 +439,8 @@
   vend désormais le marbre 180 au lieu de 150 ») ; ses achats continuent au nouveau prix, il peut les arrêter.
 - Le reste de D-019 tient : il faut une route entre les deux cités et l'accord des deux, les caravanes ne suivent que
   les routes, elles pourront être interceptées (M9).
+- Les réglages « importer / exporter » de l'empire ne s'appliquent pas entre joueurs (le jeu les refuse quand
+  l'empire n'achète ou ne vend pas la ressource) : l'acheteur dit à qui il achète quoi ; le vendeur vend au-delà de
+  son seuil d'exportation, sauf ce qu'il met en réserve. Chaque mois, une caravane d'au plus 8 chargements par
+  route, dans la limite de ce que l'acheteur peut payer ; il paie à la livraison, ce qui ne trouve pas de place
+  repart chez le vendeur.

@@ -296,9 +296,14 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
   d'une ressource qu'il achète change. *Fait* : `mp/trade` (prix demandés et achats, état « extra » de chaque
   cité), commandes `MP_ACTION_SET_SELL_PRICE` et `MP_ACTION_SET_BUYS_FROM`, avertissement « Le joueur 2 vend
   désormais : marbre 180 Dn (au lieu de 150) » sur l'ordinateur de l'acheteur seulement. Test `mp_trade_prices`.
-- [ ] **M8.4** Ouverture d'une route entre deux joueurs (accord des deux, chemin routier entre leurs cités).
-- [ ] **M8.5** Caravanes entre joueurs, uniquement sur les routes : le vendeur expédie ce qu'il exporte, l'acheteur
-  paie le prix du vendeur à la livraison ; préférence au moins cher (joueurs avant l'empire).
+- [x] **M8.4** Ouverture d'une route entre deux joueurs (accord des deux, chemin routier entre leurs cités).
+  *Fait* : commande `MP_ACTION_PROPOSE_ROUTE`, route ouverte quand les deux l'ont proposée, message à l'autre
+  joueur ; le chemin est vérifié à chaque départ (entrepôts des deux sur le même réseau routier).
+- [x] **M8.5** Caravanes entre joueurs, uniquement sur les routes : le vendeur expédie ce qu'il exporte, l'acheteur
+  paie le prix du vendeur à la livraison. *Fait* : une caravane par mois et par route (tick 15), 8 chargements au
+  plus, dans la limite de ce que l'acheteur peut payer ; livraison dans ses entrepôts, le reste revient ; route
+  coupée : la cargaison revient. Test `mp_trade_caravans` (8 marbres livrés en 42 jours, 1 200 Dn payés et reçus).
+  *Reste* : la préférence de l'acheteur pour le moins cher entre joueurs et empire.
 - [ ] **M8.6** Fenêtre du commerce entre joueurs : prix, routes, achats.
 - [ ] **M8.7** Interception : caravanes attaquables, cargaison perdue, route coupée (avec M9).
 - [ ] **M8.8** Tests : rejeux, cargaisons et argent conservés, scénarios visuels.

@@ -124,6 +124,7 @@ static int usage(void)
     printf("                                         each arrival point, permissions; MAPGEN_PICTURE=F.ppm\n");
     printf("  simtool reservoirlevel SAVE            prepared map: a reservoir cut off from its source empties\n");
     printf("                                         slowly, joined again it fills\n");
+    printf("  simtool caravans SAVE                  a caravan of player 2 brings marble to player 1, who pays\n");
     printf("  simtool tradeprices SAVE               prices between players and notices to the buyer\n");
     printf("  simtool importprice SAVE               buying from the empire costs 50%% more in multiplayer\n");
     printf("  simtool notrade SAVE                   a template without trade by land and by sea is refused\n");
@@ -2066,6 +2067,100 @@ static int command_tradeprices(const char *file)
     return failures ? 1 : 0;
 }
 
+static int count_caravans(int player_id)
+{
+    int count = 0;
+    for (int i = player_id * MAX_FIGURES + 1; i < (player_id + 1) * MAX_FIGURES; i++) {
+        figure *f = figure_get(i);
+        count += f->state == FIGURE_STATE_ALIVE && mp_trade_is_caravan(f);
+    }
+    return count;
+}
+
+static int marble_of(int player_id)
+{
+    player_context_switch(player_id);
+    int count = 0;
+    for (int i = BUILDING_FIRST; i < BUILDING_END; i++) {
+        building *b = building_get(i);
+        if (b->state == BUILDING_STATE_IN_USE && b->type == BUILDING_WAREHOUSE_SPACE &&
+            b->subtype.warehouse_resource_id == RESOURCE_MARBLE) {
+            count += b->loads_stored;
+        }
+    }
+    player_context_switch(0);
+    return count;
+}
+
+static int treasury_of(int player_id)
+{
+    player_context_switch(player_id);
+    int treasury = city_finance_treasury();
+    player_context_switch(0);
+    return treasury;
+}
+
+// caravans between players (M8.4, M8.5, D-019, D-043): player 2 sells marble to player 1
+static int command_caravans(const char *file)
+{
+    if (!mp_mapgen_create_prepared(file, 2)) {
+        printf("Unable to create the prepared map\n");
+        return 2;
+    }
+    game_rules_settings rules;
+    game_rules_default_multiplayer_settings(&rules);
+    rules.ai_invasions = 0;
+    game_rules_set_multiplayer(&rules);
+    int failures = 0;
+#define CHECK(condition, text) do { int ok_ = (condition); printf("%-62s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
+    int x0, y0, x1, y1;
+    mp_mapgen_city_center(0, &x0, &y0);
+    mp_mapgen_city_center(1, &x1, &y1);
+    // a warehouse by the main road in each city, and 8 loads of marble at player 2
+    build_as(0, BUILDING_WAREHOUSE, x0 - 6, y0 + 1, x0 - 6, y0 + 1);
+    build_as(1, BUILDING_WAREHOUSE, x1 - 6, y1 + 1, x1 - 6, y1 + 1);
+    player_context_switch(1);
+    building *store = building_get(map_building_at(map_grid_offset(x1 - 6, y1 + 1)));
+    for (int i = 0; i < 8; i++) {
+        building_warehouse_add_resource(store, RESOURCE_MARBLE);
+    }
+    player_context_switch(0);
+    city_action(1, MP_ACTION_SET_SELL_PRICE, 0, RESOURCE_MARBLE, 150);
+    city_action(0, MP_ACTION_SET_BUYS_FROM, 1, RESOURCE_MARBLE, 1);
+    run_trace(20 * 50, 20 * 50, 0, 0);
+    CHECK(count_caravans(1) == 0 && marble_of(0) == 0, "no route yet: no caravan");
+
+    city_action(0, MP_ACTION_PROPOSE_ROUTE, 1, 1, 0);
+    CHECK(!mp_trade_route_is_open(0, 1), "a route proposed by one player only is not open");
+    city_action(1, MP_ACTION_PROPOSE_ROUTE, 0, 1, 0);
+    CHECK(mp_trade_route_is_open(0, 1), "proposed by both, it is open");
+    int buyer_money = treasury_of(0), seller_money = treasury_of(1);
+    int days = 0;
+    for (; days < 60 && marble_of(0) == 0; days++) {
+        run_trace(50, 50, 0, 0);
+        if (count_caravans(1)) {
+            printf("day %d: a caravan of player 2 is on its way\n", days);
+            break;
+        }
+    }
+    for (; days < 200 && marble_of(0) == 0; days++) {
+        run_trace(50, 50, 0, 0);
+    }
+    int delivered = marble_of(0);
+    printf("after %d days: player 1 has %d loads of marble, player 2 has %d\n", days, delivered, marble_of(1));
+    CHECK(delivered == 8, "the caravan delivered the 8 loads");
+    printf("player 1 paid %d, player 2 earned %d\n", buyer_money - treasury_of(0), treasury_of(1) - seller_money);
+    CHECK(buyer_money - treasury_of(0) == 8 * 150, "player 1 paid the price of player 2");
+    CHECK(treasury_of(1) - seller_money == 8 * 150, "player 2 earned it");
+
+    player_context_switch(0);
+    player_context_set_num_players(1);
+#undef CHECK
+    printf("%s\n", failures ? "DIFFERENT: caravans between players do not work as designed" :
+        "Identical: caravans between players work as designed");
+    return failures ? 1 : 0;
+}
+
 // the camera of a player reaches every corner of a generated map, after it went through a .mpmap file as in a game
 static int command_viewcorners(const char *file, int num_players)
 {
@@ -2570,6 +2665,8 @@ int main(int argc, char **argv)
         result = command_preparedmap(file, atoi(argv[3]), atoi(argv[4]));
     } else if (strcmp(command, "reservoirlevel") == 0) {
         result = command_reservoirlevel(file);
+    } else if (strcmp(command, "caravans") == 0) {
+        result = command_caravans(file);
     } else if (strcmp(command, "tradeprices") == 0) {
         result = command_tradeprices(file);
     } else if (strcmp(command, "importprice") == 0) {

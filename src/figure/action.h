@@ -125,6 +125,7 @@ enum {
     FIGURE_ACTION_202_HIPPODROME_HORSE_DONE = 202,
     FIGURE_ACTION_220_MP_MISSIONARY_WAITING = 220, /**< multiplayer missionary (doc/mp/DECISIONS.md D-037) */
     FIGURE_ACTION_221_MP_MISSIONARY_WALKING = 221,
+    FIGURE_ACTION_222_MP_CARAVAN_GOING = 222, /**< caravan between players (doc/mp/DECISIONS.md D-019) */
 };
 
 void figure_action_handle(void);
