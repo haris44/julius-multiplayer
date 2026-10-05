@@ -1,5 +1,7 @@
 #include "construction.h"
+#include "mp/missionary.h"
 #include "mp/territory.h"
+#include "translation/translation.h"
 
 #include "building/construction_building.h"
 #include "building/construction_clear.h"
@@ -586,6 +588,13 @@ void building_construction_place(void)
         city_warning_show(WARNING_MARBLE_NEEDED_ORACLE);
         return;
     }
+    // multiplayer missions: free while the player owns no land, then marble instead of money (D-037)
+    int is_mp_mission = type == BUILDING_MISSION_POST && mp_territory_is_active();
+    if (is_mp_mission && city_resource_count(RESOURCE_MARBLE) < mp_mission_marble_cost()) {
+        map_property_clear_constructing_and_deleted();
+        city_warning_show_custom(translation_for(TR_MP_MISSION_NEEDS_MARBLE));
+        return;
+    }
     if (type != BUILDING_CLEAR_LAND && has_nearby_enemy(x_start, y_start, x_end, y_end)) {
         if (type == BUILDING_WALL || type == BUILDING_ROAD || type == BUILDING_AQUEDUCT) {
             game_undo_restore_map(0);
@@ -679,6 +688,10 @@ void building_construction_place(void)
     }
     if ((type >= BUILDING_LARGE_TEMPLE_CERES && type <= BUILDING_LARGE_TEMPLE_VENUS) || type == BUILDING_ORACLE) {
         building_warehouses_remove_resource(RESOURCE_MARBLE, 2);
+    }
+    if (is_mp_mission) {
+        mp_mission_pay();
+        placement_cost = 0;
     }
     if (data.type == BUILDING_MENU_SMALL_TEMPLES) {
         data.sub_type++;

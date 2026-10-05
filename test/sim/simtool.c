@@ -54,6 +54,8 @@
 #include "mp/actions.h"
 #include "mp/compose.h"
 #include "mp/savegame.h"
+#include "building/warehouse.h"
+#include "mp/missionary.h"
 #include "mp/territory.h"
 #include "scenario/map.h"
 #include "game/resource.h"
@@ -119,6 +121,7 @@ static int usage(void)
     printf("                                         each arrival point, permissions; MAPGEN_PICTURE=F.ppm\n");
     printf("  simtool reservoirlevel SAVE            prepared map: a reservoir cut off from its source empties\n");
     printf("                                         slowly, joined again it fills\n");
+    printf("  simtool missions SAVE                  prepared map: missions near a missionary, marble, training\n");
     printf("  simtool territory SAVE                 prepared map: players build only in their zone (D-036)\n");
     printf("  simtool caesarroads SAVE               generated map: no player clears a road of Caesar, every\n");
     printf("                                         city uses it\n");
@@ -1732,6 +1735,86 @@ static int command_territory(const char *file)
     return failures ? 1 : 0;
 }
 
+static figure *first_missionary(int player_id)
+{
+    for (int i = player_id * MAX_FIGURES + 1; i < (player_id + 1) * MAX_FIGURES; i++) {
+        figure *f = figure_get(i);
+        if (f->state == FIGURE_STATE_ALIVE && mp_missionary_is_scout(f)) {
+            return f;
+        }
+    }
+    return 0;
+}
+
+// missions and missionaries (MT.2, MT.3, D-037)
+static int command_missions(const char *file)
+{
+    if (!mp_mapgen_create_prepared(file, 2)) {
+        printf("Unable to create the prepared map\n");
+        return 2;
+    }
+    game_rules_settings rules;
+    game_rules_default_multiplayer_settings(&rules);
+    rules.territories = 1;
+    rules.ai_invasions = 0;
+    game_rules_set_multiplayer(&rules);
+    int failures = 0;
+#define CHECK(condition, text) do { int ok_ = (condition); printf("%-62s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
+    figure *m = first_missionary(0);
+    CHECK(m != 0, "player 1 starts with a missionary");
+    if (!m) {
+        return 1;
+    }
+    int mx = m->x, my = m->y;
+    int treasury = city_finance_treasury();
+    CHECK(!build_as(0, BUILDING_MISSION_POST, mx + 30, my, mx + 30, my), "no mission 30 tiles from the missionary");
+    CHECK(build_as(0, BUILDING_MISSION_POST, mx + 4, my, mx + 4, my), "a mission 4 tiles from him");
+    CHECK(city_finance_treasury() == treasury, "the first mission is free");
+    run_trace(50, 50, 0, 0);
+
+    // a warehouse in the new zone, without marble: the next mission waits for marble
+    build_as(0, BUILDING_WAREHOUSE, mx - 6, my - 6, mx - 6, my - 6);
+    building *warehouse = building_get(map_building_at(map_grid_offset(mx - 6, my - 6)));
+    CHECK(!build_as(0, BUILDING_MISSION_POST, mx + 4, my + 6, mx + 4, my + 6), "the second mission needs marble");
+    for (int i = 0; i < 6; i++) {
+        building_warehouse_add_resource(warehouse, RESOURCE_MARBLE);
+    }
+    run_trace(50, 50, 0, 0);
+    int marble = city_resource_count(RESOURCE_MARBLE);
+    treasury = city_finance_treasury();
+    CHECK(build_as(0, BUILDING_MISSION_POST, mx + 4, my + 6, mx + 4, my + 6), "with marble, it is built");
+    run_trace(50, 50, 0, 0);
+    printf("marble: %d loads before, %d after; treasury %d before, %d after\n", marble,
+        city_resource_count(RESOURCE_MARBLE), treasury, city_finance_treasury());
+    CHECK(city_resource_count(RESOURCE_MARBLE) == marble - MP_MISSION_MARBLE_LOADS, "it took the marble");
+
+    // the missionary walks where he is sent
+    mp_command move = { .type = MP_COMMAND_CITY_ACTION, .player_id = 0, .args = { MP_ACTION_MISSIONARY_MOVE, m->id, mx - 25, my - 5 } };
+    mp_command_execute(&move);
+    run_trace(400, 400, 0, 0);
+    printf("missionary at (%d, %d), sent to (%d, %d)\n", m->x, m->y, mx - 25, my - 5);
+    CHECK(m->x == mx - 25 && m->y == my - 5, "the missionary walks where he is sent");
+
+    // a mission trains one missionary at a time, for money
+    int mission_id = map_building_at(map_grid_offset(mx + 4, my));
+    treasury = city_finance_treasury();
+    mp_command train = { .type = MP_COMMAND_CITY_ACTION, .player_id = 0, .args = { MP_ACTION_TRAIN_MISSIONARY, mission_id, 0 } };
+    mp_command_execute(&train);
+    int trained = mp_mission_missionary(mission_id);
+    CHECK(trained && city_finance_treasury() == treasury - MP_MISSIONARY_TRAINING_COST, "a mission trains a missionary for money");
+    mp_command_execute(&train);
+    CHECK(city_finance_treasury() == treasury - MP_MISSIONARY_TRAINING_COST, "only one at a time");
+    figure_get(trained)->state = FIGURE_STATE_DEAD;
+    mp_command_execute(&train);
+    CHECK(mp_mission_missionary(mission_id) && mp_mission_missionary(mission_id) != trained, "when he dies, another one");
+
+    player_context_switch(0);
+    player_context_set_num_players(1);
+#undef CHECK
+    printf("%s\n", failures ? "DIFFERENT: missions do not work as designed" : "Identical: missions work as designed");
+    return failures ? 1 : 0;
+}
+
 // the camera of a player reaches every corner of a generated map, after it went through a .mpmap file as in a game
 static int command_viewcorners(const char *file, int num_players)
 {
@@ -2236,6 +2319,8 @@ int main(int argc, char **argv)
         result = command_preparedmap(file, atoi(argv[3]), atoi(argv[4]));
     } else if (strcmp(command, "reservoirlevel") == 0) {
         result = command_reservoirlevel(file);
+    } else if (strcmp(command, "missions") == 0) {
+        result = command_missions(file);
     } else if (strcmp(command, "territory") == 0) {
         result = command_territory(file);
     } else if (strcmp(command, "caesarroads") == 0) {

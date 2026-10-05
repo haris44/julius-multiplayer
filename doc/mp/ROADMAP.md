@@ -260,8 +260,14 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
   cartes préparées, protocole v4) ; refus et aperçu rouge hors zone, avertissement « Hors de votre territoire ».
   Test `mp_territory` : rien sans zone, mission → 20 cases, maisons habitées → 20 cases plus loin, l'autre joueur
   n'y bâtit que des routes. *Provisoire* : la mission se construit n'importe où tant que MT.3 n'existe pas.
-- [ ] **MT.2** Mission multijoueur : plus d'indigènes, première gratuite puis marbre, forme des missionnaires.
-- [ ] **MT.3** Missionnaire déplaçable comme une légion, mortel ; mission à 20 cases au plus de lui.
+- [x] **MT.2** Mission multijoueur : plus d'indigènes, première gratuite puis marbre, forme des missionnaires.
+  *Fait* : gratuite tant que la cité ne possède aucune case (première mission, ou après avoir tout perdu), puis 4
+  chargements de marbre et aucun denier ; plus de missionnaire en tournée ; bouton « Former un missionnaire :
+  300 Dn » dans sa fenêtre, un missionnaire vivant par mission.
+- [x] **MT.3** Missionnaire déplaçable comme une légion, mortel ; mission à 20 cases au plus de lui.
+  *Fait* : figure « missionnaire » avec deux états multijoueur (attend, marche comme un soldat) ; un au départ par
+  joueur ; clic dessus puis clic sur la destination (commande `MP_ACTION_MISSIONARY_MOVE`), clic droit pour
+  annuler ; jamais de mission dans la zone d'un autre. Test `mp_missions` ; captures du vrai jeu.
 - [ ] **MT.4** Bâtiments hors zone : message puis effondrement après le délai de grâce.
 - [ ] **MT.5** Frontières tracées à la couleur du joueur, teinte légère des bâtiments adverses (D-039).
 

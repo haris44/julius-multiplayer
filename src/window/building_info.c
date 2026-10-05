@@ -524,6 +524,8 @@ static void draw_foreground(void)
             } else {
                 window_building_draw_warehouse_foreground(&context);
             }
+        } else if (btype == BUILDING_MISSION_POST) {
+            window_building_draw_mission_post_foreground(&context);
         }
     } else if (context.type == BUILDING_INFO_LEGION) {
         window_building_draw_legion_info_foreground(&context);
@@ -566,6 +568,8 @@ static int handle_specific_building_info_mouse(const mouse *m)
             } else {
                 window_building_handle_mouse_warehouse(m, &context);
             }
+        } else if (btype == BUILDING_MISSION_POST) {
+            return window_building_handle_mouse_mission_post(m, &context);
         }
     }
     return 0;

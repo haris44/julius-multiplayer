@@ -522,7 +522,8 @@ int building_construction_place_building(building_type type, int x, int y)
     }
     // multiplayer: only in the zone of the player (D-036)
     if (!mp_territory_allows_building(type, x, y, size)) {
-        city_warning_show_custom(translation_for(TR_MP_OUTSIDE_TERRITORY));
+        city_warning_show_custom(translation_for(type == BUILDING_MISSION_POST ?
+            TR_MP_MISSION_NEEDS_MISSIONARY : TR_MP_OUTSIDE_TERRITORY));
         return 0;
     }
     // extra checks

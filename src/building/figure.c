@@ -1,4 +1,5 @@
 #include "building/figure.h"
+#include "mp/territory.h"
 
 #include "building/barracks.h"
 #include "building/granary.h"
@@ -932,6 +933,9 @@ static void spawn_figure_senate_forum(building *b)
 
 static void spawn_figure_mission_post(building *b)
 {
+    if (mp_territory_is_active()) {
+        return; // no natives: the mission trains missionaries on demand (D-037)
+    }
     if (has_figure_of_type(b, FIGURE_MISSIONARY)) {
         return;
     }

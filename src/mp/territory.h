@@ -40,6 +40,11 @@ int mp_territory_allows_tile(building_type type, int grid_offset);
  */
 void mp_territory_update_city(void);
 
+/**
+ * Whether the current city owns at least one tile
+ */
+int mp_territory_owns_land(void);
+
 void mp_territory_clear(void);
 
 void mp_territory_save_state(buffer *buf);

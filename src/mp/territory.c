@@ -5,6 +5,7 @@
 #include "game/rules.h"
 #include "map/data.h"
 #include "map/grid.h"
+#include "mp/missionary.h"
 
 #include <string.h>
 
@@ -34,7 +35,6 @@ static int needs_zone(building_type type)
         case BUILDING_SHIP_BRIDGE:
         case BUILDING_PLAZA:
         case BUILDING_CLEAR_LAND:
-        case BUILDING_MISSION_POST: // missions open a zone (D-037)
             return 0;
         default:
             return 1;
@@ -53,6 +53,9 @@ int mp_territory_allows_building(building_type type, int x, int y, int size)
 {
     if (!mp_territory_is_active() || !needs_zone(type)) {
         return 1;
+    }
+    if (type == BUILDING_MISSION_POST) {
+        return mp_mission_allows_place(x, y, size); // missions open a zone near a missionary (D-037)
     }
     for (int dy = 0; dy < size; dy++) {
         for (int dx = 0; dx < size; dx++) {
@@ -121,6 +124,19 @@ void mp_territory_update_city(void)
             }
         }
     }
+}
+
+int mp_territory_owns_land(void)
+{
+    uint8_t own = player_context_current_player + 1;
+    for (int y = 0; y < map_data.height; y++) {
+        for (int x = 0; x < map_data.width; x++) {
+            if (territory.items[map_grid_offset(x, y)] == own) {
+                return 1;
+            }
+        }
+    }
+    return 0;
 }
 
 void mp_territory_clear(void)

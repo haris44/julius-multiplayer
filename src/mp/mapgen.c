@@ -29,8 +29,10 @@
 #include "map/tiles.h"
 #include "map/water_supply.h"
 #include "mp/compose.h"
+#include "mp/missionary.h"
 #include "mp/permissions.h"
 #include "mp/territory.h"
+#include "scenario/data.h"
 #include "scenario/editor_map.h"
 #include "scenario/property.h"
 #include "game/resource.h"
@@ -651,11 +653,19 @@ int mp_mapgen_create_prepared(const char *template_file, int num_players)
     map_tiles_update_all_aqueducts(0);
     scenario_editor_set_river_entry_point(data.river_x, data.river_y);
     scenario_editor_set_river_exit_point(data.river_x, data.river_y);
+    // every player settles with missions (D-037)
+    scenario.allowed_buildings[ALLOWED_BUILDING_MISSION_POST] = 1;
     if (!add_cities(num_players)) {
         return 0;
     }
     data.num_players = num_players;
     set_slot_permissions(num_players);
+    // and starts with a missionary, near the place meant for his city
+    for (int p = 0; p < num_players; p++) {
+        player_context_switch(p);
+        mp_missionary_create(0, data.center_x[p] + 3, data.center_y[p] + 3);
+    }
+    player_context_switch(0);
     update_networks(num_players);
     return 1;
 }

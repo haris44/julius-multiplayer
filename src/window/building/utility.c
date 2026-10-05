@@ -8,6 +8,11 @@
 #include "graphics/lang_text.h"
 #include "graphics/panel.h"
 #include "map/water_supply.h"
+#include "graphics/button.h"
+#include "graphics/generic_button.h"
+#include "mp/actions.h"
+#include "mp/missionary.h"
+#include "mp/territory.h"
 
 void window_building_draw_engineers_post(building_info_context *c)
 {
@@ -179,6 +184,61 @@ void window_building_draw_well(building_info_context *c)
     if (text_id) {
         window_building_draw_description_at(c, BLOCK_SIZE * c->height_blocks - 160, 109, text_id);
     }
+}
+
+static void button_train_missionary(int param1, int param2);
+
+static generic_button train_missionary_button[] = {
+    {0, 0, 0, 25, button_train_missionary, button_none, 0, 0},
+};
+static int train_focus_button_id;
+static int train_mission_id;
+
+static void button_train_missionary(int param1, int param2)
+{
+    if (!mp_mission_missionary(train_mission_id)) {
+        mp_action_train_missionary(train_mission_id);
+    }
+}
+
+static void place_train_button(const building_info_context *c)
+{
+    train_missionary_button[0].x = 32;
+    train_missionary_button[0].y = BLOCK_SIZE * c->height_blocks - 74;
+    train_missionary_button[0].width = BLOCK_SIZE * (c->width_blocks - 4);
+}
+
+// multiplayer: the mission trains missionaries (D-037)
+void window_building_draw_mission_post_foreground(building_info_context *c)
+{
+    if (!mp_territory_is_active() || !BUILDING_IS_OWN(c->building_id)) {
+        return;
+    }
+    place_train_button(c);
+    train_mission_id = c->building_id;
+    const generic_button *b = &train_missionary_button[0];
+    int has_one = mp_mission_missionary(c->building_id) != 0;
+    button_border_draw(c->x_offset + b->x, c->y_offset + b->y, b->width, b->height,
+        !has_one && train_focus_button_id == 1);
+    if (has_one) {
+        text_draw_centered(translation_for(TR_MP_MISSIONARY_OUT), c->x_offset + b->x, c->y_offset + b->y + 6,
+            b->width, FONT_NORMAL_BLACK, 0);
+    } else {
+        int x = c->x_offset + b->x + 16;
+        x += text_draw(translation_for(TR_MP_TRAIN_MISSIONARY), x, c->y_offset + b->y + 6, FONT_NORMAL_BLACK, 0);
+        text_draw_number(MP_MISSIONARY_TRAINING_COST, 0, " Dn", x, c->y_offset + b->y + 6, FONT_NORMAL_BLACK);
+    }
+}
+
+int window_building_handle_mouse_mission_post(const mouse *m, building_info_context *c)
+{
+    if (!mp_territory_is_active() || !BUILDING_IS_OWN(c->building_id)) {
+        return 0;
+    }
+    place_train_button(c);
+    train_mission_id = c->building_id;
+    return generic_buttons_handle_mouse(m, c->x_offset, c->y_offset, train_missionary_button, 1,
+        &train_focus_button_id);
 }
 
 void window_building_draw_mission_post(building_info_context *c)

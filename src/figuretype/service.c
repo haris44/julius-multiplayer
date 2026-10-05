@@ -1,4 +1,5 @@
 #include "service.h"
+#include "mp/missionary.h"
 
 #include "building/building.h"
 #include "building/market.h"
@@ -123,6 +124,10 @@ void figure_doctor_action(figure *f)
 
 void figure_missionary_action(figure *f)
 {
+    if (mp_missionary_is_scout(f)) {
+        mp_missionary_action(f); // the missionary of a multiplayer game, moved by his player
+        return;
+    }
     f->terrain_usage = TERRAIN_USAGE_ROADS;
     f->use_cross_country = 0;
     f->max_roam_length = 192;

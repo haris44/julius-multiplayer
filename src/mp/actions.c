@@ -10,6 +10,7 @@
 #include "city/labor.h"
 #include "city/resource.h"
 #include "empire/city.h"
+#include "mp/missionary.h"
 #include "mp/session.h"
 #include "city/military.h"
 #include "figure/formation.h"
@@ -101,6 +102,16 @@ void mp_action_toggle_stockpiled(int resource)
 void mp_action_toggle_mothballed(int resource)
 {
     submit(MP_ACTION_TOGGLE_MOTHBALLED, resource, 0);
+}
+
+void mp_action_missionary_move(int figure_id, int x, int y)
+{
+    submit3(MP_ACTION_MISSIONARY_MOVE, figure_id, x, y);
+}
+
+void mp_action_train_missionary(int mission_id)
+{
+    submit(MP_ACTION_TRAIN_MISSIONARY, mission_id, 0);
 }
 
 void mp_action_legion_move(int formation_id, int x, int y)
@@ -291,6 +302,12 @@ void mp_actions_execute(const mp_command *command)
             break;
         case MP_ACTION_CLEAR_EMPIRE_SERVICE_LEGIONS:
             city_military_clear_empire_service_legions();
+            break;
+        case MP_ACTION_MISSIONARY_MOVE:
+            mp_missionary_move(arg1, arg2, arg3);
+            break;
+        case MP_ACTION_TRAIN_MISSIONARY:
+            mp_mission_train_missionary(arg1);
             break;
         case MP_ACTION_SEND_REQUEST:
             scenario_request_dispatch(arg1);

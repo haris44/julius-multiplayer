@@ -33,6 +33,11 @@
 #include "window/popup_dialog.h"
 #include "building/construction_clear.h"
 #include "mp/actions.h"
+#include "mp/missionary.h"
+#include "mp/territory.h"
+#include "map/figure.h"
+#include "figure/figure.h"
+#include "translation/translation.h"
 
 static struct {
     map_tile current_tile;
@@ -212,6 +217,50 @@ static int handle_legion_click(const map_tile *tile)
         if (formation_id > 0 && !formation_get(formation_id)->in_distant_battle) {
             window_city_military_show(formation_id);
             return 1;
+        }
+    }
+    return 0;
+}
+
+// multiplayer missionaries (D-037): a click on one of his selects him, the next click sends him there
+static int selected_missionary;
+
+static int own_missionary_on_tile(int grid_offset)
+{
+    int id = map_figure_at(grid_offset);
+    for (int guard = 0; id > 0 && guard < 100; guard++) {
+        figure *f = figure_get(id);
+        if (id >= FIGURE_FIRST && id < FIGURE_END && f->state == FIGURE_STATE_ALIVE && mp_missionary_is_scout(f)) {
+            return id;
+        }
+        id = f->next_figure_id_on_same_tile;
+    }
+    return 0;
+}
+
+static int handle_missionary_click(const map_tile *tile)
+{
+    if (!mp_territory_is_active() || !tile->grid_offset || building_construction_type()) {
+        return 0;
+    }
+    if (selected_missionary) {
+        mp_action_missionary_move(selected_missionary, tile->x, tile->y);
+        selected_missionary = 0;
+        city_warning_clear_all();
+        return 1;
+    }
+    // figures are drawn between tiles: look around the click as well
+    for (int dy = 0; dy <= 1; dy++) {
+        for (int dx = 0; dx <= 1; dx++) {
+            if (!map_grid_is_inside(tile->x + dx, tile->y + dy, 1)) {
+                continue;
+            }
+            int id = own_missionary_on_tile(map_grid_offset(tile->x + dx, tile->y + dy));
+            if (id) {
+                selected_missionary = id;
+                city_warning_show_custom(translation_for(TR_MP_MISSIONARY_SELECTED));
+                return 1;
+            }
         }
     }
     return 0;
@@ -509,7 +558,7 @@ static void handle_mouse(const mouse *m)
     update_city_view_coords(m->x, m->y, tile);
     building_construction_reset_draw_as_constructing();
     if (m->left.went_down) {
-        if (handle_legion_click(tile)) {
+        if (handle_legion_click(tile) || handle_missionary_click(tile)) {
             return;
         }
         if (!building_construction_in_progress()) {
@@ -524,6 +573,12 @@ static void handle_mouse(const mouse *m)
     }
     if (m->right.went_down && input_coords_in_city(m->x, m->y) && !building_construction_type()) {
         scroll_drag_start(0);
+    }
+    if (m->right.went_up && selected_missionary) {
+        selected_missionary = 0; // the selection is cancelled
+        city_warning_clear_all();
+        scroll_drag_end();
+        return;
     }
     if (m->right.went_up) {
         if (!building_construction_type()) {

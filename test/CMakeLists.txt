@@ -295,6 +295,8 @@ add_test(NAME mp_reservoir_level COMMAND simtool reservoirlevel brugle-massilia-
 
 # Territories (MT.1, D-036): build only in one's zone, which follows the settled buildings and the missions
 add_test(NAME mp_territory COMMAND simtool territory brugle-massilia-start.sav)
+# Missions and missionaries (MT.2, MT.3, D-037): near a missionary, free then marble, trained for money
+add_test(NAME mp_missions COMMAND simtool missions brugle-massilia-start.sav)
 
 # T1.5 (D-034): the roads of Caesar stay, untinted, and serve every city
 add_test(NAME mp_caesar_roads COMMAND simtool caesarroads brugle-massilia-start.sav)

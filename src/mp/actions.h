@@ -35,6 +35,8 @@ typedef enum {
     MP_ACTION_DISPATCH_DISTANT_BATTLE = 20,
     MP_ACTION_CLEAR_EMPIRE_SERVICE_LEGIONS = 21,
     MP_ACTION_SEND_REQUEST = 22,          /**< request id */
+    MP_ACTION_MISSIONARY_MOVE = 23,       /**< figure id, x, y */
+    MP_ACTION_TRAIN_MISSIONARY = 24,      /**< mission building id */
     MP_ACTION_MAX
 } mp_action_type;
 
@@ -48,6 +50,8 @@ void mp_action_storage_cycle_resource(int building_id, int resource);
 void mp_action_storage_toggle_empty_all(int building_id);
 void mp_action_storage_accept_none(int building_id);
 void mp_action_set_trade_center(int building_id);
+void mp_action_missionary_move(int figure_id, int x, int y);
+void mp_action_train_missionary(int mission_id);
 void mp_action_open_trade_route(int empire_city_id);
 void mp_action_cycle_trade_status(int resource);
 void mp_action_change_export_over(int resource, int delta);
