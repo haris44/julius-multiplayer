@@ -12,6 +12,7 @@
 #include "empire/city.h"
 #include "mp/missionary.h"
 #include "mp/session.h"
+#include "mp/trade.h"
 #include "city/military.h"
 #include "figure/formation.h"
 #include "figure/formation_legion.h"
@@ -112,6 +113,16 @@ void mp_action_missionary_move(int figure_id, int x, int y)
 void mp_action_train_missionary(int mission_id)
 {
     submit(MP_ACTION_TRAIN_MISSIONARY, mission_id, 0);
+}
+
+void mp_action_set_sell_price(int buyer, int resource, int price)
+{
+    submit3(MP_ACTION_SET_SELL_PRICE, buyer, resource, price);
+}
+
+void mp_action_set_buys_from(int seller, int resource, int buys)
+{
+    submit3(MP_ACTION_SET_BUYS_FROM, seller, resource, buys);
 }
 
 void mp_action_legion_move(int formation_id, int x, int y)
@@ -308,6 +319,12 @@ void mp_actions_execute(const mp_command *command)
             break;
         case MP_ACTION_TRAIN_MISSIONARY:
             mp_mission_train_missionary(arg1);
+            break;
+        case MP_ACTION_SET_SELL_PRICE:
+            mp_trade_set_price(arg1, arg2, arg3);
+            break;
+        case MP_ACTION_SET_BUYS_FROM:
+            mp_trade_set_buys_from(arg1, arg2, arg3);
             break;
         case MP_ACTION_SEND_REQUEST:
             scenario_request_dispatch(arg1);

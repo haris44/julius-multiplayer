@@ -37,6 +37,8 @@ typedef enum {
     MP_ACTION_SEND_REQUEST = 22,          /**< request id */
     MP_ACTION_MISSIONARY_MOVE = 23,       /**< figure id, x, y */
     MP_ACTION_TRAIN_MISSIONARY = 24,      /**< mission building id */
+    MP_ACTION_SET_SELL_PRICE = 25,        /**< buyer, resource, price */
+    MP_ACTION_SET_BUYS_FROM = 26,         /**< seller, resource, 1 to buy or 0 */
     MP_ACTION_MAX
 } mp_action_type;
 
@@ -52,6 +54,8 @@ void mp_action_storage_accept_none(int building_id);
 void mp_action_set_trade_center(int building_id);
 void mp_action_missionary_move(int figure_id, int x, int y);
 void mp_action_train_missionary(int mission_id);
+void mp_action_set_sell_price(int buyer, int resource, int price);
+void mp_action_set_buys_from(int seller, int resource, int buys);
 void mp_action_open_trade_route(int empire_city_id);
 void mp_action_cycle_trade_status(int resource);
 void mp_action_change_export_over(int resource, int delta);

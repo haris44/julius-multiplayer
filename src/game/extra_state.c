@@ -12,6 +12,7 @@
 #include "map/soldier_strength.h"
 #include "map/water_supply.h"
 #include "mp/territory.h"
+#include "mp/trade.h"
 
 #include "core/log.h"
 
@@ -33,6 +34,7 @@ void game_extra_state_reset(void)
     building_granary_reset_extra_state();
     map_water_supply_reset_extra_state();
     mp_territory_reset_extra_state();
+    mp_trade_reset_extra_state();
 }
 
 void game_extra_state_save(buffer *buf)
@@ -48,6 +50,7 @@ void game_extra_state_save(buffer *buf)
     building_granary_save_extra_state(buf);
     map_water_supply_save_extra_state(buf);
     mp_territory_save_extra_state(buf);
+    mp_trade_save_extra_state(buf);
 }
 
 void game_extra_state_load(buffer *buf)
@@ -63,6 +66,7 @@ void game_extra_state_load(buffer *buf)
     building_granary_load_extra_state(buf);
     map_water_supply_load_extra_state(buf);
     mp_territory_load_extra_state(buf);
+    mp_trade_load_extra_state(buf);
 }
 
 int game_extra_state_size(void)

@@ -62,6 +62,12 @@ typedef enum {
 void city_warning_show(warning_type type);
 void city_warning_show_custom(const uint8_t *text);
 
+/**
+ * Shows a warning to the player of this computer, even while the city of another player runs: the caller decides
+ * that it is for him (multiplayer)
+ */
+void city_warning_show_to_local_player(const uint8_t *text);
+
 int city_has_warnings(void);
 
 const uint8_t *city_warning_get(int id);

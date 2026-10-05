@@ -55,6 +55,7 @@
 #include "mp/actions.h"
 #include "mp/compose.h"
 #include "mp/savegame.h"
+#include "mp/trade.h"
 #include "mp/fog.h"
 #include "building/warehouse.h"
 #include "mp/missionary.h"
@@ -123,6 +124,7 @@ static int usage(void)
     printf("                                         each arrival point, permissions; MAPGEN_PICTURE=F.ppm\n");
     printf("  simtool reservoirlevel SAVE            prepared map: a reservoir cut off from its source empties\n");
     printf("                                         slowly, joined again it fills\n");
+    printf("  simtool tradeprices SAVE               prices between players and notices to the buyer\n");
     printf("  simtool importprice SAVE               buying from the empire costs 50%% more in multiplayer\n");
     printf("  simtool notrade SAVE                   a template without trade by land and by sea is refused\n");
     printf("  simtool tradecities MAP                trade cities of the empire of a map, by land and by sea\n");
@@ -2013,6 +2015,57 @@ static int command_importprice(const char *file)
     return failures ? 1 : 0;
 }
 
+static void city_action(int player_id, int action, int a1, int a2, int a3)
+{
+    mp_command command = { .type = MP_COMMAND_CITY_ACTION, .player_id = player_id, .args = { action, a1, a2, a3 } };
+    mp_command_execute(&command);
+}
+
+// prices between players (M8.3, D-043): a price per resource and buyer, a notice to the buyer when it changes
+static int command_tradeprices(const char *file)
+{
+    if (!mp_mapgen_create_prepared(file, 3)) {
+        printf("Unable to create the prepared map\n");
+        return 2;
+    }
+    int failures = 0;
+#define CHECK(condition, text) do { int ok_ = (condition); printf("%-62s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
+    int base = trade_price_buy_base(RESOURCE_MARBLE);
+    CHECK(mp_trade_price(1, 0, RESOURCE_MARBLE) == base, "by default, the price of the empire without surcharge");
+    city_action(1, MP_ACTION_SET_SELL_PRICE, 0, RESOURCE_MARBLE, 150);
+    city_action(1, MP_ACTION_SET_SELL_PRICE, 2, RESOURCE_MARBLE, 250);
+    CHECK(mp_trade_price(1, 0, RESOURCE_MARBLE) == 150 && mp_trade_price(1, 2, RESOURCE_MARBLE) == 250,
+        "player 2 sells marble 150 to player 1 and 250 to player 3");
+    int told = mp_trade_notifications();
+    city_action(1, MP_ACTION_SET_SELL_PRICE, 0, RESOURCE_MARBLE, 160);
+    CHECK(mp_trade_notifications() == told, "player 1 does not buy it: no notice");
+    city_action(0, MP_ACTION_SET_BUYS_FROM, 1, RESOURCE_MARBLE, 1);
+    CHECK(mp_trade_buys_from(0, 1, RESOURCE_MARBLE), "player 1 buys marble from player 2");
+    city_action(1, MP_ACTION_SET_SELL_PRICE, 0, RESOURCE_MARBLE, 180);
+    CHECK(mp_trade_notifications() == told + 1, "the price changes: player 1 is told");
+    city_action(1, MP_ACTION_SET_SELL_PRICE, 0, RESOURCE_MARBLE, 180);
+    CHECK(mp_trade_notifications() == told + 1, "the same price again: no notice");
+    city_action(1, MP_ACTION_SET_SELL_PRICE, 0, RESOURCE_TIMBER, 99);
+    CHECK(mp_trade_notifications() == told + 1, "another resource he does not buy: no notice");
+    city_action(1, MP_ACTION_SET_SELL_PRICE, 1, RESOURCE_MARBLE, 10);
+    CHECK(mp_trade_price(1, 1, RESOURCE_MARBLE) == base, "nobody sells to himself");
+
+    if (!mp_savegame_write("tradeprices.mpsav") || !mp_savegame_read("tradeprices.mpsav")) {
+        printf("Unable to write and read the game\n");
+        return 2;
+    }
+    remove("tradeprices.mpsav");
+    CHECK(mp_trade_price(1, 0, RESOURCE_MARBLE) == 180 && mp_trade_price(1, 2, RESOURCE_MARBLE) == 250 &&
+        mp_trade_buys_from(0, 1, RESOURCE_MARBLE), "prices and purchases are saved");
+
+    player_context_switch(0);
+    player_context_set_num_players(1);
+#undef CHECK
+    printf("%s\n", failures ? "DIFFERENT: prices between players do not work as designed" :
+        "Identical: prices between players work as designed");
+    return failures ? 1 : 0;
+}
+
 // the camera of a player reaches every corner of a generated map, after it went through a .mpmap file as in a game
 static int command_viewcorners(const char *file, int num_players)
 {
@@ -2517,6 +2570,8 @@ int main(int argc, char **argv)
         result = command_preparedmap(file, atoi(argv[3]), atoi(argv[4]));
     } else if (strcmp(command, "reservoirlevel") == 0) {
         result = command_reservoirlevel(file);
+    } else if (strcmp(command, "tradeprices") == 0) {
+        result = command_tradeprices(file);
     } else if (strcmp(command, "importprice") == 0) {
         result = command_importprice(file);
     } else if (strcmp(command, "notrade") == 0) {

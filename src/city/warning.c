@@ -56,6 +56,21 @@ void city_warning_show_custom(const uint8_t *text)
     string_copy(text, w->text, MAX_TEXT);
 }
 
+void city_warning_show_to_local_player(const uint8_t *text)
+{
+    // for the player of this computer, whichever city runs (multiplayer notices)
+    if (!setting_warnings()) {
+        return;
+    }
+    struct warning *w = new_warning();
+    if (!w) {
+        return;
+    }
+    w->in_use = 1;
+    w->time = time_get_millis();
+    string_copy(text, w->text, MAX_TEXT);
+}
+
 int city_has_warnings(void)
 {
     for (int i = 0; i < MAX_WARNINGS; i++) {

@@ -292,8 +292,10 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
 - [x] **M8.2** Achats à l'empire majorés de 50 % en multijoueur. *Fait* : `trade_price_buy` majoré en multijoueur
   (paiement et affichage), `trade_price_buy_base` pour le prix du jeu. Test `mp_empire_import_price` ; parité
   intacte.
-- [ ] **M8.3** Prix de vente par ressource et par joueur acheteur (commande), message à l'acheteur quand le prix
-  d'une ressource qu'il achète change. *Critère* : test des prix et du message.
+- [x] **M8.3** Prix de vente par ressource et par joueur acheteur (commande), message à l'acheteur quand le prix
+  d'une ressource qu'il achète change. *Fait* : `mp/trade` (prix demandés et achats, état « extra » de chaque
+  cité), commandes `MP_ACTION_SET_SELL_PRICE` et `MP_ACTION_SET_BUYS_FROM`, avertissement « Le joueur 2 vend
+  désormais : marbre 180 Dn (au lieu de 150) » sur l'ordinateur de l'acheteur seulement. Test `mp_trade_prices`.
 - [ ] **M8.4** Ouverture d'une route entre deux joueurs (accord des deux, chemin routier entre leurs cités).
 - [ ] **M8.5** Caravanes entre joueurs, uniquement sur les routes : le vendeur expédie ce qu'il exporte, l'acheteur
   paie le prix du vendeur à la livraison ; préférence au moins cher (joueurs avant l'empire).
