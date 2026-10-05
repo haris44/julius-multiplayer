@@ -1,5 +1,7 @@
 #include "empire.h"
 
+#include "mp/trade.h"
+
 #include "building/count.h"
 #include "city/constants.h"
 #include "city/population.h"
@@ -171,6 +173,10 @@ int empire_can_import_resource_from_city(int city_id, int resource)
         return 0;
     }
     if (city_resource_trade_status(resource) != TRADE_STATUS_IMPORT) {
+        return 0;
+    }
+    // multiplayer: a player who sells it cheaper over an open route supplies it instead (D-048)
+    if (!mp_trade_empire_may_sell(resource)) {
         return 0;
     }
     if (trade_route_limit_reached(city->route_id, resource)) {

@@ -5,6 +5,32 @@
 
 ---
 
+## 2026-10-05 — Session 2 (suite) : commerce, caravanes par ressource, l'empire en repli (M8.8 à M8.11)
+
+**Retour d'Alexandre** : la carte et le jeu en solo sont validés (« c'est parfait »), on passe au commerce. Pendant
+le travail : pas de repli sur l'empire quand un joueur n'a plus de stock, assécher un rival fait partie du jeu.
+
+**Fait** (D-048, protocole 8)
+- Une caravane par ressource achetée et par mois (avant, une seule par route) ; budget de l'acheteur partagé.
+- L'empire ne vend pas ce qu'une cité achète moins cher à un joueur par une route ouverte, même sans stock
+  (`empire_can_import_resource_from_city`, multijoueur seulement ; à une cité, rien ne change).
+- Livraisons annoncées à l'acheteur ; colonne Empire dans la fenêtre « Joueurs », le moins cher en vert.
+- Tests : `mp_trade_caravans` étendu, `mp_trade_preference`, `mp_trade_conservation`, `mp_trade_resume` (167 en
+  tout) ; capture de la fenêtre en réseau.
+
+**Appris**
+- Une caravane met environ 15 ticks par case : 155 cases de route, environ 46 jours. Les tests attendent l'arrivée
+  au lieu d'une durée fixe.
+- Un entrepôt tout juste construit n'est « en service » qu'au tick suivant la mise à jour des états : ses stocks ne
+  comptent pas avant.
+- Remplir un entrepôt d'une autre ressource laisse la place restante dans l'emplacement déjà entamé (4 chargements
+  par emplacement) : livraison partielle, pas nulle.
+
+**Prochaine étape** : M9 (guerre) avec M8.7 (interception des caravanes). Points ouverts : vitesse des caravanes
+(D-048, à valider).
+
+---
+
 ## 2026-10-05 — Session 2 (suite) : bras de mer, joueur de la pierre sans eau, prés visibles (MC.4, MC.5)
 
 **Demande d'Alexandre** : le défilement « fonctionne nickel » (T2.8 validé). Un grand bras de mer qui traverse la

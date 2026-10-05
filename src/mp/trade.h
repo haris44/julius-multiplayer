@@ -6,9 +6,10 @@
 
 /**
  * @file
- * Trade between players (doc/mp/DECISIONS.md D-019, D-043): every seller sets a price for each resource and each
- * buying player; every buyer says which resources he buys from which player. When a seller changes the price of a
- * resource a player buys from him, that player is told.
+ * Trade between players (doc/mp/DECISIONS.md D-019, D-043, D-048): every seller sets a price for each resource and
+ * each buying player; every buyer says which resources he buys from which player. When a seller changes the price of
+ * a resource a player buys from him, that player is told. The empire only sells a city what no player sells it
+ * cheaper.
  */
 
 /**
@@ -49,10 +50,24 @@ int mp_trade_route_is_proposed(int from, int to);
 void mp_trade_propose_route(int other, int propose);
 
 /**
- * Monthly: the current city sends a caravan to each player it trades with, carrying up to 8 loads of a resource
- * that player buys from it and can pay for, beyond its export threshold and unless it stockpiles it
+ * Monthly: the current city sends caravans to each player it trades with, one per resource that player buys from it,
+ * each carrying up to 8 loads he can pay for, beyond its export threshold and unless it stockpiles it; the buyer is
+ * told of every delivery
  */
 void mp_trade_dispatch_caravans(void);
+
+/**
+ * The player who sells the resource to the current city cheaper than the empire does, over an open route, and from
+ * whom it buys it, whether or not he has some to sell: drying up his stock is part of the game (D-048)
+ * @return His id, or -1 when the empire is the cheapest source (always in a classic game)
+ */
+int mp_trade_cheaper_player(int resource);
+
+/**
+ * Whether the traders of the empire may sell the resource to the current city: not when it buys it from a player
+ * who sells it cheaper (D-048), even when he has none left. Always in a classic game.
+ */
+int mp_trade_empire_may_sell(int resource);
 
 /**
  * Whether the figure is a caravan between players

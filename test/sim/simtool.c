@@ -24,6 +24,7 @@
 #include "city/resource.h"
 #include "city/sentiment.h"
 #include "empire/city.h"
+#include "empire/empire.h"
 #include "empire/trade_prices.h"
 #include "empire/type.h"
 #include "core/time.h"
@@ -133,6 +134,9 @@ static int usage(void)
     printf("  simtool importprice SAVE               buying from the empire costs 50%% more in multiplayer\n");
     printf("  simtool notrade SAVE                   a template without trade by land and by sea is refused\n");
     printf("  simtool inspect MPSAV                  players, rules, climate, trade, missionaries of a saved game\n");
+    printf("  simtool tradepreference SAVE           the empire sells a city nothing a player sells it cheaper\n");
+    printf("  simtool tradeconservation SAVE         trade between players makes and loses no goods nor money\n");
+    printf("  simtool traderesume SAVE               a game saved while caravans travel goes on the same\n");
     printf("  simtool terrain MAP PLAYERS X Y W H    the terrain of a part of the prepared map (or of an .mpsav), one\n");
     printf("                                         letter a tile\n");
     printf("  simtool tradecities MAP                trade cities of the empire of a map, by land and by sea\n");
@@ -2266,19 +2270,81 @@ static int count_caravans(int player_id)
     return count;
 }
 
-static int marble_of(int player_id)
+static int stock_of(int player_id, int resource)
 {
     player_context_switch(player_id);
     int count = 0;
     for (int i = BUILDING_FIRST; i < BUILDING_END; i++) {
         building *b = building_get(i);
         if (b->state == BUILDING_STATE_IN_USE && b->type == BUILDING_WAREHOUSE_SPACE &&
-            b->subtype.warehouse_resource_id == RESOURCE_MARBLE) {
+            b->subtype.warehouse_resource_id == resource) {
             count += b->loads_stored;
         }
     }
     player_context_switch(0);
     return count;
+}
+
+static int marble_of(int player_id)
+{
+    return stock_of(player_id, RESOURCE_MARBLE);
+}
+
+// loads of a resource carried by the caravans between players
+static int in_transit(int resource)
+{
+    int loads = 0;
+    for (int p = 0; p < player_context_num_players(); p++) {
+        for (int i = p * MAX_FIGURES + 1; i < (p + 1) * MAX_FIGURES; i++) {
+            figure *f = figure_get(i);
+            if (f->state == FIGURE_STATE_ALIVE && mp_trade_is_caravan(f) && f->resource_id == resource) {
+                loads += f->loads_sold_or_carrying;
+            }
+        }
+    }
+    return loads;
+}
+
+// the trade scenario of the tests: a warehouse by the main road in each city of the map for 2, loads of marble and
+// iron in the one of player 2, who sells them to player 1 at 150 and 120 over an open route
+static void setup_trade(int marble, int iron, int open_route)
+{
+    int x0, y0, x1, y1;
+    mp_mapgen_city_center(0, &x0, &y0);
+    mp_mapgen_city_center(1, &x1, &y1);
+    build_as(0, BUILDING_WAREHOUSE, x0 - 6, y0 + 1, x0 - 6, y0 + 1);
+    build_as(1, BUILDING_WAREHOUSE, x1 - 6, y1 + 1, x1 - 6, y1 + 1);
+    player_context_switch(1);
+    building *store = building_get(map_building_at(map_grid_offset(x1 - 6, y1 + 1)));
+    for (int i = 0; i < marble; i++) {
+        building_warehouse_add_resource(store, RESOURCE_MARBLE);
+    }
+    for (int i = 0; i < iron; i++) {
+        building_warehouse_add_resource(store, RESOURCE_IRON);
+    }
+    player_context_switch(0);
+    city_action(1, MP_ACTION_SET_SELL_PRICE, 0, RESOURCE_MARBLE, 150);
+    city_action(1, MP_ACTION_SET_SELL_PRICE, 0, RESOURCE_IRON, 120);
+    city_action(0, MP_ACTION_SET_BUYS_FROM, 1, RESOURCE_MARBLE, 1);
+    city_action(0, MP_ACTION_SET_BUYS_FROM, 1, RESOURCE_IRON, marble && iron ? 1 : 0);
+    if (open_route) {
+        city_action(0, MP_ACTION_PROPOSE_ROUTE, 1, 1, 0);
+        city_action(1, MP_ACTION_PROPOSE_ROUTE, 0, 1, 0);
+    }
+    run_trace(50, 50, 0, 0); // the warehouses come into use
+}
+
+static int start_trade_game(const char *file)
+{
+    if (!mp_mapgen_create_prepared(file, 2)) {
+        printf("Unable to create the prepared map\n");
+        return 0;
+    }
+    game_rules_settings rules;
+    game_rules_default_multiplayer_settings(&rules);
+    rules.ai_invasions = 0;
+    game_rules_set_multiplayer(&rules);
+    return 1;
 }
 
 static int treasury_of(int player_id)
@@ -2289,33 +2355,16 @@ static int treasury_of(int player_id)
     return treasury;
 }
 
-// caravans between players (M8.4, M8.5, D-019, D-043): player 2 sells marble to player 1
+// caravans between players (M8.4, M8.5, M8.9, D-019, D-043, D-048): player 2 sells marble and iron to player 1;
+// a caravan for each resource, both on their way the same month
 static int command_caravans(const char *file)
 {
-    if (!mp_mapgen_create_prepared(file, 2)) {
-        printf("Unable to create the prepared map\n");
+    if (!start_trade_game(file)) {
         return 2;
     }
-    game_rules_settings rules;
-    game_rules_default_multiplayer_settings(&rules);
-    rules.ai_invasions = 0;
-    game_rules_set_multiplayer(&rules);
     int failures = 0;
 #define CHECK(condition, text) do { int ok_ = (condition); printf("%-62s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
-    int x0, y0, x1, y1;
-    mp_mapgen_city_center(0, &x0, &y0);
-    mp_mapgen_city_center(1, &x1, &y1);
-    // a warehouse by the main road in each city, and 8 loads of marble at player 2
-    build_as(0, BUILDING_WAREHOUSE, x0 - 6, y0 + 1, x0 - 6, y0 + 1);
-    build_as(1, BUILDING_WAREHOUSE, x1 - 6, y1 + 1, x1 - 6, y1 + 1);
-    player_context_switch(1);
-    building *store = building_get(map_building_at(map_grid_offset(x1 - 6, y1 + 1)));
-    for (int i = 0; i < 8; i++) {
-        building_warehouse_add_resource(store, RESOURCE_MARBLE);
-    }
-    player_context_switch(0);
-    city_action(1, MP_ACTION_SET_SELL_PRICE, 0, RESOURCE_MARBLE, 150);
-    city_action(0, MP_ACTION_SET_BUYS_FROM, 1, RESOURCE_MARBLE, 1);
+    setup_trade(8, 8, 0);
     run_trace(20 * 50, 20 * 50, 0, 0);
     CHECK(count_caravans(1) == 0 && marble_of(0) == 0, "no route yet: no caravan");
 
@@ -2324,23 +2373,25 @@ static int command_caravans(const char *file)
     city_action(1, MP_ACTION_PROPOSE_ROUTE, 0, 1, 0);
     CHECK(mp_trade_route_is_open(0, 1), "proposed by both, it is open");
     int buyer_money = treasury_of(0), seller_money = treasury_of(1);
-    int days = 0;
-    for (; days < 60 && marble_of(0) == 0; days++) {
+    int notices = mp_trade_notifications();
+    int days = 0, most_caravans = 0;
+    for (; days < 200 && (marble_of(0) < 8 || stock_of(0, RESOURCE_IRON) < 8); days++) {
         run_trace(50, 50, 0, 0);
-        if (count_caravans(1)) {
-            printf("day %d: a caravan of player 2 is on its way\n", days);
-            break;
+        int caravans = count_caravans(1);
+        if (caravans > most_caravans) {
+            printf("day %d: %d caravans of player 2 on their way\n", days, caravans);
+            most_caravans = caravans;
         }
     }
-    for (; days < 200 && marble_of(0) == 0; days++) {
-        run_trace(50, 50, 0, 0);
-    }
-    int delivered = marble_of(0);
-    printf("after %d days: player 1 has %d loads of marble, player 2 has %d\n", days, delivered, marble_of(1));
-    CHECK(delivered == 8, "the caravan delivered the 8 loads");
+    printf("after %d days: player 1 has %d marble and %d iron, player 2 has %d and %d\n", days, marble_of(0),
+        stock_of(0, RESOURCE_IRON), marble_of(1), stock_of(1, RESOURCE_IRON));
+    CHECK(most_caravans == 2, "a caravan for each resource, on the road together");
+    CHECK(marble_of(0) == 8 && stock_of(0, RESOURCE_IRON) == 8, "they delivered the 8 loads of each");
+    CHECK(days <= 70, "both within 70 days (105 tiles of road)");
     printf("player 1 paid %d, player 2 earned %d\n", buyer_money - treasury_of(0), treasury_of(1) - seller_money);
-    CHECK(buyer_money - treasury_of(0) == 8 * 150, "player 1 paid the price of player 2");
-    CHECK(treasury_of(1) - seller_money == 8 * 150, "player 2 earned it");
+    CHECK(buyer_money - treasury_of(0) == 8 * 150 + 8 * 120, "player 1 paid the prices of player 2");
+    CHECK(treasury_of(1) - seller_money == 8 * 150 + 8 * 120, "player 2 earned them");
+    CHECK(mp_trade_notifications() >= notices + 2, "each delivery is told");
 
     player_context_switch(0);
     player_context_set_num_players(1);
@@ -2348,6 +2399,199 @@ static int command_caravans(const char *file)
     printf("%s\n", failures ? "DIFFERENT: caravans between players do not work as designed" :
         "Identical: caravans between players work as designed");
     return failures ? 1 : 0;
+}
+
+// goods and money between players are neither made nor lost (M8.8): every day, the loads of marble in both cities
+// and on the road, and the money of both players, stay the same; a buyer short of money gets what he can pay; a
+// caravan stores what finds room, is paid for it, and takes the rest back
+// at least `days` days, then until no caravan is on the road (120 days at most): the goods are somewhere every day
+static int conserved_days(int days, int marble, int money, int *failures)
+{
+    int ok = 1;
+    for (int day = 0; day < 120 && (day < days || in_transit(RESOURCE_MARBLE)); day++) {
+        run_trace(50, 50, 0, 0);
+        int goods = marble_of(0) + marble_of(1) + in_transit(RESOURCE_MARBLE);
+        int cash = treasury_of(0) + treasury_of(1);
+        if (ok && (goods != marble || cash != money)) {
+            printf("  day %d: %d loads instead of %d, %d Dn instead of %d\n", day, goods, marble, cash, money);
+            ok = 0;
+        }
+    }
+    *failures += !ok;
+    return ok;
+}
+
+static int command_tradeconservation(const char *file)
+{
+    if (!start_trade_game(file)) {
+        return 2;
+    }
+    int failures = 0;
+#define CHECK(condition, text) do { int ok_ = (condition); printf("%-62s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
+    setup_trade(16, 0, 1);
+    int marble = marble_of(0) + marble_of(1);
+    int money = treasury_of(0) + treasury_of(1);
+    // a buyer who can pay for 2 loads only
+    player_context_switch(0);
+    int savings = city_data.finance.treasury - 300;
+    city_data.finance.treasury = 300;
+    player_context_switch(0);
+    money -= savings;
+    CHECK(conserved_days(40, marble, money, &failures), "short of money: goods and money conserved every day");
+    CHECK(marble_of(0) == 2 && treasury_of(0) == 0, "he got the 2 loads he could pay for");
+
+    // his warehouse full of timber but for the space of his 2 loads of marble: the next caravan stores 2 more, he pays
+    // for them, the 6 others go back
+    player_context_switch(0);
+    city_data.finance.treasury += savings;
+    money += savings;
+    int x0, y0;
+    mp_mapgen_city_center(0, &x0, &y0);
+    building *store = building_get(map_building_at(map_grid_offset(x0 - 6, y0 + 1)));
+    while (building_warehouse_add_resource(store, RESOURCE_TIMBER)) {
+    }
+    player_context_switch(0);
+    int seller_money = treasury_of(1);
+    CHECK(conserved_days(20, marble, money, &failures), "little room: goods and money conserved every day");
+    printf("player 1: %d loads; player 2: %d loads, earned %d\n", marble_of(0), marble_of(1),
+        treasury_of(1) - seller_money);
+    CHECK(marble_of(0) == 4 && marble_of(1) == 12 && treasury_of(1) - seller_money == 2 * 150,
+        "2 loads stored and paid, 6 back to the seller");
+
+    // room again: the rest comes
+    player_context_switch(0);
+    building_warehouse_remove_resource(store, RESOURCE_TIMBER, 32);
+    // the 12 loads left come in two caravans of 8 and 4
+    int conserved = 1;
+    for (int trip = 0; trip < 4 && marble_of(1) > 0; trip++) {
+        conserved &= conserved_days(20, marble, money, &failures);
+    }
+    CHECK(conserved, "room again: goods and money conserved every day");
+    CHECK(marble_of(0) == 16 && marble_of(1) == 0, "all the marble came");
+
+    player_context_switch(0);
+    player_context_set_num_players(1);
+#undef CHECK
+    printf("%s\n", failures ? "DIFFERENT: trade between players makes or loses goods or money" :
+        "Identical: trade between players makes and loses nothing");
+    return failures ? 1 : 0;
+}
+
+// the empire is the dearer source (M8.9, D-048): its traders sell a city nothing a player sells it cheaper over an
+// open route; the player sets the price higher, the buyer stops buying or the route closes: the empire sells again
+static int command_tradepreference(const char *file)
+{
+    if (!start_trade_game(file)) {
+        return 2;
+    }
+    int failures = 0;
+#define CHECK(condition, text) do { int ok_ = (condition); printf("%-62s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
+    int empire_price = trade_price_buy(RESOURCE_MARBLE);
+    printf("the empire sells marble at %d (surcharge included), player 2 at 150\n", empire_price);
+    CHECK(empire_price > 150, "the test needs player 2 cheaper than the empire");
+    CHECK(mp_trade_empire_may_sell(RESOURCE_MARBLE), "no route between players: the empire sells");
+    setup_trade(8, 0, 1);
+    CHECK(mp_trade_cheaper_player(RESOURCE_MARBLE) == 1 && !mp_trade_empire_may_sell(RESOURCE_MARBLE),
+        "player 2 sells cheaper over an open route: the empire does not");
+    city_action(1, MP_ACTION_SET_SELL_PRICE, 0, RESOURCE_MARBLE, empire_price);
+    CHECK(mp_trade_empire_may_sell(RESOURCE_MARBLE), "player 2 asks the price of the empire: the empire sells");
+    city_action(1, MP_ACTION_SET_SELL_PRICE, 0, RESOURCE_MARBLE, 150);
+    city_action(0, MP_ACTION_SET_BUYS_FROM, 1, RESOURCE_MARBLE, 0);
+    CHECK(mp_trade_empire_may_sell(RESOURCE_MARBLE), "player 1 no longer buys from him: the empire sells");
+    city_action(0, MP_ACTION_SET_BUYS_FROM, 1, RESOURCE_MARBLE, 1);
+    city_action(1, MP_ACTION_PROPOSE_ROUTE, 0, 0, 0);
+    CHECK(mp_trade_empire_may_sell(RESOURCE_MARBLE), "the route is closed: the empire sells");
+    city_action(1, MP_ACTION_PROPOSE_ROUTE, 0, 1, 0);
+    CHECK(!mp_trade_empire_may_sell(RESOURCE_MARBLE), "open again: the empire does not");
+    // player 2 out of marble: the empire does not take over, drying up the stock of a rival is part of the game
+    int x1, y1;
+    mp_mapgen_city_center(1, &x1, &y1);
+    player_context_switch(1);
+    building *store = building_get(map_building_at(map_grid_offset(x1 - 6, y1 + 1)));
+    building_warehouse_remove_resource(store, RESOURCE_MARBLE, 8);
+    player_context_switch(0);
+    CHECK(marble_of(1) == 0 && !mp_trade_empire_may_sell(RESOURCE_MARBLE),
+        "player 2 has no marble left: the empire still does not sell");
+
+    // through the traders of the empire themselves, with a city of the empire that sells marble
+    int city_id = -1;
+    for (int i = 0; i < 41 && city_id < 0; i++) {
+        empire_city *c = empire_city_get(i);
+        if (c && c->in_use && (c->type == EMPIRE_CITY_TRADE || c->type == EMPIRE_CITY_FUTURE_TRADE) &&
+            c->sells_resource[RESOURCE_MARBLE]) {
+            city_id = i;
+        }
+    }
+    if (city_id >= 0) {
+        empire_city_open_trade(city_id);
+        for (int i = 0; i < 3 && city_resource_trade_status(RESOURCE_MARBLE) != TRADE_STATUS_IMPORT; i++) {
+            city_resource_cycle_trade_status(RESOURCE_MARBLE);
+        }
+        CHECK(city_resource_trade_status(RESOURCE_MARBLE) == TRADE_STATUS_IMPORT, "player 1 imports marble");
+        CHECK(!empire_can_import_resource_from_city(city_id, RESOURCE_MARBLE),
+            "the traders of the empire leave marble to player 2");
+        city_action(1, MP_ACTION_SET_SELL_PRICE, 0, RESOURCE_MARBLE, empire_price + 50);
+        CHECK(empire_can_import_resource_from_city(city_id, RESOURCE_MARBLE),
+            "player 2 dearer: the traders of the empire bring marble");
+    } else {
+        printf("no city of the empire sells marble on this map: traders not tried\n");
+    }
+    // the classic game is untouched: one city, the empire always sells
+    player_context_switch(0);
+    player_context_set_num_players(1);
+    CHECK(mp_trade_empire_may_sell(RESOURCE_MARBLE), "alone, the empire always sells");
+#undef CHECK
+    printf("%s\n", failures ? "DIFFERENT: the empire is not the dearer source as designed" :
+        "Identical: the empire is the dearer source as designed");
+    return failures ? 1 : 0;
+}
+
+// a game saved while caravans travel goes on as if it had not been saved (M8.8): the resumed game has the same state
+// every tick, and the goods and money arrive the same
+static int command_traderesume(const char *file)
+{
+    if (!start_trade_game(file)) {
+        return 2;
+    }
+    setup_trade(8, 8, 1);
+    for (int day = 0; day < 60 && !count_caravans(1); day++) {
+        run_trace(50, 50, 0, 0);
+    }
+    run_trace(3 * 50, 3 * 50, 0, 0);
+    int travelling = count_caravans(1);
+    printf("caravans on their way when saving: %d\n", travelling);
+    const char *mpsav = "traderesume.mpsav";
+    if (!travelling || !mp_savegame_write(mpsav)) {
+        printf("No caravan on its way, or unable to save\n");
+        return 2;
+    }
+    static uint64_t continued[MAX_SAMPLES], resumed[MAX_SAMPLES];
+    int ticks = 60 * 50;
+    int n = run_trace(ticks, 1, continued, 0);
+    int marble = marble_of(0), iron = stock_of(0, RESOURCE_IRON), money = treasury_of(0);
+    if (!mp_savegame_read(mpsav)) {
+        printf("Unable to read the saved game\n");
+        return 2;
+    }
+    run_trace(ticks, 1, resumed, 0);
+    int same_goods = marble_of(0) == marble && stock_of(0, RESOURCE_IRON) == iron && treasury_of(0) == money;
+    printf("delivered: %d marble, %d iron, %d Dn left (continued) / %d, %d, %d (resumed)\n", marble, iron, money,
+        marble_of(0), stock_of(0, RESOURCE_IRON), treasury_of(0));
+    remove(mpsav);
+    player_context_switch(0);
+    player_context_set_num_players(1);
+    for (int i = 0; i < n && i < MAX_SAMPLES; i++) {
+        if (continued[i] != resumed[i]) {
+            printf("DIFFERENT: the resumed game diverges at tick %d after loading\n", i);
+            return 1;
+        }
+    }
+    if (!same_goods || marble != 8 || iron != 8) {
+        printf("DIFFERENT: the goods did not all arrive, or not the same\n");
+        return 1;
+    }
+    printf("Identical: a game saved while caravans travel goes on the same\n");
+    return 0;
 }
 
 // the camera of a player reaches every corner of a generated map, after it went through a .mpmap file as in a game
@@ -2864,6 +3108,12 @@ int main(int argc, char **argv)
         result = command_notrade(file);
     } else if (strcmp(command, "terrain") == 0 && argc > 7) {
         result = command_terrain(file, atoi(argv[3]), atoi(argv[4]), atoi(argv[5]), atoi(argv[6]), atoi(argv[7]));
+    } else if (strcmp(command, "tradepreference") == 0) {
+        result = command_tradepreference(file);
+    } else if (strcmp(command, "tradeconservation") == 0) {
+        result = command_tradeconservation(file);
+    } else if (strcmp(command, "traderesume") == 0) {
+        result = command_traderesume(file);
     } else if (strcmp(command, "inspect") == 0) {
         result = command_inspect(file);
     } else if (strcmp(command, "tradecities") == 0) {

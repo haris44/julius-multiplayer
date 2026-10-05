@@ -61,9 +61,13 @@ Les règles propres au multijoueur :
 - Un bâtiment qui se retrouve hors de votre zone s'effondre au bout de 3 mois.
 - Chaque joueur n'exploite que certaines ressources : commercez pour le reste. Conseiller au commerce, bouton
   « Joueurs » : proposez une route commerciale à un joueur (elle s'ouvre quand il la propose aussi), fixez le prix
-  auquel vous lui vendez chaque ressource et dites ce que vous lui achetez. Chaque mois, une caravane apporte au
-  plus 8 chargements par la route ; l'acheteur paie à la livraison. Vous êtes prévenu quand un joueur change le
-  prix d'une ressource que vous lui achetez. Acheter à l'empire coûte 50 % de plus.
+  auquel vous lui vendez chaque ressource et dites ce que vous lui achetez. Chaque mois, le vendeur envoie une
+  caravane par ressource achetée, 8 chargements au plus, dans la limite de ce que l'acheteur peut payer ; il paie à
+  l'arrivée ce qui trouve place dans ses entrepôts, le reste repart. Chaque livraison est annoncée. Vous êtes
+  prévenu quand un joueur change le prix d'une ressource que vous lui achetez.
+- Acheter à l'empire coûte 50 % de plus. L'empire ne vous vend pas ce que vous achetez à un joueur moins cher
+  (prix en vert dans la fenêtre « Joueurs ») : même si ce joueur n'en a plus. Assécher le stock d'un rival fait
+  partie du jeu ; pour revenir à l'empire, cessez d'acheter à ce joueur.
 - Un grand bras de mer traverse la carte d'ouest en est. À deux joueurs, les deux vivent sur la rive sud ; à
   quatre, deux sur chaque rive, reliés par la route et le pont de César. Les joueurs de la côte y bâtissent leurs
   docks (les navires de l'empire arrivent par le bord de la carte le plus proche) et leurs quais de pêche. Le joueur

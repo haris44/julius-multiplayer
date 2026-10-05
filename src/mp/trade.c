@@ -221,11 +221,12 @@ static void look_at_buyer(int buyer, int resource, buyer_view *v)
     player_context_switch(previous);
 }
 
-static int has_caravan_to(int buyer)
+static int has_caravan_to(int buyer, int resource)
 {
     for (int i = FIGURE_FIRST; i < FIGURE_END; i++) {
         figure *f = figure_get(i);
-        if (f->state == FIGURE_STATE_ALIVE && mp_trade_is_caravan(f) && BUILDING_OWNER(f->destination_building_id) == buyer) {
+        if (f->state == FIGURE_STATE_ALIVE && mp_trade_is_caravan(f) &&
+            BUILDING_OWNER(f->destination_building_id) == buyer && f->resource_id == resource) {
             return 1;
         }
     }
@@ -244,16 +245,16 @@ static building *seller_warehouse(int road_network_id, map_point *road)
     return 0;
 }
 
+// a caravan for each resource the buyer buys, one at a time per resource, within what he can pay this month
 static void dispatch_to(int buyer)
 {
-    if (has_caravan_to(buyer)) {
-        return; // one caravan at a time on a route
-    }
     int seller = player_context_current_player;
+    int budget = -1; // what the buyer can still spend, once looked at
     for (int resource = RESOURCE_NONE + 1; resource < RESOURCE_MAX; resource++) {
         // the settings of the empire do not apply: a buyer says what he buys from whom, a seller sells beyond his
         // export threshold what he does not stockpile
-        if (!buys[buyer][seller][resource] || city_resource_is_stockpiled(resource)) {
+        if (!buys[buyer][seller][resource] || city_resource_is_stockpiled(resource) ||
+            has_caravan_to(buyer, resource)) {
             continue;
         }
         int available = city_resource_count(resource) - city_resource_export_over(resource);
@@ -262,8 +263,11 @@ static void dispatch_to(int buyer)
         }
         buyer_view v;
         look_at_buyer(buyer, resource, &v);
+        if (budget < 0) {
+            budget = v.treasury;
+        }
         int price = mp_trade_price(seller, buyer, resource);
-        int affordable = price > 0 ? v.treasury / price : 0;
+        int affordable = price > 0 ? budget / price : 0;
         int loads = available < MAX_CARAVAN_LOADS ? available : MAX_CARAVAN_LOADS;
         loads = loads < affordable ? loads : affordable;
         if (!v.warehouse_id || loads <= 0) {
@@ -288,7 +292,7 @@ static void dispatch_to(int buyer)
         f->resource_id = resource;
         f->loads_sold_or_carrying = loads;
         f->terrain_usage = TERRAIN_USAGE_ROADS;
-        return; // one resource per caravan
+        budget -= loads * price;
     }
 }
 
@@ -308,6 +312,28 @@ void mp_trade_dispatch_caravans(void)
 int mp_trade_is_caravan(const figure *f)
 {
     return f->type == FIGURE_TRADE_CARAVAN && f->action_state == ACTION_GOING;
+}
+
+// "Player 2 delivered to you: 8 marble for 1200 Dn", or that his caravan found no room, on the computer of the buyer
+static void tell_delivery(int seller, int resource, int loads, int paid)
+{
+    notifications++;
+    uint8_t text[200] = { 0 };
+    append(text, translation_for(TR_MP_PRICE_CHANGED_PLAYER));
+    append_number(text, seller + 1);
+    if (loads > 0) {
+        append(text, translation_for(TR_MP_DELIVERED));
+        append_number(text, loads);
+        append(text, (const uint8_t *) " ");
+        append(text, lang_get_string(23, resource));
+        append(text, translation_for(TR_MP_DELIVERED_FOR));
+        append_number(text, paid);
+        append(text, (const uint8_t *) " Dn");
+    } else {
+        append(text, translation_for(TR_MP_DELIVERY_NO_ROOM));
+        append(text, lang_get_string(23, resource));
+    }
+    city_warning_show_to_local_player(text);
 }
 
 // the caravan reached the warehouse of the buyer: he stores what he can and pays for it, the rest goes back
@@ -339,6 +365,37 @@ static void deliver(figure *f)
         building_warehouses_add_resource(resource, loads - stored);
     }
     f->loads_sold_or_carrying = 0;
+    if (buyer == mp_session_local_player_id()) {
+        tell_delivery(seller, resource, stored, stored * price);
+    }
+}
+
+// ---------- the empire as the dearer source ----------
+
+int mp_trade_cheaper_player(int resource)
+{
+    int buyer = player_context_current_player;
+    if (player_context_num_players() <= 1 || !is_resource(resource)) {
+        return -1;
+    }
+    int cheapest = -1;
+    int best = trade_price_buy(resource); // the empire, with its multiplayer surcharge
+    for (int seller = 0; seller < player_context_num_players(); seller++) {
+        if (seller == buyer || !buys[buyer][seller][resource] || !mp_trade_route_is_open(buyer, seller)) {
+            continue;
+        }
+        int price = mp_trade_price(seller, buyer, resource);
+        if (price < best) {
+            best = price;
+            cheapest = seller;
+        }
+    }
+    return cheapest;
+}
+
+int mp_trade_empire_may_sell(int resource)
+{
+    return mp_trade_cheaper_player(resource) < 0;
 }
 
 void mp_trade_caravan_action(figure *f)

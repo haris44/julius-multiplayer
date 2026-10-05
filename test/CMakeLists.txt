@@ -312,6 +312,11 @@ add_test(NAME mp_empire_import_price COMMAND simtool importprice brugle-massilia
 add_test(NAME mp_trade_prices COMMAND simtool tradeprices brugle-massilia-start.sav)
 # Trade routes and caravans between players (M8.4, M8.5): open by both, delivered by road, paid at the seller's price
 add_test(NAME mp_trade_caravans COMMAND simtool caravans brugle-massilia-start.sav)
+# Trade between players makes and loses nothing, and survives a save while caravans travel (M8.8)
+add_test(NAME mp_trade_conservation COMMAND simtool tradeconservation brugle-massilia-start.sav)
+# The empire is the dearer source (M8.9, D-048): its traders sell nothing a player sells cheaper
+add_test(NAME mp_trade_preference COMMAND simtool tradepreference brugle-massilia-start.sav)
+add_test(NAME mp_trade_resume COMMAND simtool traderesume brugle-massilia-start.sav)
 
 # T1.5 (D-034): the roads of Caesar stay, untinted, and serve every city
 add_test(NAME mp_caesar_roads COMMAND simtool caesarroads brugle-massilia-start.sav)

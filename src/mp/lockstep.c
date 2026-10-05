@@ -23,8 +23,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define PROTOCOL_VERSION 7 // 3: the rules of the game travel with the welcome message; 4: territories; 5: fog;
-                           // 6: one forest map, games alone (D-044); 7: missions at the start (D-045)
+#define PROTOCOL_VERSION 8 // 3: the rules of the game travel with the welcome message; 4: territories; 5: fog;
+                           // 6: one forest map, games alone (D-044); 7: missions at the start (D-045);
+                           // 8: a caravan per resource, the empire the dearer source (D-048)
 #define TURN_TICKS 4
 #define TURN_DELAY 2
 #define HISTORY 256

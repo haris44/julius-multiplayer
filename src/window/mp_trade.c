@@ -2,6 +2,8 @@
 
 #include "core/image.h"
 #include "core/string.h"
+#include "empire/city.h"
+#include "empire/trade_prices.h"
 #include "game/player_context.h"
 #include "game/resource.h"
 #include "graphics/button.h"
@@ -21,7 +23,7 @@
 #include "window/advisors.h"
 
 #define PRICE_STEP 10
-#define ROW_HEIGHT 20
+#define ROW_HEIGHT 19
 #define FIRST_ROW_Y 122
 #define NUM_RESOURCES (RESOURCE_MAX - RESOURCE_MIN)
 
@@ -68,11 +70,11 @@ static void init(void)
     for (int i = 0; i < NUM_RESOURCES; i++) {
         int resource = RESOURCE_MIN + i;
         int y = FIRST_ROW_Y + ROW_HEIGHT * i;
-        add_button(232, y, 20, 18, button_price, resource, -PRICE_STEP);
-        add_button(310, y, 20, 18, button_price, resource, PRICE_STEP);
+        add_button(196, y, 20, 18, button_price, resource, -PRICE_STEP);
+        add_button(266, y, 20, 18, button_price, resource, PRICE_STEP);
         add_button(500, y, 90, 18, button_buy, resource, 0);
     }
-    add_button(240, 440, 160, 24, button_back, 0, 0);
+    add_button(240, 448, 160, 22, button_back, 0, 0);
 }
 
 static void draw_background(void)
@@ -136,10 +138,11 @@ static void draw_foreground(void)
         TR_MP_ROUTE_WITHDRAW : TR_MP_ROUTE_PROPOSE), route->x, route->y + 6, route->width, FONT_NORMAL_BLACK, 0);
 
     // prices
-    inner_panel_draw(16, 100, 38, 21);
-    text_draw(translation_for(TR_MP_TRADE_I_SELL), 210, 106, FONT_SMALL_PLAIN, COLOR_WHITE);
-    text_draw(translation_for(TR_MP_TRADE_HE_SELLS), 370, 106, FONT_SMALL_PLAIN, COLOR_WHITE);
-    text_draw(translation_for(TR_MP_TRADE_I_BUY), 510, 106, FONT_SMALL_PLAIN, COLOR_WHITE);
+    inner_panel_draw(16, 100, 38, 20);
+    text_draw_centered(translation_for(TR_MP_TRADE_I_SELL), 196, 106, 90, FONT_SMALL_PLAIN, COLOR_WHITE);
+    text_draw_centered(translation_for(TR_MP_TRADE_HE_SELLS), 296, 106, 90, FONT_SMALL_PLAIN, COLOR_WHITE);
+    text_draw_centered(translation_for(TR_MP_TRADE_EMPIRE), 396, 106, 90, FONT_SMALL_PLAIN, COLOR_WHITE);
+    text_draw_centered(translation_for(TR_MP_TRADE_I_BUY), 500, 106, 90, FONT_SMALL_PLAIN, COLOR_WHITE);
     for (int i = 0; i < NUM_RESOURCES; i++) {
         int resource = RESOURCE_MIN + i;
         int y = FIRST_ROW_Y + ROW_HEIGHT * i;
@@ -158,14 +161,24 @@ static void draw_foreground(void)
                     TR_MP_NO), b->x, b->y + 4, b->width, FONT_NORMAL_WHITE, 0);
             }
         }
-        text_draw_number_centered(mp_trade_price(me, data.partner, resource), 252, y + 4, 58, FONT_NORMAL_WHITE);
-        text_draw_number_centered(mp_trade_price(data.partner, me, resource), 360, y + 4, 100, FONT_NORMAL_WHITE);
+        text_draw_number_centered(mp_trade_price(me, data.partner, resource), 216, y + 4, 50, FONT_NORMAL_WHITE);
+        // his price, and the one of the empire with its surcharge: the cheaper source supplies (D-048)
+        int his_price = mp_trade_price(data.partner, me, resource);
+        int cheaper = mp_trade_cheaper_player(resource) == data.partner;
+        text_draw_number_centered(his_price, 296, y + 4, 90, cheaper ? FONT_NORMAL_GREEN : FONT_NORMAL_WHITE);
+        if (empire_can_import_resource_potentially(resource)) {
+            text_draw_number_centered(trade_price_buy(resource), 396, y + 4, 90,
+                mp_trade_buys_from(me, data.partner, resource) && !cheaper ? FONT_NORMAL_GREEN : FONT_NORMAL_WHITE);
+        } else {
+            text_draw_centered((const uint8_t *) "-", 396, y + 4, 90, FONT_NORMAL_WHITE, 0);
+        }
     }
-    text_draw(translation_for(TR_MP_TRADE_RULE), 24, 426, FONT_SMALL_PLAIN, 0);
+    text_draw(translation_for(TR_MP_TRADE_RULE), 24, 424, FONT_SMALL_PLAIN, 0);
+    text_draw(translation_for(TR_MP_TRADE_RULE_2), 24, 436, FONT_SMALL_PLAIN, 0);
 
     const generic_button *back = &buttons[button++];
     button_border_draw(back->x, back->y, back->width, back->height, data.focus_button_id == button);
-    text_draw_centered(translation_for(TR_MP_BACK), back->x, back->y + 7, back->width, FONT_NORMAL_BLACK, 0);
+    text_draw_centered(translation_for(TR_MP_BACK), back->x, back->y + 6, back->width, FONT_NORMAL_BLACK, 0);
     graphics_reset_dialog();
 }
 

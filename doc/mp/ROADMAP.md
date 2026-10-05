@@ -355,13 +355,28 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
   paie le prix du vendeur à la livraison. *Fait* : une caravane par mois et par route (tick 15), 8 chargements au
   plus, dans la limite de ce que l'acheteur peut payer ; livraison dans ses entrepôts, le reste revient ; route
   coupée : la cargaison revient. Test `mp_trade_caravans` (8 marbres livrés en 42 jours, 1 200 Dn payés et reçus).
-  *Reste* : la préférence de l'acheteur pour le moins cher entre joueurs et empire.
+  *Reste fait par M8.9.*
 - [x] **M8.6** Fenêtre du commerce entre joueurs : prix, routes, achats.
   *Fait* : bouton « Joueurs » du conseiller au commerce (multijoueur seulement) ; un onglet par joueur, état de la
   route et bouton pour la proposer ou la retirer, pour chaque ressource mon prix (−/+ par 10), son prix, « J'achète
   oui/non ». Essayée en réseau dans le vrai jeu (captures), sans désynchronisation.
 - [ ] **M8.7** Interception : caravanes attaquables, cargaison perdue, route coupée (avec M9).
-- [ ] **M8.8** Tests : rejeux, cargaisons et argent conservés, scénarios visuels.
+- [x] **M8.8** Tests : rejeux, cargaisons et argent conservés, scénarios visuels. *Fait* : `mp_trade_conservation`
+  (chaque jour, chargements des deux cités et des caravanes, et argent des deux joueurs, constants : acheteur à court
+  d'argent servi de ce qu'il peut payer, entrepôt presque plein : 2 chargements payés et 6 rendus, puis le reste en
+  deux voyages) ; `mp_trade_resume` (sauvegarde pendant que deux caravanes roulent, partie reprise identique tick par
+  tick sur 60 jours, mêmes livraisons) ; captures de la fenêtre en réseau (`trade-window.png`). Les interceptions
+  viendront avec M8.7.
+- [x] **M8.9** Une caravane par ressource achetée et par mois (D-048) ; l'empire ne vend pas ce qu'un joueur vend
+  moins cher. *Fait* : plusieurs caravanes sur une route, une par ressource à la fois, le budget de l'acheteur
+  partagé entre elles ; `empire_can_import_resource_from_city` refuse en multijoueur une ressource achetée à un
+  joueur moins cher par une route ouverte, même sans stock (Alexandre : « assécher le stock d'un adversaire fait
+  partie du jeu »). Tests `mp_trade_caravans` (marbre et fer en route ensemble), `mp_trade_preference` (prix, achat,
+  route, stock vide, marchands de l'empire eux-mêmes, partie à une cité intacte).
+- [x] **M8.10** Livraisons annoncées à l'acheteur (« Le joueur 2 vous a livré : 8 Marbre pour 1200 Dn », ou
+  « n'a pu vous livrer (entrepôts pleins) »).
+- [x] **M8.11** Fenêtre « Joueurs » : colonne Empire (prix majoré, « - » si l'empire ne vend pas la ressource), le
+  moins cher en vert ; textes resserrés (capture en réseau).
 
 ## M9 — Guerre entre joueurs
 - [ ] **M9.1** Hostilité par propriétaire. En classique, elle reproduit exactement la matrice actuelle.

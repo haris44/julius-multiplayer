@@ -526,3 +526,19 @@
   point de pêche est au large de chacun.
 - Les quais de pierre dessinés sur le rivage près du réservoir de César sont ceux du jeu d'origine (« rive
   fortifiée » près d'un bâtiment).
+
+### D-048 — Plusieurs caravanes par route ; l'empire ne vend pas ce qu'un joueur vend moins cher (précise D-043)
+- 2026-10-05 · **adoptée** (suite du plan du commerce ; Alexandre, pendant le travail : « tu ne dois pas passer sur
+  les imports de l'empire si le joueur n'a plus de stock, c'est aussi dans le gameplay de pouvoir assécher le stock
+  d'un adversaire »)
+- Chaque mois, le vendeur envoie **une caravane par ressource** que l'acheteur lui achète (8 chargements au plus,
+  une à la fois par ressource), dans la limite de ce que l'acheteur peut payer, partagée entre elles. Avant, une
+  seule caravane par route : l'acheteur de marbre et de fer ne recevait que le marbre.
+- **L'empire est la source de repli la plus chère** : en multijoueur, ses marchands ne vendent pas à une cité une
+  ressource qu'elle achète à un joueur moins cher (prix majoré de l'empire comparé) par une route ouverte. **Même si
+  ce joueur n'en a plus** : assécher le stock d'un rival est un levier de jeu. Pour revenir à l'empire, l'acheteur
+  cesse d'acheter à ce joueur, ou la route se ferme, ou le vendeur monte son prix au niveau de l'empire.
+- Chaque livraison est annoncée à l'acheteur ; la fenêtre « Joueurs » montre le prix de l'empire et le moins cher
+  en vert.
+- Le trajet d'une caravane suit la vitesse du jeu (environ 15 ticks par case) : d'un bout à l'autre de la carte
+  pour 2, environ 45 jours. *À valider* : la distance compte-t-elle assez, ou faut-il des caravanes plus rapides ?
