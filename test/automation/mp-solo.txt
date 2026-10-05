@@ -17,19 +17,19 @@ click 240 466
 mpwait 0
 wait 5
 screenshot build/automation/mp-solo-start.png
+# the player starts with his mission and its zone (D-045)
 mpinfo
-# without a zone, no house; a mission near the missionary gives one
+# no house outside the zone, a house in it; the next mission needs marble
 build 10 70 140 70 140
-build 80 40 96 40 96
-run 100
+build 80 46 106 46 106
 build 10 46 92 46 92
 run 20
 mpinfo
 screenshot build/automation/mp-solo-mission.png
 # the missionary: a click on him, then on the place where he goes
-click 297 300
+click 297 455
 wait 2
-click 450 200
+click 450 250
 wait 2
 run 300
 mpinfo

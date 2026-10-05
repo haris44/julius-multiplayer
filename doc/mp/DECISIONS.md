@@ -465,4 +465,18 @@
   une carte préparée jouée seul.
 - **Départ** : la vue est sur le missionnaire, et un objectif reste affiché tant que le joueur n'a pas de mission
   (« construisez votre première mission, menu Éducation, gratuite, à moins de 20 cases du missionnaire »). Le
-  brouillard est calculé dès la création de la carte.
+  brouillard est calculé dès la création de la carte. *Remplacé par D-045 : la mission est construite d'office.*
+
+### D-045 — La mission de départ est construite d'office ; plein écran dans un Space (précise D-037, D-044)
+- 2026-10-05 · **adoptée** (Alexandre, troisième essai : « je veux que la mission soit construite au démarrage, le
+  joueur n'a pas le choix »)
+- Chaque joueur commence avec **sa mission déjà bâtie**, au bord de la route de César qui traverse l'emplacement de
+  sa cité (accès à la route), et la zone de 20 cases qu'elle donne. La vue de départ est sur elle. Son missionnaire
+  sert à fonder les missions suivantes, qui coûtent du marbre puisqu'il possède déjà une zone. L'objectif « fondez
+  votre mission » ne s'affiche plus que si un joueur perd toute sa zone (sa mission suivante est alors gratuite).
+- **Plein écran sur macOS** : retour au plein écran natif de macOS (un Space), qui place la fenêtre correctement
+  sur un écran à encoche. Le plein écran « sans Space » de T1.3 ne passait au-dessus de la barre de menus et du Dock
+  que si la fenêtre avait le focus quand le jeu capturait la souris (pas au lancement) et laissait le bas de l'image
+  hors de l'écran. Dans le Space, le délégué de la fenêtre de SDL 3 demande désormais à macOS de masquer
+  entièrement barre de menus et Dock (ce que faisait SDL 2) ; l'indication `SDL_VIDEO_MAC_FULLSCREEN_MENU_VISIBILITY`
+  vaut 0.

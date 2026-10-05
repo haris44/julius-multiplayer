@@ -112,6 +112,12 @@ void mp_territory_update_city(void)
     if (!mp_territory_is_active()) {
         return;
     }
+    mp_territory_start_city();
+    check_buildings_outside();
+}
+
+void mp_territory_start_city(void)
+{
     for (int y = 0; y < map_data.height; y++) {
         memset(coverage[y], 0, sizeof(int16_t) * (map_data.width + 1));
     }
@@ -136,7 +142,6 @@ void mp_territory_update_city(void)
             }
         }
     }
-    check_buildings_outside();
 }
 
 void mp_territory_reset_extra_state(void)

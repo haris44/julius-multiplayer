@@ -217,6 +217,7 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
   *Fait, à vérifier par Alexandre* (impossible sans vraie fenêtre) : la barre de menu du jeu laisse passer la
   souris ; c'est celle de macOS qui descendait sur le jeu en plein écran « Space ». Le plein écran du jeu n'utilise
   plus de Space sur macOS (`SDL_HINT_VIDEO_MAC_FULLSCREEN_SPACES`) : barre de menu et Dock restent cachés.
+  *Revu par T2.7* : ce plein écran sans Space marchait mal ; retour au Space, barre et Dock masqués autrement.
 - [x] **T1.4** 1920×1080 et 2K proposées dans la liste des résolutions.
   *Fait* : 1280 × 720, 1920 × 1080 et 2560 × 1440 après les trois tailles d'origine (capture : fenêtre de
   1920 × 1080 obtenue). *Remplacé par T2.5* : ces tailles dépassaient l'écran d'un MacBook.
@@ -242,14 +243,20 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
   navires de son empire, points de pêche, forêts et étangs loin des cités (D-044). Test `mp_prepared_map_*` : au
   moins 8 % d'eau et 20 % de forêt, climat du nord, points de pêche dans l'eau, navires de chaque joueur jusqu'à
   son lac ; brouillard : les mouettes n'éclairent rien.
+- [x] **T2.6** La mission est construite d'office au départ (D-045). *Fait* : une mission par joueur au bord de la
+  route de César qui traverse l'emplacement de sa cité, sa zone et son brouillard calculés à la création de la
+  carte ; tests `mp_territory`, `mp_missions`, `mp_outside_territory` revus (la mission suivante coûte du marbre,
+  la ville qui perd sa mission perd sa zone) ; `tools/mp-solo-test.sh` : mission et zone au départ.
+- [ ] **T2.7** Plein écran : barre de menus et Dock visibles au lancement ; après un passage fenêtre → plein écran,
+  plus de défilement vers le bas. *Fait, à vérifier par Alexandre* (D-045) : plein écran natif de macOS (Space),
+  barre de menus et Dock masqués par le délégué de la fenêtre ; l'ancien plein écran sans Space est abandonné.
 - [ ] **T2.5** Résolutions : la liste propose des tailles fixes plus grandes que l'écran du MacBook (1470 × 956,
   1710 × 1112) et le défilement par les bords ne marche plus. *Fait, à vérifier par Alexandre* : les tailles fixes
   de T1.4 sont retirées ; après les trois tailles d'origine, la ligne « L par H (écran) » donne la plus grande
   fenêtre qui tient sur l'écran (zone utile moins la barre de titre) ; aucune fenêtre n'est plus grande que l'écran
-  (au lancement aussi : une taille enregistrée trop grande est réduite). En plein écran sur macOS, barre de menus
-  et Dock sont masqués par les options de présentation de l'application, en plus de T1.3. Script
+  (au lancement aussi : une taille enregistrée trop grande est réduite). Script
   `test/automation/display.txt` (écran factice de 1024 × 768 : ligne « 1024 par 736 (écran) », 1024 × 768
-  ramené à 1024 × 736).
+  ramené à 1024 × 736). Le plein écran est revu par T2.7.
 
 ## MC — Cartes multijoueur préparées et César (D-033, D-034)
 - [ ] **MC.1** Ouvrages de César dessinés en blanc (la teinte actuelle ne fait que foncer les images) ; son aqueduc

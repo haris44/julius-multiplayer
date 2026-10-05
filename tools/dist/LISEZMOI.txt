@@ -51,10 +51,11 @@ joueur et votre score. La touche P met la partie en pause pour tout le monde, et
 sauvegarde la partie pour la reprendre plus tard depuis le salon.
 
 Les règles propres au multijoueur :
-- Vous commencez avec un missionnaire : la vue est sur lui. Cliquez dessus, puis cliquez où il doit aller.
-- On ne construit que dans sa zone. Votre première mission (menu Éducation) est gratuite : bâtissez-la à moins de
-  20 cases de votre missionnaire, elle vous donne une zone de 20 cases autour d'elle. Les missions suivantes
-  coûtent 4 chargements de marbre ; une mission peut former un nouveau missionnaire (300 Dn).
+- Vous commencez avec votre mission, déjà bâtie au bord de la route de César, et la zone de 20 cases qu'elle vous
+  donne. On ne construit que dans sa zone.
+- Vous avez aussi un missionnaire : cliquez dessus, puis cliquez où il doit aller. Il sert à fonder d'autres
+  missions (menu Éducation), à moins de 20 cases de lui ; chacune coûte 4 chargements de marbre et donne une zone
+  de plus. Une mission peut former un nouveau missionnaire (300 Dn).
 - Votre zone grandit toute seule : 20 cases autour de vos maisons habitées et de vos bâtiments qui ont des
   employés. Elle est tracée à votre couleur. Routes, aqueducs et murs se construisent partout.
 - Un bâtiment qui se retrouve hors de votre zone s'effondre au bout de 3 mois.

@@ -22,6 +22,7 @@
 #if TARGET_OS_OSX
 #include <objc/message.h>
 #include <objc/runtime.h>
+#include "SDL_syswm.h"
 #define HAS_MACOS_PRESENTATION_OPTIONS
 #endif
 #endif
@@ -113,29 +114,41 @@ static void fit_on_screen(int *pixel_width, int *pixel_height)
     }
 }
 
-// macOS: in fullscreen, the menu bar and the Dock stay hidden when the mouse reaches the edges of the screen to
-// scroll the map, instead of sliding over the game
-static void set_macos_fullscreen_presentation(int fullscreen)
+#ifdef HAS_MACOS_PRESENTATION_OPTIONS
+// what the fullscreen Space of the window shows: neither the menu bar nor the Dock, even when the mouse reaches the
+// top or the bottom of the screen to scroll the map (macOS would slide them over the game)
+static unsigned long fullscreen_presentation_options(id self, SEL cmd, id window, unsigned long proposed)
+{
+    enum { HIDE_DOCK = 1 << 1, HIDE_MENU_BAR = 1 << 3, FULLSCREEN = 1 << 10 };
+    (void) self;
+    (void) cmd;
+    (void) window;
+    (void) proposed;
+    return FULLSCREEN | HIDE_DOCK | HIDE_MENU_BAR;
+}
+#endif
+
+// macOS: the delegate of the window of SDL decides what its fullscreen Space shows; SDL 3 lets macOS slide the menu
+// bar and the Dock in, SDL 2 hid them, as this does
+static void hide_menu_bar_and_dock_in_fullscreen(void)
 {
 #ifdef HAS_MACOS_PRESENTATION_OPTIONS
-    enum { HIDE_DOCK = 1 << 1, HIDE_MENU_BAR = 1 << 3, FULLSCREEN_SPACE = 1 << 10 };
     const char *driver = SDL_GetCurrentVideoDriver();
     if (!driver || strcmp(driver, "cocoa") != 0) {
         return; // no window system (tests)
     }
-    id app = ((id (*)(id, SEL)) objc_msgSend)((id) objc_getClass("NSApplication"),
-        sel_registerName("sharedApplication"));
-    if (!app) {
+    SDL_SysWMinfo info;
+    SDL_VERSION(&info.version);
+    if (!SDL_GetWindowWMInfo(SDL.window, &info) || info.subsystem != SDL_SYSWM_COCOA || !info.info.cocoa.window) {
         return;
     }
-    unsigned long current = ((unsigned long (*)(id, SEL)) objc_msgSend)(app, sel_registerName("presentationOptions"));
-    if (current & FULLSCREEN_SPACE) {
-        return; // a fullscreen Space has its own options, which cannot be changed
+    id nswindow = (id) info.info.cocoa.window;
+    id delegate = ((id (*)(id, SEL)) objc_msgSend)(nswindow, sel_registerName("delegate"));
+    if (!delegate) {
+        return;
     }
-    ((void (*)(id, SEL, unsigned long)) objc_msgSend)(app, sel_registerName("setPresentationOptions:"),
-        fullscreen ? HIDE_DOCK | HIDE_MENU_BAR : 0);
-#else
-    (void) fullscreen;
+    class_replaceMethod(object_getClass(delegate), sel_registerName("window:willUseFullScreenPresentationOptions:"),
+        (IMP) fullscreen_presentation_options, "Q@:@Q");
 #endif
 }
 
@@ -247,9 +260,9 @@ int platform_screen_create(const char *title, int display_scale_percentage, int 
         }
     }
 
+    hide_menu_bar_and_dock_in_fullscreen();
     if (fullscreen) {
         SDL_SetWindowGrab(SDL.window, SDL_TRUE);
-        set_macos_fullscreen_presentation(1);
     }
 
     set_scale_percentage(display_scale_percentage, width, height);
@@ -372,7 +385,6 @@ void platform_screen_set_fullscreen(void)
     SDL_SetWindowDisplayMode(SDL.window, &mode);
 
     SDL_SetWindowGrab(SDL.window, SDL_TRUE);
-    set_macos_fullscreen_presentation(1);
     setting_set_display(1, mode.w, mode.h);
 }
 
@@ -388,7 +400,6 @@ void platform_screen_set_windowed(void)
     fit_on_screen(&pixel_width, &pixel_height);
     int display = SDL_GetWindowDisplayIndex(SDL.window);
     SDL_Log("User to windowed %d x %d on display %d", pixel_width, pixel_height, display);
-    set_macos_fullscreen_presentation(0);
     SDL_SetWindowFullscreen(SDL.window, 0);
     SDL_SetWindowSize(SDL.window, pixel_width, pixel_height);
     if (window_pos.centered) {
@@ -410,7 +421,6 @@ void platform_screen_set_window_size(int logical_width, int logical_height)
     fit_on_screen(&pixel_width, &pixel_height);
     int display = SDL_GetWindowDisplayIndex(SDL.window);
     if (setting_fullscreen()) {
-        set_macos_fullscreen_presentation(0);
         SDL_SetWindowFullscreen(SDL.window, 0);
     } else {
         SDL_GetWindowPosition(SDL.window, &window_pos.x, &window_pos.y);

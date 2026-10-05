@@ -41,6 +41,11 @@ int mp_territory_allows_tile(building_type type, int grid_offset);
 void mp_territory_update_city(void);
 
 /**
+ * The zone of the current city when the map is created, whatever the rules: they are set later
+ */
+void mp_territory_start_city(void);
+
+/**
  * Whether the current city owns at least one tile
  */
 int mp_territory_owns_land(void);

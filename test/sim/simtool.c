@@ -1739,8 +1739,8 @@ static int build_as(int player_id, int type, int x1, int y1, int x2, int y2)
     return building_get(map_building_at(map_grid_offset(x1, y1)))->type != BUILDING_NONE;
 }
 
-// territories (MT.1, D-036): no zone, no building; a mission opens a zone; inhabited houses push it further; the
-// other player builds nothing there but roads
+// territories (MT.1, D-036, D-045): every player starts with a mission and its zone, builds only in it; inhabited
+// houses push it further; the other player builds nothing there but roads
 static int command_territory(const char *file)
 {
     if (!mp_mapgen_create_prepared(file, 2)) {
@@ -1757,11 +1757,12 @@ static int command_territory(const char *file)
     int failures = 0;
 #define CHECK(condition, text) do { int ok_ = (condition); printf("%-62s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
 
-    CHECK(!build_as(0, BUILDING_HOUSE_VACANT_LOT, cx, cy + 2, cx, cy + 2), "without a zone, no house");
-    CHECK(build_as(0, BUILDING_MISSION_POST, cx + 3, cy - 4, cx + 3, cy - 4), "a mission is built anywhere");
-    run_trace(50, 50, 0, 0);
-    CHECK(mp_territory_owner(map_grid_offset(cx + 3 + 20, cy - 4)) == 0, "the mission gives a zone of 20 tiles");
-    CHECK(mp_territory_owner(map_grid_offset(cx + 3 + 22, cy - 4)) == -1, "but not further");
+    int sx, sy;
+    mp_mapgen_start_mission(0, &sx, &sy);
+    CHECK(building_get(map_building_at(map_grid_offset(sx, sy)))->type == BUILDING_MISSION_POST,
+        "player 1 starts with his mission");
+    CHECK(mp_territory_owner(map_grid_offset(sx + 1 + 20, sy)) == 0, "it gives a zone of 20 tiles from the start");
+    CHECK(mp_territory_owner(map_grid_offset(sx + 1 + 22, sy)) == -1, "but not further");
     CHECK(build_as(0, BUILDING_HOUSE_VACANT_LOT, cx, cy + 2, cx, cy + 2), "a house in the zone");
     CHECK(!build_as(0, BUILDING_HOUSE_VACANT_LOT, cx + 30, cy + 2, cx + 30, cy + 2), "no house 30 tiles from the mission");
     CHECK(!build_as(1, BUILDING_PREFECTURE, cx, cy + 6, cx, cy + 6), "the other player builds nothing in the zone");
@@ -1815,23 +1816,23 @@ static int command_missions(const char *file)
         return 1;
     }
     int mx = m->x, my = m->y;
-    int treasury = city_finance_treasury();
+    int sx, sy;
+    mp_mapgen_start_mission(0, &sx, &sy);
+    CHECK(building_get(map_building_at(map_grid_offset(sx, sy)))->type == BUILDING_MISSION_POST,
+        "and with his mission, built for him");
     CHECK(!build_as(0, BUILDING_MISSION_POST, mx + 30, my, mx + 30, my), "no mission 30 tiles from the missionary");
-    CHECK(build_as(0, BUILDING_MISSION_POST, mx + 4, my, mx + 4, my), "a mission 4 tiles from him");
-    CHECK(city_finance_treasury() == treasury, "the first mission is free");
-    run_trace(50, 50, 0, 0);
 
-    // a warehouse in the new zone, without marble: the next mission waits for marble
-    build_as(0, BUILDING_WAREHOUSE, mx - 6, my - 6, mx - 6, my - 6);
-    building *warehouse = building_get(map_building_at(map_grid_offset(mx - 6, my - 6)));
-    CHECK(!build_as(0, BUILDING_MISSION_POST, mx + 4, my + 6, mx + 4, my + 6), "the second mission needs marble");
+    // a warehouse on the main road, in the zone, without marble: the next mission waits for marble
+    build_as(0, BUILDING_WAREHOUSE, mx - 10, my - 2, mx - 10, my - 2);
+    building *warehouse = building_get(map_building_at(map_grid_offset(mx - 10, my - 2)));
+    CHECK(!build_as(0, BUILDING_MISSION_POST, mx + 4, my, mx + 4, my), "the next mission needs marble");
     for (int i = 0; i < 6; i++) {
         building_warehouse_add_resource(warehouse, RESOURCE_MARBLE);
     }
     run_trace(50, 50, 0, 0);
     int marble = city_resource_count(RESOURCE_MARBLE);
-    treasury = city_finance_treasury();
-    CHECK(build_as(0, BUILDING_MISSION_POST, mx + 4, my + 6, mx + 4, my + 6), "with marble, it is built");
+    int treasury = city_finance_treasury();
+    CHECK(build_as(0, BUILDING_MISSION_POST, mx + 4, my, mx + 4, my), "with marble, it is built 4 tiles from him");
     run_trace(50, 50, 0, 0);
     printf("marble: %d loads before, %d after; treasury %d before, %d after\n", marble,
         city_resource_count(RESOURCE_MARBLE), treasury, city_finance_treasury());
@@ -1881,11 +1882,12 @@ static int command_outside(const char *file)
 #define TYPE_AT(x, y) building_get(map_building_at(map_grid_offset(x, y)))->type
     figure *m = first_missionary(0);
     int mx = m->x, my = m->y;
-    build_as(0, BUILDING_MISSION_POST, mx + 4, my, mx + 4, my);
-    run_trace(50, 50, 0, 0);
-    CHECK(build_as(0, BUILDING_PREFECTURE, mx + 10, my + 5, mx + 10, my + 5), "a prefecture in the zone of the mission");
-    build_as(0, BUILDING_CLEAR_LAND, mx + 4, my, mx + 5, my + 1);
-    CHECK(building_get(map_building_at(map_grid_offset(mx + 4, my)))->state != BUILDING_STATE_IN_USE,
+    int sx, sy;
+    mp_mapgen_start_mission(0, &sx, &sy);
+    CHECK(build_as(0, BUILDING_PREFECTURE, mx + 10, my + 5, mx + 10, my + 5),
+        "a prefecture in the zone of the starting mission");
+    build_as(0, BUILDING_CLEAR_LAND, sx, sy, sx + 1, sy + 1);
+    CHECK(building_get(map_building_at(map_grid_offset(sx, sy)))->state != BUILDING_STATE_IN_USE,
         "the mission is cleared");
     run_trace(40 * 50, 40 * 50, 0, 0);
     CHECK(TYPE_AT(mx + 10, my + 5) == BUILDING_PREFECTURE, "40 days later, the prefecture still stands");

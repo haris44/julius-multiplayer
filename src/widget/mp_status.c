@@ -101,7 +101,8 @@ void widget_mp_status_draw(void)
     if (paused_width) {
         text_draw(paused, x_score, banner_y + 6, FONT_NORMAL_PLAIN, COLOR_FONT_YELLOW);
     }
-    if (state == MP_LOCKSTEP_RUNNING && mp_territory_is_active() && !mp_mission_exists()) {
+    if (state == MP_LOCKSTEP_RUNNING && mp_territory_is_active() && !mp_mission_exists() &&
+        !mp_territory_owns_land()) {
         draw_objective(banner_y);
     }
 }

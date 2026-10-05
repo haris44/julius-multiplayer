@@ -62,6 +62,8 @@ static struct {
     int center_y[MP_MAPGEN_MAX_PLAYERS];
     int entry_x[MP_MAPGEN_MAX_PLAYERS];
     int entry_y[MP_MAPGEN_MAX_PLAYERS];
+    int mission_x[MP_MAPGEN_MAX_PLAYERS];
+    int mission_y[MP_MAPGEN_MAX_PLAYERS];
 } data;
 
 // deterministic integer hash: the same seed gives the same map on every computer
@@ -616,6 +618,31 @@ static int place_caesar_water(void)
     return 1;
 }
 
+// every player starts with his mission, built for him beside the main road through the place of his city (D-045)
+static int place_start_mission(int p)
+{
+    int x = data.center_x[p] - 1, y = data.center_y[p] - 1;
+    if (data.entry_y[p] == data.size / 2) {
+        y--; // the main road runs west-east through the city: the mission stands north of it
+    } else {
+        x--; // north-south: west of it
+    }
+    for (int yy = y; yy < y + 2; yy++) {
+        for (int xx = x; xx < x + 2; xx++) {
+            map_terrain_set(map_grid_offset(xx, yy), 0);
+        }
+    }
+    building *b = building_create(BUILDING_MISSION_POST, x, y);
+    if (!b->id) {
+        return 0;
+    }
+    data.mission_x[p] = x;
+    data.mission_y[p] = y;
+    b->state = BUILDING_STATE_IN_USE;
+    map_building_tiles_add(b->id, x, y, b->size, image_group(GROUP_BUILDING_MISSION_POST), TERRAIN_BUILDING);
+    return 1;
+}
+
 // the main road of Caesar: from every arrival point to the middle of the map
 static void place_main_road(void)
 {
@@ -811,19 +838,29 @@ int mp_mapgen_create_prepared(const char *template_file, int num_players)
     }
     data.num_players = num_players;
     set_slot_permissions(num_players);
-    // and starts with a missionary, near the place meant for his city; the ships of his empire come up his own
-    // river
+    // and starts with his mission, its zone, and a missionary to found the next ones; the ships of his empire come
+    // up his own river
     for (int p = 0; p < num_players; p++) {
         player_context_switch(p);
         scenario_editor_set_river_entry_point(data.channel_x[p], data.channel_y[p]);
         scenario_editor_set_river_exit_point(data.channel_x[p], data.channel_y[p]);
+        if (!place_start_mission(p)) {
+            return 0;
+        }
         mp_missionary_create(0, data.center_x[p] + 3, data.center_y[p] + 3);
+        mp_territory_start_city();
         mp_fog_start_city(); // the players see their land from the start
     }
     player_context_switch(0);
     figure_create_fishing_points(); // the gulls over the fish, once for everybody
     update_networks(num_players);
     return 1;
+}
+
+void mp_mapgen_start_mission(int player_id, int *x, int *y)
+{
+    *x = data.mission_x[player_id];
+    *y = data.mission_y[player_id];
 }
 
 void mp_mapgen_city_center(int player_id, int *x, int *y)

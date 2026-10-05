@@ -79,6 +79,11 @@ void mp_mapgen_entry_point(int player_id, int *x, int *y);
 int mp_mapgen_lacks_trade_routes(void);
 
 /**
+ * On the last prepared map: the mission every player starts with (top-left tile)
+ */
+void mp_mapgen_start_mission(int player_id, int *x, int *y);
+
+/**
  * Where the city of a player should grow, on the last generated map
  */
 void mp_mapgen_city_center(int player_id, int *x, int *y);

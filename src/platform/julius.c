@@ -443,10 +443,10 @@ static int init_sdl(void)
 #if SDL_VERSION_ATLEAST(2, 0, 2)
     SDL_SetHint(SDL_HINT_ACCELEROMETER_AS_JOYSTICK, "0");
 #endif
-#if defined(__APPLE__) && SDL_VERSION_ATLEAST(2, 0, 2)
-    // fullscreen without a separate Space: the menu bar of macOS no longer slides down over the game when the
-    // mouse reaches the top of the screen, which stopped the map from scrolling up
-    SDL_SetHint(SDL_HINT_VIDEO_MAC_FULLSCREEN_SPACES, "0");
+#if defined(__APPLE__)
+    // fullscreen in its own Space, which macOS fits around the notch of the screen; the menu bar stays hidden when
+    // the mouse reaches the top of the screen to scroll the map (SDL 3, through sdl2-compat; see also screen.c)
+    SDL_SetHint("SDL_VIDEO_MAC_FULLSCREEN_MENU_VISIBILITY", "0");
 #endif
 
     if (SDL_Init(SDL_INIT_AUDIO | SDL_INIT_VIDEO | SDL_INIT_JOYSTICK) != 0) {
