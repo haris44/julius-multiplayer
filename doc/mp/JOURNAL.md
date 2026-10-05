@@ -5,6 +5,32 @@
 
 ---
 
+## 2026-10-05 — Session 2 : retours du premier test (TEST_1), cartes préparées
+
+**Demande d'Alexandre** : TEST_1.md (bugs et évolutions), puis réponses à QUESTIONS_1.md. Décisions D-032 à D-040,
+E11 remplacée (zone constructible qui suit la ville vivante), nouveaux jalons T1, MC, ME, MT, MB, MA avant M8.
+
+**Fait** (commits e491670d à d752a320, 157 tests ctest)
+- T1.1 : popups, fanfares et effets sonores de la cité d'un autre joueur ne sortent plus chez soi (2 popups et 3
+  sons de la cité jumelle passaient avant).
+- T1.2 : la carte générée était dans le coin de la grille de 512 ; caméra et minicarte supposent une carte centrée.
+- T1.3 (à vérifier par Alexandre) : plein écran sans « Space » sur macOS, la barre de menu ne descend plus.
+- T1.4 : 1280×720, 1920×1080, 2560×1440 dans les options d'affichage.
+- T1.5, T1.6 : propriétaire César (`MAP_OWNER_CAESAR`) ; le salon ne propose plus de copies de carte classique.
+- MC.2 : cartes préparées à 2 et à 4 (3 joueurs sur celle à 4), images dans `../CARTES_1/`.
+
+**Appris**
+- Un propriétaire qui n'est aucun joueur suffit à rendre une route indémolissable et non teintée : toute la logique
+  « autre propriétaire » existait déjà.
+- `git stash` puis recompilation : les `.o` des fichiers restaurés peuvent ne pas être refaits (noté dans CLAUDE.md).
+
+**Prochaine étape** : MC.3 et ME.1 (aqueduc et réservoir de César, réservoirs à niveau), puis MT (territoires).
+
+**Points ouverts, à valider par Alexandre** : T1.3 (défilement en plein écran), relecture des cartes et de la
+répartition D-040 ; teinte blanche de César (MC.1) demande un mode de dessin qui éclaircit.
+
+---
+
 ## 2026-10-04 — Session 1 (suite) : M5 à M7, arrivée à M8
 
 **Fait** (commits d78e1d07 à 002b99e3, 146 tests ctest)
