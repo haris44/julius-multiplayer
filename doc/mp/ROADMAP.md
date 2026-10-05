@@ -272,7 +272,10 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
   *Fait* : compteur de jours par bâtiment (état « extra » de chaque cité) ; avertissement le premier jour et un mois
   avant ; effondrement après 48 jours (3 mois) ; une mission rebâtie à temps les sauve. Test
   `mp_outside_territory`.
-- [ ] **MT.5** Frontières tracées à la couleur du joueur, teinte légère des bâtiments adverses (D-039).
+- [x] **MT.5** Frontières tracées à la couleur du joueur, teinte légère des bâtiments adverses (D-039).
+  *Fait* : bord de chaque zone tracé au sol, en escalier isométrique, dans les quatre orientations ; teintes des
+  joueurs éclaircies ; bandeau multijoueur (joueur, scores, pause) déplacé en bas de la vue, qui cachait les
+  avertissements. Commande d'automatisation `build TYPE X1 Y1 X2 Y2`. Captures du vrai jeu.
 
 ## MB — Brouillard de guerre (D-038)
 - [ ] **MB.1** Option du salon, zones découvertes, éclairage de 20 cases, minicarte et scores adverses masqués.

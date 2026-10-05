@@ -10,9 +10,9 @@
 static const color_t PLAYER_COLORS[PLAYER_CONTEXT_MAX_PLAYERS] = {
     0xff3060e0, 0xffd03030, 0xff30a030, 0xffe0c020
 };
-// light tints: multiplied with the images, they keep them readable
+// light tints (D-039): multiplied with the images, they keep them readable; the borders of the zones show the rest
 static const color_t PLAYER_TINTS[PLAYER_CONTEXT_MAX_PLAYERS] = {
-    0xffa8c0ff, 0xffffa8a8, 0xffb0f0b0, 0xfffff0a0
+    0xffd0dcff, 0xffffd0d0, 0xffd4f6d4, 0xfffff6cc
 };
 
 color_t mp_colors_player(int player_id)

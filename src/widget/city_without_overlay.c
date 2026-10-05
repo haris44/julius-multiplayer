@@ -17,6 +17,8 @@
 #include "graphics/window.h"
 #include "map/building.h"
 #include "mp/colors.h"
+#include "mp/territory.h"
+#include "graphics/graphics.h"
 #include "map/figure.h"
 #include "map/grid.h"
 #include "map/image.h"
@@ -511,6 +513,50 @@ static void deletion_draw_remaining(int x, int y, int grid_offset)
     draw_hippodrome_ornaments(x, y, grid_offset);
 }
 
+// territories (D-036): the edges of a zone, drawn on the ground in the color of its player. An edge of a tile is a
+// staircase of 2 pixels across for 1 down, from one corner of its diamond to the next.
+static void draw_isometric_edge(int x1, int y1, int x2, int y2, color_t color)
+{
+    int step_y = y2 > y1 ? 1 : -1;
+    int y = y1;
+    for (int x = x1; x < x2; x += 2, y += step_y) {
+        graphics_draw_horizontal_line(x, x + 1, y, color);
+        graphics_draw_horizontal_line(x, x + 1, y + 1, color); // two pixels thick
+    }
+}
+
+static void draw_territory_border(int x, int y, int grid_offset)
+{
+    int owner = mp_territory_owner(grid_offset);
+    if (owner < 0) {
+        return;
+    }
+    // where the next tiles along the grid axes are drawn, in this orientation: +x, then +y
+    static const int DX[4][2] = { { 30, -30 }, { 30, 30 }, { -30, 30 }, { -30, -30 } };
+    static const int DY[4][2] = { { 15, 15 }, { -15, 15 }, { -15, -15 }, { 15, -15 } };
+    int o = city_view_orientation() / 2;
+    const int neighbours[4] = { 1, GRID_SIZE, -1, -GRID_SIZE };
+    color_t color = mp_colors_player(owner);
+    for (int i = 0; i < 4; i++) {
+        int next = grid_offset + neighbours[i];
+        if (next >= 0 && next < GRID_SIZE * GRID_SIZE && mp_territory_owner(next) == owner) {
+            continue;
+        }
+        int sign = i < 2 ? 1 : -1;
+        int dx = sign * DX[o][i % 2];
+        int dy = sign * DY[o][i % 2];
+        if (dx > 0 && dy > 0) {
+            draw_isometric_edge(x + 30, y + 30, x + 60, y + 15, color);
+        } else if (dx > 0) {
+            draw_isometric_edge(x + 30, y, x + 60, y + 15, color);
+        } else if (dy > 0) {
+            draw_isometric_edge(x, y + 15, x + 30, y + 30, color);
+        } else {
+            draw_isometric_edge(x, y + 15, x + 30, y, color);
+        }
+    }
+}
+
 void city_without_overlay_draw(int selected_figure_id, pixel_coordinate *figure_coord, const map_tile *tile)
 {
     int highlighted_formation = 0;
@@ -529,6 +575,9 @@ void city_without_overlay_draw(int selected_figure_id, pixel_coordinate *figure_
     init_draw_context(selected_figure_id, figure_coord, highlighted_formation);
     int should_mark_deleting = city_building_ghost_mark_deleting(tile);
     city_view_foreach_map_tile(draw_footprint);
+    if (mp_territory_is_active()) {
+        city_view_foreach_valid_map_tile(draw_territory_border);
+    }
     if (!should_mark_deleting) {
         city_view_foreach_valid_map_tile_row(
             draw_top,

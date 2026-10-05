@@ -15,6 +15,7 @@
 
 #include "SDL.h"
 #include "mp/compose.h"
+#include "mp/session.h"
 #include "city/view.h"
 #include "map/grid.h"
 #include "game/player_context.h"
@@ -449,6 +450,16 @@ static int execute(char *line)
         int x, y, size;
         mp_compose_city_area(n - 1, MP_COMPOSE_CITY_GAP, &x, &y, &size);
         city_view_go_to_grid_offset(map_grid_offset(x + size / 2, y + size / 2));
+        return 0;
+    } else if (strcmp(command, "build") == 0) {
+        // the local player builds, as with the mouse: through a command, so over the network in a network game
+        int type, x1, y1, x2, y2;
+        if (sscanf(rest, "%d %d %d %d %d", &type, &x1, &y1, &x2, &y2) != 5) {
+            fail("invalid build:", rest);
+            return 1;
+        }
+        mp_command build = { .type = MP_COMMAND_BUILD, .args = { type, 0, x1, y1, x2, y2, 0, 0 } };
+        mp_command_submit(&build);
         return 0;
     } else if (strcmp(command, "goto") == 0) {
         // the view goes to a tile, in map coordinates

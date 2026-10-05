@@ -55,15 +55,17 @@ void widget_mp_status_draw(void)
         paused_width = text_get_width(paused, FONT_NORMAL_PLAIN) + 12;
     }
     int x = state == MP_LOCKSTEP_RUNNING ? 4 : (screen_width() - width) / 2;
-    graphics_fill_rect(x, BANNER_Y, width + scores_width + paused_width, BANNER_HEIGHT, COLOR_BLACK);
-    text_draw(encoded, x + 8, BANNER_Y + 6, FONT_NORMAL_PLAIN, color);
+    // during the game, at the bottom of the view: the warnings of the game use the top
+    int banner_y = state == MP_LOCKSTEP_RUNNING ? screen_height() - BANNER_HEIGHT - 4 : BANNER_Y;
+    graphics_fill_rect(x, banner_y, width + scores_width + paused_width, BANNER_HEIGHT, COLOR_BLACK);
+    text_draw(encoded, x + 8, banner_y + 6, FONT_NORMAL_PLAIN, color);
     int x_score = x + width;
     if (scores_width) {
         for (int p = 0; p < num_players; p++) {
-            x_score += text_draw(scores[p], x_score, BANNER_Y + 6, FONT_NORMAL_PLAIN, mp_colors_player(p)) + 12;
+            x_score += text_draw(scores[p], x_score, banner_y + 6, FONT_NORMAL_PLAIN, mp_colors_player(p)) + 12;
         }
     }
     if (paused_width) {
-        text_draw(paused, x_score, BANNER_Y + 6, FONT_NORMAL_PLAIN, COLOR_FONT_YELLOW);
+        text_draw(paused, x_score, banner_y + 6, FONT_NORMAL_PLAIN, COLOR_FONT_YELLOW);
     }
 }
