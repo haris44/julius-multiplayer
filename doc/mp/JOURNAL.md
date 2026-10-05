@@ -5,6 +5,40 @@
 
 ---
 
+## 2026-10-05 — Session 2 (suite) : retours du deuxième essai (T2)
+
+**Retours d'Alexandre** : le défilement à la souris dépend de la résolution choisie et ne marche pas (MacBook en
+1470 × 956 ou 1710 × 1112) ; le missionnaire ne bouge pas ; la vue devrait être sur lui et sa mission ; on
+construit partout ; pas assez d'eau ; un sélecteur de carte alors qu'il veut une carte pour 1-2 et une pour 3-4
+joueurs, en forêt ; pas de route commerciale sur l'eau.
+
+**Fait** (commits ff51d664, 1b5079ef, 164 tests ctest)
+- Sa sauvegarde (`simtool inspect`) : partie **seule** (1 joueur), modèle désert. Zones, brouillard et missionnaire
+  exigeaient au moins 2 cités : `game_rules_multiplayer_map()` les applique aussi à une carte préparée jouée seul.
+- Départ : vue sur le missionnaire, objectif « construisez votre première mission » jusqu'à la première mission,
+  brouillard calculé dès la création de la carte.
+- D-044 : plus de choix de carte (« Nouvelle partie (forêt) » ou une partie à reprendre), climat du nord, un lac
+  et sa rivière pour chaque joueur, points de pêche, forêts et étangs loin des cités ; environ 8 % d'eau.
+- T2.5 : tailles fixes retirées, ligne « (écran) » = plus grande fenêtre qui tient sur l'écran, fenêtres jamais
+  plus grandes que l'écran, barre de menus et Dock masqués en plein écran sur macOS.
+- Outils : `simtool inspect` (contenu d'un `.mpsav`), commande d'automatisation `mpinfo`,
+  `tools/mp-solo-test.sh`, `test/automation/display.txt`. Images des cartes : `../CARTES_2/`.
+
+**Appris**
+- Les mouettes des points de pêche appartiennent à la première cité : elles éclairaient le brouillard chez les
+  autres joueurs.
+- Le `.mpsav` de départ est écrit avant que les règles de la partie soient posées : ses règles ne disent rien de la
+  partie jouée.
+- Les ponts franchissent jusqu'à 40 cases d'eau : des rivières de 7 cases restent franchissables.
+
+**Prochaine étape** : retour d'Alexandre sur T2.5 et T1.3 (défilement en plein écran, impossible à vérifier sans
+vraie fenêtre) et sur la carte ; puis préférence de l'acheteur pour le moins cher, MA.1, M9.
+
+**Points ouverts** : ceux des entrées précédentes ; densité de la forêt (35 à 40 %, à défricher pour s'étendre
+au-delà de 30 cases).
+
+---
+
 ## 2026-10-05 — Session 2 (suite) : voies vers l'extérieur et commerce entre joueurs
 
 **Demande d'Alexandre** : voies maritimes et terrestres vers l'extérieur ; prix fixés par le vendeur pour chaque
