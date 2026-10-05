@@ -5,6 +5,28 @@
 
 ---
 
+## 2026-10-05 — Session 2 (suite) : mission d'office, plein écran natif (T2.6, T2.7)
+
+**Retours d'Alexandre** : la mission doit être construite au démarrage ; en plein écran, barre de menus et Dock
+restent visibles, sauf après un passage fenêtre → plein écran, où l'on ne peut plus défiler vers le bas.
+
+**Fait** (commits 3d5d2d76, cfcfcda0 ; protocole 7)
+- D-045 : mission de chaque joueur bâtie à la création de la carte, au bord de la route de César, avec sa zone et
+  son brouillard ; tests de zones et de missions revus ; `tools/mp-solo-test.sh` adapté.
+- Plein écran : lecture du code de SDL 3.4 (Cocoa). Sans Space, la fenêtre ne passe au-dessus de la barre et du
+  Dock que si elle a le focus quand la souris est capturée (pas au lancement), et le bas sortait de l'écran
+  (encoche probable). Retour au Space natif ; le délégué de fenêtre de SDL renvoie « barre et Dock masqués »
+  (comme SDL 2) ; `SDL_VIDEO_MAC_FULLSCREEN_MENU_VISIBILITY` = 0.
+
+**Appris**
+- Le Homebrew du Mac fournit sdl2-compat sur SDL 3 : les comportements macOS sont ceux de SDL 3 (sources lues dans
+  le bloc-notes, pas dans le dépôt).
+- Un entrepôt sans accès à la route ne compte pas dans les stocks de la cité.
+
+**Prochaine étape** : retour d'Alexandre sur le plein écran (impossible à vérifier sans vraie fenêtre).
+
+---
+
 ## 2026-10-05 — Session 2 (suite) : retours du deuxième essai (T2)
 
 **Retours d'Alexandre** : le défilement à la souris dépend de la résolution choisie et ne marche pas (MacBook en
