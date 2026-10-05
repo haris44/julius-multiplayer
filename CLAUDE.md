@@ -90,6 +90,8 @@ Syntaxe des scripts d'automatisation et pièges : `doc/mp/TESTING.md` §3.
 - Après un `git stash` / `git stash pop` (par exemple pour vérifier qu'un test échoue sans le correctif), la
   compilation peut ne pas reprendre les fichiers restaurés : supprimer leurs `.o` (`find build -name "x.c.o"
   -delete`) avant de relancer les tests.
+- Ne jamais enchaîner `tools/check.sh | tail -1 && git commit` : `tail` réussit même si les tests échouent. Écrire
+  `tools/check.sh > build/check.log 2>&1 && tail -1 build/check.log && git commit ...`.
 - `ctest` lance les tests en parallèle : un test qui écrit un fichier doit lui donner un nom propre à ses arguments.
 
 ## Communication
