@@ -3,7 +3,7 @@
 #include "building/building.h"
 #include "graphics/text.h"
 #include "translation/translation.h"
-#include "game/player_context.h"
+#include "game/rules.h"
 #include "core/calc.h"
 #include "graphics/lang_text.h"
 #include "graphics/panel.h"
@@ -119,7 +119,7 @@ void window_building_draw_reservoir(building_info_context *c)
     lang_text_draw_centered(107, 0, c->x_offset, c->y_offset + 10, BLOCK_SIZE * c->width_blocks, FONT_LARGE_BLACK);
     int text_id = building_get(c->building_id)->has_water_access ? 1 : 3;
     window_building_draw_description_at(c, BLOCK_SIZE * c->height_blocks - 173, 107, text_id);
-    if (player_context_num_players() > 1) {
+    if (game_rules_multiplayer_map()) {
         // multiplayer: reservoirs hold water (D-035), the reservoir of Caesar never runs dry
         int y = c->y_offset + BLOCK_SIZE * c->height_blocks - 62;
         if (BUILDING_IS_CAESAR(c->building_id)) {

@@ -9,12 +9,38 @@
 #include "mp/fog.h"
 #include "mp/endgame.h"
 #include "mp/lockstep.h"
+#include "mp/missionary.h"
 #include "mp/session.h"
+#include "mp/territory.h"
 
 #include <stdio.h>
 
 #define BANNER_HEIGHT 22
 #define BANNER_Y 28
+
+// until his first mission, the player is told how to found his city (D-037)
+static void draw_objective(int banner_y)
+{
+    static const char *LINES[] = {
+        "Objectif : construisez votre première mission (menu Éducation, gratuite)",
+        "à moins de 20 cases du missionnaire. Clic sur lui puis ailleurs : il y va.",
+    };
+    int num_lines = sizeof(LINES) / sizeof(LINES[0]);
+    uint8_t encoded[200];
+    int width = 0;
+    for (int i = 0; i < num_lines; i++) {
+        encoding_from_utf8(LINES[i], encoded, sizeof(encoded));
+        int line_width = text_get_width(encoded, FONT_NORMAL_PLAIN);
+        width = line_width > width ? line_width : width;
+    }
+    int height = 16 * num_lines + 8;
+    int y = banner_y - height - 4;
+    graphics_fill_rect(4, y, width + 16, height, COLOR_BLACK);
+    for (int i = 0; i < num_lines; i++) {
+        encoding_from_utf8(LINES[i], encoded, sizeof(encoded));
+        text_draw(encoded, 12, y + 6 + 16 * i, FONT_NORMAL_PLAIN, COLOR_FONT_YELLOW);
+    }
+}
 
 void widget_mp_status_draw(void)
 {
@@ -74,5 +100,8 @@ void widget_mp_status_draw(void)
     }
     if (paused_width) {
         text_draw(paused, x_score, banner_y + 6, FONT_NORMAL_PLAIN, COLOR_FONT_YELLOW);
+    }
+    if (state == MP_LOCKSTEP_RUNNING && mp_territory_is_active() && !mp_mission_exists()) {
+        draw_objective(banner_y);
     }
 }

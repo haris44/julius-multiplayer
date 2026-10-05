@@ -34,6 +34,11 @@ int mp_fog_is_lit(int grid_offset);
  */
 void mp_fog_update_city(void);
 
+/**
+ * What the current city discovers and lights when the map is created, whatever the rules: they are set later
+ */
+void mp_fog_start_city(void);
+
 void mp_fog_clear(void);
 
 void mp_fog_save_state(buffer *buf);

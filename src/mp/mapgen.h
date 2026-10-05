@@ -31,6 +31,13 @@ int mp_mapgen_create(const char *template_file, int num_players, int size, unsig
 int mp_mapgen_prepared_size(int num_players);
 
 /**
+ * Map of the free game giving the empire, start year and funds of the prepared maps: the first one found in the
+ * data of the game among those whose empire trades by land and by sea (doc/mp/DECISIONS.md D-044)
+ * @return Its file name, or 0 when the data holds none
+ */
+const char *mp_mapgen_prepared_template(void);
+
+/**
  * Builds the prepared multiplayer map for this number of players (doc/mp/DECISIONS.md D-033): always the same map,
  * each arrival point with meadows and only the materials its player may exploit, the main road of Caesar from every
  * arrival point to the middle of the map. Three players play on the map for four.
@@ -45,12 +52,7 @@ int mp_mapgen_create_prepared(const char *template_file, int num_players);
 int mp_mapgen_slot_allows(int player_id, int resource);
 
 /**
- * On the last prepared map: whether the arrival point of the player has water nearby
- */
-int mp_mapgen_slot_has_water(int player_id);
-
-/**
- * On the last prepared map: where the aqueduct of Caesar ends near the city of a player without water
+ * On the last prepared map: where the aqueduct of Caesar ends near the city of a player without clay
  * @return 0 when the player has no aqueduct of Caesar
  */
 int mp_mapgen_caesar_aqueduct_end(int player_id, int *x, int *y);
@@ -61,7 +63,8 @@ int mp_mapgen_caesar_aqueduct_end(int player_id, int *x, int *y);
 void mp_mapgen_river_point(int *x, int *y);
 
 /**
- * On the last prepared map: where the ships of the empire of a player come in (his own river or the central one)
+ * On the last prepared map: where the river of the lake of a player leaves the map (the ships of his empire come in
+ * there)
  */
 void mp_mapgen_player_river_point(int player_id, int *x, int *y);
 

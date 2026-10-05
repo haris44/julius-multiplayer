@@ -229,6 +229,22 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
   autre fichier donne le climat, l'empire et les fonds d'une carte générée. `tools/mp-lobby-test.sh` n'a plus de
   variante.
 
+## T2 — Retours du deuxième essai d'Alexandre (2026-10-05)
+- [x] **T2.1** Seul dans le salon, on construit partout et le missionnaire ne bouge pas : la partie seule applique
+  les règles de la carte (D-044). *Fait* : `game_rules_multiplayer_map()` remplace « plus d'une cité » pour les
+  zones, le brouillard, l'eau de César et les réservoirs. `tools/mp-solo-test.sh` (vrai jeu, sans fenêtre) : maison
+  hors zone refusée, mission construite, zone de 42 × 42 cases, missionnaire déplacé à la souris.
+- [x] **T2.2** Au départ, la vue est sur le missionnaire et l'objectif « fonder sa mission » s'affiche jusqu'à la
+  première mission ; le brouillard est calculé dès la création de la carte (écran noir avant). Captures
+  `mp-solo-start.png`, `mp-solo-mission.png`.
+- [x] **T2.3** Plus de sélecteur de carte : « Nouvelle partie (forêt) » ou une partie à reprendre (D-044).
+- [x] **T2.4** Carte en forêt, de l'eau pour tous : un lac et sa rivière vers le bord pour chaque joueur, docks et
+  navires de son empire, points de pêche, forêts et étangs loin des cités (D-044). Test `mp_prepared_map_*` : au
+  moins 8 % d'eau et 20 % de forêt, climat du nord, points de pêche dans l'eau, navires de chaque joueur jusqu'à
+  son lac ; brouillard : les mouettes n'éclairent rien.
+- [ ] **T2.5** Résolutions : la liste propose des tailles fixes plus grandes que l'écran du MacBook (1470 × 956,
+  1710 × 1112) et le défilement par les bords ne marche plus.
+
 ## MC — Cartes multijoueur préparées et César (D-033, D-034)
 - [ ] **MC.1** Ouvrages de César dessinés en blanc (la teinte actuelle ne fait que foncer les images) ; son aqueduc
   porte l'eau de son réservoir à toutes les cités. Le propriétaire existe déjà (T1.5).

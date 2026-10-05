@@ -444,3 +444,25 @@
   son seuil d'exportation, sauf ce qu'il met en réserve. Chaque mois, une caravane d'au plus 8 chargements par
   route, dans la limite de ce que l'acheteur peut payer ; il paie à la livraison, ce qui ne trouve pas de place
   repart chez le vendeur.
+
+### D-044 — Une seule carte, en forêt, de l'eau pour tous ; partie seule sur la carte (précise D-033, D-041, D-042)
+- 2026-10-05 · **adoptée** (Alexandre, deuxième essai : « je voudrais n'avoir qu'une carte pour 1 ou 2 joueurs ou 3
+  à 4, dans la forêt, pas dans le désert » ; « il n'y a pas assez d'eau » ; « pas de route commerciale sur l'eau »)
+- **Plus de choix de carte** dans le salon : « Nouvelle partie (forêt) » joue la carte préparée pour 2 (1 ou 2
+  joueurs) ou pour 4 (3 ou 4 joueurs) ; la liste ne propose sinon que les parties multijoueur à reprendre. L'empire,
+  l'année et les fonds viennent de la première carte trouvée dans les données parmi Lindum, Londinium, Valentia,
+  Tarraco, Caesarea, Cyrene et Carthago (empire qui commerce par terre et par mer, Bretagne d'abord).
+- **Climat du nord** (forêts) quelle que soit la carte modèle. Loin des cités (au-delà de 30 cases), forêts avec
+  clairières et étangs ; près d'elles, toujours rien qu'un joueur puisse exploiter et pas un autre.
+- **Chaque joueur a son lac** (rayon 12), du côté de son point d'arrivée et loin du lac central, relié au bord par
+  une rivière de 7 cases (les ponts la franchissent) : docks, navires de son empire, pêche (un point de pêche par lac
+  et au lac central). Le joueur des rochers a donc aussi de l'eau (remplace « sans eau » de D-041/D-042) ; il garde
+  l'aqueduc de César, comme J3 sur la carte à 4.
+- Environ 8 % d'eau et 35 à 40 % de forêt. Une terre que l'eau et les rochers isoleraient de la route devient un
+  étang.
+- **Partie seule** (1 joueur dans le salon) : elle se joue sur la carte pour 2 avec les règles de la carte (zones,
+  missionnaire, eau de César, réservoirs à niveau, brouillard). `game_rules_multiplayer_map()` : plusieurs cités, ou
+  une carte préparée jouée seul.
+- **Départ** : la vue est sur le missionnaire, et un objectif reste affiché tant que le joueur n'a pas de mission
+  (« construisez votre première mission, menu Éducation, gratuite, à moins de 20 cases du missionnaire »). Le
+  brouillard est calculé dès la création de la carte.

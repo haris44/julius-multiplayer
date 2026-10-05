@@ -1,6 +1,7 @@
 #include "rules.h"
 
 #include "core/config.h"
+#include "game/player_context.h"
 #include "game/settings.h"
 
 static struct {
@@ -87,6 +88,12 @@ int game_rules_territories(void)
 int game_rules_fog_of_war(void)
 {
     return data.mode == GAME_MODE_MULTIPLAYER ? data.multiplayer.fog_of_war : 0;
+}
+
+int game_rules_multiplayer_map(void)
+{
+    // the prepared maps come with territories, also when one player tries them alone
+    return player_context_num_players() > 1 || game_rules_territories();
 }
 
 int game_rules_score_years(void)

@@ -21,6 +21,16 @@
 int mp_missionary_is_scout(const figure *f);
 
 /**
+ * The first living missionary of the current city, 0 without any
+ */
+int mp_missionary_first(void);
+
+/**
+ * Whether the current city has a mission, built or being built: until then, its player has to found one
+ */
+int mp_mission_exists(void);
+
+/**
  * Creates a missionary of the current city, waiting at a tile
  * @param mission_id Mission that trained him, 0 for the one of the start
  */

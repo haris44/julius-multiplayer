@@ -19,7 +19,7 @@ static int16_t light[GRID_MAX_SIZE][GRID_MAX_SIZE + 1];
 
 int mp_fog_is_active(void)
 {
-    return player_context_num_players() > 1 && game_rules_fog_of_war();
+    return game_rules_multiplayer_map() && game_rules_fog_of_war();
 }
 
 int mp_fog_is_discovered(int grid_offset)
@@ -56,9 +56,13 @@ static void add_light(int x, int y, int size)
 
 void mp_fog_update_city(void)
 {
-    if (!mp_fog_is_active()) {
-        return;
+    if (mp_fog_is_active()) {
+        mp_fog_start_city();
     }
+}
+
+void mp_fog_start_city(void)
+{
     for (int y = 0; y < map_data.height; y++) {
         memset(light[y], 0, sizeof(int16_t) * (map_data.width + 1));
     }
@@ -70,7 +74,8 @@ void mp_fog_update_city(void)
     }
     for (int i = FIGURE_FIRST; i < FIGURE_END; i++) {
         figure *f = figure_get(i);
-        if (f->state == FIGURE_STATE_ALIVE) {
+        // the gulls over the fish of the map belong to the first city: they light nothing
+        if (f->state == FIGURE_STATE_ALIVE && f->type != FIGURE_FISH_GULLS) {
             add_light(f->x, f->y, 1);
         }
     }

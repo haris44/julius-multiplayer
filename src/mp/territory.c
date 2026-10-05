@@ -27,7 +27,7 @@ static int16_t coverage[GRID_MAX_SIZE][GRID_MAX_SIZE + 1];
 
 int mp_territory_is_active(void)
 {
-    return player_context_num_players() > 1 && game_rules_territories();
+    return game_rules_territories();
 }
 
 int mp_territory_owner(int grid_offset)

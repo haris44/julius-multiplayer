@@ -89,6 +89,12 @@ int game_rules_territories(void);
 int game_rules_fog_of_war(void);
 int game_rules_score_years(void);
 
+/**
+ * Whether the rules of the multiplayer maps apply (water of Caesar, reservoirs that hold water, territories, fog,
+ * missionaries): a game of several cities, or a prepared map played alone
+ */
+int game_rules_multiplayer_map(void);
+
 void game_rules_save_state(buffer *buf);
 
 void game_rules_load_state(buffer *buf);

@@ -8,6 +8,7 @@
 #include "core/dir.h"
 #include "core/encoding.h"
 #include "core/string.h"
+#include "figure/figure.h"
 #include "game/player_context.h"
 #include "game/rules.h"
 #include "graphics/button.h"
@@ -25,6 +26,8 @@
 #include "mp/discovery.h"
 #include "mp/endgame.h"
 #include "mp/lockstep.h"
+#include "mp/mapgen.h"
+#include "mp/missionary.h"
 #include "mp/savegame.h"
 #include "mp/session.h"
 #include "platform/net.h"
@@ -119,6 +122,7 @@ static struct {
     int difficulty;
     int gods;
     int rules_initialized;
+    int missing_template;
     uint8_t address[ADDRESS_LENGTH];
     char local_address[16];
     int focus_file;
@@ -140,13 +144,15 @@ static void add_files(const char *extension)
     }
 }
 
+// the first entry starts a new game on the prepared map (D-044); the others are multiplayer games to resume
+#define NEW_GAME 0
+
 static void init(void)
 {
-    data.num_files = 0;
-    add_files("map");
-    add_files("sav");
-    add_files("mpmap");
+    data.num_files = 1;
+    data.files[NEW_GAME][0] = 0;
     add_files("mpsav");
+    add_files("mpmap");
     if (data.selected_file >= data.num_files) {
         data.selected_file = 0;
     }
@@ -190,14 +196,15 @@ static void draw_files(void)
 {
     text_draw(translation_for(TR_MP_MAP), 16, 80, FONT_NORMAL_BLACK, 0);
     inner_panel_draw(16, 96, 18, 11);
-    if (!data.num_files) {
-        text_draw(translation_for(TR_MP_NO_MAP), 24, 106, FONT_NORMAL_WHITE, 0);
-    }
     for (int i = 0; i < FILES_IN_VIEW && scrollbar.scroll_position + i < data.num_files; i++) {
         int index = scrollbar.scroll_position + i;
         font_t font = index == data.selected_file || data.focus_file == i + 1 ? FONT_NORMAL_WHITE : FONT_NORMAL_GREEN;
         uint8_t name[FILE_NAME_LENGTH];
-        encoding_from_utf8(data.files[index], name, FILE_NAME_LENGTH);
+        if (index == NEW_GAME) {
+            string_copy(translation_for(TR_MP_NEW_GAME), name, FILE_NAME_LENGTH);
+        } else {
+            encoding_from_utf8(data.files[index], name, FILE_NAME_LENGTH);
+        }
         text_ellipsize(name, font, 260);
         text_draw(name, 24, 106 + 16 * i, font, 0);
     }
@@ -225,6 +232,9 @@ static void draw_status(void)
     int width = text_draw(translation_for(TR_MP_YOUR_ADDRESS), 16, 428, FONT_NORMAL_BLACK, 0);
     draw_text_utf8(data.local_address, 16 + width, 428, FONT_NORMAL_BLACK);
     mp_lockstep_state state = mp_lockstep_get_state();
+    if (state == MP_LOCKSTEP_OFF && data.missing_template) {
+        draw_text_utf8("Aucune carte modèle (Lindum.map...) dans les données du jeu", 16, 448, FONT_NORMAL_BLACK);
+    }
     if (state != MP_LOCKSTEP_OFF) {
         char status[200];
         if (state == MP_LOCKSTEP_WAITING_FOR_PLAYERS && mp_lockstep_connected_players()) {
@@ -320,7 +330,7 @@ static void button_select_file(int index, int param2)
     if (scrollbar.scroll_position + index < data.num_files) {
         data.selected_file = scrollbar.scroll_position + index;
         // a multiplayer game goes on with as many players as it has cities
-        int cities = mp_savegame_num_players(data.files[data.selected_file]);
+        int cities = data.selected_file == NEW_GAME ? 0 : mp_savegame_num_players(data.files[data.selected_file]);
         if (cities > 0) {
             data.num_players = cities;
         }
@@ -329,7 +339,7 @@ static void button_select_file(int index, int param2)
 
 static void button_players(int change, int param2)
 {
-    if (data.num_files && mp_savegame_num_players(data.files[data.selected_file]) > 0) {
+    if (data.selected_file != NEW_GAME && mp_savegame_num_players(data.files[data.selected_file]) > 0) {
         return; // fixed by the saved game
     }
     data.num_players += change;
@@ -366,12 +376,6 @@ static void button_gods(int param1, int param2)
     data.gods = !data.gods;
 }
 
-static int is_multiplayer_file(const char *filename)
-{
-    size_t length = strlen(filename);
-    return length > 6 && (strcmp(filename + length - 6, ".mpsav") == 0 || strcmp(filename + length - 6, ".mpmap") == 0);
-}
-
 static void button_host(int param1, int param2)
 {
     if (mp_lockstep_get_state() == MP_LOCKSTEP_WAITING_FOR_PLAYERS && mp_lockstep_is_host()) {
@@ -380,7 +384,13 @@ static void button_host(int param1, int param2)
         }
         return;
     }
-    if (!data.num_files || mp_lockstep_get_state() != MP_LOCKSTEP_OFF) {
+    if (mp_lockstep_get_state() != MP_LOCKSTEP_OFF) {
+        return;
+    }
+    int new_game = data.selected_file == NEW_GAME;
+    const char *file = new_game ? mp_mapgen_prepared_template() : data.files[data.selected_file];
+    data.missing_template = !file;
+    if (!file) {
         return;
     }
     game_rules_settings rules;
@@ -393,12 +403,11 @@ static void button_host(int param1, int param2)
     rules.score_years = END_YEARS[data.end_choice] ? END_YEARS[data.end_choice] : rules.score_years;
     mp_lockstep_set_rules(&rules);
     mp_lockstep_set_started_callback(window_mp_lobby_show_started_game);
-    if (mp_lockstep_host(MP_LOCKSTEP_DEFAULT_PORT, data.num_players, data.files[data.selected_file], 1)) {
+    if (mp_lockstep_host(MP_LOCKSTEP_DEFAULT_PORT, data.num_players, file, 1)) {
         mp_lockstep_set_manual_start(1);
-        // only multiplayer maps (D-033): a multiplayer game or map goes on as saved, any other file only gives the
-        // climate, empire and funds of a generated map; any seed will do, the host sends the map
-        mp_lockstep_set_generated_map(!is_multiplayer_file(data.files[data.selected_file]),
-            (unsigned int) time_get_millis());
+        // only multiplayer maps (D-033, D-044): a new game is played on the prepared map for its number of players,
+        // whose template only gives the empire, start year and funds; a multiplayer game or map goes on as saved
+        mp_lockstep_set_generated_map(new_game, (unsigned int) time_get_millis());
     }
 }
 
@@ -442,8 +451,8 @@ void window_mp_lobby_show_started_game(void)
     input_box_stop(&address_input);
     building_menu_update(); // the buildings this city may build (interface state, rebuilt on loading)
     mp_endgame_set_over_callback(window_mp_results_show);
-    // the view starts on the city of this player: its buildings, or its arrival point
-    if (player_context_num_players() > 1) {
+    // the view starts on the city of this player: its buildings, else its missionary, else its arrival point
+    {
         int count = 0, x = 0, y = 0;
         for (int i = BUILDING_FIRST; i < BUILDING_END; i++) {
             building *b = building_get(i);
@@ -453,8 +462,11 @@ void window_mp_lobby_show_started_game(void)
                 count++;
             }
         }
+        int missionary = mp_missionary_first();
         if (count) {
             city_view_go_to_grid_offset(map_grid_offset(x / count, y / count));
+        } else if (missionary) {
+            city_view_go_to_grid_offset(figure_get(missionary)->grid_offset);
         } else {
             // the arrival point is on the edge of the map: look a little inside
             const map_tile *entry = city_map_entry_point();

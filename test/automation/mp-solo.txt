@@ -1,0 +1,36 @@
+# Real game: a game alone started from the lobby, on the prepared map for 2 (see tools/mp-solo-test.sh)
+wait 10
+click 400 500
+wait 10
+# main menu: Multiplayer
+click 400 172
+wait 10
+# first entry: a new game; one player; host, then start
+click 180 170
+wait 2
+click 268 350
+wait 2
+screenshot build/automation/mp-solo-lobby.png
+click 240 466
+wait 5
+click 240 466
+mpwait 0
+wait 5
+screenshot build/automation/mp-solo-start.png
+mpinfo
+# without a zone, no house; a mission near the missionary gives one
+build 10 70 140 70 140
+build 80 40 96 40 96
+run 100
+build 10 46 92 46 92
+run 20
+mpinfo
+screenshot build/automation/mp-solo-mission.png
+# the missionary: a click on him, then on the place where he goes
+click 297 300
+wait 2
+click 450 200
+wait 2
+run 300
+mpinfo
+screenshot build/automation/mp-solo-moved.png

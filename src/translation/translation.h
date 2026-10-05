@@ -117,6 +117,7 @@ typedef enum {
     TR_MP_YOUR_ADDRESS,
     TR_MP_BACK,
     TR_MP_NO_MAP,
+    TR_MP_NEW_GAME,
     TR_MP_SEPARATE_CITIES,
     TR_MP_END,
     TR_MP_END_NONE,

@@ -29,6 +29,28 @@ static int is_own_living_missionary(const figure *f)
     return f->state == FIGURE_STATE_ALIVE && mp_missionary_is_scout(f);
 }
 
+int mp_missionary_first(void)
+{
+    for (int i = FIGURE_FIRST; i < FIGURE_END; i++) {
+        if (is_own_living_missionary(figure_get(i))) {
+            return i;
+        }
+    }
+    return 0;
+}
+
+int mp_mission_exists(void)
+{
+    for (int i = BUILDING_FIRST; i < BUILDING_END; i++) {
+        building *b = building_get(i);
+        if (b->type == BUILDING_MISSION_POST &&
+            (b->state == BUILDING_STATE_IN_USE || b->state == BUILDING_STATE_CREATED)) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
 figure *mp_missionary_create(int mission_id, int x, int y)
 {
     figure *f = figure_create(FIGURE_MISSIONARY, x, y, DIR_4_BOTTOM);

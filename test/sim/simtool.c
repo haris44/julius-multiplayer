@@ -17,6 +17,7 @@
 #include "city/population.h"
 #include "city/ratings.h"
 #include "scenario/data.h"
+#include "scenario/editor_map.h"
 #include "scenario/property.h"
 #include "scenario/request.h"
 #include "city/data_private.h"
@@ -128,6 +129,7 @@ static int usage(void)
     printf("  simtool tradeprices SAVE               prices between players and notices to the buyer\n");
     printf("  simtool importprice SAVE               buying from the empire costs 50%% more in multiplayer\n");
     printf("  simtool notrade SAVE                   a template without trade by land and by sea is refused\n");
+    printf("  simtool inspect MPSAV                  players, rules, climate, trade, missionaries of a saved game\n");
     printf("  simtool tradecities MAP                trade cities of the empire of a map, by land and by sea\n");
     printf("  simtool fog SAVE                       prepared map: what a player discovers and sees (D-038)\n");
     printf("  simtool outside SAVE                   prepared map: buildings outside the zone collapse in 3 months\n");
@@ -1514,6 +1516,24 @@ static int command_preparedmap(const char *file, int num_players, int ticks)
     int unreachable = count_unreachable_land(size);
     printf("land out of reach of the main road: %d tiles\n", unreachable);
     failures += unreachable != 0;
+    // a map of forests and lakes (D-044)
+    int water = count_terrain_near(size / 2, size / 2, size / 2 - 1, TERRAIN_WATER);
+    int trees = count_terrain_near(size / 2, size / 2, size / 2 - 1, TERRAIN_TREE);
+    printf("water: %d%% of the map, forest: %d%%, climate %d\n", 100 * water / (size * size),
+        100 * trees / (size * size), scenario_property_climate());
+    if (100 * water / (size * size) < 8 || 100 * trees / (size * size) < 20 ||
+        scenario_property_climate() != CLIMATE_NORTHERN) {
+        printf("  not a map of forests and lakes\n");
+        failures++;
+    }
+    int fishing = 0;
+    for (int i = 0; i < MAX_FISH_POINTS; i++) {
+        map_point fish = scenario_editor_fishing_point(i);
+        fishing += fish.x >= 0 && map_terrain_is(map_grid_offset(fish.x, fish.y), TERRAIN_WATER);
+    }
+    int expected_fishing = 1 + (num_players <= 2 ? 2 : 4);
+    printf("fishing points in the water: %d of %d\n", fishing, expected_fishing);
+    failures += fishing != expected_fishing;
     for (int p = 0; p < num_players; p++) {
         int cx, cy;
         mp_mapgen_city_center(p, &cx, &cy);
@@ -1523,7 +1543,7 @@ static int command_preparedmap(const char *file, int num_players, int ticks)
         int meadow = count_terrain_near(cx, cy, 26, TERRAIN_MEADOW);
         int wants_rock = mp_mapgen_slot_allows(p, RESOURCE_IRON) || mp_mapgen_slot_allows(p, RESOURCE_MARBLE);
         int wants_trees = mp_mapgen_slot_allows(p, RESOURCE_TIMBER);
-        int wants_water = mp_mapgen_slot_has_water(p) || mp_mapgen_slot_allows(p, RESOURCE_CLAY);
+        int wants_water = 1; // every player has his lake (D-044)
         printf("player %d: water %d, rock %d, trees %d, meadow %d\n", p + 1, water, rock, trees, meadow);
         if ((water > 0) != wants_water || (rock > 0) != wants_rock || (trees > 0) != wants_trees || meadow < 50) {
             printf("  the land around player %d does not match its materials\n", p + 1);
@@ -1557,9 +1577,6 @@ static int command_preparedmap(const char *file, int num_players, int ticks)
     printf("river from (%d, %d) to the central lake: %s\n", rx, ry, sailing ? "ships sail" : "NO WAY");
     failures += !sailing;
     for (int p = 0; p < num_players; p++) {
-        if (!mp_mapgen_slot_has_water(p)) {
-            continue;
-        }
         int px, py, cx, cy, reached = 0;
         mp_mapgen_player_river_point(p, &px, &py);
         mp_mapgen_city_center(p, &cx, &cy);
@@ -1960,6 +1977,58 @@ static void count_trade_cities(int *land, int *sea)
     }
 }
 
+// what an .mpsav holds: players, rules, climate, trade of the empire, missionaries, zones (to read the saves of the
+// players)
+static int command_inspect(const char *file)
+{
+    if (!mp_savegame_read(file)) {
+        printf("Unable to read %s\n", file);
+        return 2;
+    }
+    int num_players = player_context_num_players();
+    printf("%d players, map %d x %d, climate %d, territories %d, fog %d\n", num_players, map_data.width,
+        map_data.height, scenario_property_climate(), game_rules_territories(), game_rules_fog_of_war());
+    int zone[PLAYER_CONTEXT_MAX_PLAYERS + 1] = { 0 };
+    int water = 0;
+    for (int y = 0; y < map_data.height; y++) {
+        for (int x = 0; x < map_data.width; x++) {
+            int o = map_grid_offset(x, y);
+            int owner = mp_territory_owner(o);
+            zone[owner >= 0 && owner < PLAYER_CONTEXT_MAX_PLAYERS ? owner : PLAYER_CONTEXT_MAX_PLAYERS]++;
+            water += map_terrain_is(o, TERRAIN_WATER) != 0;
+        }
+    }
+    printf("water tiles: %d\n", water);
+    for (int p = 0; p < num_players; p++) {
+        player_context_switch(p);
+        int land, sea, open_land = 0, open_sea = 0;
+        count_trade_cities(&land, &sea);
+        for (int i = 0; i < 41; i++) {
+            empire_city *c = empire_city_get(i);
+            if (c && c->in_use && c->type == EMPIRE_CITY_TRADE && c->is_open) {
+                if (c->is_sea_trade) {
+                    open_sea++;
+                } else {
+                    open_land++;
+                }
+            }
+        }
+        printf("player %d: population %d, treasury %d, zone %d tiles, river entry (%d, %d), "
+            "trade cities %d by land (%d open), %d by sea (%d open)\n", p + 1, city_population(),
+            city_finance_treasury(), zone[p], scenario_map_river_entry().x, scenario_map_river_entry().y, land,
+            open_land, sea, open_sea);
+        for (int i = p * MAX_FIGURES + 1; i < (p + 1) * MAX_FIGURES; i++) {
+            figure *f = figure_get(i);
+            if (f->state == FIGURE_STATE_ALIVE && mp_missionary_is_scout(f)) {
+                printf("  missionary %d at (%d, %d), action %d, destination (%d, %d)\n", f->id, f->x, f->y,
+                    f->action_state, f->destination_x, f->destination_y);
+            }
+        }
+    }
+    player_context_switch(0);
+    return 0;
+}
+
 // a template whose empire does not trade by land and by sea is refused for the prepared maps
 static int command_notrade(const char *file)
 {
@@ -1978,7 +2047,25 @@ static int command_tradecities(const char *file)
     }
     int land, sea;
     count_trade_cities(&land, &sea);
-    printf("%s: %d trade cities by land, %d by sea\n", file, land, sea);
+    printf("%s: %d trade cities by land, %d by sea, climate %d\n", file, land, sea, scenario_property_climate());
+    for (int i = 0; i < 41; i++) {
+        empire_city *c = empire_city_get(i);
+        if (c && c->in_use && (c->type == EMPIRE_CITY_TRADE || c->type == EMPIRE_CITY_FUTURE_TRADE)) {
+            printf("  %s, cost %d, sells", c->is_sea_trade ? "sea " : "land", c->cost_to_open);
+            for (int r = RESOURCE_MIN; r < RESOURCE_MAX; r++) {
+                if (c->sells_resource[r]) {
+                    printf(" %d", r);
+                }
+            }
+            printf("; buys");
+            for (int r = RESOURCE_MIN; r < RESOURCE_MAX; r++) {
+                if (c->buys_resource[r]) {
+                    printf(" %d", r);
+                }
+            }
+            printf("\n");
+        }
+    }
     return 0;
 }
 
@@ -2673,6 +2760,8 @@ int main(int argc, char **argv)
         result = command_importprice(file);
     } else if (strcmp(command, "notrade") == 0) {
         result = command_notrade(file);
+    } else if (strcmp(command, "inspect") == 0) {
+        result = command_inspect(file);
     } else if (strcmp(command, "tradecities") == 0) {
         result = command_tradecities(file);
     } else if (strcmp(command, "fog") == 0) {

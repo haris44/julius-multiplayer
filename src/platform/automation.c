@@ -19,6 +19,11 @@
 #include "city/view.h"
 #include "map/grid.h"
 #include "game/player_context.h"
+#include "building/building.h"
+#include "figure/figure.h"
+#include "map/data.h"
+#include "mp/missionary.h"
+#include "mp/territory.h"
 
 #include <inttypes.h>
 #include <stdio.h>
@@ -469,6 +474,23 @@ static int execute(char *line)
             return 1;
         }
         city_view_go_to_grid_offset(map_grid_offset(x, y));
+        return 0;
+    } else if (strcmp(command, "mpinfo") == 0) {
+        // the city of the local player: its missionary, its buildings, its zone
+        int missionary = mp_missionary_first();
+        int buildings = 0, zone = 0;
+        for (int i = BUILDING_FIRST; i < BUILDING_END; i++) {
+            buildings += building_get(i)->state != BUILDING_STATE_UNUSED;
+        }
+        for (int y = 0; y < map_data.height; y++) {
+            for (int x = 0; x < map_data.width; x++) {
+                zone += mp_territory_owner(map_grid_offset(x, y)) == player_context_current();
+            }
+        }
+        char value[160];
+        snprintf(value, sizeof(value), "missionary at (%d, %d), buildings %d, zone %d tiles",
+            missionary ? figure_get(missionary)->x : -1, missionary ? figure_get(missionary)->y : -1, buildings, zone);
+        log_message("mpinfo:", value);
         return 0;
     } else if (strcmp(command, "mpcheck") == 0) {
         char value[160];

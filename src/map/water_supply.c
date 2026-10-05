@@ -15,6 +15,7 @@
 #include "map/terrain.h"
 #include "scenario/property.h"
 #include "game/player_context.h"
+#include "game/rules.h"
 
 #include <string.h>
 
@@ -44,7 +45,7 @@ static uint16_t reservoir_levels[PLAYER_CONTEXT_MAX_PLAYERS][MAX_BUILDINGS];
 
 static int several_cities(void)
 {
-    return player_context_player_count > 1;
+    return game_rules_multiplayer_map();
 }
 
 static int range_bits(int terrain)
