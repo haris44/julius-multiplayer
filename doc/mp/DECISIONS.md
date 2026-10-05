@@ -556,3 +556,20 @@
   tracé de construction. La partie ne s'arrête pas (la simulation tourne en réseau quelle que soit la fenêtre).
 - La file des alertes est un état d'affichage de l'ordinateur de l'acheteur, ni sauvegardé ni lu par la simulation
   (I3 intact).
+
+### D-050 — César revient comme arbitre de la partie (remplace E8, revoit D-026)
+- 2026-10-06 · **adoptée** sur le principe (Alexandre : « César va ré-apparaître, c'est lui qui donnera la victoire à
+  la cité la plus prospère […] César pourra être en colère contre des joueurs qui sont trop belliqueux entre eux, et
+  envoyer son armée pour attaquer tous les joueurs de la carte »). Détails **à valider** : CESAR.md §13.
+- La victoire par défaut devient le **jugement de César** : chaque mois, une cité gagne des lauriers. Ce gain vaut
+  la valeur de la cité (cinq notes : prospérité, commerce, habitat, culture-éducation, grandeur), multipliée par la
+  faveur, de ×0,5 à ×1,5. Le plus de lauriers à la fin l'emporte. Ce mode remplace le score provisoire de M4.6.
+- La **faveur** revient, par cité : dons depuis l'épargne, salaire et rangs, fêtes, troupes prêtées aux campagnes
+  (batailles lointaines partagées), guerres justes. Elle revient lentement vers 50.
+- La **guerre** entre joueurs se déclare, avec un motif déterminé par le jeu : riposte, mandat de César ou sans
+  motif. Une **jauge de colère commune** monte avec la durée et la puissance des guerres, et ses seuils mènent à
+  l'avertissement, à l'ultimatum, puis à l'expédition punitive dans toutes les cités ; le fautif paie le plus.
+- Restent neutralisés (D-026) : changement d'empereur, renvoi de la campagne. Restent actifs comme avant (D-026) :
+  tribut annuel, prêt de secours, salaires de Rome.
+- Jalons : M9 (César juge, en paix), M10 (la guerre sous l'œil de César), M11 (équilibrage). Les réglages chiffrés
+  sont des valeurs de départ, mesurées et corrigées selon CESAR.md §10.

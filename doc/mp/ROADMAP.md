@@ -1,8 +1,7 @@
 # Feuille de route
 
-> **Jalon en cours : M3, moteur multi-cités** (priorité d'Alexandre : statistiques séparées par joueur, E13).
-> Ordre retenu : M3.4 → M3.5 → M3.6 → M3.7, puis M3.1 à M3.3 (grande grille), puis M3.8. Le reste de M2 (M2.6, M2.7,
-> M2.9 à M2.11) suit, car il ne bloque pas.
+> **Jalon en cours : M9, César juge** (D-050, plan complet : [CESAR.md](CESAR.md)). César revient comme arbitre :
+> lauriers, faveur, campagnes ; jouable en paix et seul avant la guerre (M10). Ordre : M9.1 → M9.9.
 
 ## M0 — Infrastructure de développement et de test ✅
 - [x] **M0.1** Environnement macOS : build, données `../donnees-c3`, branche `multiplayer`, tag `upstream-base`.
@@ -360,7 +359,8 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
   *Fait* : bouton « Joueurs » du conseiller au commerce (multijoueur seulement) ; un onglet par joueur, état de la
   route et bouton pour la proposer ou la retirer, pour chaque ressource mon prix (−/+ par 10), son prix, « J'achète
   oui/non ». Essayée en réseau dans le vrai jeu (captures), sans désynchronisation.
-- [ ] **M8.7** Interception : caravanes attaquables, cargaison perdue, route coupée (avec M9).
+- [ ] **M8.7** Interception : caravanes attaquables, cargaison perdue, route coupée. *Déplacée en M10.3*, avec la
+  guerre.
 - [x] **M8.8** Tests : rejeux, cargaisons et argent conservés, scénarios visuels. *Fait* : `mp_trade_conservation`
   (chaque jour, chargements des deux cités et des caravanes, et argent des deux joueurs, constants : acheteur à court
   d'argent servi de ce qu'il peut payer, entrepôt presque plein : 2 chargements payés et 6 rendus, puis le reste en
@@ -383,14 +383,51 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
   le client achète le marbre, l'hôte monte deux fois son prix, captures `price-alert.png` et
   `price-alert-trade.png`.
 
-## M9 — Guerre entre joueurs
-- [ ] **M9.1** Hostilité par propriétaire. En classique, elle reproduit exactement la matrice actuelle.
-- [ ] **M9.2** Légions chez l'adversaire, ordre « attaquer », portes et murs qui ne laissent passer que leur
-  propriétaire.
-- [ ] **M9.3** Moral et totaux par camp, paix, arcs de triomphe.
-- [ ] **M9.4** Tests : scénarios de combat rejoués, captures.
+## M9 — César juge (D-050, [CESAR.md](CESAR.md) §4 à §6)
+César revient comme arbitre de la partie. Jouable en paix et **seul** : livré à Alexandre avant la guerre.
+- [ ] **M9.1** Module `mp/caesar` : par cité la faveur, les lauriers (en dixièmes) et leur détail du mois ; la jauge
+  commune de colère ; sauvegarde, somme de contrôle ; table de réglages `mp/caesar_rules.h`. *Critères* : ctest
+  sauvegarde et reprise identiques tick par tick ; parité verte (classique intact).
+- [ ] **M9.2** Les cinq notes (prospérité, commerce, habitat, culture-éducation, grandeur ; CESAR §5) et
+  `simtool notes SAVE`. Références calibrées sur les cités de `test/data` (CESAR §10.2), valeurs notées dans
+  DECISIONS. *Critères* : ctest des notes sur des sauvegardes connues ; flux nets et prix de référence pour le
+  commerce (ping-pong entre deux joueurs sans effet).
+- [ ] **M9.3** Faveur en multijoueur : retour vers 50, salaire et épargne, dons (formule d'origine, plafond annuel),
+  rangs selon les lauriers. Commandes réseau. *Critères* : ctest « les dons seuls plafonnent la faveur vers 75 »,
+  salaire au-dessus du rang pénalisé.
+- [ ] **M9.4** Fêtes comptées par César (une tous les 6 mois). *Critère* : ctest.
+- [ ] **M9.5** Lauriers mensuels, verdict de fin de partie, consulat anticipé, titre en partie seule ; remplace le
+  score provisoire de M4.6. *Critères* : ctest de fin de partie à 1 et 2 joueurs, égalités départagées par la
+  faveur.
+- [ ] **M9.6** Interface : conseiller impérial multijoueur (notes, faveur, rang, lauriers, dons), bandeau (lauriers
+  et jauge), lettres de César en plein écran, salon (mode « Jugement de César », durée, options). *Critère* :
+  captures sans fenêtre, en partie seule et à deux.
+- [ ] **M9.7** Campagnes de César : batailles lointaines partagées, troupes de tous les joueurs additionnées,
+  récompenses selon la part, refus pénalisé. *Critères* : ctest (envoi, voyage, résolution, récompenses), partie
+  reprise identique pendant une campagne.
+- [ ] **M9.8** Demandes de biens de César (si Alexandre les valide, CESAR §6.4).
+- [ ] **M9.9** Télémétrie mensuelle dans la sauvegarde et `simtool laurels PARTIE.mpsav` ; LISEZMOI ; DMG pour
+  Alexandre.
 
-## M10 — Finitions
-- [ ] Équilibrage par parties simulées sans tête : autorisations, prix et rareté des **armes**, quotas, fonds de
-  départ, rythme. Performance, paquets d'installation (app macOS, exécutable Windows),
-  documentation pour les joueurs.
+## M10 — La guerre sous l'œil de César ([CESAR.md](CESAR.md) §7, DESIGN §7)
+- [ ] **M10.1** Hostilité par propriétaire et état de guerre par paire de joueurs : déclaration (commande, annonce,
+  préavis d'un mois), paix proposée des deux côtés. En classique, la matrice actuelle exactement.
+- [ ] **M10.2** Légions chez l'adversaire, ordre « attaquer », portes et murs qui ne laissent passer que leur
+  propriétaire.
+- [ ] **M10.3** Interception des caravanes (ancien M8.7) : cargaison prise, route coupée.
+- [ ] **M10.4** Motifs de guerre (riposte, mandat de César, sans motif), triomphes, effets sur la faveur.
+- [ ] **M10.5** Jauge de colère : durée, puissance, dégâts, décrue, belligérance de chacun ; avertissement et
+  ultimatum (paix imposée, « ennemi de Rome »).
+- [ ] **M10.6** Expédition punitive : invasion de César dans chaque cité, disgrâce de 12 mois, pertes du fautif ;
+  seconde expédition fatale (option).
+- [ ] **M10.7** Armée trop puissante : légions au-delà de la tolérance de César.
+- [ ] **M10.8** Moral et totaux par camp, arcs de triomphe ; combats rejoués et duels scriptés (CESAR §10.3),
+  captures.
+
+## M11 — Équilibrage et finitions
+- [ ] **M11.1** Bornes d'équilibre en ctest (CESAR §10.3 et §10.5) : frappe ciblée, guerre totale, dons seuls,
+  rapport des pertes entre victime et agresseur.
+- [ ] **M11.2** Parties d'Alexandre lues avec `simtool laurels`, réglages ajustés et notés dans DECISIONS.
+- [ ] **M11.3** Équilibrage par parties simulées sans tête : autorisations, prix et rareté des **armes**, quotas,
+  fonds de départ, rythme. Performance, paquets d'installation (app macOS, exécutable Windows), documentation pour
+  les joueurs.

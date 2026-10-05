@@ -208,7 +208,11 @@ réseau et à trouver par dichotomie le premier tick fautif dans les tests.
   continuer sans le joueur parti. La cité de ce joueur reste figée ou est retirée : à décider plus tard.
 - Implémentation : une petite couche `src/platform/net*.c` (sockets POSIX et Winsock), sans nouvelle dépendance.
 
-## 5. Jeu libre multijoueur sans César
+## 5. Jeu libre multijoueur et César
+
+> **Revu par D-050 (2026-10-06)** : César revient comme arbitre (lauriers, faveur, campagnes, colère). Le plan
+> complet est dans [CESAR.md](CESAR.md) ; la liste ci-dessous décrit l'état actuel du code, qui sera rouvert
+> mécanique par mécanique aux jalons M9 et M10.
 
 ### 5.1 Interventions de César neutralisées (liste complète : code-map/04 §3)
 
@@ -220,8 +224,6 @@ Désactivées quand `game_rules.mode == MP` :
 - changement d'empereur ;
 - cadeaux, salaire, épargne et dons ;
 - rangs et promotions ;
-- tribut annuel ;
-- prêt de secours ;
 - victoire et renvoi de la campagne ;
 - blé fourni par Rome.
 
@@ -234,10 +236,10 @@ Conservés, car ils relèvent de l'économie ou de la vie interne de la cité :
 - séismes ;
 - révolte des gladiateurs ;
 - épidémies ;
-- règle du trésor à −5 000 (plus de construction possible).
+- règle du trésor à −5 000 (plus de construction possible) ;
+- tribut annuel et prêt de secours (D-026 ; la dette fait encore baisser la faveur, `city/emperor.c` `update_debt_state`).
 
-Impact assumé (H2) : sans tribut ni salaire, l'économie des cités est un peu plus facile. La prospérité, qui tient
-compte du tribut impayé, considère simplement le tribut comme payé.
+Impact assumé (H2) : sans salaire du gouverneur, l'économie des cités est un peu plus facile.
 
 ### 5.2 Arrivée des joueurs
 
@@ -256,6 +258,8 @@ Indigènes, animaux et envahisseurs IA (option « menaces neutres ») appartienn
 - Les invasions IA visent un joueur désigné par la règle, par exemple à tour de rôle.
 
 ### 5.4 Fin de partie
+
+> Remplacé à M9.5 par le jugement de César (CESAR.md §4.3) ; ci-dessous, l'état actuel.
 
 Les conditions de fin se choisissent dans le salon :
 - **sans fin** : la partie s'arrête par décision commune ;

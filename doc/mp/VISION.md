@@ -29,7 +29,7 @@
 | E5 | Les **limites** sont **par joueur** et non plus par carte. |
 | E6 | **Cartes plus grandes** (largeur et hauteur), en exploitant la puissance des machines actuelles. |
 | E7 | Le **gameplay intérieur d'une cité reste exactement celui de l'original**. |
-| E8 | **Suppression complète des interventions de César**. |
+| E8 | ~~**Suppression complète des interventions de César**~~ (remplacé le 2026-10-06, D-050) : **César revient comme arbitre**. Il donne la victoire à la cité la plus méritante (prospérité, commerce, habitat, culture et éducation, troupes prêtées, fêtes, dons, guerres justes) et punit toute la province quand les joueurs sont trop belliqueux entre eux. Plan : [CESAR.md](CESAR.md). |
 | E9 | **Suppression de la campagne** : uniquement du **jeu libre, en multijoueur**. |
 | E10 | Développement **autonome et structuré** par Claude, avec des **tests exécutables par Claude** (le jeu doit pouvoir être testé sans humain). |
 | E11 | ~~On **construit partout**, comme dans AoE2~~ (remplacé le 2026-10-05, D-036) : on construit dans sa **zone**, qui suit la ville vivante (20 cases autour des bâtiments installés et des missions), pour empêcher les « rush » sans brider la croissance. Routes et aqueducs se construisent partout et les cités peuvent se **brancher**. |
@@ -44,10 +44,10 @@ Claude a tranché ces points pour pouvoir avancer. Chacun peut être remis en ca
 | ID | Hypothèse | Conséquence si elle est fausse |
 |----|-----------|--------------------------------|
 | H1 | « Limites de ressources » désigne les **limites techniques du moteur** : nombre max de bâtiments, de figures, de légions, etc. Ce ne sont pas les ressources du jeu (blé, argile…), qui dépendent toujours du terrain de la carte. | Revoir E5 dans DESIGN. |
-| H2 | « Interventions de César » couvre : demandes impériales, faveur et ses conséquences (légions de César, destitution), rangs et promotions, cadeaux à César, messages et changement d'empereur. Le **tribut annuel** à Rome et le **salaire du gouverneur** disparaissent aussi (voir DESIGN). | Réactiver la mécanique concernée. |
-| H3 | Les notes **culture, prospérité et paix** restent (indicateurs, et base possible d'un score). La note de **faveur** disparaît. | — |
+| H2 | ~~César entièrement neutralisé~~ (revu le 2026-10-06, D-050) : faveur, dons, salaire et épargne, rangs, fêtes appréciées, campagnes (batailles lointaines) et invasion de César **reviennent** sous une forme multijoueur (CESAR.md). Restent supprimés : changement d'empereur, renvoi de la campagne. Le tribut annuel et le prêt de secours n'ont jamais été supprimés (D-026). | Réactiver la mécanique concernée. |
+| H3 | Les notes **culture et prospérité** nourrissent les lauriers ; la **faveur** revient, par cité (D-050). | — |
 | H4 | « Jeu libre » : pas d'objectifs imposés ; on choisit une carte et des réglages de partie dans un salon (lobby) avant de lancer. | — |
-| H5 | La condition de victoire n'est pas précisée. Par défaut, le salon proposera **partie sans fin**, **conquête** et **score à durée limitée** (détails dans DESIGN). | Changer les modes proposés. |
+| H5 | ~~Modes sans fin, conquête, score~~ (revu le 2026-10-06, D-050) : la victoire par défaut est le **jugement de César** (lauriers cumulés, CESAR.md §4) ; « sans fin » reste. | Changer les modes proposés. |
 | H6 | Les menaces non-joueurs (invasions barbares, indigènes, loups) ne sont pas mentionnées : elles restent possibles, **désactivables dans le salon**. | — |
 | H7 | Les dieux et les événements internes (séismes, révolte de gladiateurs, épidémies…) font partie du gameplay intérieur : ils sont **conservés**, et chaque cité les vit séparément. | — |
 | H8 | Les villes de l'empire (non-joueurs) restent des partenaires commerciaux ; s'y ajoute le **commerce entre joueurs**. | — |
@@ -67,5 +67,5 @@ Claude a tranché ces points pour pouvoir avancer. Chacun peut être remis en ca
 
 1. Une partie à 4 joueurs en LAN, Mac et PC mélangés, sur une grande carte, tient au moins 2 heures sans désynchronisation ni plantage.
 2. Les tests de parité avec le jeu original (`ctest`, harnais *autopilot*) restent verts à chaque commit.
-3. Chaque cité se joue comme dans Caesar III. Seules différences : l'absence de César et la présence des voisins (commerce, guerre).
+3. Chaque cité se joue comme dans Caesar III. Seules différences : un César arbitre de la province (D-050) et la présence des voisins (commerce, guerre).
 4. Le tout est vérifiable par des tests automatisés exécutés par Claude, sans intervention humaine.

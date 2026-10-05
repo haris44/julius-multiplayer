@@ -5,6 +5,32 @@
 
 ---
 
+## 2026-10-06 — Plan « César juge » (D-050, demande d'Alexandre)
+
+**Demande** : César revient et donne la victoire à la cité la plus méritante (prospérité, commerce, habitat,
+troupes prêtées, fêtes, culture et éducation, guerres justes, dons) ; sa colère frappe toute la province quand les
+joueurs sont trop belliqueux. Plan complet, centré sur l'équilibrage.
+
+**Fait**
+- `doc/mp/CESAR.md` : lauriers mensuels = valeur de la cité (5 notes) × faveur (×0,5 à ×1,5) ; faveur qui revient
+  vers 50 (l'argent seul plafonne vers 75) ; campagnes de César partagées ; guerre déclarée avec motif, jauge de
+  colère commune (durée et puissance au carré), avertissement, ultimatum, expédition punitive ; exploits et
+  garde-fous ; méthode d'équilibrage (réglages en table, calibrage sur `test/data`, duels scriptés, télémétrie,
+  critères chiffrés) ; 8 points à valider.
+- Fiche `code-map/07` (sous-agent) : formules d'origine de la faveur, des notes, des dons, des fêtes, des batailles
+  lointaines et de la colère de César, avec `fichier:ligne`.
+- ROADMAP : M9 César juge, M10 la guerre sous l'œil de César (avec l'ancien M8.7), M11 équilibrage ; en-tête
+  « jalon en cours » enfin à jour. VISION : E8 remplacée, H2, H3 et H5 revues. D-050.
+
+**Appris**
+- En partie libre, l'original remet la faveur à 50 chaque mois : `mp/caesar` doit tenir la faveur lui-même.
+- DESIGN §5.1 disait le tribut et le prêt de secours désactivés en multijoueur ; D-026 et le code les gardent.
+  Corrigé. La dette fait encore baisser la faveur en multijoueur.
+
+**Prochaine étape** : réponses d'Alexandre aux points de CESAR.md §13, puis M9.1.
+
+---
+
 ## 2026-10-06 — Alerte plein écran au changement de prix (M8.12, demande d'Alexandre)
 
 **Demande** : quand un joueur change ses prix, une alerte plein écran chez son client. Avant, Alexandre a vérifié
