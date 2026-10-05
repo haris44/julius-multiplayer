@@ -10,6 +10,7 @@
 #include "graphics/text.h"
 #include "graphics/window.h"
 #include "input/input.h"
+#include "translation/translation.h"
 
 #include <stdio.h>
 
@@ -42,8 +43,9 @@ static void init(void (*close_callback)(void))
     data.close_callback = close_callback;
     data.screen_label[0] = 0;
     if (system_get_max_window_size(&data.screen_width, &data.screen_height)) {
-        char label[64];
-        snprintf(label, sizeof(label), "%d par %d (écran)", data.screen_width, data.screen_height);
+        char format[64], label[64];
+        encoding_to_utf8(translation_for(TR_MP_SCREEN_SIZE), format, sizeof(format), 0);
+        snprintf(label, sizeof(label), format, data.screen_width, data.screen_height);
         encoding_from_utf8(label, data.screen_label, sizeof(data.screen_label));
     }
 }

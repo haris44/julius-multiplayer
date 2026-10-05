@@ -246,8 +246,8 @@ de sortie de sa cité :
 - les immigrants et les caravanes des villes de l'empire y arrivent ;
 - la règle de la « route de Rome » s'y rapporte.
 
-Il porte aussi les **autorisations d'exploiter** du joueur (§6.2). L'arrivée par la rivière, pour les navires,
-reste commune à la carte.
+Il porte aussi les **autorisations d'exploiter** du joueur (§6.2). L'arrivée des navires est propre à chaque cité
+(point d'entrée de la rivière par cité) : sur les cartes préparées, le bout du bras de mer le plus proche.
 
 ### 5.3 Entités neutres
 
@@ -305,16 +305,20 @@ Les conditions de fin se choisissent dans le salon :
 
 ## 8. Cartes multijoueur
 
-- Nouveau format de carte versionné :
-  - taille jusqu'au plafond ;
-  - 2 à 4 points d'arrivée, chacun avec ses autorisations d'exploiter ;
-  - rivière, indigènes, points de troupeaux et de pêche.
-- Trois sources de cartes :
-  1. un **générateur de cartes aléatoires**, à la AoE2 (terre, eau, forêts, roches, gisements, positions et
-     autorisations équilibrées), qui sert aussi aux tests ;
-  2. l'éditeur étendu (grandes tailles, points d'arrivée) ;
-  3. un outil de **composition**, qui place des cartes ou sauvegardes classiques côte à côte dans un grand monde.
-     Il sert d'abord aux tests d'isolement, puis peut servir à fabriquer des cartes.
+- Le jeu se joue sur **deux cartes préparées** (D-033, D-044, D-047), recalculées à chaque partie par `mp/mapgen`
+  (`mp_mapgen_create_prepared`) : jamais de fichier de carte dans le dépôt (I4). Une pour 1 ou 2 joueurs (200
+  cases), une pour 3 ou 4 (260 cases). Chacune suit un **plan fixe** (`map_layout`) : villes, points d'arrivée sur
+  les bords ouest et est, routes de César, tracé du bras de mer qui traverse la carte, réservoir de César. Le reste
+  (forêts, clairières, étangs, prés, côtes irrégulières) vient d'un bruit déterministe à graine fixe : la même carte
+  sur tous les ordinateurs, l'hôte l'envoie de toute façon.
+- Chaque emplacement n'offre que les matériaux que son joueur peut exploiter ; le joueur de la pierre n'a pas d'eau,
+  seulement l'aqueduc de César ; les autres ont leur côte dans leur zone de départ.
+- Le modèle (`mp_mapgen_prepared_template`, Lindum d'abord) ne donne que l'empire, l'année et les fonds ; le climat
+  est toujours celui du nord.
+- La carte passe par un `.mpsav` (`mp/savegame`), le même format qu'une partie en cours : les clients la reçoivent
+  avec le message de bienvenue.
+- Il reste, pour les tests seulement : un **générateur aléatoire** (`mp_mapgen_create`) et un outil de
+  **composition** (`mp/compose`) qui place des cartes ou sauvegardes classiques côte à côte.
 
 ## 9. Interface
 

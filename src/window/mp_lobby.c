@@ -220,9 +220,14 @@ static void draw_games(void)
     }
     for (int i = 0; i < GAMES_IN_VIEW && i < mp_discovery_count(); i++) {
         const mp_discovered_game *game = mp_discovery_get(i);
+        char name[FILE_NAME_LENGTH];
+        if (strcmp(game->map_name, MP_DISCOVERY_NEW_GAME) == 0) {
+            encoding_to_utf8(translation_for(TR_MP_NEW_GAME), name, sizeof(name), 0);
+        } else {
+            snprintf(name, sizeof(name), "%s", game->map_name);
+        }
         char line[128];
-        snprintf(line, sizeof(line), "%s (%d/%d) %s", game->map_name, game->joined_players, game->num_players,
-            game->address);
+        snprintf(line, sizeof(line), "%s (%d/%d) %s", name, game->joined_players, game->num_players, game->address);
         draw_text_utf8(line, 344, 108 + 20 * i, data.focus_game == i + 1 ? FONT_NORMAL_WHITE : FONT_NORMAL_GREEN);
     }
 }
@@ -233,7 +238,7 @@ static void draw_status(void)
     draw_text_utf8(data.local_address, 16 + width, 428, FONT_NORMAL_BLACK);
     mp_lockstep_state state = mp_lockstep_get_state();
     if (state == MP_LOCKSTEP_OFF && data.missing_template) {
-        draw_text_utf8("Aucune carte modèle (Lindum.map...) dans les données du jeu", 16, 448, FONT_NORMAL_BLACK);
+        text_draw(translation_for(TR_MP_NO_TEMPLATE), 16, 448, FONT_NORMAL_BLACK, 0);
     }
     if (state != MP_LOCKSTEP_OFF) {
         char status[200];

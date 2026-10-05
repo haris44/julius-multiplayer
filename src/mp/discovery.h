@@ -1,6 +1,9 @@
 #ifndef MP_DISCOVERY_H
 #define MP_DISCOVERY_H
 
+// announced instead of a file name by a host starting a new game on the prepared map; the lobbies translate it
+#define MP_DISCOVERY_NEW_GAME "new-game"
+
 /**
  * @file
  * Finding the games hosted on the local network: the host announces its game every second on a

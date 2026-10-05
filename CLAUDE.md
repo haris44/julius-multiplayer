@@ -35,6 +35,8 @@ La commande `/suite` enchaîne tout cela, puis les tâches du jalon.
 | Comparer deux sauvegardes | `build/test/compare attendu.sav obtenu.sav` |
 | Lancer le vrai jeu sans fenêtre, piloté par un script | `tools/run-automation.sh test/automation/smoke.txt` (captures dans `build/automation/`, à regarder avec `Read`) |
 | Partie en réseau du vrai jeu, sans fenêtre (hôte + client scriptés) | `tools/mp-real-test.sh` |
+| Depuis le salon : partie seule, partie à deux, fenêtre du commerce (sans fenêtre) | `tools/mp-solo-test.sh`, `tools/mp-lobby-test.sh`, `tools/mp-trade-test.sh` |
+| Lire une sauvegarde multijoueur ou une zone de la carte préparée | `build/test/simtool inspect PARTIE.mpsav`, `build/test/simtool terrain SAVE 2 X Y W H` |
 | Partie en réseau dans de vraies fenêtres, **pour Alexandre uniquement** | `tools/play-mp.sh [JOUEURS] [SAUVEGARDE]` |
 | Vrai jeu contre simulation de test (mêmes sommes de contrôle ?) | `tools/cross-check.sh SAVE TICKS PAS` |
 | Reconfigurer après un ajout de fichier dans CMakeLists | `cmake -S . -B build` |
@@ -93,6 +95,14 @@ Syntaxe des scripts d'automatisation et pièges : `doc/mp/TESTING.md` §3.
 - Ne jamais enchaîner `tools/check.sh | tail -1 && git commit` : `tail` réussit même si les tests échouent. Écrire
   `tools/check.sh > build/check.log 2>&1 && tail -1 build/check.log && git commit ...`.
 - `ctest` lance les tests en parallèle : un test qui écrit un fichier doit lui donner un nom propre à ses arguments.
+- Un bâtiment construit par commande n'est « en service » qu'au tick suivant : ses stocks et sa zone ne comptent pas
+  avant (faire avancer un tick dans les tests avant de compter).
+- Pour vérifier qu'un test échoue sans le correctif, inverser la seule ligne fautive : `git stash` retire aussi le
+  test.
+- Sur macOS, le vrai jeu écrit `julius-log.txt` dans le dossier des données : lire ce fichier plutôt que de
+  deviner ce qui s'est passé chez Alexandre (I6).
+- Alexandre essaie chaque version **seul** (1 joueur dans le salon) : les règles de la carte doivent marcher à une
+  cité (`game_rules_multiplayer_map()`), pas seulement à plusieurs.
 
 ## Communication
 Avec Alexandre : en français, des résumés courts et concrets (fait, testé comment, suite). Les documents de

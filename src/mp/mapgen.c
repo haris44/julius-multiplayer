@@ -48,12 +48,16 @@
 #define LATTICE 16
 #define CITY_RADIUS 22
 
+typedef struct map_layout map_layout; // plan of a prepared map, defined with the prepared maps below
+
 static struct {
     unsigned int seed;
     int size;
     int num_players; // arrival points on the map (a prepared map for 4 may have 3 players)
     int prepared;
-    const struct map_layout *layout; // plan of the prepared map
+    const map_layout *layout; // prepared maps: their plan
+    int sea_top[GRID_MAX_SIZE]; // prepared maps: the arm of the sea at each column, both coasts included
+    int sea_bottom[GRID_MAX_SIZE];
     int aqueduct_end_x[MP_MAPGEN_MAX_PLAYERS]; // end of the aqueduct of Caesar near a city, -1 without it
     int aqueduct_end_y[MP_MAPGEN_MAX_PLAYERS];
     int center_x[MP_MAPGEN_MAX_PLAYERS];
@@ -114,7 +118,8 @@ static void place_arrivals(void)
 
 static int in_prepared_settlement(int x, int y);
 
-// land kept clear: around each city and on the way from its arrival point to it
+// land kept clear: around each city, and along the main roads (prepared maps) or on the way from the arrival point
+// to the city (random maps of the tests)
 static int in_settlement(int x, int y)
 {
     if (data.prepared) {
@@ -357,7 +362,7 @@ typedef struct {
     int corners[4]; // corners of the city for its rocks, woods and meadows: those away from the sea first
 } map_slot;
 
-typedef struct map_layout {
+struct map_layout {
     int size;
     map_slot slots[MP_MAPGEN_MAX_PLAYERS];
     int num_roads;
@@ -368,7 +373,7 @@ typedef struct map_layout {
     int sea_y[MAX_SEA_POINTS];
     int reservoir_column; // the reservoir of Caesar stands on the coast at this column...
     int reservoir_side; // ...south of the sea (1) or north of it (-1)
-} map_layout_plan;
+};
 
 static const int SHARED_RAW_MATERIALS[] = {
     RESOURCE_IRON, RESOURCE_CLAY, RESOURCE_TIMBER, RESOURCE_OLIVES, RESOURCE_VINES, RESOURCE_MARBLE
@@ -377,7 +382,7 @@ static const int SHARED_RAW_MATERIALS[] = {
 
 // two players on the south shore: in the west the player of the rocks (iron, marble, olives), in the east on the
 // coast the player of timber, clay and vines; the main road of Caesar crosses the sea to the wild north shore
-static const map_layout_plan LAYOUT_2 = {
+static const map_layout LAYOUT_2 = {
     200,
     {
         { { RESOURCE_IRON, RESOURCE_MARBLE, RESOURCE_OLIVES }, 1, 45, 140, 0, 140, { 0, 2, 1, 3 } },
@@ -395,7 +400,7 @@ static const map_layout_plan LAYOUT_2 = {
 // two players on each shore: north the player of the rocks (west) and the one of timber and clay (east, on the
 // coast); south the one of olives and timber (west) and the one of vines and clay (east), both on the coast. Three
 // players leave the south-east free.
-static const map_layout_plan LAYOUT_4 = {
+static const map_layout LAYOUT_4 = {
     260,
     {
         { { RESOURCE_IRON, RESOURCE_MARBLE, RESOURCE_NONE }, 1, 55, 55, 0, 55, { 0, 2, 1, 3 } },
@@ -414,9 +419,6 @@ static const map_layout_plan LAYOUT_4 = {
     { 140, 138, 132, 130, 128 },
     95, -1
 };
-
-static int sea_top[GRID_MAX_SIZE];
-static int sea_bottom[GRID_MAX_SIZE];
 
 static const map_slot *slot_of(int slot)
 {
@@ -564,7 +566,7 @@ static void place_slot(int slot)
 // the middle line of the sea at a column, between the points of the plan
 static int sea_middle(int x)
 {
-    const struct map_layout *l = data.layout;
+    const map_layout *l = data.layout;
     for (int i = 1; i < l->num_sea_points; i++) {
         if (x <= l->sea_x[i]) {
             int dx = l->sea_x[i] - l->sea_x[i - 1];
@@ -579,22 +581,22 @@ static int sea_middle(int x)
 // between two clear shores, as bridges need
 static void place_sea(void)
 {
-    const struct map_layout *l = data.layout;
+    const map_layout *l = data.layout;
     for (int x = 0; x < data.size; x++) {
         int middle = sea_middle(x) + (soft_noise(2 * x, 1, 11) - 128) / 32;
-        sea_top[x] = middle - SEA_HALF_WIDTH + (soft_noise(3 * x, 2, 12) - 128) / 40;
-        sea_bottom[x] = middle + SEA_HALF_WIDTH + (soft_noise(3 * x, 3, 13) - 128) / 40;
-        for (int y = sea_top[x]; y <= sea_bottom[x]; y++) {
+        data.sea_top[x] = middle - SEA_HALF_WIDTH + (soft_noise(3 * x, 2, 12) - 128) / 40;
+        data.sea_bottom[x] = middle + SEA_HALF_WIDTH + (soft_noise(3 * x, 3, 13) - 128) / 40;
+        for (int y = data.sea_top[x]; y <= data.sea_bottom[x]; y++) {
             if (y >= 0 && y < data.size && !in_city_area(x, y) && !near_road(x, y, l->bridge_road)) {
                 map_terrain_set(map_grid_offset(x, y), TERRAIN_WATER);
             }
         }
     }
     int bridge_x = l->roads[l->bridge_road].x1;
-    int top = sea_top[bridge_x], bottom = sea_bottom[bridge_x];
+    int top = data.sea_top[bridge_x], bottom = data.sea_bottom[bridge_x];
     for (int x = bridge_x - 1; x <= bridge_x + 1; x++) {
-        sea_top[x] = top;
-        sea_bottom[x] = bottom;
+        data.sea_top[x] = top;
+        data.sea_bottom[x] = bottom;
         for (int y = top - 1; y <= bottom + 1; y++) {
             map_terrain_set(map_grid_offset(x, y), y < top || y > bottom ? 0 : TERRAIN_WATER);
         }
@@ -604,7 +606,7 @@ static void place_sea(void)
 // the main road of Caesar, on land: his bridge carries it over the sea
 static void place_main_road(void)
 {
-    const struct map_layout *l = data.layout;
+    const map_layout *l = data.layout;
     for (int i = 0; i < l->num_roads; i++) {
         const segment *r = &l->roads[i];
         int dx = r->x2 > r->x1 ? 1 : r->x2 < r->x1 ? -1 : 0;
@@ -627,11 +629,11 @@ static int place_caesar_bridge(void)
 {
     int x = data.layout->roads[data.layout->bridge_road].x1;
     int length, direction;
-    if (!map_bridge_calculate_length_direction(x, sea_bottom[x], &length, &direction) ||
-        length != sea_bottom[x] - sea_top[x] + 1 || map_bridge_add(x, sea_bottom[x], 1) != length) {
+    if (!map_bridge_calculate_length_direction(x, data.sea_bottom[x], &length, &direction) ||
+        length != data.sea_bottom[x] - data.sea_top[x] + 1 || map_bridge_add(x, data.sea_bottom[x], 1) != length) {
         return 0;
     }
-    for (int y = sea_top[x]; y <= sea_bottom[x]; y++) {
+    for (int y = data.sea_top[x]; y <= data.sea_bottom[x]; y++) {
         map_owner_set(map_grid_offset(x, y), MAP_OWNER_CAESAR);
     }
     return 1;
@@ -664,11 +666,11 @@ static int is_land_for_reservoir(int x, int y)
 // sea, then westwards along a row to the east side of his city (D-034, D-047). He never lets it dry up.
 static int place_caesar_water(void)
 {
-    const struct map_layout *l = data.layout;
+    const map_layout *l = data.layout;
     int column = l->reservoir_column;
     int side = l->reservoir_side;
     int rx = column - 1, ry = -1;
-    for (int y = side > 0 ? sea_bottom[column] - 1 : sea_top[column] - 1; y > 2 && y < data.size - 3; y += side) {
+    for (int y = side > 0 ? data.sea_bottom[column] - 1 : data.sea_top[column] - 1; y > 2 && y < data.size - 3; y += side) {
         int top = side > 0 ? y : y - 2;
         if (is_land_for_reservoir(rx, top)) {
             ry = top;
@@ -812,7 +814,7 @@ int mp_mapgen_caesar_aqueduct_end(int player_id, int *x, int *y)
 void mp_mapgen_sea_end(int east, int *x, int *y)
 {
     *x = data.prepared ? (east ? data.size - 1 : 0) : -1;
-    *y = data.prepared ? (sea_top[*x] + sea_bottom[*x]) / 2 : -1;
+    *y = data.prepared ? (data.sea_top[*x] + data.sea_bottom[*x]) / 2 : -1;
 }
 
 void mp_mapgen_player_river_point(int player_id, int *x, int *y)
@@ -823,8 +825,8 @@ void mp_mapgen_player_river_point(int player_id, int *x, int *y)
 void mp_mapgen_caesar_bridge(int *x, int *y_north, int *y_south)
 {
     *x = data.prepared ? data.layout->roads[data.layout->bridge_road].x1 : -1;
-    *y_north = data.prepared ? sea_top[*x] : -1;
-    *y_south = data.prepared ? sea_bottom[*x] : -1;
+    *y_north = data.prepared ? data.sea_top[*x] : -1;
+    *y_south = data.prepared ? data.sea_bottom[*x] : -1;
 }
 
 int mp_mapgen_prepared_size(int num_players)
@@ -915,7 +917,7 @@ int mp_mapgen_create_prepared(const char *template_file, int num_players)
     int fish = 0;
     for (int slot = 0; slot < data.num_players; slot++) {
         int fx = data.center_x[slot];
-        int fy = (sea_top[fx] + sea_bottom[fx]) / 2;
+        int fy = (data.sea_top[fx] + data.sea_bottom[fx]) / 2;
         if (mp_mapgen_slot_is_coastal(slot) && map_terrain_is(map_grid_offset(fx, fy), TERRAIN_WATER)) {
             scenario_editor_set_fishing_point(fish++, fx, fy);
         }

@@ -5,6 +5,29 @@
 
 ---
 
+## 2026-10-06 — Nettoyage avant la suite (demande d'Alexandre)
+
+**Demande** : nettoyer ce qui n'est pas sûr, pas propre ou trop itéré, pour le prochain développement.
+
+**Fait**
+- `mp/mapgen` : type `map_layout` unique (plus de `struct`/`typedef` à deux noms), côtes de la mer dans l'état du
+  module, commentaires à jour sur les cartes préparées.
+- Plus aucun texte français en dur dans le code ajouté ces derniers jours : objectif du bandeau, carte modèle
+  absente, taille « écran » des options d'affichage, nom d'une nouvelle partie annoncée sur le réseau
+  (`MP_DISCOVERY_NEW_GAME`, traduit par le salon). Les statuts de `mp/lockstep` restent en français en dur, comme
+  avant.
+- `simtool` : dernier avertissement de compilation corrigé, `conserved_days` ne compte plus deux fois un échec,
+  option `raw` de `terrain` au lieu d'une variable d'environnement.
+- `tools/mp-trade-test.sh` pour la fenêtre du commerce en réseau ; `TESTING.md` (commandes multijoueur de
+  `simtool`, `mpinfo`, scripts prêts, `julius-log.txt`), `DESIGN.md` §5.2 et §8 (cartes préparées, plan fixe, bras
+  de mer), `CLAUDE.md` (commandes, pièges appris, « Alexandre essaie seul »).
+- Compilation sans avertissement, 167 tests, trois scripts du vrai jeu verts.
+
+**Prochaine étape** : M9 (guerre entre joueurs) avec M8.7 (interception des caravanes). Points ouverts : vitesse des
+caravanes (D-048), densité de la forêt (D-044).
+
+---
+
 ## 2026-10-05 — Session 2 (suite) : commerce, caravanes par ressource, l'empire en repli (M8.8 à M8.11)
 
 **Retour d'Alexandre** : la carte et le jeu en solo sont validés (« c'est parfait »), on passe au commerce. Pendant

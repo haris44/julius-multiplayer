@@ -137,8 +137,8 @@ static int usage(void)
     printf("  simtool tradepreference SAVE           the empire sells a city nothing a player sells it cheaper\n");
     printf("  simtool tradeconservation SAVE         trade between players makes and loses no goods nor money\n");
     printf("  simtool traderesume SAVE               a game saved while caravans travel goes on the same\n");
-    printf("  simtool terrain MAP PLAYERS X Y W H    the terrain of a part of the prepared map (or of an .mpsav), one\n");
-    printf("                                         letter a tile\n");
+    printf("  simtool terrain MAP PLAYERS X Y W H [raw]  the terrain of a part of the prepared map (or of an .mpsav),\n");
+    printf("                                         one letter a tile; raw: terrain bits, image and elevation too\n");
     printf("  simtool tradecities MAP                trade cities of the empire of a map, by land and by sea\n");
     printf("  simtool fog SAVE                       prepared map: what a player discovers and sees (D-038)\n");
     printf("  simtool outside SAVE                   prepared map: buildings outside the zone collapse in 3 months\n");
@@ -2086,7 +2086,7 @@ static int command_inspect(const char *file)
 
 // the terrain of a part of a prepared map, one letter per tile: W water, R road, B bridge, A aqueduct, b building,
 // T tree, r rock, m meadow, . land (to look at what the generator made)
-static int command_terrain(const char *file, int num_players, int x0, int y0, int width, int height)
+static int command_terrain(const char *file, int num_players, int x0, int y0, int width, int height, int raw)
 {
     size_t length = strlen(file);
     int is_save = length > 6 && strcmp(file + length - 6, ".mpsav") == 0;
@@ -2120,7 +2120,7 @@ static int command_terrain(const char *file, int num_players, int x0, int y0, in
         }
         putchar('\n');
     }
-    if (getenv("TERRAIN_RAW")) {
+    if (raw) {
         // terrain bits, image and elevation of each tile
         for (int y = y0; y < y0 + height; y++) {
             for (int x = x0; x < x0 + width; x++) {
@@ -2405,7 +2405,7 @@ static int command_caravans(const char *file)
 // and on the road, and the money of both players, stay the same; a buyer short of money gets what he can pay; a
 // caravan stores what finds room, is paid for it, and takes the rest back
 // at least `days` days, then until no caravan is on the road (120 days at most): the goods are somewhere every day
-static int conserved_days(int days, int marble, int money, int *failures)
+static int conserved_days(int days, int marble, int money)
 {
     int ok = 1;
     for (int day = 0; day < 120 && (day < days || in_transit(RESOURCE_MARBLE)); day++) {
@@ -2417,7 +2417,6 @@ static int conserved_days(int days, int marble, int money, int *failures)
             ok = 0;
         }
     }
-    *failures += !ok;
     return ok;
 }
 
@@ -2437,7 +2436,7 @@ static int command_tradeconservation(const char *file)
     city_data.finance.treasury = 300;
     player_context_switch(0);
     money -= savings;
-    CHECK(conserved_days(40, marble, money, &failures), "short of money: goods and money conserved every day");
+    CHECK(conserved_days(40, marble, money), "short of money: goods and money conserved every day");
     CHECK(marble_of(0) == 2 && treasury_of(0) == 0, "he got the 2 loads he could pay for");
 
     // his warehouse full of timber but for the space of his 2 loads of marble: the next caravan stores 2 more, he pays
@@ -2452,7 +2451,7 @@ static int command_tradeconservation(const char *file)
     }
     player_context_switch(0);
     int seller_money = treasury_of(1);
-    CHECK(conserved_days(20, marble, money, &failures), "little room: goods and money conserved every day");
+    CHECK(conserved_days(20, marble, money), "little room: goods and money conserved every day");
     printf("player 1: %d loads; player 2: %d loads, earned %d\n", marble_of(0), marble_of(1),
         treasury_of(1) - seller_money);
     CHECK(marble_of(0) == 4 && marble_of(1) == 12 && treasury_of(1) - seller_money == 2 * 150,
@@ -2464,7 +2463,7 @@ static int command_tradeconservation(const char *file)
     // the 12 loads left come in two caravans of 8 and 4
     int conserved = 1;
     for (int trip = 0; trip < 4 && marble_of(1) > 0; trip++) {
-        conserved &= conserved_days(20, marble, money, &failures);
+        conserved &= conserved_days(20, marble, money);
     }
     CHECK(conserved, "room again: goods and money conserved every day");
     CHECK(marble_of(0) == 16 && marble_of(1) == 0, "all the marble came");
@@ -2919,7 +2918,7 @@ static int command_twinstats(const char *file, int ticks)
             int counts[2][FIGURE_TYPE_COUNT] = {{0}};
             for (int i = 1; i < 2 * MAX_FIGURES; i++) {
                 figure *f = figure_get(i);
-                if (f->state == FIGURE_STATE_ALIVE && f->type < FIGURE_TYPE_COUNT) {
+                if (f->state == FIGURE_STATE_ALIVE) { // every type fits: figure_type is a byte
                     counts[i / MAX_FIGURES][f->type]++;
                 }
             }
@@ -3107,7 +3106,8 @@ int main(int argc, char **argv)
     } else if (strcmp(command, "notrade") == 0) {
         result = command_notrade(file);
     } else if (strcmp(command, "terrain") == 0 && argc > 7) {
-        result = command_terrain(file, atoi(argv[3]), atoi(argv[4]), atoi(argv[5]), atoi(argv[6]), atoi(argv[7]));
+        result = command_terrain(file, atoi(argv[3]), atoi(argv[4]), atoi(argv[5]), atoi(argv[6]), atoi(argv[7]),
+            argc > 8 && strcmp(argv[8], "raw") == 0);
     } else if (strcmp(command, "tradepreference") == 0) {
         result = command_tradepreference(file);
     } else if (strcmp(command, "tradeconservation") == 0) {

@@ -64,6 +64,19 @@ Tests ctest associés :
 
 Toute la suite de tests tourne en environ 3 s.
 
+### Commandes multijoueur de `simtool`
+
+`./simtool` sans argument liste tout. Les tests `mp_*` de ctest les appellent ; à la main, les plus utiles :
+
+```
+./simtool preparedmap SAVE 2 4000           # la carte préparée pour 2 (ou 4) : terre, mer, pont, matériaux, cités
+MAPGEN_PICTURE=carte.ppm ./simtool preparedmap SAVE 2 10   # ... et son image (sips -s format png pour la lire)
+./simtool terrain SAVE 2 60 40 30 20 [raw]  # une lettre par case d'une zone de la carte (W eau, R route, B pont...)
+./simtool inspect PARTIE.mpsav              # joueurs, règles, climat, commerce, missionnaires d'une sauvegarde
+./simtool caravans SAVE                     # caravanes entre joueurs ; tradepreference, tradeconservation,
+                                            # traderesume : l'empire en repli, conservation, reprise
+```
+
 ## 3. Pilotage du vrai jeu : `--automation` (captures d'écran)
 
 Le jeu tourne **sans fenêtre** (pilotes SDL `dummy`) en suivant un script, avec une horloge virtuelle
@@ -101,6 +114,7 @@ répertoire courant (lancer depuis la racine du dépôt).
 | `gotocity P` | place la vue sur la cité du joueur P (cités recopiées) |
 | `goto X Y` | place la vue sur la case (X, Y) de la carte |
 | `build TYPE X1 Y1 X2 Y2` | le joueur local construit (numéro de `building_type`), par une commande comme à la souris |
+| `mpinfo` | écrit dans le journal la position du missionnaire, le nombre de bâtiments et la taille de la zone du joueur local |
 | `mpplayers N` | partie en réseau, hôte : attend que N joueurs (hôte compris) soient connectés |
 | `mpwait N` | partie en réseau : attend qu'elle ait démarré et tourné N ticks ; échoue en cas de désynchronisation ou de déconnexion |
 | `mpcheck` | partie en réseau : écrit l'état et le nombre de tours vérifiés ; échoue si la partie ne tourne plus |
@@ -123,6 +137,18 @@ Bon à savoir :
 - Pas d'enregistrement d'images frame par frame (`SDL_VIDEO_DUMMY_SAVE_FRAMES`) : ~2 Mo par frame,
   et le disque est presque plein.
 - Les PNG vont dans `build/automation/` (ignoré par git). Faire le ménage après usage.
+
+### Scripts prêts
+
+- `tools/mp-solo-test.sh` : partie seule depuis le salon sur la carte préparée (mission et zone de départ, maison
+  hors zone refusée, missionnaire déplacé à la souris).
+- `tools/mp-lobby-test.sh` : hôte et client depuis le salon, 400 ticks sans désynchronisation.
+- `tools/mp-trade-test.sh` : idem, puis l'hôte ouvre le conseiller au commerce et la fenêtre « Joueurs »
+  (captures `build/automation/trade-*.png`).
+- `test/automation/display.txt` : les options d'affichage (plus grande fenêtre qui tient sur l'écran).
+
+Sur macOS, le vrai jeu écrit aussi `julius-log.txt` dans le dossier des données (pas pendant l'automatisation) :
+c'est là qu'on lit ce qui s'est passé chez Alexandre sans ouvrir de fenêtre.
 
 ## 3 bis. Parties en réseau
 

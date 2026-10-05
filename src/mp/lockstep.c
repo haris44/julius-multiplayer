@@ -748,7 +748,7 @@ void mp_lockstep_poll(void)
             // players looking for a game on the local network see this one (mp/discovery)
             const char *name = strrchr(data.saved_game, '/');
             mp_discovery_announce(data.port, data.num_players, connected, data.generate_map ?
-                "Nouvelle partie (forêt)" : name ? name + 1 : data.saved_game);
+                MP_DISCOVERY_NEW_GAME : name ? name + 1 : data.saved_game);
         }
     }
 }
