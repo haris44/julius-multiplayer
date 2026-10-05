@@ -578,6 +578,7 @@ set(WINDOW_FILES
     ${PROJECT_SOURCE_DIR}/src/window/main_menu.c
     ${PROJECT_SOURCE_DIR}/src/window/mp_lobby.c
     ${PROJECT_SOURCE_DIR}/src/window/mp_results.c
+    ${PROJECT_SOURCE_DIR}/src/window/mp_trade.c
     ${PROJECT_SOURCE_DIR}/src/window/message_dialog.c
     ${PROJECT_SOURCE_DIR}/src/window/message_list.c
     ${PROJECT_SOURCE_DIR}/src/window/military_menu.c

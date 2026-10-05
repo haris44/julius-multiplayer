@@ -11,6 +11,9 @@
 #include "window/empire.h"
 #include "window/resource_settings.h"
 #include "window/trade_prices.h"
+#include "window/mp_trade.h"
+#include "game/player_context.h"
+#include "translation/translation.h"
 
 #define ADVISOR_HEIGHT 27
 
@@ -39,6 +42,18 @@ static generic_button resource_buttons[] = {
 };
 
 static int focus_button_id;
+
+// multiplayer: trade with the other players (D-043)
+static void button_players(int param1, int param2);
+static generic_button players_button[] = {
+    {460, 8, 140, 23, button_players, button_none, 0, 0},
+};
+static int focus_players_button;
+
+static int is_multiplayer(void)
+{
+    return player_context_num_players() > 1;
+}
 
 static int draw_background(void)
 {
@@ -93,12 +108,25 @@ static void draw_foreground(void)
 
     button_border_draw(98, 396, 200, 24, focus_button_id == 2);
     lang_text_draw_centered(54, 30, 100, 402, 200, FONT_NORMAL_BLACK);
+
+    if (is_multiplayer()) {
+        button_border_draw(460, 8, 140, 24, focus_players_button == 1);
+        text_draw_centered(translation_for(TR_MP_TRADE_BUTTON), 460, 14, 140, FONT_NORMAL_BLACK, 0);
+    }
 }
 
 static int handle_mouse(const mouse *m)
 {
+    if (is_multiplayer() && generic_buttons_handle_mouse(m, 0, 0, players_button, 1, &focus_players_button)) {
+        return 1;
+    }
     int num_resources = city_resource_get_available()->size;
     return generic_buttons_handle_mouse(m, 0, 0, resource_buttons, num_resources + 2, &focus_button_id);
+}
+
+static void button_players(int param1, int param2)
+{
+    window_mp_trade_show();
 }
 
 static void button_prices(int param1, int param2)

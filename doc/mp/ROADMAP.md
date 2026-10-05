@@ -304,7 +304,10 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
   plus, dans la limite de ce que l'acheteur peut payer ; livraison dans ses entrepôts, le reste revient ; route
   coupée : la cargaison revient. Test `mp_trade_caravans` (8 marbres livrés en 42 jours, 1 200 Dn payés et reçus).
   *Reste* : la préférence de l'acheteur pour le moins cher entre joueurs et empire.
-- [ ] **M8.6** Fenêtre du commerce entre joueurs : prix, routes, achats.
+- [x] **M8.6** Fenêtre du commerce entre joueurs : prix, routes, achats.
+  *Fait* : bouton « Joueurs » du conseiller au commerce (multijoueur seulement) ; un onglet par joueur, état de la
+  route et bouton pour la proposer ou la retirer, pour chaque ressource mon prix (−/+ par 10), son prix, « J'achète
+  oui/non ». Essayée en réseau dans le vrai jeu (captures), sans désynchronisation.
 - [ ] **M8.7** Interception : caravanes attaquables, cargaison perdue, route coupée (avec M9).
 - [ ] **M8.8** Tests : rejeux, cargaisons et argent conservés, scénarios visuels.
 
