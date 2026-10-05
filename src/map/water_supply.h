@@ -40,4 +40,11 @@ void map_water_supply_init_ranges_from_terrain(int x_min, int y_min, int x_max, 
 void map_water_supply_save_extra_state(buffer *buf);
 void map_water_supply_load_extra_state(buffer *buf);
 
+/**
+ * With several cities: water left in a reservoir, from 0 (empty) to map_water_supply_reservoir_level_full()
+ */
+int map_water_supply_reservoir_level(int building_id);
+
+int map_water_supply_reservoir_level_full(void);
+
 #endif // MAP_WATER_SUPPLY_H

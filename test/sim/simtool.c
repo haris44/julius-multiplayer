@@ -116,6 +116,8 @@ static int usage(void)
     printf("                                         but no city acts on the buildings of the other\n");
     printf("  simtool preparedmap SAVE PLAYERS TICKS prepared map: land reached from the main road, materials of\n");
     printf("                                         each arrival point, permissions; MAPGEN_PICTURE=F.ppm\n");
+    printf("  simtool reservoirlevel SAVE            prepared map: a reservoir cut off from its source empties\n");
+    printf("                                         slowly, joined again it fills\n");
     printf("  simtool caesarroads SAVE               generated map: no player clears a road of Caesar, every\n");
     printf("                                         city uses it\n");
     printf("  simtool viewcorners SAVE PLAYERS       generated map: the camera reaches its four corners\n");
@@ -1608,6 +1610,74 @@ static int command_preparedmap(const char *file, int num_players, int ticks)
     return failures ? 1 : 0;
 }
 
+static int reservoir_at(int x, int y, int *level)
+{
+    int id = map_building_at(map_grid_offset(x, y));
+    building *b = building_get(id);
+    *level = b->type == BUILDING_RESERVOIR ? map_water_supply_reservoir_level(id) : -1;
+    return b->type == BUILDING_RESERVOIR && b->has_water_access;
+}
+
+// reservoirs hold water (ME.1, D-035): cut off from its source, a reservoir keeps serving until it is empty, about
+// 270 days; joined again, it fills in about 54 days
+static int command_reservoirlevel(const char *file)
+{
+    if (!mp_mapgen_create_prepared(file, 2)) {
+        printf("Unable to create the prepared map\n");
+        return 2;
+    }
+    int ax, ay;
+    if (!mp_mapgen_caesar_aqueduct_end(0, &ax, &ay)) {
+        printf("No aqueduct of Caesar for player 1\n");
+        return 2;
+    }
+    // no enemy army comes to destroy the reservoirs
+    game_rules_settings rules;
+    game_rules_default_multiplayer_settings(&rules);
+    rules.ai_invasions = 0;
+    game_rules_set_multiplayer(&rules);
+    // R1 on the aqueduct of Caesar, an aqueduct of player 1 westwards, R2 at its end
+    mp_command r1 = { .type = MP_COMMAND_BUILD, .player_id = 0, .args = { BUILDING_DRAGGABLE_RESERVOIR, 0, ax - 2, ay, ax - 2, ay, 0, 0 } };
+    mp_command aqueduct = { .type = MP_COMMAND_BUILD, .player_id = 0, .args = { BUILDING_AQUEDUCT, 0, ax - 4, ay, ax - 10, ay, 0, 0 } };
+    mp_command r2 = { .type = MP_COMMAND_BUILD, .player_id = 0, .args = { BUILDING_DRAGGABLE_RESERVOIR, 0, ax - 12, ay, ax - 12, ay, 0, 0 } };
+    mp_command cut = { .type = MP_COMMAND_BUILD, .player_id = 0, .args = { BUILDING_CLEAR_LAND, 0, ax - 7, ay, ax - 7, ay, 0, 0 } };
+    mp_command join = { .type = MP_COMMAND_BUILD, .player_id = 0, .args = { BUILDING_AQUEDUCT, 0, ax - 7, ay, ax - 7, ay, 0, 0 } };
+    mp_command_execute(&r1);
+    mp_command_execute(&aqueduct);
+    mp_command_execute(&r2);
+    int full = map_water_supply_reservoir_level_full();
+    int failures = 0, level1, level2, water1, water2;
+    struct { int days; mp_command *before; int r2_water; int r2_full; const char *label; } steps[] = {
+        { 2, 0, 1, 0, "joined, 2 days later" },
+        { 60, 0, 1, 1, "60 days later" },
+        { 100, &cut, 1, 0, "cut off, 100 days later" },
+        { 200, 0, 0, 0, "300 days after the cut" },
+        { 3, &join, 1, 0, "joined again, 3 days later" },
+    };
+    for (int i = 0; i < 5; i++) {
+        if (steps[i].before) {
+            mp_command_execute(steps[i].before);
+        }
+        for (int day = 0; day < steps[i].days; day++) {
+            run_trace(50, 50, 0, 0);
+            // no engineer here: keep the reservoirs from collapsing
+            building_get(map_building_at(map_grid_offset(ax - 2, ay)))->damage_risk = 0;
+            building_get(map_building_at(map_grid_offset(ax - 12, ay)))->damage_risk = 0;
+        }
+        water1 = reservoir_at(ax - 2, ay, &level1);
+        water2 = reservoir_at(ax - 12, ay, &level2);
+        int ok = water1 && water2 == steps[i].r2_water && (!steps[i].r2_full || level2 == full);
+        printf("%-28s R1 %s (%d), R2 %s (%d/%d)%s\n", steps[i].label, water1 ? "water" : "dry", level1,
+            water2 ? "water" : "dry", level2, full, ok ? "" : "  <-- UNEXPECTED");
+        failures += !ok;
+    }
+    player_context_switch(0);
+    player_context_set_num_players(1);
+    printf("%s\n", failures ? "DIFFERENT: reservoirs do not hold water as designed" :
+        "Identical: reservoirs hold water as designed");
+    return failures ? 1 : 0;
+}
+
 // the camera of a player reaches every corner of a generated map, after it went through a .mpmap file as in a game
 static int command_viewcorners(const char *file, int num_players)
 {
@@ -2110,6 +2180,8 @@ int main(int argc, char **argv)
         result = command_caesarfree(file, ticks);
     } else if (strcmp(command, "preparedmap") == 0 && argc > 4) {
         result = command_preparedmap(file, atoi(argv[3]), atoi(argv[4]));
+    } else if (strcmp(command, "reservoirlevel") == 0) {
+        result = command_reservoirlevel(file);
     } else if (strcmp(command, "caesarroads") == 0) {
         result = command_caesarroads(file);
     } else if (strcmp(command, "viewcorners") == 0 && argc > 3) {

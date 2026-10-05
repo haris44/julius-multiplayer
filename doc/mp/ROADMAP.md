@@ -247,9 +247,11 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
   vrai jeu (`goto X Y`).
 
 ## ME — Eau (D-035)
-- [ ] **ME.1** Réservoirs à niveau en multijoueur : vidage en environ 5 minutes, remplissage en environ 1 minute
-  (en ticks), alimentation tant qu'il reste de l'eau. *Critère* : test de coupure et de rétablissement ; parité
-  classique intacte.
+- [x] **ME.1** Réservoirs à niveau en multijoueur : vidage en environ 5 minutes, remplissage en environ 1 minute
+  (en ticks), alimentation tant qu'il reste de l'eau. *Fait* : niveau de 0 à 270 jours d'eau par réservoir (état
+  « extra » de chaque cité), +5 par jour alimenté, −1 par jour coupé, eau tant qu'il en reste ; un réservoir neuf
+  part vide ; la fenêtre d'un réservoir affiche sa réserve. Test `mp_reservoir_level` (rempli en 54 jours, encore
+  de l'eau 100 jours après la coupure, sec après 270, de nouveau de l'eau une fois rebranché) ; parité intacte.
 
 ## MT — Territoires, missions et missionnaire (D-036, D-037)
 - [ ] **MT.1** Zone constructible : 20 cases autour des bâtiments installés et des missions, premier arrivé,

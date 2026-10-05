@@ -140,6 +140,8 @@ static translation_string all_strings[] = {
     {TR_MP_WATCH, "Watch the map"},
     {TR_MP_MAIN_MENU, "Main menu"},
     {TR_MP_SCORE_RULE, "Score: culture + prosperity + peace + population / 100"},
+    {TR_MP_RESERVOIR_LEVEL, "Water stored: "},
+    {TR_MP_RESERVOIR_OF_CAESAR, "Reservoir of Caesar: never runs dry"},
     {TR_MP_DIFFICULTY, "Difficulty: "},
     {TR_MP_DIFFICULTY_0, "very easy"},
     {TR_MP_DIFFICULTY_1, "easy"},

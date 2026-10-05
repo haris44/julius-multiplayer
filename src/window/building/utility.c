@@ -1,6 +1,10 @@
 #include "utility.h"
 
 #include "building/building.h"
+#include "graphics/text.h"
+#include "translation/translation.h"
+#include "game/player_context.h"
+#include "core/calc.h"
 #include "graphics/lang_text.h"
 #include "graphics/panel.h"
 #include "map/water_supply.h"
@@ -110,6 +114,18 @@ void window_building_draw_reservoir(building_info_context *c)
     lang_text_draw_centered(107, 0, c->x_offset, c->y_offset + 10, BLOCK_SIZE * c->width_blocks, FONT_LARGE_BLACK);
     int text_id = building_get(c->building_id)->has_water_access ? 1 : 3;
     window_building_draw_description_at(c, BLOCK_SIZE * c->height_blocks - 173, 107, text_id);
+    if (player_context_num_players() > 1) {
+        // multiplayer: reservoirs hold water (D-035), the reservoir of Caesar never runs dry
+        int y = c->y_offset + BLOCK_SIZE * c->height_blocks - 62;
+        if (BUILDING_IS_CAESAR(c->building_id)) {
+            text_draw(translation_for(TR_MP_RESERVOIR_OF_CAESAR), c->x_offset + 32, y, FONT_NORMAL_BLACK, 0);
+        } else {
+            int percent = calc_percentage(map_water_supply_reservoir_level(c->building_id),
+                map_water_supply_reservoir_level_full());
+            int width = text_draw(translation_for(TR_MP_RESERVOIR_LEVEL), c->x_offset + 32, y, FONT_NORMAL_BLACK, 0);
+            text_draw_percentage(percent, c->x_offset + 32 + width, y, FONT_NORMAL_BLACK);
+        }
+    }
 }
 
 void window_building_draw_aqueduct(building_info_context *c)

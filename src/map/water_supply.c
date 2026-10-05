@@ -35,6 +35,13 @@ static struct {
 // cities (saved games, overlays), but a city only gets water from its own fountains and reservoirs (D-018)
 static grid_u8 ranges[PLAYER_CONTEXT_MAX_PLAYERS];
 
+// With several cities, reservoirs hold water (D-035): cut off from their source, they still serve their fountains
+// and baths until they are empty; joined again, they fill. One update a day: at the normal speed (90%), a day lasts
+// about 1.1 second, so a full reservoir lasts about 5 minutes and fills in about 1 minute.
+#define RESERVOIR_LEVEL_FULL 270
+#define RESERVOIR_FILL_PER_DAY 5
+static uint16_t reservoir_levels[PLAYER_CONTEXT_MAX_PLAYERS][MAX_BUILDINGS];
+
 static int several_cities(void)
 {
     return player_context_player_count > 1;
@@ -97,16 +104,55 @@ void map_water_supply_reset_extra_state(void)
     for (int p = 0; p < PLAYER_CONTEXT_MAX_PLAYERS; p++) {
         map_grid_clear_u8(ranges[p].items);
     }
+    memset(reservoir_levels, 0, sizeof(reservoir_levels));
 }
 
 void map_water_supply_save_extra_state(buffer *buf)
 {
     map_grid_save_state_u8(ranges[player_context_current_player].items, buf);
+    for (int i = 0; i < MAX_BUILDINGS; i++) {
+        buffer_write_u16(buf, reservoir_levels[player_context_current_player][i]);
+    }
 }
 
 void map_water_supply_load_extra_state(buffer *buf)
 {
     map_grid_load_state_u8(ranges[player_context_current_player].items, buf);
+    for (int i = 0; i < MAX_BUILDINGS; i++) {
+        reservoir_levels[player_context_current_player][i] = buffer_read_u16(buf);
+    }
+}
+
+int map_water_supply_reservoir_level(int building_id)
+{
+    return reservoir_levels[BUILDING_OWNER(building_id) % PLAYER_CONTEXT_MAX_PLAYERS][BUILDING_LOCAL_ID(building_id)];
+}
+
+int map_water_supply_reservoir_level_full(void)
+{
+    return RESERVOIR_LEVEL_FULL;
+}
+
+// has_water_access of the reservoirs of the city now says whether water flows in: the level follows, and the
+// reservoir has water as long as some is left
+static void update_reservoir_levels(void)
+{
+    uint16_t *levels = reservoir_levels[player_context_current_player];
+    for (int i = BUILDING_FIRST; i < BUILDING_END; i++) {
+        building *b = building_get(i);
+        uint16_t *level = &levels[BUILDING_LOCAL_ID(i)];
+        if (b->state != BUILDING_STATE_IN_USE || b->type != BUILDING_RESERVOIR) {
+            *level = 0; // a new reservoir starts empty
+            continue;
+        }
+        if (b->has_water_access) {
+            *level = *level + RESERVOIR_FILL_PER_DAY > RESERVOIR_LEVEL_FULL ?
+                RESERVOIR_LEVEL_FULL : *level + RESERVOIR_FILL_PER_DAY;
+        } else if (*level > 0) {
+            (*level)--;
+        }
+        b->has_water_access = *level > 0;
+    }
 }
 
 static void mark_well_access(int well_id, int radius)
@@ -280,6 +326,9 @@ void map_water_supply_update_reservoir_fountain_of_city(void)
                 }
             }
         }
+    }
+    if (several_cities()) {
+        update_reservoir_levels();
     }
     // mark reservoir ranges
     for (int i = 0; i < total_reservoirs; i++) {
