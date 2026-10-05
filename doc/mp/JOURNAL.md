@@ -5,6 +5,36 @@
 
 ---
 
+## 2026-10-05 — Session 2 (suite) : eau de César, territoires, missionnaire, brouillard de guerre
+
+**Demande d'Alexandre** : lac central relié à l'extérieur et navigable ; le joueur des rochers a fer et marbre,
+un autre bois et argile (D-041) ; « continue l'implémentation ».
+
+**Fait** (commits f07256dc à fe492a7a, 164 tests ctest)
+- MC.2 révisé : rivière qui serpente du lac central au coin nord-est, entrée des navires.
+- MC.3 : tranche de bâtiments de César (ids 8001+, aucune cité ne la fait tourner) ; réservoir au bord du lac,
+  aqueduc vers les joueurs sans eau ; chaque cité le remplit dans son calcul de l'eau.
+- ME.1 : réservoirs à niveau (270 jours d'eau, remplis en 54), réserve affichée dans leur fenêtre.
+- MT.1 à MT.5 : territoires (zone de 20 cases autour des bâtiments installés et des missions, premier arrivé),
+  missions (gratuite sans terre, puis 4 marbres), missionnaire déplacé au clic, formé pour 300 Dn, bâtiments hors
+  zone effondrés après 3 mois, frontières aux couleurs des joueurs, teintes plus légères.
+- MB.1 : brouillard de guerre (option du salon), vue, minicarte et scores.
+- Automatisation : `goto X Y`, `build TYPE X1 Y1 X2 Y2`. Bandeau multijoueur déplacé en bas de la vue.
+
+**Appris**
+- Tout ce qui s'écrit hors des pièces « larges » du `.mpsav` (ici la tranche de César) doit forcer le format
+  large : sinon positions et ids sont tronqués à 16 bits, sans erreur. Le test doit passer par le fichier, comme une
+  vraie partie.
+- Les invasions prévues par la carte modèle détruisent des bâtiments dans les tests longs : les couper.
+- `check.sh | tail && git commit` commite même si les tests échouent (corrigé dans CLAUDE.md).
+
+**Prochaine étape** : MA.1 (variantes de couleur), dessin en blanc des ouvrages de César (MC.1), puis M8 (commerce).
+
+**Points ouverts, à valider par Alexandre** : T1.3 (défilement en plein écran), relecture des cartes, coûts et
+durées (4 marbres par mission, 300 Dn le missionnaire, 3 mois de grâce, 5 min / 1 min pour les réservoirs).
+
+---
+
 ## 2026-10-05 — Session 2 : retours du premier test (TEST_1), cartes préparées
 
 **Demande d'Alexandre** : TEST_1.md (bugs et évolutions), puis réponses à QUESTIONS_1.md. Décisions D-032 à D-040,
