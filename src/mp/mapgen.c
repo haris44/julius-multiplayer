@@ -14,6 +14,7 @@
 #include "game/file.h"
 #include "game/player_context.h"
 #include "map/aqueduct.h"
+#include "map/bridge.h"
 #include "map/building.h"
 #include "map/building_tiles.h"
 #include "map/data.h"
@@ -52,12 +53,9 @@ static struct {
     int size;
     int num_players; // arrival points on the map (a prepared map for 4 may have 3 players)
     int prepared;
+    const struct map_layout *layout; // plan of the prepared map
     int aqueduct_end_x[MP_MAPGEN_MAX_PLAYERS]; // end of the aqueduct of Caesar near a city, -1 without it
     int aqueduct_end_y[MP_MAPGEN_MAX_PLAYERS];
-    int channel_x[MP_MAPGEN_MAX_PLAYERS]; // where the river of the lake of a player leaves the map, -1 without it
-    int channel_y[MP_MAPGEN_MAX_PLAYERS];
-    int river_x; // where the river of the central lake leaves the map, -1 without it
-    int river_y;
     int center_x[MP_MAPGEN_MAX_PLAYERS];
     int center_y[MP_MAPGEN_MAX_PLAYERS];
     int entry_x[MP_MAPGEN_MAX_PLAYERS];
@@ -114,16 +112,20 @@ static void place_arrivals(void)
     }
 }
 
+static int in_prepared_settlement(int x, int y);
+
 // land kept clear: around each city and on the way from its arrival point to it
 static int in_settlement(int x, int y)
 {
+    if (data.prepared) {
+        return in_prepared_settlement(x, y);
+    }
     for (int p = 0; p < data.num_players; p++) {
         if (distance(x, y, data.center_x[p], data.center_y[p]) < CITY_RADIUS / 2) {
             return 1;
         }
-        // prepared maps: the main road goes on to the middle of the map
-        int to_x = data.prepared ? data.size / 2 : data.center_x[p];
-        int to_y = data.prepared ? data.size / 2 : data.center_y[p];
+        int to_x = data.center_x[p];
+        int to_y = data.center_y[p];
         int x_min = data.entry_x[p] < to_x ? data.entry_x[p] : to_x;
         int x_max = data.entry_x[p] > to_x ? data.entry_x[p] : to_x;
         int y_min = data.entry_y[p] < to_y ? data.entry_y[p] : to_y;
@@ -261,15 +263,17 @@ static void set_terrain(int (*terrain_at)(int x, int y))
     }
 }
 
+// in the order of the game loading a map: the grass of empty land first, then the meadows over it (the other way
+// round, the grass covered the meadows, which showed again only once cleared)
 static void update_tile_images(void)
 {
     map_random_init();
+    map_tiles_update_all_elevation();
+    map_tiles_update_all_water();
     map_tiles_update_all_rocks();
     map_tiles_update_region_trees(0, 0, data.size - 1, data.size - 1);
-    map_tiles_update_all_water();
-    map_tiles_update_all_meadow();
     map_tiles_update_all_empty_land();
-    map_tiles_update_all_elevation();
+    map_tiles_update_all_meadow();
     map_tiles_update_all_roads();
 }
 
@@ -326,44 +330,97 @@ int mp_mapgen_create(const char *template_file, int num_players, int size, unsig
     return 1;
 }
 
-// prepared multiplayer maps (D-033): each arrival point offers meadows and only the materials its player may
-// exploit; provisional share, to be checked by Alexandre
+// prepared multiplayer maps (D-033, D-047): one fixed plan for 2 players and one for 4. A great arm of the sea
+// crosses the map from the west edge to the east edge; on the map for 2 both players live on its south shore, on the
+// map for 4 two players live on each shore, joined by the main road of Caesar over his bridge. The player of the
+// rocks lives far from the sea and gets no water but the aqueduct of Caesar; the others live on the coast, where the
+// ships of their empire come along the sea. Each arrival point offers meadows and only the materials its player may
+// exploit.
 #define PREPARED_SEED 2026
 #define MAX_SLOT_RESOURCES 3
 #define WILD_DISTANCE 30
-#define SLOT_LAKE_RADIUS 12
-#define CENTRAL_LAKE_RADIUS 12
-#define RIVER_HALF_WIDTH 3 // rivers of 7 tiles: bridges cross them
+#define ROCK_DRY_DISTANCE 60 // no pond this close to the city of the player of the rocks
+#define SEA_HALF_WIDTH 12
+#define ROAD_MARGIN 2
+#define MAX_ROADS 8
+#define MAX_SEA_POINTS 6
+
+typedef struct {
+    int x1, y1, x2, y2; // along a row or a column, ends included
+} segment;
 
 typedef struct {
     int resources[MAX_SLOT_RESOURCES]; // materials the player may exploit, RESOURCE_NONE ends the list
-    int caesar_aqueduct; // Caesar brings his water to the city (the players without clay)
+    int caesar_aqueduct; // the player of the rocks: Caesar brings him the only water he has
+    int center_x, center_y;
+    int entry_x, entry_y; // on the west or the east edge: the main road runs along the row of the city
+    int corners[4]; // corners of the city for its rocks, woods and meadows: those away from the sea first
 } map_slot;
+
+typedef struct map_layout {
+    int size;
+    map_slot slots[MP_MAPGEN_MAX_PLAYERS];
+    int num_roads;
+    segment roads[MAX_ROADS];
+    int bridge_road; // the road that crosses the sea on the bridge of Caesar
+    int num_sea_points;
+    int sea_x[MAX_SEA_POINTS]; // middle line of the arm of the sea, from the west edge to the east edge
+    int sea_y[MAX_SEA_POINTS];
+    int reservoir_column; // the reservoir of Caesar stands on the coast at this column...
+    int reservoir_side; // ...south of the sea (1) or north of it (-1)
+} map_layout_plan;
 
 static const int SHARED_RAW_MATERIALS[] = {
     RESOURCE_IRON, RESOURCE_CLAY, RESOURCE_TIMBER, RESOURCE_OLIVES, RESOURCE_VINES, RESOURCE_MARBLE
 };
 #define NUM_SHARED_RAW_MATERIALS (int) (sizeof(SHARED_RAW_MATERIALS) / sizeof(SHARED_RAW_MATERIALS[0]))
 
-// west, east: the player of the rocks has iron and marble, and the aqueduct of Caesar; the other has timber and
-// clay; olives and vines are shared out. Every player has a lake and its river to the edge of the map (D-044).
-static const map_slot SLOTS_2[2] = {
-    { { RESOURCE_IRON, RESOURCE_MARBLE, RESOURCE_OLIVES }, 1 },
-    { { RESOURCE_TIMBER, RESOURCE_CLAY, RESOURCE_VINES }, 0 },
+// two players on the south shore: in the west the player of the rocks (iron, marble, olives), in the east on the
+// coast the player of timber, clay and vines; the main road of Caesar crosses the sea to the wild north shore
+static const map_layout_plan LAYOUT_2 = {
+    200,
+    {
+        { { RESOURCE_IRON, RESOURCE_MARBLE, RESOURCE_OLIVES }, 1, 45, 140, 0, 140, { 0, 2, 1, 3 } },
+        { { RESOURCE_TIMBER, RESOURCE_CLAY, RESOURCE_VINES }, 0, 150, 90, 199, 90, { 2, 3, 0, 1 } },
+    },
+    4,
+    { { 0, 140, 100, 140 }, { 100, 90, 199, 90 }, { 100, 90, 100, 140 }, { 100, 12, 100, 90 } },
+    3,
+    4,
+    { 0, 60, 120, 199 },
+    { 40, 44, 58, 70 },
+    75, 1
 };
 
-// west, east, north, south: one player of the rocks (iron and marble), the others share timber, clay, olives and
-// vines; the players without clay have the aqueduct of Caesar
-static const map_slot SLOTS_4[4] = {
-    { { RESOURCE_IRON, RESOURCE_MARBLE, RESOURCE_NONE }, 1 },
-    { { RESOURCE_TIMBER, RESOURCE_CLAY, RESOURCE_NONE }, 0 },
-    { { RESOURCE_OLIVES, RESOURCE_TIMBER, RESOURCE_NONE }, 1 },
-    { { RESOURCE_VINES, RESOURCE_CLAY, RESOURCE_NONE }, 0 },
+// two players on each shore: north the player of the rocks (west) and the one of timber and clay (east, on the
+// coast); south the one of olives and timber (west) and the one of vines and clay (east), both on the coast. Three
+// players leave the south-east free.
+static const map_layout_plan LAYOUT_4 = {
+    260,
+    {
+        { { RESOURCE_IRON, RESOURCE_MARBLE, RESOURCE_NONE }, 1, 55, 55, 0, 55, { 0, 2, 1, 3 } },
+        { { RESOURCE_TIMBER, RESOURCE_CLAY, RESOURCE_NONE }, 0, 200, 104, 259, 104, { 0, 1, 2, 3 } },
+        { { RESOURCE_OLIVES, RESOURCE_TIMBER, RESOURCE_NONE }, 0, 60, 165, 0, 165, { 2, 3, 0, 1 } },
+        { { RESOURCE_VINES, RESOURCE_CLAY, RESOURCE_NONE }, 0, 200, 156, 259, 156, { 2, 3, 0, 1 } },
+    },
+    7,
+    {
+        { 0, 55, 130, 55 }, { 130, 104, 259, 104 }, { 130, 55, 130, 104 }, { 130, 104, 130, 156 },
+        { 0, 165, 130, 165 }, { 130, 156, 259, 156 }, { 130, 156, 130, 165 }
+    },
+    3,
+    5,
+    { 0, 60, 130, 200, 259 },
+    { 140, 138, 132, 130, 128 },
+    95, -1
 };
+
+static int sea_top[GRID_MAX_SIZE];
+static int sea_bottom[GRID_MAX_SIZE];
 
 static const map_slot *slot_of(int slot)
 {
-    return data.num_players <= 2 ? &SLOTS_2[slot] : &SLOTS_4[slot];
+    return &data.layout->slots[slot];
 }
 
 static int slot_has(int slot, int resource)
@@ -376,6 +433,50 @@ static int slot_has(int slot, int resource)
     return 0;
 }
 
+static void place_prepared_arrivals(void)
+{
+    for (int p = 0; p < data.num_players; p++) {
+        data.center_x[p] = slot_of(p)->center_x;
+        data.center_y[p] = slot_of(p)->center_y;
+        data.entry_x[p] = slot_of(p)->entry_x;
+        data.entry_y[p] = slot_of(p)->entry_y;
+    }
+}
+
+static int in_city_area(int x, int y)
+{
+    for (int p = 0; p < data.num_players; p++) {
+        if (distance(x, y, data.center_x[p], data.center_y[p]) < CITY_RADIUS / 2) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static int near_road(int x, int y, int ignored_road)
+{
+    for (int i = 0; i < data.layout->num_roads; i++) {
+        const segment *r = &data.layout->roads[i];
+        if (i == ignored_road) {
+            continue;
+        }
+        int x_min = r->x1 < r->x2 ? r->x1 : r->x2;
+        int x_max = r->x1 > r->x2 ? r->x1 : r->x2;
+        int y_min = r->y1 < r->y2 ? r->y1 : r->y2;
+        int y_max = r->y1 > r->y2 ? r->y1 : r->y2;
+        if (x >= x_min - ROAD_MARGIN && x <= x_max + ROAD_MARGIN && y >= y_min - ROAD_MARGIN &&
+            y <= y_max + ROAD_MARGIN) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static int in_prepared_settlement(int x, int y)
+{
+    return in_city_area(x, y) || near_road(x, y, -1);
+}
+
 static int distance_to_nearest_city(int x, int y)
 {
     int nearest = data.size;
@@ -384,6 +485,16 @@ static int distance_to_nearest_city(int x, int y)
         nearest = d < nearest ? d : nearest;
     }
     return nearest;
+}
+
+static int near_dry_city(int x, int y)
+{
+    for (int p = 0; p < data.num_players; p++) {
+        if (slot_of(p)->caesar_aqueduct && distance(x, y, data.center_x[p], data.center_y[p]) < ROCK_DRY_DISTANCE) {
+            return 1;
+        }
+    }
+    return 0;
 }
 
 // two octaves: shapes less square than the lattice of the noise
@@ -398,9 +509,9 @@ static int prepared_terrain(int x, int y)
         return soft_noise(x, y, 4) > 150 ? TERRAIN_MEADOW : 0;
     }
     // far from every city, forests with clearings and ponds, thicker further away; near the cities, nothing that
-    // one player may exploit and another not (D-044)
+    // one player may exploit and another not (D-044); no pond near the player of the rocks (D-047)
     int wild = distance_to_nearest_city(x, y) - WILD_DISTANCE;
-    if (wild > 6 && soft_noise(x, y, 9) < 58) {
+    if (wild > 6 && soft_noise(x, y, 9) < 58 && !near_dry_city(x, y)) {
         return TERRAIN_WATER;
     }
     if (wild > 0 && soft_noise(x, y, 1) > 150 - (wild < 20 ? wild : 20) * 2) {
@@ -434,111 +545,96 @@ static void slot_corner(int slot, int corner, int *x, int *y)
     *y = data.center_y[slot] + (corner & 2 ? r : -r);
 }
 
-// the lake of a player lies on the side of his arrival point, away from the central lake in the north-east: west
-// and north in the north-west, east in the south-east, south in the south-west
-static int lake_corner(int slot)
-{
-    return data.entry_x[slot] == data.size - 1 ? 3 : data.entry_y[slot] == data.size - 1 ? 2 : 0;
-}
-
 static void place_slot(int slot)
 {
-    int x, y;
-    int lake = lake_corner(slot);
-    int corner = lake == 0 ? 1 : 0;
-    slot_corner(slot, lake, &x, &y);
-    set_blob(x, y, SLOT_LAKE_RADIUS, TERRAIN_WATER);
+    int x, y, corner = 0;
     if (slot_has(slot, RESOURCE_IRON) || slot_has(slot, RESOURCE_MARBLE)) {
-        slot_corner(slot, corner++, &x, &y);
-        corner += corner == lake ? 1 : 0;
+        slot_corner(slot, slot_of(slot)->corners[corner++], &x, &y);
         set_blob(x, y, 4, TERRAIN_ROCK);
     }
     if (slot_has(slot, RESOURCE_TIMBER)) {
-        slot_corner(slot, corner++, &x, &y);
-        corner += corner == lake ? 1 : 0;
+        slot_corner(slot, slot_of(slot)->corners[corner++], &x, &y);
         set_blob(x, y, 6, TERRAIN_TREE);
     }
     // farms: wheat, vegetables, fruit, pigs, and olives or vines when allowed
-    slot_corner(slot, corner, &x, &y);
+    slot_corner(slot, slot_of(slot)->corners[corner], &x, &y);
     set_blob(x, y, 6, TERRAIN_MEADOW);
 }
 
-// a lake in the middle, for the reservoir of Caesar (D-034), joined to the north-east corner by a river: ships of
-// the empire sail up to the docks built on its shores. Neither crosses a main road.
-static void lake_center(int *x, int *y);
-
-static void set_water_around(int x, int y)
+// the middle line of the sea at a column, between the points of the plan
+static int sea_middle(int x)
 {
-    for (int dy = -RIVER_HALF_WIDTH; dy <= RIVER_HALF_WIDTH; dy++) {
-        for (int dx = -RIVER_HALF_WIDTH; dx <= RIVER_HALF_WIDTH; dx++) {
-            int xx = x + dx, yy = y + dy;
-            if (xx >= 0 && yy >= 0 && xx < data.size && yy < data.size && !in_settlement(xx, yy)) {
-                map_terrain_set(map_grid_offset(xx, yy), TERRAIN_WATER);
+    const struct map_layout *l = data.layout;
+    for (int i = 1; i < l->num_sea_points; i++) {
+        if (x <= l->sea_x[i]) {
+            int dx = l->sea_x[i] - l->sea_x[i - 1];
+            return l->sea_y[i - 1] + (l->sea_y[i] - l->sea_y[i - 1]) * (x - l->sea_x[i - 1]) / (dx > 0 ? dx : 1);
+        }
+    }
+    return l->sea_y[l->num_sea_points - 1];
+}
+
+// the arm of the sea, which winds a little and whose coasts are not straight; it never reaches a city nor a main
+// road, except the one that crosses it on the bridge of Caesar. Under the bridge, a straight channel of three tiles
+// between two clear shores, as bridges need
+static void place_sea(void)
+{
+    const struct map_layout *l = data.layout;
+    for (int x = 0; x < data.size; x++) {
+        int middle = sea_middle(x) + (soft_noise(2 * x, 1, 11) - 128) / 32;
+        sea_top[x] = middle - SEA_HALF_WIDTH + (soft_noise(3 * x, 2, 12) - 128) / 40;
+        sea_bottom[x] = middle + SEA_HALF_WIDTH + (soft_noise(3 * x, 3, 13) - 128) / 40;
+        for (int y = sea_top[x]; y <= sea_bottom[x]; y++) {
+            if (y >= 0 && y < data.size && !in_city_area(x, y) && !near_road(x, y, l->bridge_road)) {
+                map_terrain_set(map_grid_offset(x, y), TERRAIN_WATER);
+            }
+        }
+    }
+    int bridge_x = l->roads[l->bridge_road].x1;
+    int top = sea_top[bridge_x], bottom = sea_bottom[bridge_x];
+    for (int x = bridge_x - 1; x <= bridge_x + 1; x++) {
+        sea_top[x] = top;
+        sea_bottom[x] = bottom;
+        for (int y = top - 1; y <= bottom + 1; y++) {
+            map_terrain_set(map_grid_offset(x, y), y < top || y > bottom ? 0 : TERRAIN_WATER);
+        }
+    }
+}
+
+// the main road of Caesar, on land: his bridge carries it over the sea
+static void place_main_road(void)
+{
+    const struct map_layout *l = data.layout;
+    for (int i = 0; i < l->num_roads; i++) {
+        const segment *r = &l->roads[i];
+        int dx = r->x2 > r->x1 ? 1 : r->x2 < r->x1 ? -1 : 0;
+        int dy = r->y2 > r->y1 ? 1 : r->y2 < r->y1 ? -1 : 0;
+        for (int x = r->x1, y = r->y1;; x += dx, y += dy) {
+            int grid_offset = map_grid_offset(x, y);
+            if (!map_terrain_is(grid_offset, TERRAIN_WATER)) {
+                map_terrain_set(grid_offset, TERRAIN_ROAD);
+                map_owner_set(grid_offset, MAP_OWNER_CAESAR);
+            }
+            if (x == r->x2 && y == r->y2) {
+                break;
             }
         }
     }
 }
 
-// the lake of every player flows to the edge of his arrival point, beside his main road: ships of the empire sail
-// up to his docks (D-041, D-044)
-static void place_slot_channel(int slot)
+// a bridge for ships, from the south shore to the north one: ships sail on under it
+static int place_caesar_bridge(void)
 {
-    int x, y;
-    slot_corner(slot, lake_corner(slot), &x, &y);
-    int last = data.size - 1;
-    int dx = data.entry_x[slot] == last ? 1 : data.entry_x[slot] == 0 ? -1 : 0;
-    int dy = data.entry_y[slot] == last ? 1 : data.entry_y[slot] == 0 ? -1 : 0;
-    int x0 = x, y0 = y;
-    for (int step = 0;; step++) {
-        set_water_around(x, y);
-        if ((dx && (x == 0 || x == last)) || (dy && (y == 0 || y == last))) {
-            break;
-        }
-        // straight to the edge, wandering a little on each side
-        int bias = soft_noise(3 * step, 5 * slot, 7);
-        if (bias > 150 && (dx ? y > y0 - 4 : x > x0 - 4) && !(step & 1)) {
-            if (dx) { y--; } else { x--; }
-        } else if (bias < 106 && (dx ? y < y0 + 4 : x < x0 + 4) && !(step & 1)) {
-            if (dx) { y++; } else { x++; }
-        } else {
-            x += dx;
-            y += dy;
-        }
+    int x = data.layout->roads[data.layout->bridge_road].x1;
+    int length, direction;
+    if (!map_bridge_calculate_length_direction(x, sea_bottom[x], &length, &direction) ||
+        length != sea_bottom[x] - sea_top[x] + 1 || map_bridge_add(x, sea_bottom[x], 1) != length) {
+        return 0;
     }
-    data.channel_x[slot] = x;
-    data.channel_y[slot] = y;
-}
-
-static void place_central_lake(void)
-{
-    int x, y;
-    lake_center(&x, &y);
-    set_blob(x, y, CENTRAL_LAKE_RADIUS, TERRAIN_WATER);
-    for (int step = 0;; step++) {
-        set_water_around(x, y);
-        if (x == data.size - 1 || y == 0) {
-            break;
-        }
-        // always towards the corner, more often across or up depending on a slow noise: it meanders
-        int bias = soft_noise(3 * step, 0, 6);
-        if (bias > 145 && x < data.size - 1) {
-            x++;
-        } else if (bias < 111 && y > 0) {
-            y--;
-        } else if (step & 1) {
-            x++;
-        } else {
-            y--;
-        }
+    for (int y = sea_top[x]; y <= sea_bottom[x]; y++) {
+        map_owner_set(map_grid_offset(x, y), MAP_OWNER_CAESAR);
     }
-    data.river_x = x;
-    data.river_y = y;
-}
-
-static void lake_center(int *x, int *y)
-{
-    *x = data.size / 2 + 20;
-    *y = data.size / 2 - 20;
+    return 1;
 }
 
 static void set_caesar_aqueduct(int x, int y)
@@ -564,19 +660,22 @@ static int is_land_for_reservoir(int x, int y)
     return map_terrain_exists_tile_in_area_with_type(x - 1, y - 1, 5, TERRAIN_WATER);
 }
 
-// the reservoir of Caesar on the west shore of the central lake, and his aqueduct to every player without water:
-// westwards to the city of the west, northwards to the city of the north (D-034). He never lets them dry up.
+// the reservoir of Caesar on the coast, and his aqueduct to the player of the rocks: along a column away from the
+// sea, then westwards along a row to the east side of his city (D-034, D-047). He never lets it dry up.
 static int place_caesar_water(void)
 {
-    int lx, ly;
-    lake_center(&lx, &ly);
-    int rx = -1, ry = ly - 1;
-    for (int x = lx - CENTRAL_LAKE_RADIUS - 6; x < lx; x++) {
-        if (is_land_for_reservoir(x, ry)) {
-            rx = x;
+    const struct map_layout *l = data.layout;
+    int column = l->reservoir_column;
+    int side = l->reservoir_side;
+    int rx = column - 1, ry = -1;
+    for (int y = side > 0 ? sea_bottom[column] - 1 : sea_top[column] - 1; y > 2 && y < data.size - 3; y += side) {
+        int top = side > 0 ? y : y - 2;
+        if (is_land_for_reservoir(rx, top)) {
+            ry = top;
+            break;
         }
     }
-    if (rx < 0) {
+    if (ry < 0) {
         return 0;
     }
     for (int yy = ry; yy < ry + 3; yy++) {
@@ -595,38 +694,31 @@ static int place_caesar_water(void)
         if (!slot_of(slot)->caesar_aqueduct) {
             continue;
         }
-        if (data.entry_x[slot] == 0) {
-            // west: from the middle of the west side of the reservoir
-            int end = data.center_x[slot] + CITY_RADIUS / 2 + 1;
-            for (int x = rx - 1; x >= end; x--) {
-                set_caesar_aqueduct(x, ry + 1);
-            }
-            data.aqueduct_end_x[slot] = end;
-            data.aqueduct_end_y[slot] = ry + 1;
-        } else if (data.entry_y[slot] == 0) {
-            // north: from the middle of the north side
-            int end = data.center_y[slot] + CITY_RADIUS / 2 + 1;
-            for (int y = ry - 1; y >= end; y--) {
-                set_caesar_aqueduct(rx + 1, y);
-            }
-            data.aqueduct_end_x[slot] = rx + 1;
-            data.aqueduct_end_y[slot] = end;
-        } else {
-            return 0; // the central lake is in the north-east: the aqueduct goes west or north
+        // from the middle of the side of the reservoir away from the sea
+        int x = rx + 1;
+        int y = side > 0 ? ry + 3 : ry - 1;
+        int end_x = data.center_x[slot] + CITY_RADIUS / 2 + 1;
+        int end_y = data.center_y[slot] - 4;
+        if (end_x >= x || (side > 0 ? end_y < y : end_y > y)) {
+            return 0; // the plan puts the player of the rocks west of the reservoir, away from the sea
         }
+        for (; y != end_y; y += side) {
+            set_caesar_aqueduct(x, y);
+        }
+        for (; x >= end_x; x--) {
+            set_caesar_aqueduct(x, y);
+        }
+        data.aqueduct_end_x[slot] = end_x;
+        data.aqueduct_end_y[slot] = end_y;
     }
     return 1;
 }
 
-// every player starts with his mission, built for him beside the main road through the place of his city (D-045)
+// every player starts with his mission, built for him beside the main road through the place of his city (D-045),
+// north of it
 static int place_start_mission(int p)
 {
-    int x = data.center_x[p] - 1, y = data.center_y[p] - 1;
-    if (data.entry_y[p] == data.size / 2) {
-        y--; // the main road runs west-east through the city: the mission stands north of it
-    } else {
-        x--; // north-south: west of it
-    }
+    int x = data.center_x[p] - 1, y = data.center_y[p] - 2;
     for (int yy = y; yy < y + 2; yy++) {
         for (int xx = x; xx < x + 2; xx++) {
             map_terrain_set(map_grid_offset(xx, yy), 0);
@@ -643,26 +735,8 @@ static int place_start_mission(int p)
     return 1;
 }
 
-// the main road of Caesar: from every arrival point to the middle of the map
-static void place_main_road(void)
-{
-    int middle = data.size / 2;
-    for (int p = 0; p < data.num_players; p++) {
-        int x = data.entry_x[p], y = data.entry_y[p];
-        while (1) {
-            int grid_offset = map_grid_offset(x, y);
-            map_terrain_set(grid_offset, TERRAIN_ROAD);
-            map_owner_set(grid_offset, MAP_OWNER_CAESAR);
-            if (x == middle && y == middle) {
-                break;
-            }
-            x += x < middle ? 1 : x > middle ? -1 : 0;
-            y += y < middle ? 1 : y > middle ? -1 : 0;
-        }
-    }
-}
-
-// land cut off from the main road by lakes, rivers and rocks: a pond more, so that every player reaches all the land
+// land cut off from the main road by water and rocks: a pond more, so that every player reaches all the land (the
+// bridge of Caesar leads to the other shore)
 static void fill_cut_off_land(void)
 {
     static uint8_t reached[GRID_MAX_SIZE * GRID_MAX_SIZE];
@@ -679,8 +753,12 @@ static void fill_cut_off_land(void)
         for (int d = 0; d < 4; d++) {
             int nx = x + DX[d], ny = y + DY[d];
             int n = ny * data.size + nx;
-            if (nx < 0 || ny < 0 || nx >= data.size || ny >= data.size || reached[n] ||
-                map_terrain_is(map_grid_offset(nx, ny), TERRAIN_WATER | TERRAIN_ROCK)) {
+            if (nx < 0 || ny < 0 || nx >= data.size || ny >= data.size || reached[n]) {
+                continue;
+            }
+            int grid_offset = map_grid_offset(nx, ny);
+            if (map_terrain_is(grid_offset, TERRAIN_WATER | TERRAIN_ROCK) &&
+                !map_terrain_is(grid_offset, TERRAIN_ROAD)) {
                 continue;
             }
             reached[n] = 1;
@@ -713,6 +791,11 @@ int mp_mapgen_slot_allows(int player_id, int resource)
     return data.prepared && slot_has(player_id, resource);
 }
 
+int mp_mapgen_slot_is_coastal(int player_id)
+{
+    return data.prepared && !slot_of(player_id)->caesar_aqueduct;
+}
+
 void mp_mapgen_entry_point(int player_id, int *x, int *y)
 {
     *x = data.entry_x[player_id];
@@ -726,21 +809,27 @@ int mp_mapgen_caesar_aqueduct_end(int player_id, int *x, int *y)
     return *x >= 0;
 }
 
-void mp_mapgen_player_river_point(int player_id, int *x, int *y)
+void mp_mapgen_sea_end(int east, int *x, int *y)
 {
-    *x = data.prepared ? data.channel_x[player_id] : -1;
-    *y = data.prepared ? data.channel_y[player_id] : -1;
+    *x = data.prepared ? (east ? data.size - 1 : 0) : -1;
+    *y = data.prepared ? (sea_top[*x] + sea_bottom[*x]) / 2 : -1;
 }
 
-void mp_mapgen_river_point(int *x, int *y)
+void mp_mapgen_player_river_point(int player_id, int *x, int *y)
 {
-    *x = data.prepared ? data.river_x : -1;
-    *y = data.prepared ? data.river_y : -1;
+    mp_mapgen_sea_end(data.center_x[player_id] >= data.size / 2, x, y);
+}
+
+void mp_mapgen_caesar_bridge(int *x, int *y_north, int *y_south)
+{
+    *x = data.prepared ? data.layout->roads[data.layout->bridge_road].x1 : -1;
+    *y_north = data.prepared ? sea_top[*x] : -1;
+    *y_south = data.prepared ? sea_bottom[*x] : -1;
 }
 
 int mp_mapgen_prepared_size(int num_players)
 {
-    return num_players <= 2 ? 200 : 260;
+    return num_players <= 2 ? LAYOUT_2.size : LAYOUT_4.size;
 }
 
 static int lacks_trade_routes;
@@ -788,7 +877,8 @@ int mp_mapgen_create_prepared(const char *template_file, int num_players)
         return 0;
     }
     data.seed = PREPARED_SEED;
-    data.size = mp_mapgen_prepared_size(num_players);
+    data.layout = num_players <= 2 ? &LAYOUT_2 : &LAYOUT_4;
+    data.size = data.layout->size;
     // three players play on the map for four, one arrival point stays free
     data.num_players = num_players <= 2 ? 2 : 4;
     data.prepared = 1;
@@ -801,35 +891,34 @@ int mp_mapgen_create_prepared(const char *template_file, int num_players)
     }
     // whatever the template, the cities grow in the forest
     scenario.climate = CLIMATE_NORTHERN;
-    place_arrivals();
+    place_prepared_arrivals();
     set_terrain(prepared_terrain);
     for (int slot = 0; slot < data.num_players; slot++) {
         place_slot(slot);
     }
-    place_central_lake();
-    for (int slot = 0; slot < data.num_players; slot++) {
-        place_slot_channel(slot);
-    }
+    place_sea();
     map_owner_clear_all();
     mp_territory_clear();
     mp_fog_clear();
     place_main_road();
-    if (!place_caesar_water()) {
+    if (!place_caesar_water() || !place_caesar_bridge()) {
         return 0;
     }
     fill_cut_off_land();
     update_tile_images();
     map_tiles_update_all_aqueducts(0);
-    scenario_editor_set_river_entry_point(data.river_x, data.river_y);
-    scenario_editor_set_river_exit_point(data.river_x, data.river_y);
-    // fish in the central lake and in the lake of every player, for his wharves
-    int fish = 0, fx, fy;
-    lake_center(&fx, &fy);
-    scenario_editor_set_fishing_point(fish++, fx + 3, fy + 3);
+    int west_x, west_y;
+    mp_mapgen_sea_end(0, &west_x, &west_y);
+    scenario_editor_set_river_entry_point(west_x, west_y);
+    scenario_editor_set_river_exit_point(west_x, west_y);
+    // fish in the sea off the coast of every player who lives on it, for his wharves
+    int fish = 0;
     for (int slot = 0; slot < data.num_players; slot++) {
-        slot_corner(slot, lake_corner(slot), &fx, &fy);
-        scenario_editor_set_fishing_point(fish++, fx + (fx < data.center_x[slot] ? -3 : 3),
-            fy + (fy < data.center_y[slot] ? -3 : 3));
+        int fx = data.center_x[slot];
+        int fy = (sea_top[fx] + sea_bottom[fx]) / 2;
+        if (mp_mapgen_slot_is_coastal(slot) && map_terrain_is(map_grid_offset(fx, fy), TERRAIN_WATER)) {
+            scenario_editor_set_fishing_point(fish++, fx, fy);
+        }
     }
     // every player settles with missions (D-037)
     scenario.allowed_buildings[ALLOWED_BUILDING_MISSION_POST] = 1;
@@ -839,11 +928,13 @@ int mp_mapgen_create_prepared(const char *template_file, int num_players)
     data.num_players = num_players;
     set_slot_permissions(num_players);
     // and starts with his mission, its zone, and a missionary to found the next ones; the ships of his empire come
-    // up his own river
+    // along the sea from the nearest edge
     for (int p = 0; p < num_players; p++) {
         player_context_switch(p);
-        scenario_editor_set_river_entry_point(data.channel_x[p], data.channel_y[p]);
-        scenario_editor_set_river_exit_point(data.channel_x[p], data.channel_y[p]);
+        int river_x, river_y;
+        mp_mapgen_player_river_point(p, &river_x, &river_y);
+        scenario_editor_set_river_entry_point(river_x, river_y);
+        scenario_editor_set_river_exit_point(river_x, river_y);
         if (!place_start_mission(p)) {
             return 0;
         }

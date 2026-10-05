@@ -507,3 +507,22 @@
   (comportement de Julius avant 2020). Sur macOS, le jeu écrit aussi `julius-log.txt` dans le dossier des données
   (pas pendant l'automatisation) ; près du haut de l'écran il y note chaque seconde la position vue par le jeu et
   par le système, pour vérifier la correction chez Alexandre.
+
+### D-047 — Un grand bras de mer ; le joueur de la pierre sans eau (remplace l'eau de D-044)
+- 2026-10-05 · **adoptée** (Alexandre : « un grand bras de mer qui traverse la carte ; en carte 2 joueurs, les 2
+  joueurs doivent être sur la même rive, en 4 joueurs 2 de chaque rive. Ne mets pas d'eau hors aqueduc à celui qui a
+  la pierre »)
+- Chaque carte suit un **plan fixe** : villes, points d'arrivée (bords ouest et est), routes de César le long de la
+  rangée de chaque ville, tracé de la mer. Le bras de mer (environ 25 cases, côtes irrégulières) va du bord ouest au
+  bord est ; il n'atteint ni une ville ni une route, sauf celle qui le franchit sur le **pont de César** (pont pour
+  navires, indestructible).
+  - Carte pour 2 (200 cases) : mer au nord ; J1 (pierre) au sud-ouest, J2 (bois, argile, vignes) sur la côte au
+    sud-est ; le pont mène à la rive nord, sauvage.
+  - Carte pour 4 (260 cases) : mer au milieu ; rive nord J1 (pierre, ouest) et J2 (bois, argile, côte) ; rive sud J3
+    (olives, bois) et J4 (vignes, argile), tous deux sur la côte ; à 3 joueurs le sud-est reste libre.
+- **Joueur de la pierre** : aucune eau à moins de 45 cases de sa ville, ni étang ; seul l'aqueduc de César, depuis
+  un réservoir sur la côte, lui apporte l'eau. Les autres joueurs n'ont plus de lac à eux ni d'aqueduc de César :
+  leur rivage est dans leur zone de départ, les navires de leur empire arrivent par le bord de mer le plus proche, un
+  point de pêche est au large de chacun.
+- Les quais de pierre dessinés sur le rivage près du réservoir de César sont ceux du jeu d'origine (« rive
+  fortifiée » près d'un bâtiment).

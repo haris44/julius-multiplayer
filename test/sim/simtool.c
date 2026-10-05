@@ -31,7 +31,10 @@
 #include "game/game.h"
 #include "game/rules.h"
 #include "game/settings.h"
+#include "core/image.h"
 #include "map/bridge.h"
+#include "map/elevation.h"
+#include "map/image.h"
 #include "map/terrain.h"
 #include "map/grid.h"
 #include "figure/route.h"
@@ -130,6 +133,8 @@ static int usage(void)
     printf("  simtool importprice SAVE               buying from the empire costs 50%% more in multiplayer\n");
     printf("  simtool notrade SAVE                   a template without trade by land and by sea is refused\n");
     printf("  simtool inspect MPSAV                  players, rules, climate, trade, missionaries of a saved game\n");
+    printf("  simtool terrain MAP PLAYERS X Y W H    the terrain of a part of the prepared map (or of an .mpsav), one\n");
+    printf("                                         letter a tile\n");
     printf("  simtool tradecities MAP                trade cities of the empire of a map, by land and by sea\n");
     printf("  simtool fog SAVE                       prepared map: what a player discovers and sees (D-038)\n");
     printf("  simtool outside SAVE                   prepared map: buildings outside the zone collapse in 3 months\n");
@@ -1471,8 +1476,9 @@ static int count_unreachable_land(int size)
         for (int d = 0; d < 4; d++) {
             int nx = x + DX[d], ny = y + DY[d];
             if (nx < 0 || ny < 0 || nx >= size || ny >= size || seen[ny * size + nx] ||
-                map_terrain_is(map_grid_offset(nx, ny), TERRAIN_WATER | TERRAIN_ROCK)) {
-                continue;
+                (map_terrain_is(map_grid_offset(nx, ny), TERRAIN_WATER | TERRAIN_ROCK) &&
+                !map_terrain_is(map_grid_offset(nx, ny), TERRAIN_ROAD))) {
+                continue; // water and rocks stop walkers, but not bridges
             }
             seen[ny * size + nx] = 1;
             queue[tail++] = ny * size + nx;
@@ -1500,8 +1506,9 @@ static int count_terrain_near(int cx, int cy, int radius, int terrain)
     return count;
 }
 
-// the prepared maps (D-033): all land reached from the main road, each arrival point with its materials only,
-// permissions that match, a main road of Caesar, the same map every time, and cities that grow
+// the prepared maps (D-033, D-047): all land reached from the main road (over the bridge of Caesar), an arm of the
+// sea from edge to edge, each arrival point with its materials only, no water near the player of the rocks but the
+// aqueduct of Caesar, the others on the coast, permissions that match, the same map every time, cities that grow
 static int command_preparedmap(const char *file, int num_players, int ticks)
 {
     if (!mp_mapgen_create_prepared(file, num_players)) {
@@ -1526,12 +1533,30 @@ static int command_preparedmap(const char *file, int num_players, int ticks)
         printf("  not a map of forests and lakes\n");
         failures++;
     }
+    // the meadows show as meadows: drawn after the grass of empty land, as when the game loads a map
+    int meadows = 0, hidden_meadows = 0;
+    int meadow_image = image_group(GROUP_TERRAIN_MEADOW);
+    for (int y = 0; y < size; y++) {
+        for (int x = 0; x < size; x++) {
+            int o = map_grid_offset(x, y);
+            if (map_terrain_get(o) == TERRAIN_MEADOW) {
+                meadows++;
+                hidden_meadows += map_image_at(o) < meadow_image || map_image_at(o) >= meadow_image + 12;
+            }
+        }
+    }
+    printf("meadows: %d tiles, %d drawn as something else\n", meadows, hidden_meadows);
+    failures += meadows == 0 || hidden_meadows != 0;
     int fishing = 0;
     for (int i = 0; i < MAX_FISH_POINTS; i++) {
         map_point fish = scenario_editor_fishing_point(i);
         fishing += fish.x >= 0 && map_terrain_is(map_grid_offset(fish.x, fish.y), TERRAIN_WATER);
     }
-    int expected_fishing = 1 + (num_players <= 2 ? 2 : 4);
+    int map_players = num_players <= 2 ? 2 : 4;
+    int expected_fishing = 0;
+    for (int p = 0; p < map_players; p++) {
+        expected_fishing += mp_mapgen_slot_is_coastal(p);
+    }
     printf("fishing points in the water: %d of %d\n", fishing, expected_fishing);
     failures += fishing != expected_fishing;
     for (int p = 0; p < num_players; p++) {
@@ -1543,9 +1568,20 @@ static int command_preparedmap(const char *file, int num_players, int ticks)
         int meadow = count_terrain_near(cx, cy, 26, TERRAIN_MEADOW);
         int wants_rock = mp_mapgen_slot_allows(p, RESOURCE_IRON) || mp_mapgen_slot_allows(p, RESOURCE_MARBLE);
         int wants_trees = mp_mapgen_slot_allows(p, RESOURCE_TIMBER);
-        int wants_water = 1; // every player has his lake (D-044)
-        printf("player %d: water %d, rock %d, trees %d, meadow %d\n", p + 1, water, rock, trees, meadow);
-        if ((water > 0) != wants_water || (rock > 0) != wants_rock || (trees > 0) != wants_trees || meadow < 50) {
+        int wants_water = mp_mapgen_slot_is_coastal(p); // the player of the rocks has only the aqueduct (D-047)
+        int far_water = count_terrain_near(cx, cy, 45, TERRAIN_WATER);
+        // the coast is in the zone the player starts with: he may build his docks at once
+        int own_water = 0;
+        for (int y = cy - 26; y <= cy + 26; y++) {
+            for (int x = cx - 26; x <= cx + 26; x++) {
+                int o = map_grid_offset(x, y);
+                own_water += map_terrain_is(o, TERRAIN_WATER) && mp_territory_owner(o) == p;
+            }
+        }
+        printf("player %d: water %d (%d in his zone, %d within 45 tiles), rock %d, trees %d, meadow %d\n", p + 1,
+            water, own_water, far_water, rock, trees, meadow);
+        if ((water > 0) != wants_water || (rock > 0) != wants_rock || (trees > 0) != wants_trees || meadow < 50 ||
+            (!wants_water && far_water > 0) || (wants_water && own_water < 30)) {
             printf("  the land around player %d does not match its materials\n", p + 1);
             failures++;
         }
@@ -1567,16 +1603,29 @@ static int command_preparedmap(const char *file, int num_players, int ticks)
             failures++;
         }
     }
-    // ships of the empire sail from the edge of the map to the central lake, and to the lake of each player who has
-    // one; caravans come by the main road (checked above)
-    int rx, ry;
-    mp_mapgen_river_point(&rx, &ry);
-    map_routing_calculate_distances_water_boat(rx, ry);
-    int lake = map_grid_offset(size / 2 + 14, size / 2 - 14);
-    int sailing = scenario_map_has_river_entry() && map_routing_distance(lake) > 0;
-    printf("river from (%d, %d) to the central lake: %s\n", rx, ry, sailing ? "ships sail" : "NO WAY");
+    // the arm of the sea goes from edge to edge, ships sail under the bridge of Caesar, which his main road crosses;
+    // the ships of the empire of each player on the coast come from the nearest edge to his coast; caravans come by
+    // the main road (checked above)
+    int wx, wy, ex, ey;
+    mp_mapgen_sea_end(0, &wx, &wy);
+    mp_mapgen_sea_end(1, &ex, &ey);
+    map_routing_calculate_distances_water_boat(wx, wy);
+    int sailing = scenario_map_has_river_entry() && map_routing_distance(map_grid_offset(ex, ey)) > 0;
+    printf("sea from (%d, %d) to (%d, %d): %s\n", wx, wy, ex, ey, sailing ? "ships sail across the map" : "NO WAY");
     failures += !sailing;
+    int bx, by_north, by_south, bridge_ok = 1;
+    mp_mapgen_caesar_bridge(&bx, &by_north, &by_south);
+    for (int y = by_north; y <= by_south; y++) {
+        int o = map_grid_offset(bx, y);
+        bridge_ok &= map_is_bridge(o) && map_terrain_is(o, TERRAIN_ROAD) && map_owner_get_claimed(o) == MAP_OWNER_CAESAR;
+    }
+    printf("bridge of Caesar at column %d, from %d to %d (%d tiles): %s\n", bx, by_north, by_south,
+        by_south - by_north + 1, bridge_ok ? "a road of Caesar over the sea" : "BROKEN");
+    failures += !bridge_ok;
     for (int p = 0; p < num_players; p++) {
+        if (!mp_mapgen_slot_is_coastal(p)) {
+            continue;
+        }
         int px, py, cx, cy, reached = 0;
         mp_mapgen_player_river_point(p, &px, &py);
         mp_mapgen_city_center(p, &cx, &cy);
@@ -1591,7 +1640,7 @@ static int command_preparedmap(const char *file, int num_players, int ticks)
         int entry_ok = scenario_map_river_entry().x == px && scenario_map_river_entry().y == py;
         player_context_switch(0);
         printf("player %d: ships from (%d, %d) %s\n", p + 1, px, py,
-            reached && entry_ok ? "sail to his lake" : "DO NOT REACH HIS LAKE");
+            reached && entry_ok ? "sail to his coast" : "DO NOT REACH HIS COAST");
         failures += !reached || !entry_ok;
     }
 
@@ -2028,6 +2077,57 @@ static int command_inspect(const char *file)
         }
     }
     player_context_switch(0);
+    return 0;
+}
+
+// the terrain of a part of a prepared map, one letter per tile: W water, R road, B bridge, A aqueduct, b building,
+// T tree, r rock, m meadow, . land (to look at what the generator made)
+static int command_terrain(const char *file, int num_players, int x0, int y0, int width, int height)
+{
+    size_t length = strlen(file);
+    int is_save = length > 6 && strcmp(file + length - 6, ".mpsav") == 0;
+    if (is_save ? !mp_savegame_read(file) : !mp_mapgen_create_prepared(file, num_players)) {
+        printf("Unable to create the prepared map\n");
+        return 2;
+    }
+    for (int y = y0; y < y0 + height; y++) {
+        printf("%4d ", y);
+        for (int x = x0; x < x0 + width; x++) {
+            int o = map_grid_offset(x, y);
+            char c = '.';
+            if (map_is_bridge(o)) {
+                c = 'B';
+            } else if (map_terrain_is(o, TERRAIN_AQUEDUCT)) {
+                c = 'A';
+            } else if (map_terrain_is(o, TERRAIN_ROAD)) {
+                c = 'R';
+            } else if (map_terrain_is(o, TERRAIN_BUILDING)) {
+                c = 'b';
+            } else if (map_terrain_is(o, TERRAIN_WATER)) {
+                c = 'W';
+            } else if (map_terrain_is(o, TERRAIN_TREE)) {
+                c = 'T';
+            } else if (map_terrain_is(o, TERRAIN_ROCK)) {
+                c = 'r';
+            } else if (map_terrain_is(o, TERRAIN_MEADOW)) {
+                c = 'm';
+            }
+            putchar(c);
+        }
+        putchar('\n');
+    }
+    if (getenv("TERRAIN_RAW")) {
+        // terrain bits, image and elevation of each tile
+        for (int y = y0; y < y0 + height; y++) {
+            for (int x = x0; x < x0 + width; x++) {
+                int o = map_grid_offset(x, y);
+                printf("(%d,%d) terrain %05x image %d elevation %d\n", x, y, map_terrain_get(o), map_image_at(o),
+                    map_elevation_at(o));
+            }
+        }
+    }
+    player_context_switch(0);
+    player_context_set_num_players(1);
     return 0;
 }
 
@@ -2762,6 +2862,8 @@ int main(int argc, char **argv)
         result = command_importprice(file);
     } else if (strcmp(command, "notrade") == 0) {
         result = command_notrade(file);
+    } else if (strcmp(command, "terrain") == 0 && argc > 7) {
+        result = command_terrain(file, atoi(argv[3]), atoi(argv[4]), atoi(argv[5]), atoi(argv[6]), atoi(argv[7]));
     } else if (strcmp(command, "inspect") == 0) {
         result = command_inspect(file);
     } else if (strcmp(command, "tradecities") == 0) {

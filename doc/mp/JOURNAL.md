@@ -5,6 +5,33 @@
 
 ---
 
+## 2026-10-05 — Session 2 (suite) : bras de mer, joueur de la pierre sans eau, prés visibles (MC.4, MC.5)
+
+**Demande d'Alexandre** : le défilement « fonctionne nickel » (T2.8 validé). Un grand bras de mer qui traverse la
+carte, deux joueurs sur la même rive à 2, deux par rive à 4 ; pas d'eau hors aqueduc pour le joueur de la pierre.
+En cours de travail : « les plaines fertiles n'apparaissent toujours pas, sauf quand je passe un coup de pelle ».
+
+**Fait** (D-047)
+- Générateur des cartes préparées réécrit autour d'un plan fixe par carte : villes, points d'arrivée, routes de
+  César, tracé de la mer ; bras de mer d'un bord à l'autre ; pont de César pour navires (`map_bridge_add` sur un
+  chenal droit de trois cases) ; réservoir de César sur la côte, aqueduc vers le joueur de la pierre ; plus de lacs
+  de joueurs ni de lac central.
+- Prés : le générateur dessinait les prés puis l'herbe, qui les recouvrait (le chargement d'une carte fait
+  l'inverse) ; ordre corrigé, contrôle ajouté au test (5 785 prés cachés avant, 0 après).
+- `simtool terrain` (une lettre par case, `TERRAIN_RAW=1` pour les valeurs brutes) ; ligne de diagnostic de la
+  souris retirée. Images : `../CARTES_3/` (cartes, pont, prés).
+
+**Appris**
+- Un pont se bâtit depuis une case d'eau dont un seul voisin est de la terre et se termine sur une case pareille :
+  sur une côte irrégulière, il faut creuser un chenal droit.
+- Les quais de pierre sur le rivage près d'un bâtiment sont du jeu d'origine (rive fortifiée), pas un défaut.
+- `git stash` pour « vérifier sans le correctif » retire aussi le test : inverser seulement la ligne fautive.
+
+**Prochaine étape** : retour d'Alexandre sur la carte ; puis le commerce (choix du moins cher) et M9 (le pont de
+César sera un enjeu de la guerre).
+
+---
+
 ## 2026-10-05 — Session 2 (suite) : défilement vers le haut, deuxième correction (T2.8)
 
 **Retour d'Alexandre** : la carte est bien, mais la souris en haut de l'écran ne fait toujours pas défiler.

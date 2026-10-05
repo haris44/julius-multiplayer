@@ -38,9 +38,11 @@ int mp_mapgen_prepared_size(int num_players);
 const char *mp_mapgen_prepared_template(void);
 
 /**
- * Builds the prepared multiplayer map for this number of players (doc/mp/DECISIONS.md D-033): always the same map,
- * each arrival point with meadows and only the materials its player may exploit, the main road of Caesar from every
- * arrival point to the middle of the map. Three players play on the map for four.
+ * Builds the prepared multiplayer map for this number of players (doc/mp/DECISIONS.md D-033, D-047): always the same
+ * map, crossed from west to east by an arm of the sea; both players on the south shore of the map for 2, two on each
+ * shore of the map for 4, joined by the main road of Caesar over his bridge. Each arrival point offers meadows and
+ * only the materials its player may exploit; the player of the rocks lives far from water and gets the aqueduct of
+ * Caesar, the others live on the coast. Three players play on the map for four.
  * @param template_file Map of the free game giving climate, empire and funds
  * @return 1 on success
  */
@@ -52,21 +54,31 @@ int mp_mapgen_create_prepared(const char *template_file, int num_players);
 int mp_mapgen_slot_allows(int player_id, int resource);
 
 /**
- * On the last prepared map: where the aqueduct of Caesar ends near the city of a player without clay
+ * On the last prepared map: whether the player lives on the coast of the sea (all but the player of the rocks)
+ */
+int mp_mapgen_slot_is_coastal(int player_id);
+
+/**
+ * On the last prepared map: where the aqueduct of Caesar ends, coming westwards along a row, near the city of the
+ * player of the rocks
  * @return 0 when the player has no aqueduct of Caesar
  */
 int mp_mapgen_caesar_aqueduct_end(int player_id, int *x, int *y);
 
 /**
- * On the last prepared map: where the river of the central lake leaves the map (ships come and go there)
+ * On the last prepared map: where the arm of the sea meets the west edge (east = 0) or the east edge (east = 1)
  */
-void mp_mapgen_river_point(int *x, int *y);
+void mp_mapgen_sea_end(int east, int *x, int *y);
 
 /**
- * On the last prepared map: where the river of the lake of a player leaves the map (the ships of his empire come in
- * there)
+ * On the last prepared map: where the ships of the empire of a player come in, the end of the sea nearest to him
  */
 void mp_mapgen_player_river_point(int player_id, int *x, int *y);
+
+/**
+ * On the last prepared map: the column of the bridge of Caesar over the sea and its two ends
+ */
+void mp_mapgen_caesar_bridge(int *x, int *y_north, int *y_south);
 
 /**
  * Arrival point of a player on the last generated map

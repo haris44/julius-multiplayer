@@ -251,7 +251,7 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
   plus de défilement vers le bas. *Fait* (D-045, confirmé par Alexandre : « beaucoup mieux ») : plein écran natif de
   macOS (Space), barre de menus et Dock masqués par le délégué de la fenêtre ; l'ancien plein écran sans Space est
   abandonné.
-- [ ] **T2.8** En plein écran, la souris en haut de l'écran ne fait plus défiler la carte (« la barre de menu de
+- [x] **T2.8** En plein écran, la souris en haut de l'écran ne fait plus défiler la carte (« la barre de menu de
   Caesar empêche le déplacement »). *Fait, à vérifier par Alexandre* (D-046) : sur macOS, la position de la souris
   est relue auprès du système à chaque image (`SDL_GetGlobalMouseState`) et ramenée au bord de la fenêtre en plein
   écran ; les événements de mouvement ne suffisent pas (bande noire de l'encoche au-dessus de la fenêtre, positions
@@ -285,6 +285,18 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
   remplit dans son calcul de l'eau et ses réservoirs branchés dessus reçoivent l'eau. Test `mp_prepared_map_*`
   (après passage par un fichier, comme en partie) : réservoir branché plein, réservoir à l'écart sec ; captures du
   vrai jeu (`goto X Y`).
+
+- [x] **MC.4** Un grand bras de mer traverse la carte (D-047) : à 2 joueurs, les deux sur la même rive ; à 4, deux sur
+  chaque rive ; pas d'eau près du joueur de la pierre, sauf l'aqueduc de César. *Fait* : plan fixe par carte (villes,
+  points d'arrivée, routes de César, tracé de la mer), bras de mer d'environ 25 cases qui serpente d'un bord à
+  l'autre, pont de César pour navires sur la route qui le traverse, réservoir de César sur la côte et aqueduc vers le
+  joueur de la pierre, joueurs de la côte avec leur rivage dans leur zone de départ, points de pêche au large.
+  Test `mp_prepared_map_*` : mer d'un bord à l'autre et navires sous le pont, pont de César, aucune eau à moins de
+  45 cases du joueur de la pierre, au moins 30 cases de mer dans la zone de départ des autres, navires de chaque
+  joueur côtier jusqu'à sa côte. `simtool terrain` : une lettre par case pour relire la carte.
+- [x] **MC.5** Les prés fertiles n'apparaissaient qu'après un coup de pelle (retour d'Alexandre). *Fait* : le
+  générateur dessinait les prés avant l'herbe, qui les recouvrait ; même ordre que le chargement d'une carte. Test
+  `mp_prepared_map_*` : aucun pré dessiné autrement (5 785 l'étaient avant le correctif).
 
 ## ME — Eau (D-035)
 - [x] **ME.1** Réservoirs à niveau en multijoueur : vidage en environ 5 minutes, remplissage en environ 1 minute

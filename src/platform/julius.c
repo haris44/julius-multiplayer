@@ -458,13 +458,6 @@ static void sync_mouse_with_system(void)
         return;
     }
     const mouse *m = mouse_get();
-    // while the scrolling from the top of the screen is being looked into (D-046): what the game and the system see
-    static time_millis last_report;
-    if (setting_fullscreen() && (y < 60 || m->y < 60) && time_get_millis() - last_report >= 1000) {
-        last_report = time_get_millis();
-        SDL_Log("Mouse near the top: game (%d, %d), system (%d, %d), over the window %d, screen %d x %d", m->x, m->y,
-            x, y, inside, screen_width(), screen_height());
-    }
     // a difference of a pixel is rounding: left alone, it would cancel double clicks
     if (abs(m->x - x) >= 2 || abs(m->y - y) >= 2) {
         mouse_set_position(x, y);

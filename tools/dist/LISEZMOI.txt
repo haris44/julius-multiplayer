@@ -64,8 +64,10 @@ Les règles propres au multijoueur :
   auquel vous lui vendez chaque ressource et dites ce que vous lui achetez. Chaque mois, une caravane apporte au
   plus 8 chargements par la route ; l'acheteur paie à la livraison. Vous êtes prévenu quand un joueur change le
   prix d'une ressource que vous lui achetez. Acheter à l'empire coûte 50 % de plus.
-- Chaque joueur a un lac relié au bord de la carte par une rivière : ses docks reçoivent les navires de l'empire,
-  ses quais de pêche trouvent du poisson. Certains joueurs ont aussi l'aqueduc de César, qui part du lac central.
+- Un grand bras de mer traverse la carte d'ouest en est. À deux joueurs, les deux vivent sur la rive sud ; à
+  quatre, deux sur chaque rive, reliés par la route et le pont de César. Les joueurs de la côte y bâtissent leurs
+  docks (les navires de l'empire arrivent par le bord de la carte le plus proche) et leurs quais de pêche. Le joueur
+  de la pierre vit loin de l'eau : seul l'aqueduc de César, qui part d'un réservoir sur la côte, l'alimente.
   En multijoueur, un réservoir coupé de sa source garde son eau environ 5 minutes.
 - Brouillard de guerre (option du salon) : on ne voit que ce qu'on a découvert.
 
