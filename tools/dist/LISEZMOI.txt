@@ -63,8 +63,9 @@ Les règles propres au multijoueur :
   « Joueurs » : proposez une route commerciale à un joueur (elle s'ouvre quand il la propose aussi), fixez le prix
   auquel vous lui vendez chaque ressource et dites ce que vous lui achetez. Chaque mois, le vendeur envoie une
   caravane par ressource achetée, 8 chargements au plus, dans la limite de ce que l'acheteur peut payer ; il paie à
-  l'arrivée ce qui trouve place dans ses entrepôts, le reste repart. Chaque livraison est annoncée. Vous êtes
-  prévenu quand un joueur change le prix d'une ressource que vous lui achetez.
+  l'arrivée ce qui trouve place dans ses entrepôts, le reste repart. Chaque livraison est annoncée. Quand un
+  joueur change le prix d'une ressource que vous lui achetez, une alerte en plein écran vous donne l'ancien et le
+  nouveau prix ; « Voir le commerce » ouvre directement sa fenêtre.
 - Acheter à l'empire coûte 50 % de plus. L'empire ne vous vend pas ce que vous achetez à un joueur moins cher
   (prix en vert dans la fenêtre « Joueurs ») : même si ce joueur n'en a plus. Assécher le stock d'un rival fait
   partie du jeu ; pour revenir à l'empire, cessez d'acheter à ce joueur.

@@ -8,8 +8,8 @@
  * @file
  * Trade between players (doc/mp/DECISIONS.md D-019, D-043, D-048): every seller sets a price for each resource and
  * each buying player; every buyer says which resources he buys from which player. When a seller changes the price of
- * a resource a player buys from him, that player is told. The empire only sells a city what no player sells it
- * cheaper.
+ * a resource a player buys from him, that player sees a full-screen alert. The empire only sells a city what no
+ * player sells it cheaper.
  */
 
 /**
@@ -37,6 +37,26 @@ void mp_trade_set_buys_from(int seller, int resource, int buys);
  * Price changes told to the local player since the start (user interface, tests)
  */
 int mp_trade_notifications(void);
+
+/**
+ * A price change shown to the local buyer in a full-screen alert (window/mp_price_alert): one line per seller and
+ * resource, from the price he knew to the current one. Display state of this computer only, never saved: the
+ * simulation does not read it.
+ */
+typedef struct {
+    int seller;
+    int resource;
+    int old_price;
+    int new_price;
+} mp_price_alert;
+
+int mp_trade_num_price_alerts(void);
+const mp_price_alert *mp_trade_price_alert(int index);
+
+/**
+ * The local player closed the alert
+ */
+void mp_trade_clear_price_alerts(void);
 
 /**
  * Trade routes: open when both players proposed them (D-019)

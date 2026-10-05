@@ -7,4 +7,9 @@
  */
 void window_mp_trade_show(void);
 
+/**
+ * The same window, on the tab of that player
+ */
+void window_mp_trade_show_partner(int player_id);
+
 #endif // WINDOW_MP_TRADE_H

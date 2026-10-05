@@ -377,6 +377,11 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
   « n'a pu vous livrer (entrepôts pleins) »).
 - [x] **M8.11** Fenêtre « Joueurs » : colonne Empire (prix majoré, « - » si l'empire ne vend pas la ressource), le
   moins cher en vert ; textes resserrés (capture en réseau).
+- [x] **M8.12** Alerte plein écran chez l'acheteur quand un vendeur change le prix d'une ressource qu'il lui achète
+  (D-049, demande d'Alexandre). *Fait* : `window/mp_price_alert`, une ligne par vendeur et ressource ; test
+  `mp_trade_prices` (ligne créée, mise à jour, effacée au retour à l'ancien prix, fermée) ; `tools/mp-trade-test.sh` :
+  le client achète le marbre, l'hôte monte deux fois son prix, captures `price-alert.png` et
+  `price-alert-trade.png`.
 
 ## M9 — Guerre entre joueurs
 - [ ] **M9.1** Hostilité par propriétaire. En classique, elle reproduit exactement la matrice actuelle.

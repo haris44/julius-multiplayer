@@ -35,7 +35,7 @@ La commande `/suite` enchaîne tout cela, puis les tâches du jalon.
 | Comparer deux sauvegardes | `build/test/compare attendu.sav obtenu.sav` |
 | Lancer le vrai jeu sans fenêtre, piloté par un script | `tools/run-automation.sh test/automation/smoke.txt` (captures dans `build/automation/`, à regarder avec `Read`) |
 | Partie en réseau du vrai jeu, sans fenêtre (hôte + client scriptés) | `tools/mp-real-test.sh` |
-| Depuis le salon : partie seule, partie à deux, fenêtre du commerce (sans fenêtre) | `tools/mp-solo-test.sh`, `tools/mp-lobby-test.sh`, `tools/mp-trade-test.sh` |
+| Depuis le salon : partie seule, partie à deux, fenêtre du commerce et alerte de prix (sans fenêtre) | `tools/mp-solo-test.sh`, `tools/mp-lobby-test.sh`, `tools/mp-trade-test.sh` |
 | Lire une sauvegarde multijoueur ou une zone de la carte préparée | `build/test/simtool inspect PARTIE.mpsav`, `build/test/simtool terrain SAVE 2 X Y W H` |
 | Partie en réseau dans de vraies fenêtres, **pour Alexandre uniquement** | `tools/play-mp.sh [JOUEURS] [SAUVEGARDE]` |
 | Vrai jeu contre simulation de test (mêmes sommes de contrôle ?) | `tools/cross-check.sh SAVE TICKS PAS` |

@@ -5,6 +5,29 @@
 
 ---
 
+## 2026-10-06 — Alerte plein écran au changement de prix (M8.12, demande d'Alexandre)
+
+**Demande** : quand un joueur change ses prix, une alerte plein écran chez son client. Avant, Alexandre a vérifié
+que le prix de l'empire n'est pas indexé sur celui des joueurs (il ne l'est pas : table d'origine × 1,5 ; seul le
+prix par défaut d'un joueur, tant qu'il n'y a pas touché, suit le prix de base de l'empire).
+
+**Fait**
+- `window/mp_price_alert` (D-049) : fenêtre 640 × 480 sur la ville grisée, vendeur, ressource, ancien et nouveau
+  prix, « Voir le commerce » (onglet du vendeur, `window_mp_trade_show_partner`) et « OK ». Elle attend la vue de la
+  ville hors construction, comme les popups de l'original.
+- `mp/trade` : la file d'alertes remplace l'avertissement ; une ligne par vendeur et ressource, effacée si le prix
+  revient à l'ancien. État d'affichage local, non sauvegardé.
+- Tests : `mp_trade_prices` étendu (vérifié rouge en neutralisant l'effacement) ; `tools/mp-trade-test.sh` a son
+  propre script client (`mp-trade-client.txt`) : achat du marbre, deux « + » de l'hôte, une seule ligne 200 → 220.
+
+**Appris** : après une inversion de ligne pour voir un test échouer, la recompilation peut rater le retour (horodatage
+à la seconde) : supprimer le `.o` (piège déjà noté dans `CLAUDE.md`).
+
+**Prochaine étape** : M9 (guerre entre joueurs) avec M8.7. Points ouverts inchangés : vitesse des caravanes (D-048),
+densité de la forêt (D-044).
+
+---
+
 ## 2026-10-06 — Nettoyage avant la suite (demande d'Alexandre)
 
 **Demande** : nettoyer ce qui n'est pas sûr, pas propre ou trop itéré, pour le prochain développement.

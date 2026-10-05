@@ -71,21 +71,49 @@ static void append_number(uint8_t *text, int value)
     append(text, number);
 }
 
-// "Player 2 now sells marble at 180 Dn (was 150)", only on the computer of the buyer
+// price changes not yet seen by the local buyer (display only, see mp_price_alert); at most one per seller and resource
+static struct {
+    mp_price_alert items[PLAYER_CONTEXT_MAX_PLAYERS * RESOURCE_MAX];
+    int count;
+} alerts;
+
+// only on the computer of the buyer: a full-screen alert, drawn by window/mp_price_alert
 static void tell_buyer(int seller, int resource, int old_price, int new_price)
 {
     notifications++;
-    uint8_t text[200] = { 0 };
-    append(text, translation_for(TR_MP_PRICE_CHANGED_PLAYER));
-    append_number(text, seller + 1);
-    append(text, translation_for(TR_MP_PRICE_CHANGED_SELLS));
-    append(text, lang_get_string(23, resource));
-    append(text, (const uint8_t *) " ");
-    append_number(text, new_price);
-    append(text, translation_for(TR_MP_PRICE_CHANGED_WAS));
-    append_number(text, old_price);
-    append(text, (const uint8_t *) ")");
-    city_warning_show_to_local_player(text);
+    for (int i = 0; i < alerts.count; i++) {
+        mp_price_alert *alert = &alerts.items[i];
+        if (alert->seller != seller || alert->resource != resource) {
+            continue;
+        }
+        alert->new_price = new_price;
+        if (alert->new_price == alert->old_price) {
+            // back to the price the buyer knew: nothing to tell any more
+            alerts.count--;
+            memmove(alert, alert + 1, (alerts.count - i) * sizeof(mp_price_alert));
+        }
+        return;
+    }
+    mp_price_alert *alert = &alerts.items[alerts.count++];
+    alert->seller = seller;
+    alert->resource = resource;
+    alert->old_price = old_price;
+    alert->new_price = new_price;
+}
+
+int mp_trade_num_price_alerts(void)
+{
+    return alerts.count;
+}
+
+const mp_price_alert *mp_trade_price_alert(int index)
+{
+    return index >= 0 && index < alerts.count ? &alerts.items[index] : 0;
+}
+
+void mp_trade_clear_price_alerts(void)
+{
+    alerts.count = 0;
 }
 
 void mp_trade_set_price(int buyer, int resource, int price)
@@ -128,6 +156,7 @@ void mp_trade_reset_extra_state(void)
     memset(asked_prices, 0, sizeof(asked_prices));
     memset(buys, 0, sizeof(buys));
     memset(proposed, 0, sizeof(proposed));
+    alerts.count = 0;
 }
 
 void mp_trade_save_extra_state(buffer *buf)

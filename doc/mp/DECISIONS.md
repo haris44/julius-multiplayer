@@ -542,3 +542,17 @@
   en vert.
 - Le trajet d'une caravane suit la vitesse du jeu (environ 15 ticks par case) : d'un bout à l'autre de la carte
   pour 2, environ 45 jours. *À valider* : la distance compte-t-elle assez, ou faut-il des caravanes plus rapides ?
+
+### D-049 — Alerte plein écran quand un vendeur change son prix (précise D-043)
+- 2026-10-06 · **adoptée** (Alexandre : « je veux que lorsque un joueur change ses prix, une alerte plein écran
+  s'affiche de changement de prix pour le joueur client »)
+- Le petit avertissement en haut de la ville est remplacé par une fenêtre de la taille de l'écran d'origine
+  (640 × 480), ville grisée derrière : vendeur, ressource, ancien et nouveau prix (rouge en hausse, vert en baisse),
+  boutons « Voir le commerce » (fenêtre « Joueurs » sur l'onglet du vendeur) et « OK ».
+- Seul l'acheteur est alerté, et seulement pour une ressource qu'il achète à ce vendeur (comme avant D-049).
+- Une ligne par vendeur et ressource : plusieurs clics sur « + » ne donnent qu'une ligne, de l'ancien prix connu au
+  dernier ; un prix revenu à l'ancien efface la ligne. La fenêtre ouverte se met à jour en direct.
+- Comme les messages en popup de l'original, l'alerte attend que le joueur soit sur la vue de la ville, hors d'un
+  tracé de construction. La partie ne s'arrête pas (la simulation tourne en réseau quelle que soit la fenêtre).
+- La file des alertes est un état d'affichage de l'ordinateur de l'acheteur, ni sauvegardé ni lu par la simulation
+  (I3 intact).

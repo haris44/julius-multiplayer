@@ -230,3 +230,9 @@ void window_mp_trade_show(void)
     init();
     window_show(&window);
 }
+
+void window_mp_trade_show_partner(int player_id)
+{
+    data.partner = player_id;
+    window_mp_trade_show();
+}

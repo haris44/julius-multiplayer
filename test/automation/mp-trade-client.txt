@@ -1,0 +1,33 @@
+# Real game, network game from the lobby (client, player 2): buys marble from player 1, then sees the full-screen
+# alert when player 1 raises its price (see mp-trade-host.txt)
+wait 10
+click 400 500
+wait 10
+click 400 172
+# the hosted game appears in the list within a second or two
+wait 150
+click 530 174
+wait 5
+mpwait 0
+speed 300
+mpwait 400
+# trade advisor, Players, the marble row: I buy; then back to the city
+key 5
+wait 5
+click 610 80
+wait 5
+click 625 400
+wait 5
+screenshot build/automation/trade-client-buys.png
+rclick 400 300
+wait 5
+rclick 400 300
+wait 5
+mpwait 1000
+screenshot build/automation/price-alert.png
+# See trade: the window of trade with player 1
+click 288 512
+wait 5
+screenshot build/automation/price-alert-trade.png
+mpcheck
+quit

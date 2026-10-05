@@ -2241,6 +2241,18 @@ static int command_tradeprices(const char *file)
     CHECK(mp_trade_notifications() == told + 1, "the same price again: no notice");
     city_action(1, MP_ACTION_SET_SELL_PRICE, 0, RESOURCE_TIMBER, 99);
     CHECK(mp_trade_notifications() == told + 1, "another resource he does not buy: no notice");
+    // the full-screen alert of the buyer: one line per seller and resource, from the price he knew
+    const mp_price_alert *alert = mp_trade_num_price_alerts() == 1 ? mp_trade_price_alert(0) : 0;
+    CHECK(alert && alert->seller == 1 && alert->resource == RESOURCE_MARBLE && alert->old_price == 160 &&
+        alert->new_price == 180, "player 1 has an alert: marble from player 2, 160 to 180");
+    city_action(1, MP_ACTION_SET_SELL_PRICE, 0, RESOURCE_MARBLE, 200);
+    alert = mp_trade_num_price_alerts() == 1 ? mp_trade_price_alert(0) : 0;
+    CHECK(alert && alert->old_price == 160 && alert->new_price == 200, "a second change updates the same line");
+    city_action(1, MP_ACTION_SET_SELL_PRICE, 0, RESOURCE_MARBLE, 160);
+    CHECK(mp_trade_num_price_alerts() == 0, "back to the price he knew: no alert left");
+    city_action(1, MP_ACTION_SET_SELL_PRICE, 0, RESOURCE_MARBLE, 180);
+    mp_trade_clear_price_alerts();
+    CHECK(mp_trade_num_price_alerts() == 0, "the player closes the alert");
     city_action(1, MP_ACTION_SET_SELL_PRICE, 1, RESOURCE_MARBLE, 10);
     CHECK(mp_trade_price(1, 1, RESOURCE_MARBLE) == base, "nobody sells to himself");
 

@@ -144,7 +144,8 @@ Bon à savoir :
   hors zone refusée, missionnaire déplacé à la souris).
 - `tools/mp-lobby-test.sh` : hôte et client depuis le salon, 400 ticks sans désynchronisation.
 - `tools/mp-trade-test.sh` : idem, puis l'hôte ouvre le conseiller au commerce et la fenêtre « Joueurs »
-  (captures `build/automation/trade-*.png`).
+  (captures `build/automation/trade-*.png`) ; le client achète le marbre, l'hôte en monte le prix et le client voit
+  l'alerte plein écran (`price-alert.png`, puis `price-alert-trade.png` après « Voir le commerce »).
 - `test/automation/display.txt` : les options d'affichage (plus grande fenêtre qui tient sur l'écran).
 
 Sur macOS, le vrai jeu écrit aussi `julius-log.txt` dans le dossier des données (pas pendant l'automatisation) :

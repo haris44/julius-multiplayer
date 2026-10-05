@@ -31,6 +31,7 @@
 #include "widget/sidebar/military.h"
 #include "window/advisors.h"
 #include "window/file_dialog.h"
+#include "window/mp_price_alert.h"
 
 static void draw_background(void)
 {
@@ -118,6 +119,7 @@ static void draw_foreground(void)
     widget_city_draw_construction_cost_and_size();
     if (window_is(WINDOW_CITY)) {
         city_message_process_queue();
+        window_mp_price_alert_show_pending();
     }
 }
 
