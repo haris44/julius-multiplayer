@@ -87,6 +87,10 @@ Syntaxe des scripts d'automatisation et pièges : `doc/mp/TESTING.md` §3.
 - `julius --help` ne quitte pas sur macOS : il lance le jeu. Le pilote SDL `offscreen` ne marche pas (pas
   d'OpenGL), seul `dummy` fonctionne.
 - `tee fichier | head` tronque le fichier : ne pas l'utiliser pour capturer une sortie complète.
+- Après un `git stash` / `git stash pop` (par exemple pour vérifier qu'un test échoue sans le correctif), la
+  compilation peut ne pas reprendre les fichiers restaurés : supprimer leurs `.o` (`find build -name "x.c.o"
+  -delete`) avant de relancer les tests.
+- `ctest` lance les tests en parallèle : un test qui écrit un fichier doit lui donner un nom propre à ses arguments.
 
 ## Communication
 Avec Alexandre : en français, des résumés courts et concrets (fait, testé comment, suite). Les documents de

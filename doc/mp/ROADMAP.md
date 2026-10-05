@@ -232,10 +232,14 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
 ## MC — Cartes multijoueur préparées et César (D-033, D-034)
 - [ ] **MC.1** Ouvrages de César dessinés en blanc (la teinte actuelle ne fait que foncer les images) ; son aqueduc
   porte l'eau de son réservoir à toutes les cités. Le propriétaire existe déjà (T1.5).
-- [ ] **MC.2** Carte à 2 joueurs et carte à 4 joueurs (3 joueurs sur la carte à 4) : emplacements avec prés et
-  seulement les ressources autorisées, tout relié à la route principale, aqueduc de César près des joueurs loin de
-  l'eau, réservoir indestructible. *Critère* : test « chaque emplacement est relié et a ses ressources » ; relecture
-  par Alexandre sur captures.
+- [x] **MC.2** Carte à 2 joueurs et carte à 4 joueurs (3 joueurs sur la carte à 4) : emplacements avec prés et
+  seulement les ressources autorisées, tout relié à la route principale. *Fait* (à relire par Alexandre) :
+  `mp_mapgen_create_prepared`, toujours la même carte (200 cases à 2, 260 à 4) ; route de César de chaque point
+  d'arrivée au centre ; lac central pour le futur réservoir de César ; autorisations fixées par la carte. Test
+  `mp_prepared_map_*` (terre accessible, matériaux et autorisations de chaque emplacement, carte identique d'une
+  création à l'autre, cités qui grandissent) ; image : `MAPGEN_PICTURE=carte.ppm simtool preparedmap`. Les
+  cartes sont recalculées au lancement à partir des données du joueur : aucune `.mpmap` dans git (I4).
+- [ ] **MC.3** Aqueduc de César et son réservoir indestructible, près des joueurs loin de l'eau (avec ME.1).
 
 ## ME — Eau (D-035)
 - [ ] **ME.1** Réservoirs à niveau en multijoueur : vidage en environ 5 minutes, remplissage en environ 1 minute

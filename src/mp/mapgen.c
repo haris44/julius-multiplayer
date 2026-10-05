@@ -15,7 +15,9 @@
 #include "map/elevation.h"
 #include "map/figure.h"
 #include "map/grid.h"
+#include "empire/city.h"
 #include "map/image.h"
+#include "map/owner.h"
 #include "map/property.h"
 #include "map/random.h"
 #include "map/road_network.h"
@@ -27,6 +29,7 @@
 #include "mp/permissions.h"
 #include "scenario/editor_map.h"
 #include "scenario/property.h"
+#include "game/resource.h"
 
 #include <string.h>
 
@@ -37,7 +40,8 @@
 static struct {
     unsigned int seed;
     int size;
-    int num_players;
+    int num_players; // arrival points on the map (a prepared map for 4 may have 3 players)
+    int prepared;
     int center_x[MP_MAPGEN_MAX_PLAYERS];
     int center_y[MP_MAPGEN_MAX_PLAYERS];
     int entry_x[MP_MAPGEN_MAX_PLAYERS];
@@ -99,10 +103,13 @@ static int in_settlement(int x, int y)
         if (distance(x, y, data.center_x[p], data.center_y[p]) < CITY_RADIUS / 2) {
             return 1;
         }
-        int x_min = data.entry_x[p] < data.center_x[p] ? data.entry_x[p] : data.center_x[p];
-        int x_max = data.entry_x[p] > data.center_x[p] ? data.entry_x[p] : data.center_x[p];
-        int y_min = data.entry_y[p] < data.center_y[p] ? data.entry_y[p] : data.center_y[p];
-        int y_max = data.entry_y[p] > data.center_y[p] ? data.entry_y[p] : data.center_y[p];
+        // prepared maps: the main road goes on to the middle of the map
+        int to_x = data.prepared ? data.size / 2 : data.center_x[p];
+        int to_y = data.prepared ? data.size / 2 : data.center_y[p];
+        int x_min = data.entry_x[p] < to_x ? data.entry_x[p] : to_x;
+        int x_max = data.entry_x[p] > to_x ? data.entry_x[p] : to_x;
+        int y_min = data.entry_y[p] < to_y ? data.entry_y[p] : to_y;
+        int y_max = data.entry_y[p] > to_y ? data.entry_y[p] : to_y;
         if (x >= x_min - 2 && x <= x_max + 2 && y >= y_min - 2 && y <= y_max + 2) {
             return 1;
         }
@@ -193,15 +200,9 @@ int mp_mapgen_default_size(int num_players)
     return num_players <= 2 ? 200 : 260;
 }
 
-int mp_mapgen_create(const char *template_file, int num_players, int size, unsigned int seed)
+// loads the template, empties it and grows it to a map of `size` centred on the grid
+static int prepare_template(const char *template_file, int size)
 {
-    if (num_players < 1 || num_players > MP_MAPGEN_MAX_PLAYERS || size < MIN_SIZE || size > GRID_MAX_SIZE - 4) {
-        return 0;
-    }
-    data.seed = seed;
-    data.size = size;
-    data.num_players = num_players;
-
     // climate, empire, start year and funds of a map of the free game (or of a saved game: tests)
     size_t length = strlen(template_file);
     int is_map = length > 4 && (strcmp(template_file + length - 4, ".map") == 0 ||
@@ -223,17 +224,16 @@ int mp_mapgen_create(const char *template_file, int num_players, int size, unsig
     int x0 = map_data.start_offset % GRID_SIZE;
     int y0 = map_data.start_offset / GRID_SIZE;
     int start = (GRID_MAX_SIZE - size) / 2;
-    if (!mp_compose_relocate(GRID_MAX_SIZE, start - x0, start - y0) ||
-        !mp_compose_extend_map(0, 0, size - map_data.width, size - map_data.height)) {
-        return 0;
-    }
+    return mp_compose_relocate(GRID_MAX_SIZE, start - x0, start - y0) &&
+        mp_compose_extend_map(0, 0, size - map_data.width, size - map_data.height);
+}
 
-    // the terrain of the whole map
-    place_arrivals();
-    for (int y = 0; y < size; y++) {
-        for (int x = 0; x < size; x++) {
+static void set_terrain(int (*terrain_at)(int x, int y))
+{
+    for (int y = 0; y < data.size; y++) {
+        for (int x = 0; x < data.size; x++) {
             int grid_offset = map_grid_offset(x, y);
-            map_terrain_set(grid_offset, generated_terrain(x, y));
+            map_terrain_set(grid_offset, terrain_at(x, y));
             map_elevation_set(grid_offset, 0);
             map_property_set_multi_tile_size(grid_offset, 1);
             map_property_mark_draw_tile(grid_offset);
@@ -241,18 +241,23 @@ int mp_mapgen_create(const char *template_file, int num_players, int size, unsig
             map_image_set(grid_offset, 0);
         }
     }
-    for (int p = 0; p < num_players; p++) {
-        place_resources(p);
-    }
+}
+
+static void update_tile_images(void)
+{
     map_random_init();
     map_tiles_update_all_rocks();
-    map_tiles_update_region_trees(0, 0, size - 1, size - 1);
+    map_tiles_update_region_trees(0, 0, data.size - 1, data.size - 1);
     map_tiles_update_all_water();
     map_tiles_update_all_meadow();
     map_tiles_update_all_empty_land();
     map_tiles_update_all_elevation();
+    map_tiles_update_all_roads();
+}
 
-    // one empty city per player, each with its arrival point
+// one empty city per player, each with its arrival point
+static int add_cities(int num_players)
+{
     for (int p = 1; p < num_players; p++) {
         if (player_context_add_player() != p) {
             return 0;
@@ -262,15 +267,247 @@ int mp_mapgen_create(const char *template_file, int num_players, int size, unsig
         set_arrival(p);
     }
     player_context_switch(0);
-    mp_permissions_share_out();
+    return 1;
+}
+
+static void update_networks(int num_players)
+{
     map_routing_update_all();
     map_road_network_update_grid();
     for (int p = 0; p < num_players; p++) {
         player_context_switch(p);
         map_road_network_update_largest();
-        map_water_supply_init_ranges_from_terrain(0, 0, size - 1, size - 1);
+        map_water_supply_init_ranges_from_terrain(0, 0, data.size - 1, data.size - 1);
     }
     player_context_switch(0);
+}
+
+int mp_mapgen_create(const char *template_file, int num_players, int size, unsigned int seed)
+{
+    if (num_players < 1 || num_players > MP_MAPGEN_MAX_PLAYERS || size < MIN_SIZE || size > GRID_MAX_SIZE - 4) {
+        return 0;
+    }
+    data.seed = seed;
+    data.size = size;
+    data.num_players = num_players;
+    data.prepared = 0;
+    if (!prepare_template(template_file, size)) {
+        return 0;
+    }
+    place_arrivals();
+    set_terrain(generated_terrain);
+    for (int p = 0; p < num_players; p++) {
+        place_resources(p);
+    }
+    update_tile_images();
+    if (!add_cities(num_players)) {
+        return 0;
+    }
+    mp_permissions_share_out();
+    update_networks(num_players);
+    return 1;
+}
+
+// prepared multiplayer maps (D-033): each arrival point offers meadows and only the materials its player may
+// exploit; provisional share, to be checked by Alexandre
+#define PREPARED_SEED 2026
+#define MAX_SLOT_RESOURCES 3
+#define WILD_DISTANCE 45
+
+typedef struct {
+    int resources[MAX_SLOT_RESOURCES]; // materials the player may exploit, RESOURCE_NONE ends the list
+    int has_water;
+} map_slot;
+
+static const int SHARED_RAW_MATERIALS[] = {
+    RESOURCE_IRON, RESOURCE_CLAY, RESOURCE_TIMBER, RESOURCE_OLIVES, RESOURCE_VINES, RESOURCE_MARBLE
+};
+#define NUM_SHARED_RAW_MATERIALS (int) (sizeof(SHARED_RAW_MATERIALS) / sizeof(SHARED_RAW_MATERIALS[0]))
+
+// west, east: the marble player has neither water nor clay, which needs water
+static const map_slot SLOTS_2[2] = {
+    { { RESOURCE_IRON, RESOURCE_CLAY, RESOURCE_VINES }, 1 },
+    { { RESOURCE_MARBLE, RESOURCE_TIMBER, RESOURCE_OLIVES }, 0 },
+};
+
+// west, east, north, south
+static const map_slot SLOTS_4[4] = {
+    { { RESOURCE_IRON, RESOURCE_OLIVES, RESOURCE_NONE }, 0 },
+    { { RESOURCE_MARBLE, RESOURCE_VINES, RESOURCE_NONE }, 0 },
+    { { RESOURCE_CLAY, RESOURCE_TIMBER, RESOURCE_NONE }, 1 },
+    { { RESOURCE_TIMBER, RESOURCE_OLIVES, RESOURCE_NONE }, 1 },
+};
+
+static const map_slot *slot_of(int slot)
+{
+    return data.num_players <= 2 ? &SLOTS_2[slot] : &SLOTS_4[slot];
+}
+
+static int slot_has(int slot, int resource)
+{
+    for (int i = 0; i < MAX_SLOT_RESOURCES; i++) {
+        if (slot_of(slot)->resources[i] == resource) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static int distance_to_nearest_city(int x, int y)
+{
+    int nearest = data.size;
+    for (int p = 0; p < data.num_players; p++) {
+        int d = distance(x, y, data.center_x[p], data.center_y[p]);
+        nearest = d < nearest ? d : nearest;
+    }
+    return nearest;
+}
+
+// two octaves: shapes less square than the lattice of the noise
+static int soft_noise(int x, int y, int layer)
+{
+    return (2 * noise(x, y, layer) + noise(2 * x + 7, 2 * y + 3, layer + 8)) / 3;
+}
+
+static int prepared_terrain(int x, int y)
+{
+    if (in_settlement(x, y)) {
+        return soft_noise(x, y, 4) > 150 ? TERRAIN_MEADOW : 0;
+    }
+    // far from every city, woods that thin out towards the cities; near them, nothing that one player may exploit
+    // and another not
+    int wild = distance_to_nearest_city(x, y) - WILD_DISTANCE;
+    if (wild > 0 && soft_noise(x, y, 1) > 175 - (wild < 15 ? wild : 15) * 2 + 30) {
+        return TERRAIN_TREE;
+    }
+    return soft_noise(x, y, 3) > 150 ? TERRAIN_MEADOW : 0;
+}
+
+// a round patch with a slightly irregular edge
+static void set_blob(int x, int y, int radius, int terrain)
+{
+    for (int yy = y - radius - 2; yy <= y + radius + 2; yy++) {
+        for (int xx = x - radius - 2; xx <= x + radius + 2; xx++) {
+            if (xx <= 1 || yy <= 1 || xx >= data.size - 2 || yy >= data.size - 2 || in_settlement(xx, yy)) {
+                continue;
+            }
+            int dx = xx - x, dy = yy - y;
+            int r = radius * 4 + (soft_noise(xx * 4, yy * 4, 5) - 128) / 24; // in quarter tiles
+            if (16 * (dx * dx + dy * dy) <= r * r) {
+                map_terrain_set(map_grid_offset(xx, yy), terrain);
+            }
+        }
+    }
+}
+
+// the four corners of a city, away from its main road
+static void slot_corner(int slot, int corner, int *x, int *y)
+{
+    int r = CITY_RADIUS / 2 + 5;
+    *x = data.center_x[slot] + (corner & 1 ? r : -r);
+    *y = data.center_y[slot] + (corner & 2 ? r : -r);
+}
+
+static void place_slot(int slot)
+{
+    int x, y, corner = 0;
+    if (slot_of(slot)->has_water) {
+        slot_corner(slot, corner++, &x, &y);
+        set_blob(x, y, 6, TERRAIN_WATER);
+    }
+    if (slot_has(slot, RESOURCE_IRON) || slot_has(slot, RESOURCE_MARBLE)) {
+        slot_corner(slot, corner++, &x, &y);
+        set_blob(x, y, 4, TERRAIN_ROCK);
+    }
+    if (slot_has(slot, RESOURCE_TIMBER)) {
+        slot_corner(slot, corner++, &x, &y);
+        set_blob(x, y, 6, TERRAIN_TREE);
+    }
+    // farms: wheat, vegetables, fruit, pigs, and olives or vines when allowed
+    slot_corner(slot, corner, &x, &y);
+    set_blob(x, y, 6, TERRAIN_MEADOW);
+}
+
+// the main road of Caesar: from every arrival point to the middle of the map
+static void place_main_road(void)
+{
+    int middle = data.size / 2;
+    for (int p = 0; p < data.num_players; p++) {
+        int x = data.entry_x[p], y = data.entry_y[p];
+        while (1) {
+            int grid_offset = map_grid_offset(x, y);
+            map_terrain_set(grid_offset, TERRAIN_ROAD);
+            map_owner_set(grid_offset, MAP_OWNER_CAESAR);
+            if (x == middle && y == middle) {
+                break;
+            }
+            x += x < middle ? 1 : x > middle ? -1 : 0;
+            y += y < middle ? 1 : y > middle ? -1 : 0;
+        }
+    }
+}
+
+static void set_slot_permissions(int num_players)
+{
+    for (int p = 0; p < num_players; p++) {
+        player_context_switch(p);
+        for (int i = 0; i < NUM_SHARED_RAW_MATERIALS; i++) {
+            empire_city_set_our_production_allowed(SHARED_RAW_MATERIALS[i], slot_has(p, SHARED_RAW_MATERIALS[i]));
+        }
+    }
+    player_context_switch(0);
+}
+
+int mp_mapgen_slot_allows(int player_id, int resource)
+{
+    return data.prepared && slot_has(player_id, resource);
+}
+
+int mp_mapgen_slot_has_water(int player_id)
+{
+    return data.prepared && slot_of(player_id)->has_water;
+}
+
+void mp_mapgen_entry_point(int player_id, int *x, int *y)
+{
+    *x = data.entry_x[player_id];
+    *y = data.entry_y[player_id];
+}
+
+int mp_mapgen_prepared_size(int num_players)
+{
+    return num_players <= 2 ? 200 : 260;
+}
+
+int mp_mapgen_create_prepared(const char *template_file, int num_players)
+{
+    if (num_players < 1 || num_players > MP_MAPGEN_MAX_PLAYERS) {
+        return 0;
+    }
+    data.seed = PREPARED_SEED;
+    data.size = mp_mapgen_prepared_size(num_players);
+    // three players play on the map for four, one arrival point stays free
+    data.num_players = num_players <= 2 ? 2 : 4;
+    data.prepared = 1;
+    if (!prepare_template(template_file, data.size)) {
+        return 0;
+    }
+    place_arrivals();
+    set_terrain(prepared_terrain);
+    for (int slot = 0; slot < data.num_players; slot++) {
+        place_slot(slot);
+    }
+    // a lake in the middle, for the reservoir of Caesar (D-034)
+    set_blob(data.size / 2 + 14, data.size / 2 - 14, 6, TERRAIN_WATER);
+    map_owner_clear_all();
+    place_main_road();
+    update_tile_images();
+    if (!add_cities(num_players)) {
+        return 0;
+    }
+    data.num_players = num_players;
+    set_slot_permissions(num_players);
+    update_networks(num_players);
     return 1;
 }
 

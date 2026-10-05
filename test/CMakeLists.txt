@@ -284,6 +284,12 @@ foreach(save brugle-lugdunum valentia57 kknight)
 endforeach()
 
 # Generated maps (M6.2): each player settles at its arrival point and gets immigrants; network game on one
+# Prepared multiplayer maps (MC.2, D-033): land reached from the main road, materials of each arrival point,
+# permissions, the same map every time, cities that grow; three players play on the map for four
+foreach(players 2 3 4)
+    add_test(NAME mp_prepared_map_${players}_players COMMAND simtool preparedmap brugle-massilia-start.sav ${players} 4000)
+endforeach()
+
 # T1.5 (D-034): the roads of Caesar stay, untinted, and serve every city
 add_test(NAME mp_caesar_roads COMMAND simtool caesarroads brugle-massilia-start.sav)
 foreach(players 2 4)

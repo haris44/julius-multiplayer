@@ -53,6 +53,7 @@
 #include "mp/actions.h"
 #include "mp/compose.h"
 #include "mp/savegame.h"
+#include "game/resource.h"
 #include "mp/colors.h"
 #include "mp/lockstep.h"
 #include "mp/session.h"
@@ -111,6 +112,8 @@ static int usage(void)
     printf("                                         none of its buildings\n");
     printf("  simtool neighbours SAVE TICKS          two copies of the city joined by a road: walkers cross,\n");
     printf("                                         but no city acts on the buildings of the other\n");
+    printf("  simtool preparedmap SAVE PLAYERS TICKS prepared map: land reached from the main road, materials of\n");
+    printf("                                         each arrival point, permissions; MAPGEN_PICTURE=F.ppm\n");
     printf("  simtool caesarroads SAVE               generated map: no player clears a road of Caesar, every\n");
     printf("                                         city uses it\n");
     printf("  simtool viewcorners SAVE PLAYERS       generated map: the camera reaches its four corners\n");
@@ -1396,6 +1399,164 @@ static int command_caesarroads(const char *file)
     return failures ? 1 : 0;
 }
 
+// picture of a generated map, one square of `scale` pixels per tile (PPM), for Alexandre to look at the map
+static void write_map_picture(const char *filename, int size, int scale)
+{
+    FILE *fp = fopen(filename, "wb");
+    if (!fp) {
+        return;
+    }
+    fprintf(fp, "P6\n%d %d\n255\n", size * scale, size * scale);
+    for (int y = 0; y < size * scale; y++) {
+        for (int x = 0; x < size * scale; x++) {
+            int offset = map_grid_offset(x / scale, y / scale);
+            int t = map_terrain_get(offset);
+            unsigned char c[3] = { 150, 170, 90 };
+            if (t & TERRAIN_ROAD) {
+                int caesar = map_owner_get_claimed(offset) == MAP_OWNER_CAESAR;
+                c[0] = caesar ? 240 : 140; c[1] = caesar ? 240 : 110; c[2] = caesar ? 240 : 80;
+            } else if (t & TERRAIN_WATER) {
+                c[0] = 50; c[1] = 90; c[2] = 200;
+            } else if (t & TERRAIN_ROCK) {
+                c[0] = 120; c[1] = 120; c[2] = 120;
+            } else if (t & TERRAIN_TREE) {
+                c[0] = 30; c[1] = 100; c[2] = 40;
+            } else if (t & TERRAIN_MEADOW) {
+                c[0] = 210; c[1] = 200; c[2] = 90;
+            }
+            fwrite(c, 1, 3, fp);
+        }
+    }
+    fclose(fp);
+    printf("%s written\n", filename);
+}
+
+// land that roads may reach from the first arrival point: everything but water and rock (trees can be cleared)
+static int count_unreachable_land(int size)
+{
+    static uint8_t seen[GRID_MAX_SIZE * GRID_MAX_SIZE];
+    static int queue[GRID_MAX_SIZE * GRID_MAX_SIZE];
+    memset(seen, 0, sizeof(seen));
+    int ex, ey;
+    mp_mapgen_entry_point(0, &ex, &ey);
+    int head = 0, tail = 0;
+    queue[tail++] = ey * size + ex;
+    seen[ey * size + ex] = 1;
+    while (head < tail) {
+        int i = queue[head++];
+        int x = i % size, y = i / size;
+        static const int DX[] = { 1, -1, 0, 0 };
+        static const int DY[] = { 0, 0, 1, -1 };
+        for (int d = 0; d < 4; d++) {
+            int nx = x + DX[d], ny = y + DY[d];
+            if (nx < 0 || ny < 0 || nx >= size || ny >= size || seen[ny * size + nx] ||
+                map_terrain_is(map_grid_offset(nx, ny), TERRAIN_WATER | TERRAIN_ROCK)) {
+                continue;
+            }
+            seen[ny * size + nx] = 1;
+            queue[tail++] = ny * size + nx;
+        }
+    }
+    int unreachable = 0;
+    for (int y = 0; y < size; y++) {
+        for (int x = 0; x < size; x++) {
+            if (!seen[y * size + x] && !map_terrain_is(map_grid_offset(x, y), TERRAIN_WATER | TERRAIN_ROCK)) {
+                unreachable++;
+            }
+        }
+    }
+    return unreachable;
+}
+
+static int count_terrain_near(int cx, int cy, int radius, int terrain)
+{
+    int count = 0;
+    for (int y = cy - radius; y <= cy + radius; y++) {
+        for (int x = cx - radius; x <= cx + radius; x++) {
+            count += map_terrain_is(map_grid_offset(x, y), terrain) ? 1 : 0;
+        }
+    }
+    return count;
+}
+
+// the prepared maps (D-033): all land reached from the main road, each arrival point with its materials only,
+// permissions that match, a main road of Caesar, the same map every time, and cities that grow
+static int command_preparedmap(const char *file, int num_players, int ticks)
+{
+    if (!mp_mapgen_create_prepared(file, num_players)) {
+        printf("Unable to create the prepared map\n");
+        return 2;
+    }
+    int size = mp_mapgen_prepared_size(num_players);
+    if (getenv("MAPGEN_PICTURE")) {
+        write_map_picture(getenv("MAPGEN_PICTURE"), size, 3);
+    }
+    int failures = 0;
+    int unreachable = count_unreachable_land(size);
+    printf("land out of reach of the main road: %d tiles\n", unreachable);
+    failures += unreachable != 0;
+    for (int p = 0; p < num_players; p++) {
+        int cx, cy;
+        mp_mapgen_city_center(p, &cx, &cy);
+        int water = count_terrain_near(cx, cy, 26, TERRAIN_WATER);
+        int rock = count_terrain_near(cx, cy, 26, TERRAIN_ROCK);
+        int trees = count_terrain_near(cx, cy, 26, TERRAIN_TREE);
+        int meadow = count_terrain_near(cx, cy, 26, TERRAIN_MEADOW);
+        int wants_rock = mp_mapgen_slot_allows(p, RESOURCE_IRON) || mp_mapgen_slot_allows(p, RESOURCE_MARBLE);
+        int wants_trees = mp_mapgen_slot_allows(p, RESOURCE_TIMBER);
+        int wants_water = mp_mapgen_slot_has_water(p) || mp_mapgen_slot_allows(p, RESOURCE_CLAY);
+        printf("player %d: water %d, rock %d, trees %d, meadow %d\n", p + 1, water, rock, trees, meadow);
+        if ((water > 0) != wants_water || (rock > 0) != wants_rock || (trees > 0) != wants_trees || meadow < 50) {
+            printf("  the land around player %d does not match its materials\n", p + 1);
+            failures++;
+        }
+        player_context_switch(p);
+        static const int MATERIALS[] = { RESOURCE_IRON, RESOURCE_CLAY, RESOURCE_TIMBER, RESOURCE_OLIVES,
+            RESOURCE_VINES, RESOURCE_MARBLE };
+        for (int i = 0; i < 6; i++) {
+            if (empire_city_our_production_allowed(MATERIALS[i]) != mp_mapgen_slot_allows(p, MATERIALS[i])) {
+                printf("  player %d: permission for material %d does not match the map\n", p + 1, MATERIALS[i]);
+                failures++;
+            }
+        }
+        player_context_switch(0);
+        int ex, ey;
+        mp_mapgen_entry_point(p, &ex, &ey);
+        int entry = map_grid_offset(ex, ey);
+        if (!map_terrain_is(entry, TERRAIN_ROAD) || map_owner_get_claimed(entry) != MAP_OWNER_CAESAR) {
+            printf("  player %d: no road of Caesar at the arrival point\n", p + 1);
+            failures++;
+        }
+    }
+    uint64_t first = mp_checksum_state();
+    player_context_switch(0);
+    player_context_set_num_players(1);
+    if (!mp_mapgen_create_prepared(file, num_players) || mp_checksum_state() != first) {
+        printf("DIFFERENT: the prepared map changed between two creations\n");
+        return 1;
+    }
+    for (int p = 0; p < num_players; p++) {
+        settle_city(p, size);
+    }
+    map_road_network_update_grid();
+    for (int p = 0; p < num_players; p++) {
+        player_context_switch(p);
+        map_road_network_update_largest();
+    }
+    player_context_switch(0);
+    run_trace(ticks, ticks, 0, 0);
+    for (int p = 0; p < num_players; p++) {
+        player_context_switch(p);
+        printf("player %d: population %d\n", p + 1, city_population());
+        failures += city_population() == 0;
+    }
+    player_context_switch(0);
+    player_context_set_num_players(1);
+    printf("%s\n", failures ? "DIFFERENT: the prepared map is not as designed" :
+        "Identical: the prepared map is as designed");
+    return failures ? 1 : 0;
+}
+
 // the camera of a player reaches every corner of a generated map, after it went through a .mpmap file as in a game
 static int command_viewcorners(const char *file, int num_players)
 {
@@ -1896,6 +2057,8 @@ int main(int argc, char **argv)
         result = command_figtrace(file, atoi(argv[3]), atoi(argv[4]), atoi(argv[5]), atoi(argv[6]));
     } else if (strcmp(command, "caesarfree") == 0 && argc > 3) {
         result = command_caesarfree(file, ticks);
+    } else if (strcmp(command, "preparedmap") == 0 && argc > 4) {
+        result = command_preparedmap(file, atoi(argv[3]), atoi(argv[4]));
     } else if (strcmp(command, "caesarroads") == 0) {
         result = command_caesarroads(file);
     } else if (strcmp(command, "viewcorners") == 0 && argc > 3) {
