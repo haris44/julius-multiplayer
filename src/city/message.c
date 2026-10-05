@@ -8,6 +8,7 @@
 #include "figure/formation.h"
 #include "game/time.h"
 #include "graphics/window.h"
+#include "mp/session.h"
 #include "sound/effect.h"
 #include "window/message_dialog.h"
 #include "game/player_context.h"
@@ -188,7 +189,9 @@ void city_message_post(int use_popup, int message_type, int param1, int param2)
         data.problem_count = 1;
         window_invalidate();
     }
-    if (use_popup && window_is(WINDOW_CITY)) {
+    if (mp_session_is_other_players_city()) {
+        // the message stays in that player's list; its popup and sound are on that player's computer
+    } else if (use_popup && window_is(WINDOW_CITY)) {
         show_message_popup(id);
     } else if (use_popup) {
         // add to queue to be processed when player returns to city

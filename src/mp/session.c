@@ -40,6 +40,11 @@ int mp_session_local_player_id(void)
     return data.local_player_id;
 }
 
+int mp_session_is_other_players_city(void)
+{
+    return player_context_num_players() > 1 && player_context_current() != data.local_player_id;
+}
+
 int mp_session_is_networked(void)
 {
     return data.networked;

@@ -109,6 +109,8 @@ static int usage(void)
     printf("                                         none of its buildings\n");
     printf("  simtool neighbours SAVE TICKS          two copies of the city joined by a road: walkers cross,\n");
     printf("                                         but no city acts on the buildings of the other\n");
+    printf("  simtool privatepopups SAVE TICKS       twin cities: the popups and sounds of player 2 do not\n");
+    printf("                                         reach player 1\n");
     printf("  simtool caesarfree SAVE TICKS          Caesar (requests, anger, salary...) acts in a classic game\n");
     printf("                                         and not in a multiplayer game\n");
     printf("  simtool mpresume SAVE TICKS MORE       twin cities: saving after TICKS (.mpsav), then loading it and\n");
@@ -880,6 +882,35 @@ static int command_twins(const char *file, int ticks)
     print_stats("twin", &second_stats);
     printf("%s after %d ticks\n", failures ? "DIFFERENT" : "Identical", ticks);
     return failures ? 1 : 0;
+}
+
+extern int stub_city_message_popups[2];
+extern int stub_sounds_played[2];
+
+// every computer runs every city: the popups and sounds of the twin (player 2) never reach player 1
+static int command_privatepopups(const char *file, int ticks)
+{
+    int width, height;
+    if (!setup_twin_map(file, 2, &width, &height)) {
+        printf("Unable to create the twin city\n");
+        return 2;
+    }
+    memset(stub_city_message_popups, 0, sizeof(stub_city_message_popups));
+    memset(stub_sounds_played, 0, sizeof(stub_sounds_played));
+    run_trace(ticks, ticks, 0, 0);
+    player_context_set_num_players(1);
+    printf("own city: %d popups, %d sounds; other player's city: %d popups, %d sounds\n",
+        stub_city_message_popups[0], stub_sounds_played[0], stub_city_message_popups[1], stub_sounds_played[1]);
+    if (!stub_city_message_popups[0]) {
+        printf("FAILED: no popup in the own city either, the test proves nothing\n");
+        return 1;
+    }
+    if (stub_city_message_popups[1] || stub_sounds_played[1]) {
+        printf("DIFFERENT: the city of the other player shows its popups or plays its sounds here\n");
+        return 1;
+    }
+    printf("Identical: only the own city shows popups and plays sounds\n");
+    return 0;
 }
 
 // first figure of the twin that is not the copy of its counterpart in the first city
@@ -1751,6 +1782,8 @@ int main(int argc, char **argv)
         result = command_figtrace(file, atoi(argv[3]), atoi(argv[4]), atoi(argv[5]), atoi(argv[6]));
     } else if (strcmp(command, "caesarfree") == 0 && argc > 3) {
         result = command_caesarfree(file, ticks);
+    } else if (strcmp(command, "privatepopups") == 0 && argc > 3) {
+        result = command_privatepopups(file, ticks);
     } else if (strcmp(command, "twins") == 0 && argc > 3) {
         result = command_twins(file, ticks);
     } else if (strcmp(command, "mpnode") == 0) {

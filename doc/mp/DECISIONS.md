@@ -124,7 +124,9 @@
   conservés.
 
 ### D-018 — Construction partout, branchements possibles, économie propre à chaque cité
-- 2026-10-04 · **adoptée** (décision d'Alexandre) ; la règle « chacun ne sert que sa cité » est **à valider** (H11)
+- 2026-10-04 · **adoptée** (décision d'Alexandre) ; « construire partout » **remplacé par D-036** ; la règle « chacun
+  ne sert que sa cité » est confirmée par Alexandre le 2026-10-05 (Q2 à Q4 : marchandes et immigrés circulent,
+  la désirabilité passe)
 - On construit n'importe où sur une case libre, comme dans AoE2. Les routes, aqueducs et murs de deux joueurs
   peuvent se toucher et se brancher.
 - Propriété :
@@ -244,7 +246,8 @@
   brute de la mémoire de chaque cité sert seulement d'**oracle de test** (`mpresume`), jamais de format.
 
 ### D-025 — Partie réseau provisoire : une copie de la cité de départ par joueur
-- 2026-10-04 · **adoptée, provisoire** (en attendant M4.4 et les cartes de M6) · *à valider* par Alexandre
+- 2026-10-04 · **remplacée par D-033** (le salon ne propose plus de copie de carte classique ; l'outil reste pour les
+  tests)
 - Par défaut, une partie réseau donne à chaque joueur **sa propre cité** : l'hôte charge la sauvegarde classique,
   la recopie une fois par joueur sur une grille de 512 (carré 2 × 2, 24 cases de roche entre les cités, joueurs 1 et 2
   en diagonale), écrit le `.mpsav`, le recharge et l'envoie aux clients. Chaque machine affiche sa cité : trésorerie,
@@ -322,3 +325,74 @@
   ensuite « Nouvelle carrière ». La campagne n'est pas retirée : l'invariant I2 la neutralise par le mode, et le
   jeu classique sert de référence aux tests de parité. La retirer du menu reste possible si Alexandre le souhaite.
 
+### D-032 — Popups, sons et avertissements : seulement chez le joueur de la cité
+- 2026-10-05 · **adoptée** (retours de TEST_1, T1.1)
+- Chaque machine calcule toutes les cités. Les messages restaient bien propres à chaque cité, mais la fenêtre et le
+  son d'un message, et les effets sonores (incendie, effondrement, séisme), sortaient aussi chez les autres joueurs :
+  « Mars est en colère » pouvait concerner le voisin. `mp_session_is_other_players_city()` les coupe pendant le tour
+  d'une autre cité. Les messages ne sont pas dans la somme de contrôle : aucun risque de désynchronisation.
+
+### D-033 — Seulement des cartes multijoueur préparées (remplace l'option « copie de carte » de D-025 et précise D-030)
+- 2026-10-05 · **adoptée** (Alexandre, QUESTIONS_1 Q13 à Q17)
+- Le salon ne propose plus que des cartes multijoueur : pour l'instant **une carte à 2 joueurs et une à 4**,
+  produites par Claude et relues par Alexandre. À 3 joueurs, on joue sur la carte à 4 avec un emplacement vide.
+- Chaque emplacement de départ offre **des prés cultivables** et **seulement les ressources que son joueur a le droit
+  d'exploiter** (D-020), pour forcer le commerce. Toutes les zones constructibles sont reliées à la route principale.
+- Le joueur qui reçoit le marbre est celui qui n'a ni eau ni commerce fluvial : c'est sa contrepartie.
+- La génération aléatoire (D-030) reste un outil pour produire ces cartes ; elle reviendra dans le salon plus tard.
+
+### D-034 — César, propriétaire neutre des routes et aqueducs de la carte (précise D-026)
+- 2026-10-05 · **adoptée** (Alexandre, Q11, Q12, Q35 à Q40)
+- Les routes et l'aqueduc posés par la carte appartiennent à **César**, un propriétaire neutre qui n'agit pas : il
+  ne joue pas, ne demande rien (E8 tient toujours). Ses ouvrages sont dessinés en blanc, jamais à la couleur d'un
+  joueur.
+- Ses routes sont **indestructibles**. Son aqueduc l'est aussi jusqu'à la guerre (M9), puis les soldats des joueurs
+  et les envahisseurs pourront le casser ; on peut construire des routes dessous.
+- Un seul réseau d'aqueduc, alimenté dès le départ par un **réservoir indestructible**, passe près des joueurs
+  éloignés de l'eau, et seulement d'eux. Le casser pour priver un voisin d'eau est une arme voulue.
+
+### D-035 — Réservoirs qui se vident et se remplissent (multijoueur seulement)
+- 2026-10-05 · **adoptée** (Alexandre, Q41 à Q43) ; durées **à régler** en jeu
+- En multijoueur, **tous** les réservoirs ont un niveau. Coupé de sa source, un réservoir continue d'alimenter
+  fontaines et bains jusqu'à être vide, en environ 5 minutes à vitesse normale ; il se remplit en environ 1 minute.
+  Les durées sont comptées en temps de jeu (ticks), jamais en temps réel (I3). Le mode classique ne change pas.
+
+### D-036 — Territoires : la zone constructible suit la ville vivante (remplace « construire partout » de D-018)
+- 2026-10-05 · **adoptée** (Alexandre, Q18 à Q25 et précision du 2026-10-05) ; rayon et délais **à régler**
+- But : empêcher qu'on aille construire une tour à côté d'un adversaire (« rush »), **sans jamais brider** la
+  croissance d'une ville ou d'un nouveau quartier.
+- On construit à **20 cases** au plus de l'un de ses bâtiments « installés » (maison habitée, bâtiment avec des
+  employés) ou d'une mission. Routes, murs et aqueducs ne donnent pas de zone, statues, jardins et bâtiments vides
+  non plus : une chaîne de bâtiments bon marché ne fait pas avancer. Les blocs de 8 bâtiments envisagés dans
+  TEST_1 sont abandonnés : ils permettaient de s'étendre sans fin.
+- Routes, aqueducs (et murs) se construisent partout, pour relier les cités.
+- Une case revendiquée appartient au premier joueur qui l'a obtenue : on ne construit jamais dans la zone d'un
+  autre. Sa ville étant entourée de 20 cases à lui, aucune tour adverse ne peut s'en approcher.
+- Si une mission est détruite et que des bâtiments sortent de toute zone, un message prévient et ils s'effondrent
+  après un délai de grâce (environ 3 mois de jeu) s'ils ne sont pas de nouveau couverts.
+- La zone est tracée par une ligne de la couleur du joueur (remplace la teinte forte des bâtiments, voir D-039).
+
+### D-037 — La mission et le missionnaire
+- 2026-10-05 · **adoptée** (Alexandre, Q22 à Q28, Q45)
+- En multijoueur, la mission ne sert plus aux indigènes (il n'y en a plus) : elle **prend possession d'une zone** et
+  **forme des missionnaires**. La première mission est gratuite, les suivantes coûtent du **marbre** (achetable aussi
+  à l'empire). Elle n'a pas d'autre rôle et peut être détruite.
+- Chaque joueur commence avec un **missionnaire**, déplacé comme une légion, qui suit les règles de terrain des
+  soldats. On construit une mission à 20 cases au plus d'un missionnaire. Il peut mourir ; une mission en forme un
+  nouveau, cher.
+- Ce n'est pas une option : c'est la nouvelle façon de s'installer.
+
+### D-038 — Brouillard de guerre (option du salon)
+- 2026-10-05 · **adoptée** (Alexandre, Q29 à Q32, Q45)
+- Désactivable dans le salon. Tout ce qui appartient au joueur (bâtiments, personnages, routes, missionnaire)
+  éclaire 20 cases ; une zone découverte reste visible pour le terrain, sans ce qui bouge. La minicarte respecte le
+  brouillard et les scores adverses sont cachés.
+- Purement local à l'affichage : chaque machine calcule tout, un tricheur pourrait voir à travers, accepté entre
+  amis.
+
+### D-039 — Apparence des joueurs : teinte légère, variantes générées au lancement
+- 2026-10-05 · **adoptée** (Alexandre, Q33 à Q35)
+- Les bâtiments adverses gardent une teinte **légère** ; à terme, des variantes de couleur (toits de brique,
+  d'ardoise…). César en blanc.
+- Toute image modifiée est **calculée au lancement** à partir des données du joueur : une image dérivée de Caesar III
+  ne va jamais dans git (I4). Des dessins entièrement nouveaux d'Alexandre pourront s'y ajouter.

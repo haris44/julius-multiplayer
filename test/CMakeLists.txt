@@ -254,6 +254,11 @@ foreach(save request_start tower)
     add_test(NAME mp_no_caesar_${save} COMMAND simtool caesarfree ${save}.sav 12000)
 endforeach()
 
+# Popups and sounds of a city are for its own player only (T1.1): every computer runs every city
+foreach(save tower brugle-lugdunum valentia57)
+    add_test(NAME mp_private_popups_${save} COMMAND simtool privatepopups ${save}.sav 3000)
+endforeach()
+
 # Connected cities (M4.3, D-018): the walkers of a city act on none of the buildings of another one, even when
 # they walk through it (intruders: the twin's walkers moved into the first city; neighbours: two cities
 # side by side joined by roads)

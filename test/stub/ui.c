@@ -10,6 +10,10 @@
 #include "window/victory_dialog.h"
 
 #include "city/victory.h"
+#include "mp/session.h"
+
+// popups shown, while the city of the local player [0] or of another player [1] was simulated
+int stub_city_message_popups[2];
 
 int window_is(window_id id)
 {
@@ -55,7 +59,9 @@ void window_draw(int force)
 
 void window_message_dialog_show_city_message(int text_id, int year, int month,
                                              int param1, int param2, int message_advisor, int use_popup)
-{}
+{
+    stub_city_message_popups[mp_session_is_other_players_city()]++;
+}
 
 static void (*last_popup_callback)(int);
 

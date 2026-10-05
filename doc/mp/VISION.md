@@ -32,7 +32,8 @@
 | E8 | **Suppression complète des interventions de César**. |
 | E9 | **Suppression de la campagne** : uniquement du **jeu libre, en multijoueur**. |
 | E10 | Développement **autonome et structuré** par Claude, avec des **tests exécutables par Claude** (le jeu doit pouvoir être testé sans humain). |
-| E11 | On **construit partout**, comme dans AoE2, et les cités peuvent se **brancher** les unes sur les autres (routes, etc.). |
+| E11 | ~~On **construit partout**, comme dans AoE2~~ (remplacé le 2026-10-05, D-036) : on construit dans sa **zone**, qui suit la ville vivante (20 cases autour des bâtiments installés et des missions), pour empêcher les « rush » sans brider la croissance. Routes et aqueducs se construisent partout et les cités peuvent se **brancher**. |
+| E14 | **Retours de TEST_1** (2026-10-05) : cartes multijoueur préparées seulement, César propriétaire neutre des routes et de l'aqueduc de la carte, réservoirs à niveau, missions et missionnaire, brouillard de guerre optionnel (D-033 à D-039). |
 | E13 | Les **statistiques** (population, finances, notes, conseillers…) sont **séparées par joueur** : chacun voit celles de sa propre cité (Alexandre, 2026-10-04, après le test du prototype). |
 | E12 | **Autorisations d'exploiter** les ressources, comme dans le jeu de base : chaque joueur démarre avec des autorisations **différentes selon son point d'arrivée**, pour forcer le commerce. Un **équilibrage** est à faire, en particulier sur les **armes**, ressource essentielle. |
 

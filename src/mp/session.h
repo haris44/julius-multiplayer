@@ -31,6 +31,12 @@ int mp_session_local_player_id(void);
 int mp_session_is_networked(void);
 
 /**
+ * Whether the city being simulated right now belongs to another player: every computer runs every city,
+ * but the popups, sounds and warnings of a city are only for its own player
+ */
+int mp_session_is_other_players_city(void);
+
+/**
  * Optional observer of every command executed by the simulation (recording, logs)
  */
 void mp_session_set_execution_observer(mp_command_executor observer);

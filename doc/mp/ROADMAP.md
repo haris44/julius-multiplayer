@@ -205,6 +205,45 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
 - [ ] **M7.5** Discussion entre joueurs (optionnelle).
   *Non faite* (optionnelle).
 
+## T1 — Retours du premier test d'Alexandre (TEST_1, QUESTIONS_1, 2026-10-05)
+- [x] **T1.1** Popups, sons et avertissements de la cité d'un autre joueur plus jamais chez soi (D-032).
+  *Fait* : `mp_session_is_other_players_city()` ; test `mp_private_popups_*` (2 popups et 3 sons de la cité jumelle
+  sortaient chez le joueur 1 avant le correctif).
+- [ ] **T1.2** Grande carte : la vue reste bloquée en haut à droite, on ne voit que la moitié et on ne peut plus
+  défiler. *Critère* : capture d'automatisation des quatre coins d'une carte de 260 cases.
+- [ ] **T1.3** Défilement au bord haut de l'écran bloqué par la barre de menu (plein écran).
+- [ ] **T1.4** 1920×1080 et 2K proposées dans la liste des résolutions.
+- [ ] **T1.5** Routes de la carte à César : neutres (pas à la couleur d'un joueur), indestructibles (D-034).
+- [ ] **T1.6** Le salon ne propose plus que les cartes multijoueur (D-033).
+
+## MC — Cartes multijoueur préparées et César (D-033, D-034)
+- [ ] **MC.1** Propriétaire « César » dans la grille des propriétaires : routes et aqueducs de la carte, dessinés en
+  blanc, indestructibles.
+- [ ] **MC.2** Carte à 2 joueurs et carte à 4 joueurs (3 joueurs sur la carte à 4) : emplacements avec prés et
+  seulement les ressources autorisées, tout relié à la route principale, aqueduc de César près des joueurs loin de
+  l'eau, réservoir indestructible. *Critère* : test « chaque emplacement est relié et a ses ressources » ; relecture
+  par Alexandre sur captures.
+
+## ME — Eau (D-035)
+- [ ] **ME.1** Réservoirs à niveau en multijoueur : vidage en environ 5 minutes, remplissage en environ 1 minute
+  (en ticks), alimentation tant qu'il reste de l'eau. *Critère* : test de coupure et de rétablissement ; parité
+  classique intacte.
+
+## MT — Territoires, missions et missionnaire (D-036, D-037)
+- [ ] **MT.1** Zone constructible : 20 cases autour des bâtiments installés et des missions, premier arrivé,
+  routes, murs et aqueducs partout. *Critère* : tests « pas de tour dans la zone adverse », « un quartier neuf
+  étend la zone ».
+- [ ] **MT.2** Mission multijoueur : plus d'indigènes, première gratuite puis marbre, forme des missionnaires.
+- [ ] **MT.3** Missionnaire déplaçable comme une légion, mortel ; mission à 20 cases au plus de lui.
+- [ ] **MT.4** Bâtiments hors zone : message puis effondrement après le délai de grâce.
+- [ ] **MT.5** Frontières tracées à la couleur du joueur, teinte légère des bâtiments adverses (D-039).
+
+## MB — Brouillard de guerre (D-038)
+- [ ] **MB.1** Option du salon, zones découvertes, éclairage de 20 cases, minicarte et scores adverses masqués.
+
+## MA — Apparence (D-039)
+- [ ] **MA.1** Variantes de couleur des bâtiments calculées au lancement (toits brique, ardoise…), jamais dans git.
+
 ## M8 — Commerce entre joueurs
 - [ ] **M8.1** Conception détaillée (D-019) ; routes commerciales par joueur avec les villes de l'empire.
 - [ ] **M8.2** Ouverture d'une route entre deux joueurs (accord des deux, chemin routier entre entrepôts).

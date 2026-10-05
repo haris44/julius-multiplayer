@@ -1,6 +1,7 @@
 #include "effect.h"
 
 #include "game/settings.h"
+#include "mp/session.h"
 #include "sound/channel.h"
 #include "sound/device.h"
 
@@ -13,7 +14,8 @@ void sound_effect_set_volume(int percentage)
 
 void sound_effect_play(int effect)
 {
-    if (!setting_sound(SOUND_EFFECTS)->enabled) {
+    // the fire, collapse or earthquake of another player's city is not heard here
+    if (!setting_sound(SOUND_EFFECTS)->enabled || mp_session_is_other_players_city()) {
         return;
     }
     if (sound_device_is_channel_playing(effect)) {

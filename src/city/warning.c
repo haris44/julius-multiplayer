@@ -44,8 +44,7 @@ void city_warning_show(warning_type type)
 void city_warning_show_custom(const uint8_t *text)
 {
     // the commands of the other players run here too: their warnings are theirs
-    if (!setting_warnings() ||
-        (player_context_num_players() > 1 && player_context_current() != mp_session_local_player_id())) {
+    if (!setting_warnings() || mp_session_is_other_players_city()) {
         return;
     }
     struct warning *w = new_warning();

@@ -137,7 +137,7 @@ static void advance_tick(void)
     switch (game_time_tick()) {
         case 1: city_gods_calculate_moods(1); break;
         case 2:
-            if (player_context_current() == mp_session_local_player_id() || player_context_num_players() == 1) {
+            if (!mp_session_is_other_players_city()) {
                 sound_music_update(0);
             }
             break;
