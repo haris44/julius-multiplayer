@@ -37,3 +37,6 @@ local.properties
 /android/julius.keystore
 /android/play-publisher.json
 /android/julius/src/main/play
+
+# Packages to send (tools/package-mac.sh)
+/dist/

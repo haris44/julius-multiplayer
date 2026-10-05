@@ -1,0 +1,58 @@
+CAESAR III MULTIJOUEUR
+======================
+
+Une version de Caesar III pour jouer à plusieurs (de 2 à 4 joueurs) sur le même réseau local : chacun construit
+sa cité sur une carte commune. Elle est basée sur Julius, une réimplémentation libre de Caesar III.
+
+Il faut un Mac avec une puce Apple (M1 ou plus récente).
+
+
+1. IL VOUS FAUT VOTRE PROPRE COPIE DE CAESAR III
+------------------------------------------------
+Ce programme ne contient pas les fichiers du jeu original (images, sons, cartes) : Caesar III est toujours vendu.
+Achetez-le sur GOG ou Steam (quelques euros), puis récupérez son dossier d'installation :
+
+- depuis GOG : téléchargez l'installateur Windows (setup_caesar3_....exe), puis dans le Terminal :
+      brew install innoextract
+      innoextract setup_caesar3_....exe
+  Le dossier « app » créé contient les fichiers du jeu ;
+- ou copiez le dossier « Caesar 3 » d'un PC où le jeu est installé.
+
+Le dossier doit contenir notamment c3.eng, c3.emp et c3_model.txt.
+
+
+2. INSTALLER
+------------
+Glissez « Caesar III Multijoueur.app » dans votre dossier Applications.
+
+Le programme n'est pas signé par Apple : au premier lancement, macOS le bloque. Faites un clic droit sur
+l'application, choisissez « Ouvrir », puis confirmez « Ouvrir ». Si ce n'est pas proposé : Réglages Système,
+Confidentialité et sécurité, « Ouvrir quand même ».
+
+Au premier lancement, le jeu demande le dossier de Caesar III : indiquez celui de l'étape 1.
+
+
+3. JOUER ENSEMBLE
+-----------------
+Les deux ordinateurs doivent être sur le même réseau (même box, même Wi-Fi) et avoir exactement la même version
+de ce programme.
+
+- Menu principal, « Multijoueur ».
+- Celui qui héberge choisit une carte, le nombre de joueurs et les règles, puis clique sur « Héberger ».
+  macOS peut demander d'autoriser les connexions entrantes : répondez « Autoriser ».
+- Les autres voient la partie apparaître dans « Parties trouvées sur le réseau » et cliquent dessus (ou tapent
+  l'adresse affichée chez l'hôte, puis « Rejoindre »).
+- Quand tout le monde est là, l'hôte clique sur « Lancer la partie ».
+
+En jeu : chacun a sa cité, ses finances et ses conseillers. Ce que construisent les autres apparaît teinté de leur
+couleur ; les scores sont en haut à gauche. La touche P met la partie en pause pour tout le monde, et
+« Fichier, Enregistrer » sauvegarde la partie pour la reprendre plus tard depuis le salon.
+
+Si le jeu refuse la connexion pour « données du jeu différentes », vos fichiers de Caesar III ne sont pas la même
+version que ceux de l'hôte.
+
+
+4. CODE SOURCE
+--------------
+Ce programme est un logiciel libre sous licence GNU AGPL version 3, comme Julius dont il dérive. Son code source
+complet est dans code-source.zip, à côté de ce fichier.
