@@ -52,6 +52,7 @@ static void button_back(int param1, int param2);
 static void on_scroll(void);
 static void button_end(int param1, int param2);
 static void button_invasions(int param1, int param2);
+static void button_fog(int param1, int param2);
 static void button_difficulty(int param1, int param2);
 static void button_gods(int param1, int param2);
 
@@ -77,7 +78,8 @@ static generic_button file_buttons[] = {
 #define BUTTON_INVASIONS 6
 #define BUTTON_DIFFICULTY 7
 #define BUTTON_GODS 8
-#define NUM_ACTION_BUTTONS 9
+#define BUTTON_FOG 9
+#define NUM_ACTION_BUTTONS 10
 static generic_button action_buttons[] = {
     {176, 280, 24, 20, button_players, button_none, -1, 0},
     {208, 280, 24, 20, button_players, button_none, 1, 0},
@@ -88,6 +90,7 @@ static generic_button action_buttons[] = {
     {16, 348, 296, 20, button_invasions, button_none, 0, 0},
     {16, 304, 188, 20, button_difficulty, button_none, 0, 0},
     {208, 304, 104, 20, button_gods, button_none, 0, 0},
+    {16, 370, 296, 20, button_fog, button_none, 0, 0},
 };
 
 // end of the game: none, or by score after these years
@@ -112,6 +115,7 @@ static struct {
     int num_players;
     int end_choice;
     int ai_invasions;
+    int fog_of_war;
     int difficulty;
     int gods;
     int rules_initialized;
@@ -154,6 +158,7 @@ static void init(void)
         game_rules_settings rules;
         game_rules_default_multiplayer_settings(&rules);
         data.ai_invasions = rules.ai_invasions;
+        data.fog_of_war = rules.fog_of_war;
         data.difficulty = rules.difficulty;
         data.gods = rules.gods_enabled;
     }
@@ -263,6 +268,9 @@ static void draw_foreground(void)
     font_t invasions_font = data.focus_action == BUTTON_INVASIONS + 1 ? FONT_NORMAL_WHITE : FONT_NORMAL_BLACK;
     width = text_draw(translation_for(TR_MP_INVASIONS), 16, 352, invasions_font, 0);
     text_draw(translation_for(data.ai_invasions ? TR_MP_YES : TR_MP_NO), 16 + width, 352, invasions_font, 0);
+    font_t fog_font = data.focus_action == BUTTON_FOG + 1 ? FONT_NORMAL_WHITE : FONT_NORMAL_BLACK;
+    width = text_draw(translation_for(TR_MP_FOG_OF_WAR), 16, 374, fog_font, 0);
+    text_draw(translation_for(data.fog_of_war ? TR_MP_YES : TR_MP_NO), 16 + width, 374, fog_font, 0);
     draw_button(&action_buttons[BUTTON_LESS], string_from_ascii("-"), data.focus_action == BUTTON_LESS + 1);
     draw_button(&action_buttons[BUTTON_MORE], string_from_ascii("+"), data.focus_action == BUTTON_MORE + 1);
     // once hosting, the same button starts the game when every player is there
@@ -338,6 +346,11 @@ static void button_end(int param1, int param2)
     data.end_choice = (data.end_choice + 1) % NUM_END_CHOICES;
 }
 
+static void button_fog(int param1, int param2)
+{
+    data.fog_of_war = !data.fog_of_war;
+}
+
 static void button_invasions(int param1, int param2)
 {
     data.ai_invasions = !data.ai_invasions;
@@ -373,6 +386,7 @@ static void button_host(int param1, int param2)
     game_rules_settings rules;
     game_rules_default_multiplayer_settings(&rules);
     rules.ai_invasions = data.ai_invasions;
+    rules.fog_of_war = data.fog_of_war;
     rules.difficulty = data.difficulty;
     rules.gods_enabled = data.gods;
     rules.end_condition = END_YEARS[data.end_choice] ? GAME_END_SCORE : GAME_END_NONE;

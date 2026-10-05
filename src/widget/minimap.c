@@ -12,6 +12,7 @@
 #include "map/property.h"
 #include "map/random.h"
 #include "map/terrain.h"
+#include "mp/fog.h"
 #include "scenario/property.h"
 #include "mp/colors.h"
 
@@ -153,12 +154,13 @@ static void draw_tinted(int image_id, int x, int y, color_t tint)
 
 static void draw_minimap_tile(int x_view, int y_view, int grid_offset)
 {
-    if (grid_offset < 0) {
+    // fog of war: nothing of the undiscovered land, nobody where the player does not see now
+    if (grid_offset < 0 || !mp_fog_is_discovered(grid_offset)) {
         image_draw(image_group(GROUP_MINIMAP_BLACK), x_view, y_view);
         return;
     }
 
-    if (draw_figure(x_view, y_view, grid_offset)) {
+    if (mp_fog_is_lit(grid_offset) && draw_figure(x_view, y_view, grid_offset)) {
         return;
     }
 

@@ -616,6 +616,7 @@ set(MP_FILES
     ${PROJECT_SOURCE_DIR}/src/mp/permissions.c
     ${PROJECT_SOURCE_DIR}/src/mp/territory.c
     ${PROJECT_SOURCE_DIR}/src/mp/missionary.c
+    ${PROJECT_SOURCE_DIR}/src/mp/fog.c
     ${PROJECT_SOURCE_DIR}/src/mp/lockstep.c
     ${PROJECT_SOURCE_DIR}/src/mp/mapgen.c
     ${PROJECT_SOURCE_DIR}/src/mp/savegame.c

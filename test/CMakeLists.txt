@@ -299,6 +299,8 @@ add_test(NAME mp_territory COMMAND simtool territory brugle-massilia-start.sav)
 add_test(NAME mp_missions COMMAND simtool missions brugle-massilia-start.sav)
 # Buildings left outside the zone collapse after three months, unless covered again (MT.4)
 add_test(NAME mp_outside_territory COMMAND simtool outside brugle-massilia-start.sav)
+# Fog of war (MB.1, D-038): discovered land stays discovered, what moves shows only where the player sees
+add_test(NAME mp_fog_of_war COMMAND simtool fog brugle-massilia-start.sav)
 
 # T1.5 (D-034): the roads of Caesar stay, untinted, and serve every city
 add_test(NAME mp_caesar_roads COMMAND simtool caesarroads brugle-massilia-start.sav)

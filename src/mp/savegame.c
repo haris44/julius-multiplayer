@@ -13,6 +13,7 @@
 #include "map/grid.h"
 #include "map/owner.h"
 #include "mp/command.h"
+#include "mp/fog.h"
 #include "mp/territory.h"
 
 #include <stdio.h>
@@ -66,6 +67,7 @@ void mp_savegame_visit(mp_savegame_visitor visitor, void *userdata)
     visit_buffer(visitor, userdata, "mp_endgame", mp_endgame_save_state, 64);
     visit_buffer(visitor, userdata, "caesar_buildings", building_save_caesar_state, MAX_BUILDINGS * 256);
     visit_buffer(visitor, userdata, "territory_grid", mp_territory_save_state, GRID_MAX_TILES);
+    visit_buffer(visitor, userdata, "fog_grid", mp_fog_save_state, GRID_MAX_TILES);
     int previous = player_context_current();
     forward f = { visitor, userdata };
     for (int p = 0; p < player_context_num_players(); p++) {
@@ -278,6 +280,14 @@ static int load_pieces(void)
         mp_territory_load_state(&zones_buf);
     } else {
         mp_territory_clear();
+    }
+    const piece *fog = find_piece("fog_grid", 0, reading.num_pieces);
+    if (fog) {
+        buffer fog_buf;
+        buffer_init(&fog_buf, (uint8_t *) fog->data, fog->size);
+        mp_fog_load_state(&fog_buf);
+    } else {
+        mp_fog_clear();
     }
     const piece *owner = find_piece("owner_grid", 0, reading.num_pieces);
     if (owner) {

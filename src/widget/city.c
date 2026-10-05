@@ -34,6 +34,7 @@
 #include "building/construction_clear.h"
 #include "mp/actions.h"
 #include "mp/missionary.h"
+#include "mp/fog.h"
 #include "mp/territory.h"
 #include "map/figure.h"
 #include "figure/figure.h"
@@ -200,7 +201,7 @@ static int handle_right_click_allow_building_info(const map_tile *tile)
     }
     window_city_show();
 
-    if (!tile->grid_offset) {
+    if (!tile->grid_offset || !mp_fog_is_discovered(tile->grid_offset)) {
         allow = 0;
     }
     if (allow && city_has_warnings()) {

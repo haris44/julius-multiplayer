@@ -30,6 +30,8 @@
 #include "map/random.h"
 #include "map/road_network.h"
 #include "map/water_supply.h"
+#include "mp/fog.h"
+#include "mp/territory.h"
 #include "map/routing_terrain.h"
 #include "map/soldier_strength.h"
 #include "map/sprite.h"
@@ -142,6 +144,9 @@ int mp_compose_relocate(int new_stride, int dx, int dy)
         x0 + dx + map_data.width >= new_stride || y0 + dy + map_data.height >= new_stride) {
         return 0; // the map must stay inside the grid, with a border
     }
+    // a new multiplayer map: nobody owns or has discovered any land yet
+    mp_territory_clear();
+    mp_fog_clear();
     relocation.old_stride = old_stride;
     relocation.new_stride = new_stride;
     relocation.dx = dx;

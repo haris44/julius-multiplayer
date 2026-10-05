@@ -6,6 +6,7 @@
 #include "graphics/text.h"
 #include "game/player_context.h"
 #include "mp/colors.h"
+#include "mp/fog.h"
 #include "mp/endgame.h"
 #include "mp/lockstep.h"
 #include "mp/session.h"
@@ -42,6 +43,10 @@ void widget_mp_status_draw(void)
     uint8_t scores[PLAYER_CONTEXT_MAX_PLAYERS][32];
     if (state == MP_LOCKSTEP_RUNNING && num_players > 1) {
         for (int p = 0; p < num_players; p++) {
+            if (mp_fog_is_active() && p != mp_session_local_player_id()) {
+                scores[p][0] = 0; // the fog of war hides the other cities (D-038)
+                continue;
+            }
             char score[32];
             snprintf(score, sizeof(score), "J%d %d", p + 1, mp_endgame_live_score(p));
             encoding_from_utf8(score, scores[p], sizeof(scores[p]));
@@ -62,7 +67,9 @@ void widget_mp_status_draw(void)
     int x_score = x + width;
     if (scores_width) {
         for (int p = 0; p < num_players; p++) {
-            x_score += text_draw(scores[p], x_score, banner_y + 6, FONT_NORMAL_PLAIN, mp_colors_player(p)) + 12;
+            if (scores[p][0]) {
+                x_score += text_draw(scores[p], x_score, banner_y + 6, FONT_NORMAL_PLAIN, mp_colors_player(p)) + 12;
+            }
         }
     }
     if (paused_width) {

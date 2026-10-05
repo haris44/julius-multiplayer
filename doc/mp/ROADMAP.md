@@ -278,7 +278,11 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
   avertissements. Commande d'automatisation `build TYPE X1 Y1 X2 Y2`. Captures du vrai jeu.
 
 ## MB — Brouillard de guerre (D-038)
-- [ ] **MB.1** Option du salon, zones découvertes, éclairage de 20 cases, minicarte et scores adverses masqués.
+- [x] **MB.1** Option du salon, zones découvertes, éclairage de 20 cases, minicarte et scores adverses masqués.
+  *Fait* : `mp/fog` (bits « découvert » et « éclairé » par joueur, calculés chaque jour au tick 14 par la simulation,
+  sauvegardés) ; règle `fog_of_war` (oui par défaut, protocole v5) ; vue, surcouches et minicarte en noir hors du
+  découvert ; personnages des autres cachés hors de l'éclairé ; pas de fiche de bâtiment sur le non-découvert ;
+  scores adverses cachés. Test `mp_fog_of_war` ; captures du vrai jeu.
 
 ## MA — Apparence (D-039)
 - [ ] **MA.1** Variantes de couleur des bâtiments calculées au lancement (toits brique, ardoise…), jamais dans git.

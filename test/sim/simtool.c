@@ -54,6 +54,7 @@
 #include "mp/actions.h"
 #include "mp/compose.h"
 #include "mp/savegame.h"
+#include "mp/fog.h"
 #include "building/warehouse.h"
 #include "mp/missionary.h"
 #include "mp/territory.h"
@@ -121,6 +122,7 @@ static int usage(void)
     printf("                                         each arrival point, permissions; MAPGEN_PICTURE=F.ppm\n");
     printf("  simtool reservoirlevel SAVE            prepared map: a reservoir cut off from its source empties\n");
     printf("                                         slowly, joined again it fills\n");
+    printf("  simtool fog SAVE                       prepared map: what a player discovers and sees (D-038)\n");
     printf("  simtool outside SAVE                   prepared map: buildings outside the zone collapse in 3 months\n");
     printf("  simtool missions SAVE                  prepared map: missions near a missionary, marble, training\n");
     printf("  simtool territory SAVE                 prepared map: players build only in their zone (D-036)\n");
@@ -1863,6 +1865,56 @@ static int command_outside(const char *file)
     return failures ? 1 : 0;
 }
 
+static int walk_missionary(figure *m, int x, int y)
+{
+    mp_command move = { .type = MP_COMMAND_CITY_ACTION, .player_id = 0, .args = { MP_ACTION_MISSIONARY_MOVE, m->id, x, y } };
+    mp_command_execute(&move);
+    for (int day = 0; day < 200 && (m->x != x || m->y != y); day++) {
+        run_trace(50, 50, 0, 0);
+    }
+    run_trace(50, 50, 0, 0); // the fog is updated once a day
+    return m->x == x && m->y == y;
+}
+
+// fog of war (MB.1, D-038): what player 1 discovers and sees
+static int command_fog(const char *file)
+{
+    if (!mp_mapgen_create_prepared(file, 2)) {
+        printf("Unable to create the prepared map\n");
+        return 2;
+    }
+    game_rules_settings rules;
+    game_rules_default_multiplayer_settings(&rules);
+    rules.ai_invasions = 0;
+    game_rules_set_multiplayer(&rules);
+    int failures = 0;
+#define CHECK(condition, text) do { int ok_ = (condition); printf("%-62s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
+    int x0, y0, x1, y1;
+    mp_mapgen_city_center(0, &x0, &y0);
+    mp_mapgen_city_center(1, &x1, &y1);
+    int home = map_grid_offset(x0, y0);
+    int other = map_grid_offset(x1, y1);
+    run_trace(50, 50, 0, 0);
+    CHECK(mp_fog_is_discovered(home) && mp_fog_is_lit(home), "player 1 sees around his missionary");
+    CHECK(!mp_fog_is_discovered(other), "not the city of player 2");
+    figure *m = first_missionary(0);
+    CHECK(walk_missionary(m, x1 - 10, y1 + 3), "his missionary walks to it");
+    CHECK(mp_fog_is_discovered(other) && mp_fog_is_lit(other), "there, he discovers and sees it");
+    CHECK(walk_missionary(m, x0, y0 + 3), "he walks back home");
+    CHECK(mp_fog_is_discovered(other) && !mp_fog_is_lit(other), "it stays discovered, but no longer seen");
+    rules.fog_of_war = 0;
+    game_rules_set_multiplayer(&rules);
+    CHECK(mp_fog_is_discovered(map_grid_offset(5, 5)) && mp_fog_is_lit(map_grid_offset(5, 5)),
+        "without fog of war, everything shows");
+
+    player_context_switch(0);
+    player_context_set_num_players(1);
+#undef CHECK
+    printf("%s\n", failures ? "DIFFERENT: the fog of war does not work as designed" :
+        "Identical: the fog of war works as designed");
+    return failures ? 1 : 0;
+}
+
 // the camera of a player reaches every corner of a generated map, after it went through a .mpmap file as in a game
 static int command_viewcorners(const char *file, int num_players)
 {
@@ -2367,6 +2419,8 @@ int main(int argc, char **argv)
         result = command_preparedmap(file, atoi(argv[3]), atoi(argv[4]));
     } else if (strcmp(command, "reservoirlevel") == 0) {
         result = command_reservoirlevel(file);
+    } else if (strcmp(command, "fog") == 0) {
+        result = command_fog(file);
     } else if (strcmp(command, "outside") == 0) {
         result = command_outside(file);
     } else if (strcmp(command, "missions") == 0) {

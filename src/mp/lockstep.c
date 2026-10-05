@@ -23,7 +23,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define PROTOCOL_VERSION 4 // 3: the rules of the game travel with the welcome message; 4: territories
+#define PROTOCOL_VERSION 5 // 3: the rules of the game travel with the welcome message; 4: territories; 5: fog
 #define TURN_TICKS 4
 #define TURN_DELAY 2
 #define HISTORY 256

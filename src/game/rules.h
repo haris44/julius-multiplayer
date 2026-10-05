@@ -31,6 +31,7 @@ typedef struct {
     int end_condition;     /**< game_end_condition */
     int score_years;       /**< Length of a GAME_END_SCORE game */
     int territories;       /**< Players build only in their zone (prepared maps, doc/mp/DECISIONS.md D-036) */
+    int fog_of_war;        /**< Players see only what they discovered (doc/mp/DECISIONS.md D-038) */
 } game_rules_settings;
 
 /**
@@ -81,6 +82,11 @@ game_end_condition game_rules_end_condition(void);
  * Whether players build only in their zone (multiplayer games on prepared maps)
  */
 int game_rules_territories(void);
+
+/**
+ * Whether players see only what they discovered (multiplayer games)
+ */
+int game_rules_fog_of_war(void);
 int game_rules_score_years(void);
 
 void game_rules_save_state(buffer *buf);

@@ -29,6 +29,7 @@ void game_rules_default_multiplayer_settings(game_rules_settings *settings)
     settings->end_condition = GAME_END_NONE;
     settings->score_years = 10;
     settings->territories = 0; // on with the prepared maps; the tests on copied cities build anywhere
+    settings->fog_of_war = 1;
 }
 
 const game_rules_settings *game_rules_multiplayer_settings(void)
@@ -83,6 +84,11 @@ int game_rules_territories(void)
     return data.mode == GAME_MODE_MULTIPLAYER ? data.multiplayer.territories : 0;
 }
 
+int game_rules_fog_of_war(void)
+{
+    return data.mode == GAME_MODE_MULTIPLAYER ? data.multiplayer.fog_of_war : 0;
+}
+
 int game_rules_score_years(void)
 {
     return data.multiplayer.score_years;
@@ -99,6 +105,7 @@ void game_rules_save_state(buffer *buf)
     buffer_write_i32(buf, data.multiplayer.end_condition);
     buffer_write_i32(buf, data.multiplayer.score_years);
     buffer_write_i32(buf, data.multiplayer.territories);
+    buffer_write_i32(buf, data.multiplayer.fog_of_war);
 }
 
 void game_rules_load_state(buffer *buf)
@@ -112,4 +119,5 @@ void game_rules_load_state(buffer *buf)
     data.multiplayer.end_condition = buffer_read_i32(buf);
     data.multiplayer.score_years = buffer_read_i32(buf);
     data.multiplayer.territories = buffer_read_i32(buf); // 0 in games saved before territories
+    data.multiplayer.fog_of_war = buffer_read_i32(buf);
 }

@@ -17,6 +17,8 @@
 #include "graphics/window.h"
 #include "map/building.h"
 #include "mp/colors.h"
+#include "mp/fog.h"
+#include "mp/session.h"
 #include "mp/territory.h"
 #include "graphics/graphics.h"
 #include "map/figure.h"
@@ -105,7 +107,7 @@ static int has_adjacent_deletion(int grid_offset)
 static void draw_footprint(int x, int y, int grid_offset)
 {
     building_construction_record_view_position(x, y, grid_offset);
-    if (grid_offset < 0) {
+    if (grid_offset < 0 || !mp_fog_is_discovered(grid_offset)) {
         // Outside map: draw black tile
         image_draw_isometric_footprint_from_draw_tile(image_group(GROUP_TERRAIN_BLACK), x, y, 0);
     } else if (map_property_is_draw_tile(grid_offset)) {
@@ -281,7 +283,7 @@ static void draw_senate_rating_flags(const building *b, int x, int y, color_t co
 
 static void draw_top(int x, int y, int grid_offset)
 {
-    if (!map_property_is_draw_tile(grid_offset)) {
+    if (!map_property_is_draw_tile(grid_offset) || !mp_fog_is_discovered(grid_offset)) {
         return;
     }
     building *b = building_get(map_building_at(grid_offset));
@@ -299,9 +301,18 @@ static void draw_top(int x, int y, int grid_offset)
     draw_workshop_raw_material_storage(b, x, y, color_mask);
 }
 
+// fog of war: what moves shows only where the local player sees now, but his own people always
+static int figure_is_hidden(int figure_id, int grid_offset)
+{
+    return !mp_fog_is_lit(grid_offset) && FIGURE_OWNER(figure_id) != mp_session_local_player_id();
+}
+
 static void draw_figures(int x, int y, int grid_offset)
 {
     int figure_id = map_figure_at(grid_offset);
+    if (figure_id && figure_is_hidden(figure_id, grid_offset)) {
+        return;
+    }
     while (figure_id) {
         figure *f = figure_get(figure_id);
         if (figure_id == draw_context.selected_figure_id) {
@@ -371,6 +382,9 @@ static void draw_granary_stores(const image *img, const building *b, int x, int 
 
 static void draw_animation(int x, int y, int grid_offset)
 {
+    if (!mp_fog_is_discovered(grid_offset)) {
+        return;
+    }
     int image_id = map_image_at(grid_offset);
     const image *img = image_get(image_id);
     if (img->num_animation_sprites) {
@@ -459,6 +473,9 @@ static void draw_animation(int x, int y, int grid_offset)
 static void draw_elevated_figures(int x, int y, int grid_offset)
 {
     int figure_id = map_figure_at(grid_offset);
+    if (figure_id && figure_is_hidden(figure_id, grid_offset)) {
+        return;
+    }
     while (figure_id > 0) {
         figure *f = figure_get(figure_id);
         if ((f->use_cross_country && !f->is_ghost) || f->height_adjusted_ticks) {
@@ -528,7 +545,7 @@ static void draw_isometric_edge(int x1, int y1, int x2, int y2, color_t color)
 static void draw_territory_border(int x, int y, int grid_offset)
 {
     int owner = mp_territory_owner(grid_offset);
-    if (owner < 0) {
+    if (owner < 0 || !mp_fog_is_discovered(grid_offset)) {
         return;
     }
     // where the next tiles along the grid axes are drawn, in this orientation: +x, then +y
