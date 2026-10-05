@@ -254,9 +254,12 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
   de l'eau 100 jours après la coupure, sec après 270, de nouveau de l'eau une fois rebranché) ; parité intacte.
 
 ## MT — Territoires, missions et missionnaire (D-036, D-037)
-- [ ] **MT.1** Zone constructible : 20 cases autour des bâtiments installés et des missions, premier arrivé,
-  routes, murs et aqueducs partout. *Critère* : tests « pas de tour dans la zone adverse », « un quartier neuf
-  étend la zone ».
+- [x] **MT.1** Zone constructible : 20 cases autour des bâtiments installés et des missions, premier arrivé,
+  routes, murs et aqueducs partout. *Fait* : `mp/territory` (grille sauvegardée dans le `.mpsav`, mise à jour
+  chaque jour au tick 13, cité par cité, par différences de lignes) ; règle de partie `territories` (active sur les
+  cartes préparées, protocole v4) ; refus et aperçu rouge hors zone, avertissement « Hors de votre territoire ».
+  Test `mp_territory` : rien sans zone, mission → 20 cases, maisons habitées → 20 cases plus loin, l'autre joueur
+  n'y bâtit que des routes. *Provisoire* : la mission se construit n'importe où tant que MT.3 n'existe pas.
 - [ ] **MT.2** Mission multijoueur : plus d'indigènes, première gratuite puis marbre, forme des missionnaires.
 - [ ] **MT.3** Missionnaire déplaçable comme une légion, mortel ; mission à 20 cases au plus de lui.
 - [ ] **MT.4** Bâtiments hors zone : message puis effondrement après le délai de grâce.

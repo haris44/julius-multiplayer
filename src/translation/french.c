@@ -142,6 +142,7 @@ static translation_string all_strings[] = {
     {TR_MP_SCORE_RULE, "Score : culture + prospérité + paix + population / 100"},
     {TR_MP_RESERVOIR_LEVEL, "Réserve d'eau : "},
     {TR_MP_RESERVOIR_OF_CAESAR, "Réservoir de César : jamais à sec"},
+    {TR_MP_OUTSIDE_TERRITORY, "Hors de votre territoire"},
     {TR_MP_DIFFICULTY, "Difficulté : "},
     {TR_MP_DIFFICULTY_0, "très facile"},
     {TR_MP_DIFFICULTY_1, "facile"},

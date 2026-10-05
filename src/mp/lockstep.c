@@ -23,7 +23,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define PROTOCOL_VERSION 3 // 3: the rules of the game travel with the welcome message
+#define PROTOCOL_VERSION 4 // 3: the rules of the game travel with the welcome message; 4: territories
 #define TURN_TICKS 4
 #define TURN_DELAY 2
 #define HISTORY 256
@@ -372,7 +372,7 @@ static void host_start_game(void)
     start_session(0, game_time_absolute_tick(), &data.rules);
     uint64_t checksum = mp_checksum_state();
 
-    int size = 64 + save_size;
+    int size = 128 + save_size;
     uint8_t *payload = malloc(size);
     for (int p = 1; p < data.num_players && payload; p++) {
         buffer buf;
@@ -627,6 +627,8 @@ void mp_lockstep_set_generated_map(int generate, unsigned int seed)
 {
     data.generate_map = generate;
     data.map_seed = seed;
+    // the prepared maps come with territories (D-036)
+    data.rules.territories = generate;
 }
 
 void mp_lockstep_set_manual_start(int manual)

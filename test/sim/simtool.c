@@ -54,6 +54,7 @@
 #include "mp/actions.h"
 #include "mp/compose.h"
 #include "mp/savegame.h"
+#include "mp/territory.h"
 #include "scenario/map.h"
 #include "game/resource.h"
 #include "mp/colors.h"
@@ -118,6 +119,7 @@ static int usage(void)
     printf("                                         each arrival point, permissions; MAPGEN_PICTURE=F.ppm\n");
     printf("  simtool reservoirlevel SAVE            prepared map: a reservoir cut off from its source empties\n");
     printf("                                         slowly, joined again it fills\n");
+    printf("  simtool territory SAVE                 prepared map: players build only in their zone (D-036)\n");
     printf("  simtool caesarroads SAVE               generated map: no player clears a road of Caesar, every\n");
     printf("                                         city uses it\n");
     printf("  simtool viewcorners SAVE PLAYERS       generated map: the camera reaches its four corners\n");
@@ -1678,6 +1680,58 @@ static int command_reservoirlevel(const char *file)
     return failures ? 1 : 0;
 }
 
+static int build_as(int player_id, int type, int x1, int y1, int x2, int y2)
+{
+    mp_command command = { .type = MP_COMMAND_BUILD, .player_id = player_id, .args = { type, 0, x1, y1, x2, y2, 0, 0 } };
+    mp_command_execute(&command);
+    return building_get(map_building_at(map_grid_offset(x1, y1)))->type != BUILDING_NONE;
+}
+
+// territories (MT.1, D-036): no zone, no building; a mission opens a zone; inhabited houses push it further; the
+// other player builds nothing there but roads
+static int command_territory(const char *file)
+{
+    if (!mp_mapgen_create_prepared(file, 2)) {
+        printf("Unable to create the prepared map\n");
+        return 2;
+    }
+    game_rules_settings rules;
+    game_rules_default_multiplayer_settings(&rules);
+    rules.territories = 1;
+    rules.ai_invasions = 0;
+    game_rules_set_multiplayer(&rules);
+    int cx, cy;
+    mp_mapgen_city_center(0, &cx, &cy);
+    int failures = 0;
+#define CHECK(condition, text) do { int ok_ = (condition); printf("%-62s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
+
+    CHECK(!build_as(0, BUILDING_HOUSE_VACANT_LOT, cx, cy + 2, cx, cy + 2), "without a zone, no house");
+    CHECK(build_as(0, BUILDING_MISSION_POST, cx + 3, cy - 4, cx + 3, cy - 4), "a mission is built anywhere");
+    run_trace(50, 50, 0, 0);
+    CHECK(mp_territory_owner(map_grid_offset(cx + 3 + 20, cy - 4)) == 0, "the mission gives a zone of 20 tiles");
+    CHECK(mp_territory_owner(map_grid_offset(cx + 3 + 22, cy - 4)) == -1, "but not further");
+    CHECK(build_as(0, BUILDING_HOUSE_VACANT_LOT, cx, cy + 2, cx, cy + 2), "a house in the zone");
+    CHECK(!build_as(0, BUILDING_HOUSE_VACANT_LOT, cx + 30, cy + 2, cx + 30, cy + 2), "no house 30 tiles from the mission");
+    CHECK(!build_as(1, BUILDING_PREFECTURE, cx, cy + 6, cx, cy + 6), "the other player builds nothing in the zone");
+    build_as(1, BUILDING_ROAD, cx - 10, cy + 8, cx - 6, cy + 8);
+    CHECK(map_terrain_is(map_grid_offset(cx - 8, cy + 8), TERRAIN_ROAD), "but he builds roads there");
+
+    // a quarter of houses along the main road: once inhabited, the zone goes 20 tiles beyond it
+    int far_x = cx - 5 - 20;
+    int before = mp_territory_owner(map_grid_offset(far_x, cy + 1));
+    build_as(0, BUILDING_HOUSE_VACANT_LOT, cx - 5, cy + 1, cx + 5, cy + 1);
+    run_trace(3000, 3000, 0, 0);
+    printf("population of player 1: %d\n", city_population());
+    int after = mp_territory_owner(map_grid_offset(far_x, cy + 1));
+    CHECK(before == -1 && after == 0, "inhabited houses push the zone 20 tiles further");
+
+    player_context_switch(0);
+    player_context_set_num_players(1);
+#undef CHECK
+    printf("%s\n", failures ? "DIFFERENT: territories do not work as designed" : "Identical: territories work as designed");
+    return failures ? 1 : 0;
+}
+
 // the camera of a player reaches every corner of a generated map, after it went through a .mpmap file as in a game
 static int command_viewcorners(const char *file, int num_players)
 {
@@ -2182,6 +2236,8 @@ int main(int argc, char **argv)
         result = command_preparedmap(file, atoi(argv[3]), atoi(argv[4]));
     } else if (strcmp(command, "reservoirlevel") == 0) {
         result = command_reservoirlevel(file);
+    } else if (strcmp(command, "territory") == 0) {
+        result = command_territory(file);
     } else if (strcmp(command, "caesarroads") == 0) {
         result = command_caesarroads(file);
     } else if (strcmp(command, "viewcorners") == 0 && argc > 3) {

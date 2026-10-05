@@ -28,3 +28,8 @@ void font_set_encoding(encoding_type encoding)
 
 void translation_load(language_type language)
 {}
+
+const uint8_t *translation_for(translation_key key)
+{
+    return (const uint8_t *) "";
+}

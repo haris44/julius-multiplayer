@@ -1,4 +1,5 @@
 #include "construction.h"
+#include "mp/territory.h"
 
 #include "building/construction_building.h"
 #include "building/construction_clear.h"
@@ -88,7 +89,8 @@ static int place_houses(int measure_only, int x_start, int y_start, int x_end, i
     for (int y = y_min; y <= y_max; y++) {
         for (int x = x_min; x <= x_max; x++) {
             int grid_offset = map_grid_offset(x,y);
-            if (map_terrain_is(grid_offset, TERRAIN_NOT_CLEAR)) {
+            if (map_terrain_is(grid_offset, TERRAIN_NOT_CLEAR) ||
+                !mp_territory_allows_tile(BUILDING_HOUSE_VACANT_LOT, grid_offset)) {
                 continue;
             }
             if (measure_only) {
@@ -156,7 +158,7 @@ static int place_garden(int x_start, int y_start, int x_end, int y_end)
     for (int y = y_min; y <= y_max; y++) {
         for (int x = x_min; x <= x_max; x++) {
             int grid_offset = map_grid_offset(x,y);
-            if (!map_terrain_is(grid_offset, TERRAIN_NOT_CLEAR)) {
+            if (!map_terrain_is(grid_offset, TERRAIN_NOT_CLEAR) && mp_territory_allows_tile(BUILDING_GARDENS, grid_offset)) {
                 items_placed++;
                 map_terrain_add(grid_offset, TERRAIN_GARDEN);
             }
@@ -182,7 +184,8 @@ static int place_reservoir_and_aqueducts(
     if (distance > 0) {
         if (map_building_is_reservoir(x_start - 1, y_start - 1)) {
             info->place_reservoir_at_start = PLACE_RESERVOIR_EXISTS;
-        } else if (map_tiles_are_clear(x_start - 1, y_start - 1, 3, TERRAIN_ALL)) {
+        } else if (map_tiles_are_clear(x_start - 1, y_start - 1, 3, TERRAIN_ALL) &&
+            mp_territory_allows_building(BUILDING_RESERVOIR, x_start - 1, y_start - 1, 3)) {
             info->place_reservoir_at_start = PLACE_RESERVOIR_YES;
         } else {
             info->place_reservoir_at_start = PLACE_RESERVOIR_BLOCKED;
@@ -190,7 +193,8 @@ static int place_reservoir_and_aqueducts(
     }
     if (map_building_is_reservoir(x_end - 1, y_end - 1)) {
         info->place_reservoir_at_end = PLACE_RESERVOIR_EXISTS;
-    } else if (map_tiles_are_clear(x_end - 1, y_end - 1, 3, TERRAIN_ALL)) {
+    } else if (map_tiles_are_clear(x_end - 1, y_end - 1, 3, TERRAIN_ALL) &&
+        mp_territory_allows_building(BUILDING_RESERVOIR, x_end - 1, y_end - 1, 3)) {
         info->place_reservoir_at_end = PLACE_RESERVOIR_YES;
     } else {
         info->place_reservoir_at_end = PLACE_RESERVOIR_BLOCKED;

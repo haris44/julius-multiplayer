@@ -30,6 +30,7 @@
 #include "map/water_supply.h"
 #include "mp/compose.h"
 #include "mp/permissions.h"
+#include "mp/territory.h"
 #include "scenario/editor_map.h"
 #include "scenario/property.h"
 #include "game/resource.h"
@@ -641,6 +642,7 @@ int mp_mapgen_create_prepared(const char *template_file, int num_players)
     }
     place_central_lake();
     map_owner_clear_all();
+    mp_territory_clear();
     place_main_road();
     if (!place_caesar_water()) {
         return 0;

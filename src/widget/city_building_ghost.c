@@ -1,4 +1,5 @@
 #include "city_building_ghost.h"
+#include "mp/territory.h"
 
 #include "building/construction.h"
 #include "building/count.h"
@@ -255,6 +256,9 @@ static int is_fully_blocked(int map_x, int map_y, building_type type, int buildi
 
     if (!building_construction_can_place_on_terrain(x, y, 0)) {
         return 1;
+    }
+    if (!mp_territory_allows_building(type, x, y, building_size)) {
+        return 1; // outside the zone of the player (D-036)
     }
     if (type == BUILDING_SENATE && city_buildings_has_senate()) {
         return 1;

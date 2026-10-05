@@ -293,6 +293,9 @@ endforeach()
 # Reservoirs hold water (ME.1, D-035): cut off, a reservoir empties in about 270 days; joined again, it fills
 add_test(NAME mp_reservoir_level COMMAND simtool reservoirlevel brugle-massilia-start.sav)
 
+# Territories (MT.1, D-036): build only in one's zone, which follows the settled buildings and the missions
+add_test(NAME mp_territory COMMAND simtool territory brugle-massilia-start.sav)
+
 # T1.5 (D-034): the roads of Caesar stay, untinted, and serve every city
 add_test(NAME mp_caesar_roads COMMAND simtool caesarroads brugle-massilia-start.sav)
 foreach(players 2 4)

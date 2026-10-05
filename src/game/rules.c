@@ -28,6 +28,7 @@ void game_rules_default_multiplayer_settings(game_rules_settings *settings)
     settings->ai_invasions = 1;
     settings->end_condition = GAME_END_NONE;
     settings->score_years = 10;
+    settings->territories = 0; // on with the prepared maps; the tests on copied cities build anywhere
 }
 
 const game_rules_settings *game_rules_multiplayer_settings(void)
@@ -77,6 +78,11 @@ game_end_condition game_rules_end_condition(void)
     return data.mode == GAME_MODE_MULTIPLAYER ? data.multiplayer.end_condition : GAME_END_NONE;
 }
 
+int game_rules_territories(void)
+{
+    return data.mode == GAME_MODE_MULTIPLAYER ? data.multiplayer.territories : 0;
+}
+
 int game_rules_score_years(void)
 {
     return data.multiplayer.score_years;
@@ -92,6 +98,7 @@ void game_rules_save_state(buffer *buf)
     buffer_write_i32(buf, data.multiplayer.ai_invasions);
     buffer_write_i32(buf, data.multiplayer.end_condition);
     buffer_write_i32(buf, data.multiplayer.score_years);
+    buffer_write_i32(buf, data.multiplayer.territories);
 }
 
 void game_rules_load_state(buffer *buf)
@@ -104,4 +111,5 @@ void game_rules_load_state(buffer *buf)
     data.multiplayer.ai_invasions = buffer_read_i32(buf);
     data.multiplayer.end_condition = buffer_read_i32(buf);
     data.multiplayer.score_years = buffer_read_i32(buf);
+    data.multiplayer.territories = buffer_read_i32(buf); // 0 in games saved before territories
 }

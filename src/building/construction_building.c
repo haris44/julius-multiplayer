@@ -1,4 +1,6 @@
 #include "construction_building.h"
+#include "translation/translation.h"
+#include "mp/territory.h"
 
 #include "building/building.h"
 #include "building/construction.h"
@@ -517,6 +519,11 @@ int building_construction_place_building(building_type type, int x, int y)
         case DIR_2_RIGHT: x = x - size + 1; break;
         case DIR_4_BOTTOM: x = x - size + 1; y = y - size + 1; break;
         case DIR_6_LEFT: y = y - size + 1; break;
+    }
+    // multiplayer: only in the zone of the player (D-036)
+    if (!mp_territory_allows_building(type, x, y, size)) {
+        city_warning_show_custom(translation_for(TR_MP_OUTSIDE_TERRITORY));
+        return 0;
     }
     // extra checks
     if (type == BUILDING_GATEHOUSE) {

@@ -30,6 +30,7 @@ typedef struct {
     int ai_invasions;      /**< Enemy armies and local uprisings of the map (multiplayer) */
     int end_condition;     /**< game_end_condition */
     int score_years;       /**< Length of a GAME_END_SCORE game */
+    int territories;       /**< Players build only in their zone (prepared maps, doc/mp/DECISIONS.md D-036) */
 } game_rules_settings;
 
 /**
@@ -75,6 +76,11 @@ int game_rules_ai_invasions(void);
  * How a multiplayer game ends (GAME_END_NONE in a classic game) and after how many years
  */
 game_end_condition game_rules_end_condition(void);
+
+/**
+ * Whether players build only in their zone (multiplayer games on prepared maps)
+ */
+int game_rules_territories(void);
 int game_rules_score_years(void);
 
 void game_rules_save_state(buffer *buf);
