@@ -20,6 +20,7 @@
 #if defined(__APPLE__)
 #include <TargetConditionals.h>
 #if TARGET_OS_OSX
+#include <CoreGraphics/CGGeometry.h>
 #include <objc/message.h>
 #include <objc/runtime.h>
 #include "SDL_syswm.h"
@@ -115,6 +116,21 @@ static void fit_on_screen(int *pixel_width, int *pixel_height)
 }
 
 #ifdef HAS_MACOS_PRESENTATION_OPTIONS
+// the window of macOS behind the window of SDL, 0 without a window system (tests)
+static id cocoa_window(void)
+{
+    const char *driver = SDL_GetCurrentVideoDriver();
+    if (!SDL.window || !driver || strcmp(driver, "cocoa") != 0) {
+        return 0;
+    }
+    SDL_SysWMinfo info;
+    SDL_VERSION(&info.version);
+    if (!SDL_GetWindowWMInfo(SDL.window, &info) || info.subsystem != SDL_SYSWM_COCOA) {
+        return 0;
+    }
+    return (id) info.info.cocoa.window;
+}
+
 // what the fullscreen Space of the window shows: neither the menu bar nor the Dock, even when the mouse reaches the
 // top or the bottom of the screen to scroll the map (macOS would slide them over the game)
 static unsigned long fullscreen_presentation_options(id self, SEL cmd, id window, unsigned long proposed)
@@ -133,16 +149,10 @@ static unsigned long fullscreen_presentation_options(id self, SEL cmd, id window
 static void hide_menu_bar_and_dock_in_fullscreen(void)
 {
 #ifdef HAS_MACOS_PRESENTATION_OPTIONS
-    const char *driver = SDL_GetCurrentVideoDriver();
-    if (!driver || strcmp(driver, "cocoa") != 0) {
-        return; // no window system (tests)
-    }
-    SDL_SysWMinfo info;
-    SDL_VERSION(&info.version);
-    if (!SDL_GetWindowWMInfo(SDL.window, &info) || info.subsystem != SDL_SYSWM_COCOA || !info.info.cocoa.window) {
+    id nswindow = cocoa_window();
+    if (!nswindow) {
         return;
     }
-    id nswindow = (id) info.info.cocoa.window;
     id delegate = ((id (*)(id, SEL)) objc_msgSend)(nswindow, sel_registerName("delegate"));
     if (!delegate) {
         return;
@@ -152,21 +162,60 @@ static void hide_menu_bar_and_dock_in_fullscreen(void)
 #endif
 }
 
+// macOS: where the window itself says the cursor is, whether or not events report it; window coordinates have their
+// origin at the bottom left. Only for the key window: the player may be in another application.
+static int cocoa_mouse_position(int *x, int *y, int height)
+{
+#ifdef HAS_MACOS_PRESENTATION_OPTIONS
+    id nswindow = cocoa_window();
+    if (!nswindow || !((BOOL (*)(id, SEL)) objc_msgSend)(nswindow, sel_registerName("isKeyWindow"))) {
+        return 0;
+    }
+    CGPoint point = ((CGPoint (*)(id, SEL)) objc_msgSend)(nswindow, sel_registerName("mouseLocationOutsideOfEventStream"));
+    *x = (int) point.x;
+    *y = height - (int) point.y;
+    return 1;
+#else
+    (void) x;
+    (void) y;
+    (void) height;
+    return 0;
+#endif
+}
+
+// the cursor stays on the display of the game in fullscreen (several displays). Not on macOS: SDL 3 confines the
+// cursor to a rectangle computed from the layout rectangle of the window, which in a fullscreen Space leaves out the
+// hidden title bar, so the cursor could no longer reach the top of the screen, where the map scrolls (D-046). There
+// the game reads the position of the cursor from the system each frame instead
+static void grab_mouse_in_fullscreen(void)
+{
+#if !defined(__APPLE__)
+    SDL_SetWindowGrab(SDL.window, SDL_TRUE);
+#endif
+}
+
 int platform_screen_get_system_mouse_position(int *x, int *y, int *inside)
 {
 #if SDL_VERSION_ATLEAST(2, 0, 18)
-    if (!SDL.window || !SDL.renderer || !(SDL_GetWindowFlags(SDL.window) & SDL_WINDOW_INPUT_FOCUS)) {
+    if (!SDL.window || !SDL.renderer) {
         return 0;
     }
-    int global_x, global_y, window_x, window_y, width, height;
-    SDL_GetGlobalMouseState(&global_x, &global_y);
-    SDL_GetWindowPosition(SDL.window, &window_x, &window_y);
+    int width, height;
     SDL_GetWindowSize(SDL.window, &width, &height);
     if (width <= 0 || height <= 0) {
         return 0;
     }
-    int in_window_x = global_x - window_x;
-    int in_window_y = global_y - window_y;
+    int in_window_x, in_window_y;
+    if (!cocoa_mouse_position(&in_window_x, &in_window_y, height)) {
+        if (!(SDL_GetWindowFlags(SDL.window) & SDL_WINDOW_INPUT_FOCUS)) {
+            return 0;
+        }
+        int global_x, global_y, window_x, window_y;
+        SDL_GetGlobalMouseState(&global_x, &global_y);
+        SDL_GetWindowPosition(SDL.window, &window_x, &window_y);
+        in_window_x = global_x - window_x;
+        in_window_y = global_y - window_y;
+    }
     *inside = in_window_x >= 0 && in_window_y >= 0 && in_window_x < width && in_window_y < height;
     in_window_x = in_window_x < 0 ? 0 : in_window_x >= width ? width - 1 : in_window_x;
     in_window_y = in_window_y < 0 ? 0 : in_window_y >= height ? height - 1 : in_window_y;
@@ -290,7 +339,7 @@ int platform_screen_create(const char *title, int display_scale_percentage, int 
 
     hide_menu_bar_and_dock_in_fullscreen();
     if (fullscreen) {
-        SDL_SetWindowGrab(SDL.window, SDL_TRUE);
+        grab_mouse_in_fullscreen();
     }
 
     set_scale_percentage(display_scale_percentage, width, height);
@@ -412,7 +461,7 @@ void platform_screen_set_fullscreen(void)
     }
     SDL_SetWindowDisplayMode(SDL.window, &mode);
 
-    SDL_SetWindowGrab(SDL.window, SDL_TRUE);
+    grab_mouse_in_fullscreen();
     setting_set_display(1, mode.w, mode.h);
 }
 

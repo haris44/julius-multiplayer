@@ -496,3 +496,14 @@
   l'automatisation (pilote factice), ni en mode relatif (déplacement de la carte au clic droit), ni au toucher.
 - Le mode compatibilité de l'encoche (`NSPrefersDisplaySafeAreaCompatibilityMode`, défaut) est conservé : la barre
   de menu du jeu resterait sinon en partie sous l'encoche.
+- **Complément (même jour, le blocage persistait)** : en plein écran, le jeu capturait la souris (`SDL_SetWindowGrab`,
+  pour la garder sur l'écran du jeu quand il y en a plusieurs). SDL 3 réalise cette capture par
+  `mouseConfinementRect`, calculé depuis `contentLayoutRect` de la fenêtre ; dans un Space ce rectangle exclut la
+  barre de titre cachée (28 points), si bien que le curseur ne pouvait plus monter dans les 28 points du haut de
+  l'écran, exactement la hauteur de la barre de menu du jeu. Sur macOS la capture est retirée ; la position du
+  curseur est lue directement sur la fenêtre Cocoa (`mouseLocationOutsideOfEventStream`, indépendante des
+  événements et de la position de fenêtre que SDL croit connaître), avec `SDL_GetGlobalMouseState` en secours.
+  Contrepartie : avec plusieurs écrans, un curseur parti sur l'autre écran fait défiler la carte tant qu'il y reste
+  (comportement de Julius avant 2020). Sur macOS, le jeu écrit aussi `julius-log.txt` dans le dossier des données
+  (pas pendant l'automatisation) ; près du haut de l'écran il y note chaque seconde la position vue par le jeu et
+  par le système, pour vérifier la correction chez Alexandre.

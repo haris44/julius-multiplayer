@@ -255,7 +255,12 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
   Caesar empêche le déplacement »). *Fait, à vérifier par Alexandre* (D-046) : sur macOS, la position de la souris
   est relue auprès du système à chaque image (`SDL_GetGlobalMouseState`) et ramenée au bord de la fenêtre en plein
   écran ; les événements de mouvement ne suffisent pas (bande noire de l'encoche au-dessus de la fenêtre, positions
-  périmées de macOS 26+, SDL #15967).
+  périmées de macOS 26+, SDL #15967). *Deuxième correction* (toujours bloqué) : la capture de la souris en plein
+  écran (`SDL_SetWindowGrab`) est retirée sur macOS, car SDL 3 confine le curseur à un rectangle calculé depuis
+  `contentLayoutRect`, qui dans un Space exclut la barre de titre cachée : le curseur ne pouvait plus atteindre les
+  28 points du haut, juste la hauteur de la barre de menu du jeu ; la position est lue sur la fenêtre Cocoa
+  (`mouseLocationOutsideOfEventStream`). Journal `julius-log.txt` dans le dossier des données (macOS) avec les
+  positions vues près du haut, pour vérifier chez Alexandre.
 - [ ] **T2.5** Résolutions : la liste propose des tailles fixes plus grandes que l'écran du MacBook (1470 × 956,
   1710 × 1112) et le défilement par les bords ne marche plus. *Fait, à vérifier par Alexandre* : les tailles fixes
   de T1.4 sont retirées ; après les trois tailles d'origine, la ligne « L par H (écran) » donne la plus grande

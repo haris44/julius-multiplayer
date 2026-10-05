@@ -5,6 +5,33 @@
 
 ---
 
+## 2026-10-05 — Session 2 (suite) : défilement vers le haut, deuxième correction (T2.8)
+
+**Retour d'Alexandre** : la carte est bien, mais la souris en haut de l'écran ne fait toujours pas défiler.
+
+**Fait** (D-046, complément)
+- Relecture de SDL 3 : en plein écran le jeu capturait la souris (`SDL_SetWindowGrab`) ; SDL 3 confine alors le
+  curseur à `mouseConfinementRect`, calculé depuis `contentLayoutRect`, qui dans un Space exclut la barre de titre
+  cachée (28 points) : le curseur ne pouvait plus atteindre le haut de l'écran, juste la hauteur de la barre de menu
+  du jeu, d'où le ressenti d'Alexandre. Cela explique aussi pourquoi la première correction (position lue auprès du
+  système) n'a rien changé : le curseur était vraiment bloqué sous la barre. Capture retirée sur macOS.
+- Position lue sur la fenêtre Cocoa (`mouseLocationOutsideOfEventStream`), indépendante des événements et de la
+  position que SDL croit connaître ; `SDL_GetGlobalMouseState` en secours.
+- macOS : `julius-log.txt` écrit dans le dossier des données (jamais pendant l'automatisation) ; près du haut de
+  l'écran, une ligne par seconde avec la position vue par le jeu et par le système, à lire chez Alexandre
+  (`../donnees-c3_test2/julius-log.txt`).
+
+**Appris**
+- Sur macOS, `SDL_Log` d'une application lancée depuis le Finder ne va nulle part de lisible : un fichier est
+  nécessaire pour diagnostiquer chez Alexandre sans ouvrir de fenêtre (I6).
+- Contrepartie de la capture retirée : avec deux écrans, un curseur parti sur l'autre écran fait défiler la carte
+  tant qu'il y reste.
+
+**Prochaine étape** : retour d'Alexandre ; si le blocage persiste, lire `julius-log.txt` ; puis le commerce (choix
+du moins cher) et M9.
+
+---
+
 ## 2026-10-05 — Session 2 (suite) : défilement vers le haut en plein écran (T2.8)
 
 **Retour d'Alexandre** : plein écran « beaucoup mieux », mais la souris en haut de l'écran ne fait plus défiler

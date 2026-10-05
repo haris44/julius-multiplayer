@@ -132,6 +132,40 @@ static void teardown_logging(void)
     }
 }
 
+#elif defined(__APPLE__)
+/* The application started from the Finder has no console: a log next to the data of the game as well */
+static FILE *log_file = 0;
+
+static void write_log(void *userdata, int category, SDL_LogPriority priority, const char *message)
+{
+    const char *prefix = priority == SDL_LOG_PRIORITY_ERROR ? "ERROR: " : "INFO: ";
+    fprintf(stderr, "%s%s\n", prefix, message);
+    if (log_file) {
+        fprintf(log_file, "%s%s\n", prefix, message);
+        fflush(log_file);
+    }
+}
+
+static void setup_logging(void)
+{
+    SDL_LogSetOutputFunction(write_log, NULL);
+}
+
+// once the directory of the data is known (the current one); the tests read the console
+static void open_log_in_data_directory(void)
+{
+    if (!platform_automation_is_active()) {
+        log_file = file_open("julius-log.txt", "wt");
+    }
+}
+
+static void teardown_logging(void)
+{
+    if (log_file) {
+        file_close(log_file);
+    }
+}
+
 #else
 static void setup_logging(void) {}
 static void teardown_logging(void) {}
@@ -424,6 +458,13 @@ static void sync_mouse_with_system(void)
         return;
     }
     const mouse *m = mouse_get();
+    // while the scrolling from the top of the screen is being looked into (D-046): what the game and the system see
+    static time_millis last_report;
+    if (setting_fullscreen() && (y < 60 || m->y < 60) && time_get_millis() - last_report >= 1000) {
+        last_report = time_get_millis();
+        SDL_Log("Mouse near the top: game (%d, %d), system (%d, %d), over the window %d, screen %d x %d", m->x, m->y,
+            x, y, inside, screen_width(), screen_height());
+    }
     // a difference of a pixel is rounding: left alone, it would cancel double clicks
     if (abs(m->x - x) >= 2 || abs(m->y - y) >= 2) {
         mouse_set_position(x, y);
@@ -653,6 +694,10 @@ static void setup(const julius_args *args)
         SDL_Log("Exiting: game pre-init failed");
         exit_with_status(1);
     }
+#if defined(__APPLE__)
+    open_log_in_data_directory();
+    SDL_Log("Julius version %s, log in the directory of the data", system_version());
+#endif
 
     if (args->force_windowed && setting_fullscreen()) {
         int w, h;
