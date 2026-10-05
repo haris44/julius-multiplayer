@@ -36,7 +36,7 @@ int mp_territory_allows_tile(building_type type, int grid_offset);
 
 /**
  * Daily update of the zone of the current city: claims the free tiles near its settled buildings and missions,
- * releases those it no longer covers
+ * releases those it no longer covers; its buildings left outside collapse after three months
  */
 void mp_territory_update_city(void);
 
@@ -46,6 +46,11 @@ void mp_territory_update_city(void);
 int mp_territory_owns_land(void);
 
 void mp_territory_clear(void);
+
+/** Days each building of the current city has spent outside its zone (state of each city) */
+void mp_territory_reset_extra_state(void);
+void mp_territory_save_extra_state(buffer *buf);
+void mp_territory_load_extra_state(buffer *buf);
 
 void mp_territory_save_state(buffer *buf);
 

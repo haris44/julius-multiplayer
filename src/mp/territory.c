@@ -1,6 +1,10 @@
 #include "territory.h"
 
 #include "building/building.h"
+#include "building/destruction.h"
+#include "city/warning.h"
+#include "mp/audit.h"
+#include "translation/translation.h"
 #include "game/player_context.h"
 #include "game/rules.h"
 #include "map/data.h"
@@ -11,6 +15,12 @@
 
 // player id + 1, 0 when nobody got the tile
 static grid_u8 territory;
+
+// a building left outside the zone of its player collapses after this many days (3 months), unless covered again
+#define GRACE_DAYS 48
+
+// days each building of each city has been outside its zone
+static uint8_t days_outside[PLAYER_CONTEXT_MAX_PLAYERS][MAX_BUILDINGS];
 
 // coverage of the current city, one row of differences per map row (map coordinates)
 static int16_t coverage[GRID_MAX_SIZE][GRID_MAX_SIZE + 1];
@@ -95,6 +105,8 @@ static void add_coverage(int x_min, int y_min, int x_max, int y_max)
     }
 }
 
+static void check_buildings_outside(void);
+
 void mp_territory_update_city(void)
 {
     if (!mp_territory_is_active()) {
@@ -123,6 +135,50 @@ void mp_territory_update_city(void)
                 *tile = 0;
             }
         }
+    }
+    check_buildings_outside();
+}
+
+void mp_territory_reset_extra_state(void)
+{
+    memset(days_outside, 0, sizeof(days_outside));
+}
+
+void mp_territory_save_extra_state(buffer *buf)
+{
+    buffer_write_raw(buf, days_outside[player_context_current_player], MAX_BUILDINGS);
+}
+
+void mp_territory_load_extra_state(buffer *buf)
+{
+    buffer_read_raw(buf, days_outside[player_context_current_player], MAX_BUILDINGS);
+}
+
+// buildings outside the zone of their player: a warning, then they collapse (D-036)
+static void check_buildings_outside(void)
+{
+    uint8_t *days = days_outside[player_context_current_player];
+    int warn = 0;
+    for (int i = BUILDING_FIRST; i < BUILDING_END; i++) {
+        building *b = building_get(i);
+        uint8_t *d = &days[BUILDING_LOCAL_ID(i)];
+        if (b->state != BUILDING_STATE_IN_USE || mp_territory_owner(b->grid_offset) == player_context_current_player ||
+            b->type == BUILDING_MISSION_POST) {
+            *d = 0;
+            continue;
+        }
+        (*d)++;
+        if (*d == 1 || *d == GRACE_DAYS - 16) {
+            warn = 1; // when it happens, and one month before the collapse
+        }
+        if (*d >= GRACE_DAYS) {
+            *d = 0;
+            mp_audit_effect(i, "outside territory");
+            building_destroy_by_collapse(b);
+        }
+    }
+    if (warn) {
+        city_warning_show_custom(translation_for(TR_MP_BUILDINGS_OUTSIDE_TERRITORY));
     }
 }
 

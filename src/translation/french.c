@@ -148,6 +148,7 @@ static translation_string all_strings[] = {
     {TR_MP_TRAIN_MISSIONARY, "Former un missionnaire : "},
     {TR_MP_MISSIONARY_OUT, "Un missionnaire est en route"},
     {TR_MP_MISSIONARY_SELECTED, "Cliquez où envoyer le missionnaire"},
+    {TR_MP_BUILDINGS_OUTSIDE_TERRITORY, "Des bâtiments hors de votre territoire vont s'effondrer"},
     {TR_MP_DIFFICULTY, "Difficulté : "},
     {TR_MP_DIFFICULTY_0, "très facile"},
     {TR_MP_DIFFICULTY_1, "facile"},

@@ -297,6 +297,8 @@ add_test(NAME mp_reservoir_level COMMAND simtool reservoirlevel brugle-massilia-
 add_test(NAME mp_territory COMMAND simtool territory brugle-massilia-start.sav)
 # Missions and missionaries (MT.2, MT.3, D-037): near a missionary, free then marble, trained for money
 add_test(NAME mp_missions COMMAND simtool missions brugle-massilia-start.sav)
+# Buildings left outside the zone collapse after three months, unless covered again (MT.4)
+add_test(NAME mp_outside_territory COMMAND simtool outside brugle-massilia-start.sav)
 
 # T1.5 (D-034): the roads of Caesar stay, untinted, and serve every city
 add_test(NAME mp_caesar_roads COMMAND simtool caesarroads brugle-massilia-start.sav)

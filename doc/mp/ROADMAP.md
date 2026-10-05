@@ -268,7 +268,10 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
   *Fait* : figure « missionnaire » avec deux états multijoueur (attend, marche comme un soldat) ; un au départ par
   joueur ; clic dessus puis clic sur la destination (commande `MP_ACTION_MISSIONARY_MOVE`), clic droit pour
   annuler ; jamais de mission dans la zone d'un autre. Test `mp_missions` ; captures du vrai jeu.
-- [ ] **MT.4** Bâtiments hors zone : message puis effondrement après le délai de grâce.
+- [x] **MT.4** Bâtiments hors zone : message puis effondrement après le délai de grâce.
+  *Fait* : compteur de jours par bâtiment (état « extra » de chaque cité) ; avertissement le premier jour et un mois
+  avant ; effondrement après 48 jours (3 mois) ; une mission rebâtie à temps les sauve. Test
+  `mp_outside_territory`.
 - [ ] **MT.5** Frontières tracées à la couleur du joueur, teinte légère des bâtiments adverses (D-039).
 
 ## MB — Brouillard de guerre (D-038)

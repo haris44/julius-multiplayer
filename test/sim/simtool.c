@@ -121,6 +121,7 @@ static int usage(void)
     printf("                                         each arrival point, permissions; MAPGEN_PICTURE=F.ppm\n");
     printf("  simtool reservoirlevel SAVE            prepared map: a reservoir cut off from its source empties\n");
     printf("                                         slowly, joined again it fills\n");
+    printf("  simtool outside SAVE                   prepared map: buildings outside the zone collapse in 3 months\n");
     printf("  simtool missions SAVE                  prepared map: missions near a missionary, marble, training\n");
     printf("  simtool territory SAVE                 prepared map: players build only in their zone (D-036)\n");
     printf("  simtool caesarroads SAVE               generated map: no player clears a road of Caesar, every\n");
@@ -1815,6 +1816,53 @@ static int command_missions(const char *file)
     return failures ? 1 : 0;
 }
 
+// buildings left outside the zone collapse after three months, unless a mission covers them again (MT.4, D-036)
+static int command_outside(const char *file)
+{
+    if (!mp_mapgen_create_prepared(file, 2)) {
+        printf("Unable to create the prepared map\n");
+        return 2;
+    }
+    game_rules_settings rules;
+    game_rules_default_multiplayer_settings(&rules);
+    rules.territories = 1;
+    rules.ai_invasions = 0;
+    game_rules_set_multiplayer(&rules);
+    int failures = 0;
+#define CHECK(condition, text) do { int ok_ = (condition); printf("%-62s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
+#define TYPE_AT(x, y) building_get(map_building_at(map_grid_offset(x, y)))->type
+    figure *m = first_missionary(0);
+    int mx = m->x, my = m->y;
+    build_as(0, BUILDING_MISSION_POST, mx + 4, my, mx + 4, my);
+    run_trace(50, 50, 0, 0);
+    CHECK(build_as(0, BUILDING_PREFECTURE, mx + 10, my + 5, mx + 10, my + 5), "a prefecture in the zone of the mission");
+    build_as(0, BUILDING_CLEAR_LAND, mx + 4, my, mx + 5, my + 1);
+    CHECK(building_get(map_building_at(map_grid_offset(mx + 4, my)))->state != BUILDING_STATE_IN_USE,
+        "the mission is cleared");
+    run_trace(40 * 50, 40 * 50, 0, 0);
+    CHECK(TYPE_AT(mx + 10, my + 5) == BUILDING_PREFECTURE, "40 days later, the prefecture still stands");
+    run_trace(10 * 50, 10 * 50, 0, 0);
+    CHECK(TYPE_AT(mx + 10, my + 5) != BUILDING_PREFECTURE, "after three months outside the zone, it collapsed");
+
+    // the city owns no land any more: a new mission is free and saves the next prefecture in time
+    CHECK(build_as(0, BUILDING_MISSION_POST, mx + 4, my, mx + 4, my), "a new mission, free again");
+    run_trace(50, 50, 0, 0);
+    build_as(0, BUILDING_PREFECTURE, mx + 12, my + 5, mx + 12, my + 5);
+    build_as(0, BUILDING_CLEAR_LAND, mx + 4, my, mx + 5, my + 1);
+    run_trace(20 * 50, 20 * 50, 0, 0);
+    build_as(0, BUILDING_MISSION_POST, mx + 4, my, mx + 4, my);
+    run_trace(60 * 50, 60 * 50, 0, 0);
+    CHECK(TYPE_AT(mx + 12, my + 5) == BUILDING_PREFECTURE, "a mission built within the three months saves it");
+
+    player_context_switch(0);
+    player_context_set_num_players(1);
+#undef TYPE_AT
+#undef CHECK
+    printf("%s\n", failures ? "DIFFERENT: buildings outside the zone do not behave as designed" :
+        "Identical: buildings outside the zone behave as designed");
+    return failures ? 1 : 0;
+}
+
 // the camera of a player reaches every corner of a generated map, after it went through a .mpmap file as in a game
 static int command_viewcorners(const char *file, int num_players)
 {
@@ -2319,6 +2367,8 @@ int main(int argc, char **argv)
         result = command_preparedmap(file, atoi(argv[3]), atoi(argv[4]));
     } else if (strcmp(command, "reservoirlevel") == 0) {
         result = command_reservoirlevel(file);
+    } else if (strcmp(command, "outside") == 0) {
+        result = command_outside(file);
     } else if (strcmp(command, "missions") == 0) {
         result = command_missions(file);
     } else if (strcmp(command, "territory") == 0) {
