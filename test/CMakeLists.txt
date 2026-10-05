@@ -284,6 +284,8 @@ foreach(save brugle-lugdunum valentia57 kknight)
 endforeach()
 
 # Generated maps (M6.2): each player settles at its arrival point and gets immigrants; network game on one
+# T1.5 (D-034): the roads of Caesar stay, untinted, and serve every city
+add_test(NAME mp_caesar_roads COMMAND simtool caesarroads brugle-massilia-start.sav)
 foreach(players 2 4)
     add_test(NAME mp_generated_map_${players}_players COMMAND simtool mapgen brugle-massilia-start.sav ${players} 11 4000)
     # T1.2: the camera reaches the four corners (the map was in a corner of the grid, out of reach)

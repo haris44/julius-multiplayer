@@ -181,7 +181,7 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
   complémentaires équilibrées (fer et armes rares).
   *Fait* (D-030) : `mp/mapgen`, option « grande carte générée » du salon et `--mp-generate`. Pas encore de relief.
   Tests : chaque joueur s'installe et reçoit des immigrants (2 et 4 joueurs), partie réseau sur carte générée,
-  `tools/mp-lobby-test.sh generated`.
+  `tools/mp-lobby-test.sh`.
 - [ ] **M6.3** Éditeur : grandes tailles, points d'arrivée, autorisations.
   *Reporté* : le générateur couvre le besoin pour l'instant ; à reprendre si Alexandre veut dessiner ses cartes.
 - [x] **M6.4** Rendu, minicarte et captures sur grandes cartes ; mesure et optimisation du routage.
@@ -220,12 +220,18 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
 - [x] **T1.4** 1920×1080 et 2K proposées dans la liste des résolutions.
   *Fait* : 1280 × 720, 1920 × 1080 et 2560 × 1440 après les trois tailles d'origine (capture : fenêtre de
   1920 × 1080 obtenue).
-- [ ] **T1.5** Routes de la carte à César : neutres (pas à la couleur d'un joueur), indestructibles (D-034).
-- [ ] **T1.6** Le salon ne propose plus que les cartes multijoueur (D-033).
+- [x] **T1.5** Routes de la carte à César : neutres (pas à la couleur d'un joueur), indestructibles (D-034).
+  *Fait* : propriétaire `MAP_OWNER_CAESAR` ; le rouge venait du mode « copie de carte », qui attribuait les routes
+  de chaque copie à son joueur. Test `mp_caesar_roads` : aucun joueur ne les démolit, pas de teinte, les maisons
+  qui les bordent reçoivent des immigrants. Le dessin en blanc reste à faire (MC.1).
+- [x] **T1.6** Le salon ne propose plus que les cartes multijoueur (D-033).
+  *Fait* : plus de choix « copies / carte générée » ; une partie ou carte multijoueur reprend telle quelle, tout
+  autre fichier donne le climat, l'empire et les fonds d'une carte générée. `tools/mp-lobby-test.sh` n'a plus de
+  variante.
 
 ## MC — Cartes multijoueur préparées et César (D-033, D-034)
-- [ ] **MC.1** Propriétaire « César » dans la grille des propriétaires : routes et aqueducs de la carte, dessinés en
-  blanc, indestructibles.
+- [ ] **MC.1** Ouvrages de César dessinés en blanc (la teinte actuelle ne fait que foncer les images) ; son aqueduc
+  porte l'eau de son réservoir à toutes les cités. Le propriétaire existe déjà (T1.5).
 - [ ] **MC.2** Carte à 2 joueurs et carte à 4 joueurs (3 joueurs sur la carte à 4) : emplacements avec prés et
   seulement les ressources autorisées, tout relié à la route principale, aqueduc de César près des joueurs loin de
   l'eau, réservoir indestructible. *Critère* : test « chaque emplacement est relié et a ses ressources » ; relecture

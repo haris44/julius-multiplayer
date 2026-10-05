@@ -53,6 +53,7 @@
 #include "mp/actions.h"
 #include "mp/compose.h"
 #include "mp/savegame.h"
+#include "mp/colors.h"
 #include "mp/lockstep.h"
 #include "mp/session.h"
 
@@ -110,6 +111,8 @@ static int usage(void)
     printf("                                         none of its buildings\n");
     printf("  simtool neighbours SAVE TICKS          two copies of the city joined by a road: walkers cross,\n");
     printf("                                         but no city acts on the buildings of the other\n");
+    printf("  simtool caesarroads SAVE               generated map: no player clears a road of Caesar, every\n");
+    printf("                                         city uses it\n");
     printf("  simtool viewcorners SAVE PLAYERS       generated map: the camera reaches its four corners\n");
     printf("  simtool privatepopups SAVE TICKS       twin cities: the popups and sounds of player 2 do not\n");
     printf("                                         reach player 1\n");
@@ -1324,6 +1327,75 @@ static void settle_city(int player_id, int size)
     mp_command_execute(&houses2);
 }
 
+static int count_roads(int x_from, int x_to, int y)
+{
+    int roads = 0;
+    for (int x = x_from; x <= x_to; x++) {
+        roads += map_terrain_is(map_grid_offset(x, y), TERRAIN_ROAD) ? 1 : 0;
+    }
+    return roads;
+}
+
+// the roads of Caesar (D-034): no player may clear them, none is tinted, and every city may use them
+static int command_caesarroads(const char *file)
+{
+    int size = mp_mapgen_default_size(2);
+    if (!mp_mapgen_create(file, 2, size, 11)) {
+        printf("Unable to generate the map\n");
+        return 2;
+    }
+    int failures = 0;
+    for (int p = 0; p < 2; p++) {
+        int cx, cy;
+        mp_mapgen_city_center(p, &cx, &cy);
+        // a road of Caesar, as a map places it, and next to it a road the player builds
+        mp_command build = { .type = MP_COMMAND_BUILD, .player_id = p, .args = { BUILDING_ROAD, 0, cx - 6, cy, cx + 6, cy, 0, 0 } };
+        mp_command_execute(&build);
+        for (int x = cx - 6; x <= cx + 6; x++) {
+            map_owner_set(map_grid_offset(x, cy), MAP_OWNER_CAESAR);
+        }
+        mp_command own = { .type = MP_COMMAND_BUILD, .player_id = p, .args = { BUILDING_ROAD, 0, cx - 6, cy + 3, cx + 6, cy + 3, 0, 0 } };
+        mp_command_execute(&own);
+        int tinted = mp_colors_tint_for_tile(map_grid_offset(cx, cy)) != 0;
+        // houses along the road of Caesar: the city reaches them by that road
+        mp_command houses = { .type = MP_COMMAND_BUILD, .player_id = p,
+            .args = { BUILDING_HOUSE_VACANT_LOT, 0, cx - 5, cy + 1, cx + 5, cy + 1, 0, 0 } };
+        mp_command_execute(&houses);
+        for (int q = 0; q < 2; q++) {
+            mp_command clear = { .type = MP_COMMAND_BUILD, .player_id = q, .args = { BUILDING_CLEAR_LAND, 0, cx - 6, cy, cx + 6, cy, 0, 0 } };
+            mp_command_execute(&clear);
+        }
+        mp_command clear_own = { .type = MP_COMMAND_BUILD, .player_id = p, .args = { BUILDING_CLEAR_LAND, 0, cx - 6, cy + 3, cx + 6, cy + 3, 0, 0 } };
+        mp_command_execute(&clear_own);
+        int caesar_roads = count_roads(cx - 6, cx + 6, cy);
+        int own_roads = count_roads(cx - 6, cx + 6, cy + 3);
+        printf("player %d: road of Caesar %d/13 tiles left, own road %d/13 tiles left, %s\n", p + 1, caesar_roads,
+            own_roads, tinted ? "TINTED" : "not tinted");
+        if (caesar_roads != 13 || tinted) {
+            failures++;
+        }
+        if (own_roads != 0) {
+            printf("FAILED: the player cannot clear his own road either, the test proves nothing\n");
+            return 1;
+        }
+    }
+    // a day of the game: the houses along the roads of Caesar get road access and their first immigrants
+    run_trace(1000, 1000, 0, 0);
+    for (int p = 0; p < 2; p++) {
+        player_context_switch(p);
+        printf("player %d: population %d\n", p + 1, city_population());
+        if (!city_population()) {
+            printf("the houses along the road of Caesar get no immigrant\n");
+            failures++;
+        }
+    }
+    player_context_switch(0);
+    player_context_set_num_players(1);
+    printf("%s\n", failures ? "DIFFERENT: the roads of Caesar are not neutral and permanent" :
+        "Identical: the roads of Caesar stay, untinted, and serve every city");
+    return failures ? 1 : 0;
+}
+
 // the camera of a player reaches every corner of a generated map, after it went through a .mpmap file as in a game
 static int command_viewcorners(const char *file, int num_players)
 {
@@ -1824,6 +1896,8 @@ int main(int argc, char **argv)
         result = command_figtrace(file, atoi(argv[3]), atoi(argv[4]), atoi(argv[5]), atoi(argv[6]));
     } else if (strcmp(command, "caesarfree") == 0 && argc > 3) {
         result = command_caesarfree(file, ticks);
+    } else if (strcmp(command, "caesarroads") == 0) {
+        result = command_caesarroads(file);
     } else if (strcmp(command, "viewcorners") == 0 && argc > 3) {
         result = command_viewcorners(file, atoi(argv[3]));
     } else if (strcmp(command, "privatepopups") == 0 && argc > 3) {

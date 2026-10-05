@@ -54,7 +54,6 @@ static void button_end(int param1, int param2);
 static void button_invasions(int param1, int param2);
 static void button_difficulty(int param1, int param2);
 static void button_gods(int param1, int param2);
-static void button_map_kind(int param1, int param2);
 
 static generic_button file_buttons[] = {
     {24, 104, 264, 16, button_select_file, button_none, 0, 0},
@@ -78,8 +77,7 @@ static generic_button file_buttons[] = {
 #define BUTTON_INVASIONS 6
 #define BUTTON_DIFFICULTY 7
 #define BUTTON_GODS 8
-#define BUTTON_MAP_KIND 9
-#define NUM_ACTION_BUTTONS 10
+#define NUM_ACTION_BUTTONS 9
 static generic_button action_buttons[] = {
     {176, 280, 24, 20, button_players, button_none, -1, 0},
     {208, 280, 24, 20, button_players, button_none, 1, 0},
@@ -90,7 +88,6 @@ static generic_button action_buttons[] = {
     {16, 348, 296, 20, button_invasions, button_none, 0, 0},
     {16, 304, 188, 20, button_difficulty, button_none, 0, 0},
     {208, 304, 104, 20, button_gods, button_none, 0, 0},
-    {16, 370, 296, 20, button_map_kind, button_none, 0, 0},
 };
 
 // end of the game: none, or by score after these years
@@ -117,7 +114,6 @@ static struct {
     int ai_invasions;
     int difficulty;
     int gods;
-    int generated_map;
     int rules_initialized;
     uint8_t address[ADDRESS_LENGTH];
     char local_address[16];
@@ -273,9 +269,6 @@ static void draw_foreground(void)
     int hosting = mp_lockstep_get_state() == MP_LOCKSTEP_WAITING_FOR_PLAYERS && mp_lockstep_is_host();
     draw_button(&action_buttons[BUTTON_HOST], translation_for(hosting ? TR_MP_START : TR_MP_HOST_BUTTON),
         data.focus_action == BUTTON_HOST + 1);
-    font_t map_font = data.focus_action == BUTTON_MAP_KIND + 1 ? FONT_NORMAL_WHITE : FONT_NORMAL_BLACK;
-    width = text_draw(translation_for(TR_MP_MAP_KIND), 16, 374, map_font, 0);
-    text_draw(translation_for(data.generated_map ? TR_MP_MAP_GENERATED : TR_MP_MAP_COPIES), 16 + width, 374, map_font, 0);
 
     // joining
     text_draw(translation_for(TR_MP_JOIN_TITLE), 336, 56, FONT_NORMAL_BLACK, 0);
@@ -360,9 +353,10 @@ static void button_gods(int param1, int param2)
     data.gods = !data.gods;
 }
 
-static void button_map_kind(int param1, int param2)
+static int is_multiplayer_file(const char *filename)
 {
-    data.generated_map = !data.generated_map;
+    size_t length = strlen(filename);
+    return length > 6 && (strcmp(filename + length - 6, ".mpsav") == 0 || strcmp(filename + length - 6, ".mpmap") == 0);
 }
 
 static void button_host(int param1, int param2)
@@ -387,8 +381,10 @@ static void button_host(int param1, int param2)
     mp_lockstep_set_started_callback(window_mp_lobby_show_started_game);
     if (mp_lockstep_host(MP_LOCKSTEP_DEFAULT_PORT, data.num_players, data.files[data.selected_file], 1)) {
         mp_lockstep_set_manual_start(1);
-        // any seed will do: the host generates the map and sends it
-        mp_lockstep_set_generated_map(data.generated_map, (unsigned int) time_get_millis());
+        // only multiplayer maps (D-033): a multiplayer game or map goes on as saved, any other file only gives the
+        // climate, empire and funds of a generated map; any seed will do, the host sends the map
+        mp_lockstep_set_generated_map(!is_multiplayer_file(data.files[data.selected_file]),
+            (unsigned int) time_get_millis());
     }
 }
 

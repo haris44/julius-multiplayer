@@ -13,6 +13,12 @@
 #define MAP_OWNER_NONE -1
 
 /**
+ * Caesar, the neutral owner of the roads and aqueducts placed by a multiplayer map (doc/mp/DECISIONS.md D-034):
+ * he never plays, nobody may clear what he owns, every city may use it. Not a player id.
+ */
+#define MAP_OWNER_CAESAR 7
+
+/**
  * @return Player owning the tile; player 0 when nobody claimed it
  */
 int map_owner_get(int grid_offset);

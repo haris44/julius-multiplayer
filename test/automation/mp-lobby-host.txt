@@ -1,4 +1,4 @@
-# Real game, network game started from the lobby only (see tools/mp-lobby-test.sh): host
+# Real game, network game on a generated map started from the lobby only (see tools/mp-lobby-test.sh): host
 wait 10
 click 400 500
 wait 10
