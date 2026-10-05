@@ -398,7 +398,7 @@
   ne va jamais dans git (I4). Des dessins entièrement nouveaux d'Alexandre pourront s'y ajouter.
 
 ### D-040 — Répartition des matériaux sur les cartes préparées (précise D-033 et remplace D-020 pour elles)
-- 2026-10-05 · **adoptée, provisoire** · *à valider* par Alexandre (équilibrage)
+- 2026-10-05 · **remplacée par D-041**
 - L'argile demande de l'eau à côté, le marbre et le fer des rochers, le bois des arbres, toutes les fermes des
   prés. Le joueur du marbre n'a ni eau ni argile.
 - Carte à 2 (ouest, est) : J1 fer, argile, vignes, avec un lac ; J2 marbre, bois, olives, sans eau.
@@ -406,3 +406,14 @@
   bois, avec un lac ; J4 bois et olives, avec un lac. À 3 joueurs, le sud reste libre.
 - Blé, légumes, fruits et porcs pour tous (prés). Loin de toutes les cités, des bois ; nulle part ailleurs de
   rocher ni d'eau, sauf le lac central réservé à César.
+
+### D-041 — Matériaux des cartes préparées, rivière du lac central (remplace D-040)
+- 2026-10-05 · **adoptée** (Alexandre) ; répartition du reste : équitable, provisoire
+- Le joueur des rochers a **le fer et le marbre**, sans eau ; un autre a **le bois et l'argile** (l'argile demande
+  de l'eau), avec un lac ; olives et vignes sont partagées.
+  - Carte à 2 (ouest, est) : J1 fer, marbre, olives ; J2 bois, argile, vignes, lac.
+  - Carte à 4 (ouest, est, nord, sud) : J1 fer, marbre ; J2 bois, argile, lac ; J3 olives, bois ; J4 vignes,
+    argile, lac. À 3 joueurs, le sud reste libre. J1 et J3 auront l'aqueduc de César.
+- Le lac central est relié au coin nord-est de la carte par une **rivière** (entrée et sortie des navires) : les
+  navires de l'empire remontent jusqu'aux docks bâtis sur ses rives. Ni le lac ni la rivière ne coupent une route
+  principale.

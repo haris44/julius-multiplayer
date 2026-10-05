@@ -50,6 +50,11 @@ int mp_mapgen_slot_allows(int player_id, int resource);
 int mp_mapgen_slot_has_water(int player_id);
 
 /**
+ * On the last prepared map: where the river of the central lake leaves the map (ships come and go there)
+ */
+void mp_mapgen_river_point(int *x, int *y);
+
+/**
  * Arrival point of a player on the last generated map
  */
 void mp_mapgen_entry_point(int player_id, int *x, int *y);

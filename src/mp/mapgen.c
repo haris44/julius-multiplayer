@@ -42,6 +42,8 @@ static struct {
     int size;
     int num_players; // arrival points on the map (a prepared map for 4 may have 3 players)
     int prepared;
+    int river_x; // where the river of the central lake leaves the map, -1 without it
+    int river_y;
     int center_x[MP_MAPGEN_MAX_PLAYERS];
     int center_y[MP_MAPGEN_MAX_PLAYERS];
     int entry_x[MP_MAPGEN_MAX_PLAYERS];
@@ -324,18 +326,20 @@ static const int SHARED_RAW_MATERIALS[] = {
 };
 #define NUM_SHARED_RAW_MATERIALS (int) (sizeof(SHARED_RAW_MATERIALS) / sizeof(SHARED_RAW_MATERIALS[0]))
 
-// west, east: the marble player has neither water nor clay, which needs water
+// west, east: the player of the rocks has iron and marble but no water; the other has the lake, timber and clay,
+// which needs water; olives and vines are shared out
 static const map_slot SLOTS_2[2] = {
-    { { RESOURCE_IRON, RESOURCE_CLAY, RESOURCE_VINES }, 1 },
-    { { RESOURCE_MARBLE, RESOURCE_TIMBER, RESOURCE_OLIVES }, 0 },
+    { { RESOURCE_IRON, RESOURCE_MARBLE, RESOURCE_OLIVES }, 0 },
+    { { RESOURCE_TIMBER, RESOURCE_CLAY, RESOURCE_VINES }, 1 },
 };
 
-// west, east, north, south
+// west, east, north, south: one player of the rocks (iron and marble), the others share timber, clay, olives and
+// vines; the players without water will have the aqueduct of Caesar
 static const map_slot SLOTS_4[4] = {
-    { { RESOURCE_IRON, RESOURCE_OLIVES, RESOURCE_NONE }, 0 },
-    { { RESOURCE_MARBLE, RESOURCE_VINES, RESOURCE_NONE }, 0 },
-    { { RESOURCE_CLAY, RESOURCE_TIMBER, RESOURCE_NONE }, 1 },
-    { { RESOURCE_TIMBER, RESOURCE_OLIVES, RESOURCE_NONE }, 1 },
+    { { RESOURCE_IRON, RESOURCE_MARBLE, RESOURCE_NONE }, 0 },
+    { { RESOURCE_TIMBER, RESOURCE_CLAY, RESOURCE_NONE }, 1 },
+    { { RESOURCE_OLIVES, RESOURCE_TIMBER, RESOURCE_NONE }, 0 },
+    { { RESOURCE_VINES, RESOURCE_CLAY, RESOURCE_NONE }, 1 },
 };
 
 static const map_slot *slot_of(int slot)
@@ -428,6 +432,41 @@ static void place_slot(int slot)
     set_blob(x, y, 6, TERRAIN_MEADOW);
 }
 
+// a lake in the middle, for the reservoir of Caesar (D-034), joined to the north-east corner by a river: ships of
+// the empire sail up to the docks built on its shores. Neither crosses a main road.
+static void place_central_lake(void)
+{
+    int x = data.size / 2 + 14;
+    int y = data.size / 2 - 14;
+    set_blob(x, y, 6, TERRAIN_WATER);
+    for (int step = 0;; step++) {
+        for (int dy = -2; dy <= 2; dy++) {
+            for (int dx = -2; dx <= 2; dx++) {
+                int xx = x + dx, yy = y + dy;
+                if (xx >= 0 && yy >= 0 && xx < data.size && yy < data.size && !in_settlement(xx, yy)) {
+                    map_terrain_set(map_grid_offset(xx, yy), TERRAIN_WATER);
+                }
+            }
+        }
+        if (x == data.size - 1 || y == 0) {
+            break;
+        }
+        // always towards the corner, more often across or up depending on a slow noise: it meanders
+        int bias = soft_noise(3 * step, 0, 6);
+        if (bias > 145 && x < data.size - 1) {
+            x++;
+        } else if (bias < 111 && y > 0) {
+            y--;
+        } else if (step & 1) {
+            x++;
+        } else {
+            y--;
+        }
+    }
+    data.river_x = x;
+    data.river_y = y;
+}
+
 // the main road of Caesar: from every arrival point to the middle of the map
 static void place_main_road(void)
 {
@@ -474,6 +513,12 @@ void mp_mapgen_entry_point(int player_id, int *x, int *y)
     *y = data.entry_y[player_id];
 }
 
+void mp_mapgen_river_point(int *x, int *y)
+{
+    *x = data.prepared ? data.river_x : -1;
+    *y = data.prepared ? data.river_y : -1;
+}
+
 int mp_mapgen_prepared_size(int num_players)
 {
     return num_players <= 2 ? 200 : 260;
@@ -497,11 +542,12 @@ int mp_mapgen_create_prepared(const char *template_file, int num_players)
     for (int slot = 0; slot < data.num_players; slot++) {
         place_slot(slot);
     }
-    // a lake in the middle, for the reservoir of Caesar (D-034)
-    set_blob(data.size / 2 + 14, data.size / 2 - 14, 6, TERRAIN_WATER);
+    place_central_lake();
     map_owner_clear_all();
     place_main_road();
     update_tile_images();
+    scenario_editor_set_river_entry_point(data.river_x, data.river_y);
+    scenario_editor_set_river_exit_point(data.river_x, data.river_y);
     if (!add_cities(num_players)) {
         return 0;
     }

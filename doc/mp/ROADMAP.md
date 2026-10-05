@@ -235,7 +235,7 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
 - [x] **MC.2** Carte à 2 joueurs et carte à 4 joueurs (3 joueurs sur la carte à 4) : emplacements avec prés et
   seulement les ressources autorisées, tout relié à la route principale. *Fait* (à relire par Alexandre) :
   `mp_mapgen_create_prepared`, toujours la même carte (200 cases à 2, 260 à 4) ; route de César de chaque point
-  d'arrivée au centre ; lac central pour le futur réservoir de César ; autorisations fixées par la carte. Test
+  d'arrivée au centre ; lac central relié au coin nord-est par une rivière navigable (D-041) ; autorisations fixées par la carte. Test
   `mp_prepared_map_*` (terre accessible, matériaux et autorisations de chaque emplacement, carte identique d'une
   création à l'autre, cités qui grandissent) ; image : `MAPGEN_PICTURE=carte.ppm simtool preparedmap`. Les
   cartes sont recalculées au lancement à partir des données du joueur : aucune `.mpmap` dans git (I4).

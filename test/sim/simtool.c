@@ -53,6 +53,7 @@
 #include "mp/actions.h"
 #include "mp/compose.h"
 #include "mp/savegame.h"
+#include "scenario/map.h"
 #include "game/resource.h"
 #include "mp/colors.h"
 #include "mp/lockstep.h"
@@ -1528,6 +1529,15 @@ static int command_preparedmap(const char *file, int num_players, int ticks)
             failures++;
         }
     }
+    // ships of the empire sail from the edge of the map to the central lake
+    int rx, ry;
+    mp_mapgen_river_point(&rx, &ry);
+    map_routing_calculate_distances_water_boat(rx, ry);
+    int lake = map_grid_offset(size / 2 + 14, size / 2 - 14);
+    int sailing = scenario_map_has_river_entry() && map_routing_distance(lake) > 0;
+    printf("river from (%d, %d) to the central lake: %s\n", rx, ry, sailing ? "ships sail" : "NO WAY");
+    failures += !sailing;
+
     uint64_t first = mp_checksum_state();
     player_context_switch(0);
     player_context_set_num_players(1);
