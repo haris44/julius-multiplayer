@@ -15,6 +15,16 @@
 #include "SDL.h"
 
 #include <stdlib.h>
+#include <string.h>
+
+#if defined(__APPLE__)
+#include <TargetConditionals.h>
+#if TARGET_OS_OSX
+#include <objc/message.h>
+#include <objc/runtime.h>
+#define HAS_MACOS_PRESENTATION_OPTIONS
+#endif
+#endif
 
 static struct {
     SDL_Window *window;
@@ -69,6 +79,77 @@ static void apply_max_scale(int pixel_width, int pixel_height)
     }
 }
 
+// the largest window that fits on its screen, title bar included, in the units of the window system
+static int get_max_window_pixels(int *width, int *height)
+{
+#if SDL_VERSION_ATLEAST(2, 0, 5)
+    int display = SDL.window ? SDL_GetWindowDisplayIndex(SDL.window) : 0;
+    SDL_Rect usable;
+    if (display < 0 || SDL_GetDisplayUsableBounds(display, &usable) != 0) {
+        return 0;
+    }
+    int top = 0, left = 0, bottom = 0, right = 0;
+    if (SDL.window && !(SDL_GetWindowFlags(SDL.window) & SDL_WINDOW_FULLSCREEN)) {
+        SDL_GetWindowBordersSize(SDL.window, &top, &left, &bottom, &right);
+    }
+    if (top <= 0) {
+        top = 32; // the title bar the window will have
+    }
+    *width = usable.w - left - right;
+    *height = usable.h - top - bottom;
+    return *width > 0 && *height > 0;
+#else
+    return 0;
+#endif
+}
+
+// a window larger than its screen cannot be scrolled from its edges, which the mouse does not reach
+static void fit_on_screen(int *pixel_width, int *pixel_height)
+{
+    int max_width, max_height;
+    if (get_max_window_pixels(&max_width, &max_height)) {
+        *pixel_width = *pixel_width > max_width ? max_width : *pixel_width;
+        *pixel_height = *pixel_height > max_height ? max_height : *pixel_height;
+    }
+}
+
+// macOS: in fullscreen, the menu bar and the Dock stay hidden when the mouse reaches the edges of the screen to
+// scroll the map, instead of sliding over the game
+static void set_macos_fullscreen_presentation(int fullscreen)
+{
+#ifdef HAS_MACOS_PRESENTATION_OPTIONS
+    enum { HIDE_DOCK = 1 << 1, HIDE_MENU_BAR = 1 << 3, FULLSCREEN_SPACE = 1 << 10 };
+    const char *driver = SDL_GetCurrentVideoDriver();
+    if (!driver || strcmp(driver, "cocoa") != 0) {
+        return; // no window system (tests)
+    }
+    id app = ((id (*)(id, SEL)) objc_msgSend)((id) objc_getClass("NSApplication"),
+        sel_registerName("sharedApplication"));
+    if (!app) {
+        return;
+    }
+    unsigned long current = ((unsigned long (*)(id, SEL)) objc_msgSend)(app, sel_registerName("presentationOptions"));
+    if (current & FULLSCREEN_SPACE) {
+        return; // a fullscreen Space has its own options, which cannot be changed
+    }
+    ((void (*)(id, SEL, unsigned long)) objc_msgSend)(app, sel_registerName("setPresentationOptions:"),
+        fullscreen ? HIDE_DOCK | HIDE_MENU_BAR : 0);
+#else
+    (void) fullscreen;
+#endif
+}
+
+int system_get_max_window_size(int *width, int *height)
+{
+    int pixel_width, pixel_height;
+    if (!get_max_window_pixels(&pixel_width, &pixel_height)) {
+        return 0;
+    }
+    *width = scale_pixels_to_logical(pixel_width);
+    *height = scale_pixels_to_logical(pixel_height);
+    return 1;
+}
+
 static void set_scale_percentage(int new_scale, int pixel_width, int pixel_height)
 {
 #ifdef __vita__
@@ -115,6 +196,7 @@ int platform_screen_create(const char *title, int display_scale_percentage, int 
         setting_window(&width, &height);
         width = scale_logical_to_pixels(width);
         height = scale_logical_to_pixels(height);
+        fit_on_screen(&width, &height);
     }
 
     platform_screen_destroy();
@@ -167,6 +249,7 @@ int platform_screen_create(const char *title, int display_scale_percentage, int 
 
     if (fullscreen) {
         SDL_SetWindowGrab(SDL.window, SDL_TRUE);
+        set_macos_fullscreen_presentation(1);
     }
 
     set_scale_percentage(display_scale_percentage, width, height);
@@ -289,6 +372,7 @@ void platform_screen_set_fullscreen(void)
     SDL_SetWindowDisplayMode(SDL.window, &mode);
 
     SDL_SetWindowGrab(SDL.window, SDL_TRUE);
+    set_macos_fullscreen_presentation(1);
     setting_set_display(1, mode.w, mode.h);
 }
 
@@ -301,8 +385,10 @@ void platform_screen_set_windowed(void)
     setting_window(&logical_width, &logical_height);
     int pixel_width = scale_logical_to_pixels(logical_width);
     int pixel_height = scale_logical_to_pixels(logical_height);
+    fit_on_screen(&pixel_width, &pixel_height);
     int display = SDL_GetWindowDisplayIndex(SDL.window);
     SDL_Log("User to windowed %d x %d on display %d", pixel_width, pixel_height, display);
+    set_macos_fullscreen_presentation(0);
     SDL_SetWindowFullscreen(SDL.window, 0);
     SDL_SetWindowSize(SDL.window, pixel_width, pixel_height);
     if (window_pos.centered) {
@@ -321,8 +407,10 @@ void platform_screen_set_window_size(int logical_width, int logical_height)
     }
     int pixel_width = scale_logical_to_pixels(logical_width);
     int pixel_height = scale_logical_to_pixels(logical_height);
+    fit_on_screen(&pixel_width, &pixel_height);
     int display = SDL_GetWindowDisplayIndex(SDL.window);
     if (setting_fullscreen()) {
+        set_macos_fullscreen_presentation(0);
         SDL_SetWindowFullscreen(SDL.window, 0);
     } else {
         SDL_GetWindowPosition(SDL.window, &window_pos.x, &window_pos.y);

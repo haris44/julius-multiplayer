@@ -219,7 +219,7 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
   plus de Space sur macOS (`SDL_HINT_VIDEO_MAC_FULLSCREEN_SPACES`) : barre de menu et Dock restent cachés.
 - [x] **T1.4** 1920×1080 et 2K proposées dans la liste des résolutions.
   *Fait* : 1280 × 720, 1920 × 1080 et 2560 × 1440 après les trois tailles d'origine (capture : fenêtre de
-  1920 × 1080 obtenue).
+  1920 × 1080 obtenue). *Remplacé par T2.5* : ces tailles dépassaient l'écran d'un MacBook.
 - [x] **T1.5** Routes de la carte à César : neutres (pas à la couleur d'un joueur), indestructibles (D-034).
   *Fait* : propriétaire `MAP_OWNER_CAESAR` ; le rouge venait du mode « copie de carte », qui attribuait les routes
   de chaque copie à son joueur. Test `mp_caesar_roads` : aucun joueur ne les démolit, pas de teinte, les maisons
@@ -243,7 +243,13 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
   moins 8 % d'eau et 20 % de forêt, climat du nord, points de pêche dans l'eau, navires de chaque joueur jusqu'à
   son lac ; brouillard : les mouettes n'éclairent rien.
 - [ ] **T2.5** Résolutions : la liste propose des tailles fixes plus grandes que l'écran du MacBook (1470 × 956,
-  1710 × 1112) et le défilement par les bords ne marche plus.
+  1710 × 1112) et le défilement par les bords ne marche plus. *Fait, à vérifier par Alexandre* : les tailles fixes
+  de T1.4 sont retirées ; après les trois tailles d'origine, la ligne « L par H (écran) » donne la plus grande
+  fenêtre qui tient sur l'écran (zone utile moins la barre de titre) ; aucune fenêtre n'est plus grande que l'écran
+  (au lancement aussi : une taille enregistrée trop grande est réduite). En plein écran sur macOS, barre de menus
+  et Dock sont masqués par les options de présentation de l'application, en plus de T1.3. Script
+  `test/automation/display.txt` (écran factice de 1024 × 768 : ligne « 1024 par 736 (écran) », 1024 × 768
+  ramené à 1024 × 736).
 
 ## MC — Cartes multijoueur préparées et César (D-033, D-034)
 - [ ] **MC.1** Ouvrages de César dessinés en blanc (la teinte actuelle ne fait que foncer les images) ; son aqueduc

@@ -38,8 +38,9 @@ Les deux ordinateurs doivent être sur le même réseau (même box, même Wi-Fi)
 de ce programme.
 
 - Menu principal, « Multijoueur ».
-- Celui qui héberge choisit une carte (elle donne le climat et l'empire), le nombre de joueurs et les règles,
-  puis clique sur « Héberger ».
+- Celui qui héberge choisit « Nouvelle partie (forêt) » (ou une partie sauvegardée à reprendre), le nombre de
+  joueurs et les règles, puis clique sur « Héberger ». La carte dépend du nombre de joueurs : une carte pour 1 ou
+  2 joueurs, une pour 3 ou 4. On peut aussi jouer seul (1 joueur) pour découvrir la carte et ses règles.
   macOS peut demander d'autoriser les connexions entrantes : répondez « Autoriser ».
 - Les autres voient la partie apparaître dans « Parties trouvées sur le réseau » et cliquent dessus (ou tapent
   l'adresse affichée chez l'hôte, puis « Rejoindre »).
@@ -50,7 +51,7 @@ joueur et votre score. La touche P met la partie en pause pour tout le monde, et
 sauvegarde la partie pour la reprendre plus tard depuis le salon.
 
 Les règles propres au multijoueur :
-- Vous commencez avec un missionnaire. Cliquez dessus, puis cliquez où il doit aller.
+- Vous commencez avec un missionnaire : la vue est sur lui. Cliquez dessus, puis cliquez où il doit aller.
 - On ne construit que dans sa zone. Votre première mission (menu Éducation) est gratuite : bâtissez-la à moins de
   20 cases de votre missionnaire, elle vous donne une zone de 20 cases autour d'elle. Les missions suivantes
   coûtent 4 chargements de marbre ; une mission peut former un nouveau missionnaire (300 Dn).
@@ -61,10 +62,15 @@ Les règles propres au multijoueur :
   « Joueurs » : proposez une route commerciale à un joueur (elle s'ouvre quand il la propose aussi), fixez le prix
   auquel vous lui vendez chaque ressource et dites ce que vous lui achetez. Chaque mois, une caravane apporte au
   plus 8 chargements par la route ; l'acheteur paie à la livraison. Vous êtes prévenu quand un joueur change le
-  prix d'une ressource que vous lui achetez. Acheter à l'empire coûte 50 % de plus. Les joueurs loin de l'eau peuvent se
-  brancher sur l'aqueduc de César, qui part du lac central. En multijoueur, un réservoir coupé de sa source garde
-  son eau environ 5 minutes.
+  prix d'une ressource que vous lui achetez. Acheter à l'empire coûte 50 % de plus.
+- Chaque joueur a un lac relié au bord de la carte par une rivière : ses docks reçoivent les navires de l'empire,
+  ses quais de pêche trouvent du poisson. Certains joueurs ont aussi l'aqueduc de César, qui part du lac central.
+  En multijoueur, un réservoir coupé de sa source garde son eau environ 5 minutes.
 - Brouillard de guerre (option du salon) : on ne voit que ce qu'on a découvert.
+
+Affichage : le plus simple est le plein écran (Options, Affichage), qui prend la taille de votre écran. En
+fenêtre, choisissez la ligne « (écran) », la plus grande fenêtre qui tient sur votre écran : la carte défile quand
+la souris touche un bord de la fenêtre.
 
 Si le jeu refuse la connexion pour « données du jeu différentes », vos fichiers de Caesar III ne sont pas la même
 version que ceux de l'hôte.

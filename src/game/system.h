@@ -28,6 +28,12 @@ void system_resize(int width, int height);
 void system_center(void);
 
 /**
+ * Largest window that fits on its screen, title bar included, in the coordinates of the game
+ * @return 0 when the screen does not tell
+ */
+int system_get_max_window_size(int *width, int *height);
+
+/**
  * Returns whether the window must always be fullscreen
  * @return true when only fullscreen can be used, false otherwise
  */

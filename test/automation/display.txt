@@ -1,0 +1,15 @@
+# Real game: the display options offer the largest window that fits on the screen, and no window grows larger
+# than the screen (T2.5). The dummy screen is 1024 x 768: "1024 par 736 (écran)", 1024 x 768 gives 1024 x 736.
+wait 10
+load test/data/brugle-massilia-start.sav
+wait 5
+click 126 10
+wait 3
+screenshot build/automation/display-menu.png
+click 140 34
+wait 3
+screenshot build/automation/display-options.png
+click 400 278
+wait 5
+screenshot build/automation/display-after.png
+quit
