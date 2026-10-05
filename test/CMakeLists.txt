@@ -305,6 +305,9 @@ add_test(NAME mp_fog_of_war COMMAND simtool fog brugle-massilia-start.sav)
 # The prepared maps need an empire trading by land and by sea (D-041)
 add_test(NAME mp_prepared_map_needs_trade_routes COMMAND simtool notrade brugle-lugdunum.sav)
 
+# Buying from the empire costs 50% more in multiplayer (M8.2, D-043)
+add_test(NAME mp_empire_import_price COMMAND simtool importprice brugle-massilia-start.sav)
+
 # T1.5 (D-034): the roads of Caesar stay, untinted, and serve every city
 add_test(NAME mp_caesar_roads COMMAND simtool caesarroads brugle-massilia-start.sav)
 foreach(players 2 4)

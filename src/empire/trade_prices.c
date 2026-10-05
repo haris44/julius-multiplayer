@@ -1,5 +1,6 @@
 #include "trade_prices.h"
 #include "game/player_context.h"
+#include "game/rules.h"
 
 struct trade_price {
     int32_t buy;
@@ -23,6 +24,12 @@ void trade_prices_reset(void)
 }
 
 int trade_price_buy(resource_type resource)
+{
+    // multiplayer: buying from the empire costs 50% more, trading between players is cheaper (D-043)
+    return game_rules_is_multiplayer() ? prices[resource].buy * 3 / 2 : prices[resource].buy;
+}
+
+int trade_price_buy_base(resource_type resource)
 {
     return prices[resource].buy;
 }

@@ -287,13 +287,19 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
 ## MA — Apparence (D-039)
 - [ ] **MA.1** Variantes de couleur des bâtiments calculées au lancement (toits brique, ardoise…), jamais dans git.
 
-## M8 — Commerce entre joueurs
-- [ ] **M8.1** Conception détaillée (D-019) ; routes commerciales par joueur avec les villes de l'empire.
-- [ ] **M8.2** Ouverture d'une route entre deux joueurs (accord des deux, chemin routier entre entrepôts).
-- [ ] **M8.3** Caravanes entre joueurs, uniquement sur les routes, avec achat et vente selon les réglages, quotas
-  et argent.
-- [ ] **M8.4** Interception : caravanes attaquables, cargaison perdue, route coupée.
-- [ ] **M8.5** Tests : rejeux, cargaisons et argent conservés, interception, scénarios visuels.
+## M8 — Commerce entre joueurs (D-019, D-043)
+- [x] **M8.1** Conception détaillée : D-019, D-042 (voies vers l'extérieur), D-043 (prix).
+- [x] **M8.2** Achats à l'empire majorés de 50 % en multijoueur. *Fait* : `trade_price_buy` majoré en multijoueur
+  (paiement et affichage), `trade_price_buy_base` pour le prix du jeu. Test `mp_empire_import_price` ; parité
+  intacte.
+- [ ] **M8.3** Prix de vente par ressource et par joueur acheteur (commande), message à l'acheteur quand le prix
+  d'une ressource qu'il achète change. *Critère* : test des prix et du message.
+- [ ] **M8.4** Ouverture d'une route entre deux joueurs (accord des deux, chemin routier entre leurs cités).
+- [ ] **M8.5** Caravanes entre joueurs, uniquement sur les routes : le vendeur expédie ce qu'il exporte, l'acheteur
+  paie le prix du vendeur à la livraison ; préférence au moins cher (joueurs avant l'empire).
+- [ ] **M8.6** Fenêtre du commerce entre joueurs : prix, routes, achats.
+- [ ] **M8.7** Interception : caravanes attaquables, cargaison perdue, route coupée (avec M9).
+- [ ] **M8.8** Tests : rejeux, cargaisons et argent conservés, scénarios visuels.
 
 ## M9 — Guerre entre joueurs
 - [ ] **M9.1** Hostilité par propriétaire. En classique, elle reproduit exactement la matrice actuelle.

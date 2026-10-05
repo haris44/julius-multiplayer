@@ -23,6 +23,7 @@
 #include "city/resource.h"
 #include "city/sentiment.h"
 #include "empire/city.h"
+#include "empire/trade_prices.h"
 #include "empire/type.h"
 #include "core/time.h"
 #include "game/file.h"
@@ -122,6 +123,7 @@ static int usage(void)
     printf("                                         each arrival point, permissions; MAPGEN_PICTURE=F.ppm\n");
     printf("  simtool reservoirlevel SAVE            prepared map: a reservoir cut off from its source empties\n");
     printf("                                         slowly, joined again it fills\n");
+    printf("  simtool importprice SAVE               buying from the empire costs 50%% more in multiplayer\n");
     printf("  simtool notrade SAVE                   a template without trade by land and by sea is refused\n");
     printf("  simtool tradecities MAP                trade cities of the empire of a map, by land and by sea\n");
     printf("  simtool fog SAVE                       prepared map: what a player discovers and sees (D-038)\n");
@@ -1977,6 +1979,40 @@ static int command_tradecities(const char *file)
     return 0;
 }
 
+// buying from the empire costs 50% more in multiplayer (M8.2, D-043)
+static int command_importprice(const char *file)
+{
+    if (!mp_mapgen_create_prepared(file, 2)) {
+        printf("Unable to create the prepared map\n");
+        return 2;
+    }
+    game_rules_settings rules;
+    game_rules_default_multiplayer_settings(&rules);
+    rules.territories = 1;
+    rules.ai_invasions = 0;
+    game_rules_set_multiplayer(&rules);
+    figure *m = first_missionary(0);
+    int mx = m->x, my = m->y;
+    build_as(0, BUILDING_MISSION_POST, mx + 4, my, mx + 4, my);
+    run_trace(50, 50, 0, 0);
+    build_as(0, BUILDING_WAREHOUSE, mx - 6, my - 6, mx - 6, my - 6);
+    building *space = building_next(building_get(map_building_at(map_grid_offset(mx - 6, my - 6))));
+    int base = trade_price_buy_base(RESOURCE_MARBLE);
+    int treasury = city_finance_treasury();
+    building_warehouse_space_add_import(space, RESOURCE_MARBLE);
+    int paid = treasury - city_finance_treasury();
+    printf("marble: price of the empire %d, paid %d in multiplayer\n", base, paid);
+    int failures = paid != base * 3 / 2;
+    game_rules_set_classic();
+    printf("classic game: buying price %d\n", trade_price_buy(RESOURCE_MARBLE));
+    failures += trade_price_buy(RESOURCE_MARBLE) != base;
+    player_context_switch(0);
+    player_context_set_num_players(1);
+    printf("%s\n", failures ? "DIFFERENT: the empire does not cost 50% more in multiplayer only" :
+        "Identical: the empire costs 50% more in multiplayer only");
+    return failures ? 1 : 0;
+}
+
 // the camera of a player reaches every corner of a generated map, after it went through a .mpmap file as in a game
 static int command_viewcorners(const char *file, int num_players)
 {
@@ -2481,6 +2517,8 @@ int main(int argc, char **argv)
         result = command_preparedmap(file, atoi(argv[3]), atoi(argv[4]));
     } else if (strcmp(command, "reservoirlevel") == 0) {
         result = command_reservoirlevel(file);
+    } else if (strcmp(command, "importprice") == 0) {
+        result = command_importprice(file);
     } else if (strcmp(command, "notrade") == 0) {
         result = command_notrade(file);
     } else if (strcmp(command, "tradecities") == 0) {

@@ -21,6 +21,11 @@ void trade_prices_reset(void);
 int trade_price_buy(resource_type resource);
 
 /**
+ * Price of the empire before the multiplayer surcharge
+ */
+int trade_price_buy_base(resource_type resource);
+
+/**
  * Get the sell price for the resource
  * @param resource Resource
  */

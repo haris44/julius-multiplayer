@@ -427,3 +427,15 @@
   à chaque cité). Le joueur des rochers n'a pas de lac à lui : c'est la contrepartie voulue.
 - La carte modèle choisie dans le salon doit avoir un empire qui commerce par terre **et** par mer ; sinon la partie
   est refusée avec un message (Corinthus, Hierosolyma, Lugdunum, Mediolanum et Toletum ne conviennent pas).
+
+### D-043 — Prix du commerce : un prix par joueur acheteur, l'empire plus cher (précise D-019)
+- 2026-10-05 · **adoptée** (Alexandre, questions du 2026-10-05)
+- **Empire** : ses prix restent ceux du jeu (et leurs variations), mais en multijoueur, **acheter à l'empire coûte
+  50 % de plus** (transport, taxes). Vendre à l'empire rapporte son prix habituel. Le commerce entre joueurs est donc
+  normalement plus avantageux.
+- **Entre joueurs** : chaque vendeur fixe, **pour chaque ressource et chaque joueur acheteur**, son prix de vente
+  (par défaut le prix d'achat de l'empire sans majoration). Il peut vendre le marbre 150 à J2 et 250 à J3.
+- Quand un vendeur change le prix d'une ressource que lui achète un joueur, celui-ci reçoit un **message** (« J2
+  vend désormais le marbre 180 au lieu de 150 ») ; ses achats continuent au nouveau prix, il peut les arrêter.
+- Le reste de D-019 tient : il faut une route entre les deux cités et l'accord des deux, les caravanes ne suivent que
+  les routes, elles pourront être interceptées (M9).
