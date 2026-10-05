@@ -356,7 +356,9 @@ static void host_start_game(void)
         data.separate_cities = 1;
     }
     if (data.separate_cities && !host_compose_cities()) {
-        set_status("Impossible de composer les cités des joueurs");
+        set_status(data.generate_map && mp_mapgen_lacks_trade_routes() ?
+            "La carte choisie ne commerce pas par terre et par mer : choisissez-en une autre" :
+            "Impossible de composer les cités des joueurs");
         data.state = MP_LOCKSTEP_DISCONNECTED;
         return;
     }

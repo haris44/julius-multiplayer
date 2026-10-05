@@ -122,6 +122,8 @@ static int usage(void)
     printf("                                         each arrival point, permissions; MAPGEN_PICTURE=F.ppm\n");
     printf("  simtool reservoirlevel SAVE            prepared map: a reservoir cut off from its source empties\n");
     printf("                                         slowly, joined again it fills\n");
+    printf("  simtool notrade SAVE                   a template without trade by land and by sea is refused\n");
+    printf("  simtool tradecities MAP                trade cities of the empire of a map, by land and by sea\n");
     printf("  simtool fog SAVE                       prepared map: what a player discovers and sees (D-038)\n");
     printf("  simtool outside SAVE                   prepared map: buildings outside the zone collapse in 3 months\n");
     printf("  simtool missions SAVE                  prepared map: missions near a missionary, marble, training\n");
@@ -1540,7 +1542,8 @@ static int command_preparedmap(const char *file, int num_players, int ticks)
             failures++;
         }
     }
-    // ships of the empire sail from the edge of the map to the central lake
+    // ships of the empire sail from the edge of the map to the central lake, and to the lake of each player who has
+    // one; caravans come by the main road (checked above)
     int rx, ry;
     mp_mapgen_river_point(&rx, &ry);
     map_routing_calculate_distances_water_boat(rx, ry);
@@ -1548,6 +1551,27 @@ static int command_preparedmap(const char *file, int num_players, int ticks)
     int sailing = scenario_map_has_river_entry() && map_routing_distance(lake) > 0;
     printf("river from (%d, %d) to the central lake: %s\n", rx, ry, sailing ? "ships sail" : "NO WAY");
     failures += !sailing;
+    for (int p = 0; p < num_players; p++) {
+        if (!mp_mapgen_slot_has_water(p)) {
+            continue;
+        }
+        int px, py, cx, cy, reached = 0;
+        mp_mapgen_player_river_point(p, &px, &py);
+        mp_mapgen_city_center(p, &cx, &cy);
+        map_routing_calculate_distances_water_boat(px, py);
+        for (int y = cy - 26; y <= cy + 26 && !reached; y++) {
+            for (int x = cx - 26; x <= cx + 26 && !reached; x++) {
+                int o = map_grid_offset(x, y);
+                reached = map_terrain_is(o, TERRAIN_WATER) && map_routing_distance(o) > 0;
+            }
+        }
+        player_context_switch(p);
+        int entry_ok = scenario_map_river_entry().x == px && scenario_map_river_entry().y == py;
+        player_context_switch(0);
+        printf("player %d: ships from (%d, %d) %s\n", p + 1, px, py,
+            reached && entry_ok ? "sail to his lake" : "DO NOT REACH HIS LAKE");
+        failures += !reached || !entry_ok;
+    }
 
     uint64_t first = mp_checksum_state();
     player_context_switch(0);
@@ -1913,6 +1937,44 @@ static int command_fog(const char *file)
     printf("%s\n", failures ? "DIFFERENT: the fog of war does not work as designed" :
         "Identical: the fog of war works as designed");
     return failures ? 1 : 0;
+}
+
+// trade cities of the empire of a map: by land and by sea, open or to be opened
+static void count_trade_cities(int *land, int *sea)
+{
+    *land = *sea = 0;
+    for (int i = 0; i < 41; i++) { // the empire holds 41 cities
+        empire_city *c = empire_city_get(i);
+        if (c && c->in_use && (c->type == EMPIRE_CITY_TRADE || c->type == EMPIRE_CITY_FUTURE_TRADE)) {
+            if (c->is_sea_trade) {
+                (*sea)++;
+            } else {
+                (*land)++;
+            }
+        }
+    }
+}
+
+// a template whose empire does not trade by land and by sea is refused for the prepared maps
+static int command_notrade(const char *file)
+{
+    int refused = !mp_mapgen_create_prepared(file, 2) && mp_mapgen_lacks_trade_routes();
+    player_context_switch(0);
+    player_context_set_num_players(1);
+    printf("%s\n", refused ? "Identical: the map without trade by land and by sea is refused" :
+        "DIFFERENT: the map is accepted");
+    return refused ? 0 : 1;
+}
+
+static int command_tradecities(const char *file)
+{
+    if (!load(file)) {
+        return 2;
+    }
+    int land, sea;
+    count_trade_cities(&land, &sea);
+    printf("%s: %d trade cities by land, %d by sea\n", file, land, sea);
+    return 0;
 }
 
 // the camera of a player reaches every corner of a generated map, after it went through a .mpmap file as in a game
@@ -2419,6 +2481,10 @@ int main(int argc, char **argv)
         result = command_preparedmap(file, atoi(argv[3]), atoi(argv[4]));
     } else if (strcmp(command, "reservoirlevel") == 0) {
         result = command_reservoirlevel(file);
+    } else if (strcmp(command, "notrade") == 0) {
+        result = command_notrade(file);
+    } else if (strcmp(command, "tradecities") == 0) {
+        result = command_tradecities(file);
     } else if (strcmp(command, "fog") == 0) {
         result = command_fog(file);
     } else if (strcmp(command, "outside") == 0) {

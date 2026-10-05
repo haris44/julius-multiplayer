@@ -61,9 +61,19 @@ int mp_mapgen_caesar_aqueduct_end(int player_id, int *x, int *y);
 void mp_mapgen_river_point(int *x, int *y);
 
 /**
+ * On the last prepared map: where the ships of the empire of a player come in (his own river or the central one)
+ */
+void mp_mapgen_player_river_point(int player_id, int *x, int *y);
+
+/**
  * Arrival point of a player on the last generated map
  */
 void mp_mapgen_entry_point(int player_id, int *x, int *y);
+
+/**
+ * Whether the last prepared map was refused because the empire of its template does not trade by land and by sea
+ */
+int mp_mapgen_lacks_trade_routes(void);
 
 /**
  * Where the city of a player should grow, on the last generated map

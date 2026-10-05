@@ -417,3 +417,13 @@
 - Le lac central est relié au coin nord-est de la carte par une **rivière** (entrée et sortie des navires) : les
   navires de l'empire remontent jusqu'aux docks bâtis sur ses rives. Ni le lac ni la rivière ne coupent une route
   principale.
+
+### D-042 — Voies commerciales vers l'extérieur sur les cartes préparées (précise D-041)
+- 2026-10-05 · **adoptée** (Alexandre : « il faut des voies maritimes et des voies terrestres vers l'extérieur »)
+- Voie terrestre : le point d'arrivée de chaque joueur, au bord de la carte, relié par la route de César ; les
+  caravanes de l'empire y entrent.
+- Voie maritime : le lac de chaque joueur qui en a un rejoint le bord le plus proche par une rivière, et les navires
+  de son empire entrent par là ; les autres joueurs ont la rivière du lac central (point d'entrée des navires propre
+  à chaque cité). Le joueur des rochers n'a pas de lac à lui : c'est la contrepartie voulue.
+- La carte modèle choisie dans le salon doit avoir un empire qui commerce par terre **et** par mer ; sinon la partie
+  est refusée avec un message (Corinthus, Hierosolyma, Lugdunum, Mediolanum et Toletum ne conviennent pas).

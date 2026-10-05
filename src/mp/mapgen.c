@@ -19,6 +19,7 @@
 #include "map/figure.h"
 #include "map/grid.h"
 #include "empire/city.h"
+#include "empire/type.h"
 #include "map/image.h"
 #include "map/owner.h"
 #include "map/property.h"
@@ -51,6 +52,8 @@ static struct {
     int prepared;
     int aqueduct_end_x[MP_MAPGEN_MAX_PLAYERS]; // end of the aqueduct of Caesar near a city, -1 without it
     int aqueduct_end_y[MP_MAPGEN_MAX_PLAYERS];
+    int channel_x[MP_MAPGEN_MAX_PLAYERS]; // where the river of the lake of a player leaves the map, -1 without it
+    int channel_y[MP_MAPGEN_MAX_PLAYERS];
     int river_x; // where the river of the central lake leaves the map, -1 without it
     int river_y;
     int center_x[MP_MAPGEN_MAX_PLAYERS];
@@ -445,6 +448,50 @@ static void place_slot(int slot)
 // the empire sail up to the docks built on its shores. Neither crosses a main road.
 static void lake_center(int *x, int *y);
 
+static void set_water_around(int x, int y)
+{
+    for (int dy = -2; dy <= 2; dy++) {
+        for (int dx = -2; dx <= 2; dx++) {
+            int xx = x + dx, yy = y + dy;
+            if (xx >= 0 && yy >= 0 && xx < data.size && yy < data.size && !in_settlement(xx, yy)) {
+                map_terrain_set(map_grid_offset(xx, yy), TERRAIN_WATER);
+            }
+        }
+    }
+}
+
+// the lake of a player with water flows to the nearest edge: ships of the empire sail up to his docks (D-041)
+static void place_slot_channel(int slot)
+{
+    int x, y;
+    slot_corner(slot, 0, &x, &y); // his lake
+    int dx = data.entry_x[slot] == data.size - 1 ? 1 : 0;
+    int dy = data.entry_y[slot] == data.size - 1 ? 1 : 0;
+    if (!dx && !dy) {
+        data.channel_x[slot] = data.channel_y[slot] = -1; // the prepared maps keep water in the east and south
+        return;
+    }
+    int x0 = x, y0 = y;
+    for (int step = 0;; step++) {
+        set_water_around(x, y);
+        if ((dx && x == data.size - 1) || (dy && y == data.size - 1)) {
+            break;
+        }
+        // straight to the edge, wandering a little on each side
+        int bias = soft_noise(3 * step, 5 * slot, 7);
+        if (bias > 150 && (dx ? y > y0 - 4 : x > x0 - 4) && !(step & 1)) {
+            if (dx) { y--; } else { x--; }
+        } else if (bias < 106 && (dx ? y < y0 + 4 : x < x0 + 4) && !(step & 1)) {
+            if (dx) { y++; } else { x++; }
+        } else {
+            x += dx;
+            y += dy;
+        }
+    }
+    data.channel_x[slot] = x;
+    data.channel_y[slot] = y;
+}
+
 static void place_central_lake(void)
 {
     int x, y;
@@ -614,6 +661,16 @@ int mp_mapgen_caesar_aqueduct_end(int player_id, int *x, int *y)
     return *x >= 0;
 }
 
+void mp_mapgen_player_river_point(int player_id, int *x, int *y)
+{
+    if (data.prepared && data.channel_x[player_id] >= 0) {
+        *x = data.channel_x[player_id];
+        *y = data.channel_y[player_id];
+    } else {
+        mp_mapgen_river_point(x, y);
+    }
+}
+
 void mp_mapgen_river_point(int *x, int *y)
 {
     *x = data.prepared ? data.river_x : -1;
@@ -625,8 +682,30 @@ int mp_mapgen_prepared_size(int num_players)
     return num_players <= 2 ? 200 : 260;
 }
 
+static int lacks_trade_routes;
+
+// the empire of the template must trade by land and by sea: the prepared maps offer both ways out (D-041)
+static int empire_trades_by_land_and_sea(void)
+{
+    int land = 0, sea = 0;
+    for (int i = 0; i < 41; i++) { // the empire holds 41 cities
+        empire_city *c = empire_city_get(i);
+        if (c && c->in_use && (c->type == EMPIRE_CITY_TRADE || c->type == EMPIRE_CITY_FUTURE_TRADE)) {
+            sea += c->is_sea_trade ? 1 : 0;
+            land += c->is_sea_trade ? 0 : 1;
+        }
+    }
+    return land > 0 && sea > 0;
+}
+
+int mp_mapgen_lacks_trade_routes(void)
+{
+    return lacks_trade_routes;
+}
+
 int mp_mapgen_create_prepared(const char *template_file, int num_players)
 {
+    lacks_trade_routes = 0;
     if (num_players < 1 || num_players > MP_MAPGEN_MAX_PLAYERS) {
         return 0;
     }
@@ -638,12 +717,22 @@ int mp_mapgen_create_prepared(const char *template_file, int num_players)
     if (!prepare_template(template_file, data.size)) {
         return 0;
     }
+    if (!empire_trades_by_land_and_sea()) {
+        lacks_trade_routes = 1;
+        return 0;
+    }
     place_arrivals();
     set_terrain(prepared_terrain);
     for (int slot = 0; slot < data.num_players; slot++) {
         place_slot(slot);
     }
     place_central_lake();
+    for (int slot = 0; slot < data.num_players; slot++) {
+        data.channel_x[slot] = data.channel_y[slot] = -1;
+        if (slot_of(slot)->has_water) {
+            place_slot_channel(slot);
+        }
+    }
     map_owner_clear_all();
     mp_territory_clear();
     mp_fog_clear();
@@ -662,9 +751,14 @@ int mp_mapgen_create_prepared(const char *template_file, int num_players)
     }
     data.num_players = num_players;
     set_slot_permissions(num_players);
-    // and starts with a missionary, near the place meant for his city
+    // and starts with a missionary, near the place meant for his city; the ships of his empire come up his own
+    // river when his lake has one, else up the river of the central lake
     for (int p = 0; p < num_players; p++) {
         player_context_switch(p);
+        if (data.channel_x[p] >= 0) {
+            scenario_editor_set_river_entry_point(data.channel_x[p], data.channel_y[p]);
+            scenario_editor_set_river_exit_point(data.channel_x[p], data.channel_y[p]);
+        }
         mp_missionary_create(0, data.center_x[p] + 3, data.center_y[p] + 3);
     }
     player_context_switch(0);
