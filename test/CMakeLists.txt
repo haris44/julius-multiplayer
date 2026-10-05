@@ -286,6 +286,8 @@ endforeach()
 # Generated maps (M6.2): each player settles at its arrival point and gets immigrants; network game on one
 foreach(players 2 4)
     add_test(NAME mp_generated_map_${players}_players COMMAND simtool mapgen brugle-massilia-start.sav ${players} 11 4000)
+    # T1.2: the camera reaches the four corners (the map was in a corner of the grid, out of reach)
+    add_test(NAME mp_generated_map_view_${players}_players COMMAND simtool viewcorners brugle-massilia-start.sav ${players})
 endforeach()
 if(NOT WIN32)
     add_test(NAME mp_lan_generated_map COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/sim/lan_test.sh $<TARGET_FILE:simtool> 27441 3 brugle-massilia-start.sav 600 generate)

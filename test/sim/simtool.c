@@ -8,6 +8,7 @@
 #include "building/count.h"
 #include "building/menu.h"
 #include "building/storage.h"
+#include "city/view.h"
 #include "city/buildings.h"
 #include "city/festival.h"
 #include "city/finance.h"
@@ -109,6 +110,7 @@ static int usage(void)
     printf("                                         none of its buildings\n");
     printf("  simtool neighbours SAVE TICKS          two copies of the city joined by a road: walkers cross,\n");
     printf("                                         but no city acts on the buildings of the other\n");
+    printf("  simtool viewcorners SAVE PLAYERS       generated map: the camera reaches its four corners\n");
     printf("  simtool privatepopups SAVE TICKS       twin cities: the popups and sounds of player 2 do not\n");
     printf("                                         reach player 1\n");
     printf("  simtool caesarfree SAVE TICKS          Caesar (requests, anger, salary...) acts in a classic game\n");
@@ -1322,6 +1324,46 @@ static void settle_city(int player_id, int size)
     mp_command_execute(&houses2);
 }
 
+// the camera of a player reaches every corner of a generated map, after it went through a .mpmap file as in a game
+static int command_viewcorners(const char *file, int num_players)
+{
+    int size = mp_mapgen_default_size(num_players);
+    char map_file[64]; // one file per test: ctest runs them in parallel
+    snprintf(map_file, sizeof(map_file), "viewcorners-%d.mpmap", num_players);
+    if (!mp_mapgen_create(file, num_players, size, 11) || !mp_savegame_write(map_file) ||
+        !mp_savegame_read(map_file)) {
+        printf("Unable to generate the map\n");
+        return 2;
+    }
+    remove(map_file);
+    city_view_set_viewport(800, 600);
+    city_view_init();
+    int width_tiles, height_tiles;
+    city_view_get_viewport_size_tiles(&width_tiles, &height_tiles);
+    static const int CORNER_X[] = { 0, 1, 0, 1 };
+    static const int CORNER_Y[] = { 0, 0, 1, 1 };
+    int failures = 0;
+    for (int i = 0; i < 4; i++) {
+        int x = CORNER_X[i] ? size - 2 : 1;
+        int y = CORNER_Y[i] ? size - 2 : 1;
+        int grid_offset = map_grid_offset(x, y);
+        int x_view, y_view, camera_x, camera_y;
+        city_view_go_to_grid_offset(grid_offset);
+        city_view_grid_offset_to_xy_view(grid_offset, &x_view, &y_view);
+        city_view_get_camera(&camera_x, &camera_y);
+        int visible = (x_view || y_view) && x_view >= camera_x && x_view < camera_x + width_tiles &&
+            y_view >= camera_y && y_view < camera_y + height_tiles;
+        printf("tile (%d, %d): view (%d, %d), camera (%d, %d): %s\n", x, y, x_view, y_view, camera_x, camera_y,
+            visible ? "visible" : "OUT OF REACH");
+        failures += !visible;
+    }
+    player_context_switch(0);
+    player_context_set_num_players(1);
+    printf("%s\n", failures ? "DIFFERENT: the camera cannot show every corner of the map" :
+        "Identical: the camera shows every corner of the map");
+    return failures ? 1 : 0;
+}
+
 static int command_mapgen(const char *file, int num_players, int seed, int ticks)
 {
     int size = mp_mapgen_default_size(num_players);
@@ -1782,6 +1824,8 @@ int main(int argc, char **argv)
         result = command_figtrace(file, atoi(argv[3]), atoi(argv[4]), atoi(argv[5]), atoi(argv[6]));
     } else if (strcmp(command, "caesarfree") == 0 && argc > 3) {
         result = command_caesarfree(file, ticks);
+    } else if (strcmp(command, "viewcorners") == 0 && argc > 3) {
+        result = command_viewcorners(file, atoi(argv[3]));
     } else if (strcmp(command, "privatepopups") == 0 && argc > 3) {
         result = command_privatepopups(file, ticks);
     } else if (strcmp(command, "twins") == 0 && argc > 3) {

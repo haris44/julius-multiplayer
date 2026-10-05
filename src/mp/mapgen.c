@@ -219,9 +219,11 @@ int mp_mapgen_create(const char *template_file, int num_players, int size, unsig
         city_data_init();
         city_data_init_scenario();
     }
+    // the map is centred on the grid, as classic maps are: the camera limits and the minimap expect it
     int x0 = map_data.start_offset % GRID_SIZE;
     int y0 = map_data.start_offset / GRID_SIZE;
-    if (!mp_compose_relocate(GRID_MAX_SIZE, 1 - x0, 1 - y0) ||
+    int start = (GRID_MAX_SIZE - size) / 2;
+    if (!mp_compose_relocate(GRID_MAX_SIZE, start - x0, start - y0) ||
         !mp_compose_extend_map(0, 0, size - map_data.width, size - map_data.height)) {
         return 0;
     }

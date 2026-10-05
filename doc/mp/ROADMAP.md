@@ -209,8 +209,10 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
 - [x] **T1.1** Popups, sons et avertissements de la cité d'un autre joueur plus jamais chez soi (D-032).
   *Fait* : `mp_session_is_other_players_city()` ; test `mp_private_popups_*` (2 popups et 3 sons de la cité jumelle
   sortaient chez le joueur 1 avant le correctif).
-- [ ] **T1.2** Grande carte : la vue reste bloquée en haut à droite, on ne voit que la moitié et on ne peut plus
-  défiler. *Critère* : capture d'automatisation des quatre coins d'une carte de 260 cases.
+- [x] **T1.2** Grande carte : la vue reste bloquée en haut à droite, on ne voit que la moitié et on ne peut plus
+  défiler. *Fait* : la carte générée était dans le coin de la grille de 512, alors que les limites de la caméra et la
+  minicarte supposent une carte centrée, comme les cartes classiques ; elle est maintenant centrée. Test
+  `mp_generated_map_view_*` : la caméra atteint les quatre coins (trois hors d'atteinte avant).
 - [ ] **T1.3** Défilement au bord haut de l'écran bloqué par la barre de menu (plein écran).
 - [ ] **T1.4** 1920×1080 et 2K proposées dans la liste des résolutions.
 - [ ] **T1.5** Routes de la carte à César : neutres (pas à la couleur d'un joueur), indestructibles (D-034).
