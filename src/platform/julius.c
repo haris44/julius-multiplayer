@@ -405,6 +405,32 @@ static void teardown(void)
 #endif
 }
 
+// macOS: the motion events are not enough to scroll the map from the edges of the screen. On a screen with a
+// notch, the fullscreen window sits below the strip macOS keeps black: the cursor leaves the window into that strip
+// and no event tells where it is; and macOS 26 and later deliver stale positions near the top of the screen (SDL
+// issue #15967). The system always knows where the cursor is: in fullscreen it is brought back to the edge of the
+// window, where the map scrolls; in a window, it corrects the position while the cursor is over the window.
+static void sync_mouse_with_system(void)
+{
+#if defined(__APPLE__)
+    if (platform_automation_is_active() || SDL_GetRelativeMouseMode() || mouse_get()->is_touch) {
+        return;
+    }
+    int x, y, inside;
+    if (!platform_screen_get_system_mouse_position(&x, &y, &inside)) {
+        return;
+    }
+    if (!setting_fullscreen() && !inside) {
+        return;
+    }
+    const mouse *m = mouse_get();
+    // a difference of a pixel is rounding: left alone, it would cancel double clicks
+    if (abs(m->x - x) >= 2 || abs(m->y - y) >= 2) {
+        mouse_set_position(x, y);
+    }
+#endif
+}
+
 static void main_loop(void)
 {
     SDL_Event event;
@@ -429,6 +455,7 @@ static void main_loop(void)
     }
     // a network game must keep running when the window is hidden: the other players wait for us
     if (data.active || platform_automation_is_active() || mp_lockstep_is_active()) {
+        sync_mouse_with_system();
         run_and_draw();
     } else {
         SDL_WaitEvent(NULL);

@@ -247,9 +247,15 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
   route de César qui traverse l'emplacement de sa cité, sa zone et son brouillard calculés à la création de la
   carte ; tests `mp_territory`, `mp_missions`, `mp_outside_territory` revus (la mission suivante coûte du marbre,
   la ville qui perd sa mission perd sa zone) ; `tools/mp-solo-test.sh` : mission et zone au départ.
-- [ ] **T2.7** Plein écran : barre de menus et Dock visibles au lancement ; après un passage fenêtre → plein écran,
-  plus de défilement vers le bas. *Fait, à vérifier par Alexandre* (D-045) : plein écran natif de macOS (Space),
-  barre de menus et Dock masqués par le délégué de la fenêtre ; l'ancien plein écran sans Space est abandonné.
+- [x] **T2.7** Plein écran : barre de menus et Dock visibles au lancement ; après un passage fenêtre → plein écran,
+  plus de défilement vers le bas. *Fait* (D-045, confirmé par Alexandre : « beaucoup mieux ») : plein écran natif de
+  macOS (Space), barre de menus et Dock masqués par le délégué de la fenêtre ; l'ancien plein écran sans Space est
+  abandonné.
+- [ ] **T2.8** En plein écran, la souris en haut de l'écran ne fait plus défiler la carte (« la barre de menu de
+  Caesar empêche le déplacement »). *Fait, à vérifier par Alexandre* (D-046) : sur macOS, la position de la souris
+  est relue auprès du système à chaque image (`SDL_GetGlobalMouseState`) et ramenée au bord de la fenêtre en plein
+  écran ; les événements de mouvement ne suffisent pas (bande noire de l'encoche au-dessus de la fenêtre, positions
+  périmées de macOS 26+, SDL #15967).
 - [ ] **T2.5** Résolutions : la liste propose des tailles fixes plus grandes que l'écran du MacBook (1470 × 956,
   1710 × 1112) et le défilement par les bords ne marche plus. *Fait, à vérifier par Alexandre* : les tailles fixes
   de T1.4 sont retirées ; après les trois tailles d'origine, la ligne « L par H (écran) » donne la plus grande

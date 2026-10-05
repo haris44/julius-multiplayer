@@ -12,6 +12,13 @@ void platform_screen_move(int x, int y);
 
 int platform_screen_get_scale(void);
 
+/**
+ * Where the system says the cursor is, in the coordinates of the game, clamped to the window
+ * @param inside Set to whether the cursor is really over the window
+ * @return 0 when the system does not tell (no window system, window without the focus)
+ */
+int platform_screen_get_system_mouse_position(int *x, int *y, int *inside);
+
 void platform_screen_set_fullscreen(void);
 void platform_screen_set_windowed(void);
 void platform_screen_set_window_size(int logical_width, int logical_height);

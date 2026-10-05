@@ -5,6 +5,30 @@
 
 ---
 
+## 2026-10-05 — Session 2 (suite) : défilement vers le haut en plein écran (T2.8)
+
+**Retour d'Alexandre** : plein écran « beaucoup mieux », mais la souris en haut de l'écran ne fait plus défiler
+(« la barre de menu de Caesar empêche le déplacement »). Travail confié à Fable.
+
+**Fait** (D-046)
+- Diagnostic par lecture de SDL 3.4.18 (Cocoa) et des tickets SDL : sur un écran à encoche, le plein écran natif
+  place la fenêtre sous la bande noire de l'encoche ; le curseur y sort de la fenêtre et plus aucun événement de
+  mouvement n'arrive, la position connue du jeu reste figée sur la barre de menu. De plus, macOS 26+ (Alexandre est
+  en macOS 27) livre des positions périmées en haut de l'écran (SDL #15967).
+- `platform_screen_get_system_mouse_position` : position du curseur demandée au système, convertie en coordonnées
+  du jeu ; `sync_mouse_with_system` (macOS) avant chaque image : en plein écran la position est ramenée au bord de
+  la fenêtre, en fenêtre elle est corrigée tant que le curseur est dessus. Pas pendant l'automatisation.
+
+**Appris**
+- La barre de menu du jeu n'y était pour rien : survolée, elle laisse passer le défilement (`handle_mouse_menu`
+  ne rend 1 qu'au clic). Le bord de défilement fait 5 pixels : seul un curseur réellement en haut déclenche.
+- Mode compatibilité de l'encoche conservé (par défaut) : sans lui, la barre de menu du jeu passerait sous l'encoche.
+
+**Prochaine étape** : retour d'Alexandre (impossible à vérifier sans vraie fenêtre) ; puis le commerce (choix du
+moins cher) et M9.
+
+---
+
 ## 2026-10-05 — Session 2 (suite) : mission d'office, plein écran natif (T2.6, T2.7)
 
 **Retours d'Alexandre** : la mission doit être construite au démarrage ; en plein écran, barre de menus et Dock

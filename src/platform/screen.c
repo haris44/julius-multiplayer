@@ -152,6 +152,34 @@ static void hide_menu_bar_and_dock_in_fullscreen(void)
 #endif
 }
 
+int platform_screen_get_system_mouse_position(int *x, int *y, int *inside)
+{
+#if SDL_VERSION_ATLEAST(2, 0, 18)
+    if (!SDL.window || !SDL.renderer || !(SDL_GetWindowFlags(SDL.window) & SDL_WINDOW_INPUT_FOCUS)) {
+        return 0;
+    }
+    int global_x, global_y, window_x, window_y, width, height;
+    SDL_GetGlobalMouseState(&global_x, &global_y);
+    SDL_GetWindowPosition(SDL.window, &window_x, &window_y);
+    SDL_GetWindowSize(SDL.window, &width, &height);
+    if (width <= 0 || height <= 0) {
+        return 0;
+    }
+    int in_window_x = global_x - window_x;
+    int in_window_y = global_y - window_y;
+    *inside = in_window_x >= 0 && in_window_y >= 0 && in_window_x < width && in_window_y < height;
+    in_window_x = in_window_x < 0 ? 0 : in_window_x >= width ? width - 1 : in_window_x;
+    in_window_y = in_window_y < 0 ? 0 : in_window_y >= height ? height - 1 : in_window_y;
+    float logical_x, logical_y;
+    SDL_RenderWindowToLogical(SDL.renderer, in_window_x, in_window_y, &logical_x, &logical_y);
+    *x = (int) logical_x;
+    *y = (int) logical_y;
+    return 1;
+#else
+    return 0;
+#endif
+}
+
 int system_get_max_window_size(int *width, int *height)
 {
     int pixel_width, pixel_height;

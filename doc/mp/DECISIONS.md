@@ -480,3 +480,19 @@
   hors de l'écran. Dans le Space, le délégué de la fenêtre de SDL 3 demande désormais à macOS de masquer
   entièrement barre de menus et Dock (ce que faisait SDL 2) ; l'indication `SDL_VIDEO_MAC_FULLSCREEN_MENU_VISIBILITY`
   vaut 0.
+
+### D-046 — Position de la souris relue auprès du système sur macOS (précise D-045)
+- 2026-10-05 · **adoptée** (Alexandre, troisième essai : en plein écran, « la barre de menu de Caesar empêche le
+  déplacement » vers le haut)
+- Le défilement par les bords repose sur la position de la souris reçue par événements. Sur macOS ils ne suffisent
+  pas : (1) sur un écran à encoche, le plein écran natif place la fenêtre sous la bande que macOS garde noire ; le
+  curseur y entre, sort de la fenêtre et plus aucun événement n'arrive, la dernière position connue (souvent sur la
+  barre de menu du jeu) reste figée ; (2) macOS 26 et suivants livrent des positions périmées près du haut de
+  l'écran (SDL #15967, contourné pour les événements dans SDL 3.4.12+ mais pas pour l'absence d'événements).
+- Sur macOS, à chaque image, la position du curseur est demandée au système (`SDL_GetGlobalMouseState` moins la
+  position de la fenêtre, convertie en coordonnées du jeu). En plein écran elle est ramenée dans la fenêtre : un
+  curseur poussé au-dessus ou en dehors fait défiler comme s'il touchait le bord. En fenêtre, elle corrige la
+  position tant que le curseur est sur la fenêtre. Un écart d'un pixel est ignoré (double-clic). Jamais pendant
+  l'automatisation (pilote factice), ni en mode relatif (déplacement de la carte au clic droit), ni au toucher.
+- Le mode compatibilité de l'encoche (`NSPrefersDisplaySafeAreaCompatibilityMode`, défaut) est conservé : la barre
+  de menu du jeu resterait sinon en partie sous l'encoche.
