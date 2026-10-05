@@ -57,7 +57,11 @@ Les règles propres au multijoueur :
 - Votre zone grandit toute seule : 20 cases autour de vos maisons habitées et de vos bâtiments qui ont des
   employés. Elle est tracée à votre couleur. Routes, aqueducs et murs se construisent partout.
 - Un bâtiment qui se retrouve hors de votre zone s'effondre au bout de 3 mois.
-- Chaque joueur n'exploite que certaines ressources : commercez pour le reste. Les joueurs loin de l'eau peuvent se
+- Chaque joueur n'exploite que certaines ressources : commercez pour le reste. Conseiller au commerce, bouton
+  « Joueurs » : proposez une route commerciale à un joueur (elle s'ouvre quand il la propose aussi), fixez le prix
+  auquel vous lui vendez chaque ressource et dites ce que vous lui achetez. Chaque mois, une caravane apporte au
+  plus 8 chargements par la route ; l'acheteur paie à la livraison. Vous êtes prévenu quand un joueur change le
+  prix d'une ressource que vous lui achetez. Acheter à l'empire coûte 50 % de plus. Les joueurs loin de l'eau peuvent se
   brancher sur l'aqueduc de César, qui part du lac central. En multijoueur, un réservoir coupé de sa source garde
   son eau environ 5 minutes.
 - Brouillard de guerre (option du salon) : on ne voit que ce qu'on a découvert.

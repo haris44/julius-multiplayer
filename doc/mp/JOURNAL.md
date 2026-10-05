@@ -5,6 +5,32 @@
 
 ---
 
+## 2026-10-05 — Session 2 (suite) : voies vers l'extérieur et commerce entre joueurs
+
+**Demande d'Alexandre** : voies maritimes et terrestres vers l'extérieur ; prix fixés par le vendeur pour chaque
+joueur acheteur, empire plus cher, message quand un prix change (réponses : D-043).
+
+**Fait** (commits dcad747d à 1af2d285, 167 tests ctest)
+- D-042 : rivière du lac de chaque joueur qui en a un jusqu'au bord (entrée de ses navires), rivière centrale pour
+  les autres ; carte modèle refusée si son empire ne commerce pas par terre et par mer.
+- M8.2 : achats à l'empire +50 % en multijoueur.
+- M8.3 : prix par ressource et par acheteur, achats, message à l'acheteur.
+- M8.4, M8.5 : routes ouvertes par les deux joueurs, caravane mensuelle par la route (8 chargements), paiement à
+  la livraison.
+- M8.6 : fenêtre « Commerce entre joueurs » (bouton « Joueurs » du conseiller au commerce).
+
+**Appris**
+- Les réglages « importer / exporter » du jeu dépendent de l'empire : le commerce entre joueurs a ses propres
+  réglages.
+- Le missionnaire de départ occupe une case : un test qui bâtit au centre d'une cité doit l'éviter.
+
+**Prochaine étape** : préférence de l'acheteur pour le moins cher (joueurs avant l'empire), MA.1, puis M9 (guerre,
+interception des caravanes).
+
+**Points ouverts** : voir l'entrée précédente ; s'y ajoutent le pas de prix (10) et la taille des caravanes (8).
+
+---
+
 ## 2026-10-05 — Session 2 (suite) : eau de César, territoires, missionnaire, brouillard de guerre
 
 **Demande d'Alexandre** : lac central relié à l'extérieur et navigable ; le joueur des rochers a fer et marbre,
