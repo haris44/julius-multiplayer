@@ -8,7 +8,11 @@
 
 /** Buildings per player: every player has its own slice of ids, as large as the original limit */
 #define MAX_BUILDINGS 2000
-#define BUILDING_ARRAY_SIZE (MAX_BUILDINGS * PLAYER_CONTEXT_MAX_PLAYERS)
+/** The slice after those of the players belongs to Caesar (doc/mp/DECISIONS.md D-034): no city runs it */
+#define BUILDING_CAESAR_SLICE PLAYER_CONTEXT_MAX_PLAYERS
+#define BUILDING_CAESAR_FIRST (BUILDING_CAESAR_SLICE * MAX_BUILDINGS + 1)
+#define BUILDING_CAESAR_END ((BUILDING_CAESAR_SLICE + 1) * MAX_BUILDINGS)
+#define BUILDING_ARRAY_SIZE (MAX_BUILDINGS * (PLAYER_CONTEXT_MAX_PLAYERS + 1))
 /** First and past-the-end ids of the buildings of the current player (1 and 2000 in a classic game) */
 #define BUILDING_FIRST (player_context_current_player * MAX_BUILDINGS + 1)
 #define BUILDING_END ((player_context_current_player + 1) * MAX_BUILDINGS)
@@ -18,6 +22,8 @@
 #define BUILDING_OWNER(id) ((id) / MAX_BUILDINGS)
 /** Whether a building belongs to the current player: a city acts only on its own buildings (D-018) */
 #define BUILDING_IS_OWN(id) (BUILDING_OWNER(id) == player_context_current_player)
+/** Whether a building belongs to Caesar */
+#define BUILDING_IS_CAESAR(id) (BUILDING_OWNER(id) == BUILDING_CAESAR_SLICE)
 /** Id inside the slice of its owner: the original id in a classic game, for code that uses ids as numbers */
 #define BUILDING_LOCAL_ID(id) ((id) % MAX_BUILDINGS)
 
@@ -161,6 +167,16 @@ building *building_main(building *b);
 building *building_next(building *b);
 
 building *building_create(building_type type, int x, int y);
+
+/**
+ * Creates a building of Caesar, already in use: no city runs it, no player may clear it (D-034)
+ */
+building *building_create_for_caesar(building_type type, int x, int y);
+
+/** The buildings of Caesar in multiplayer saved games */
+void building_save_caesar_state(buffer *buf);
+void building_load_caesar_state(buffer *buf);
+void building_clear_caesar_state(void);
 
 void building_clear_related_data(building *b);
 

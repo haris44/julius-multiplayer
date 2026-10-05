@@ -50,6 +50,12 @@ int mp_mapgen_slot_allows(int player_id, int resource);
 int mp_mapgen_slot_has_water(int player_id);
 
 /**
+ * On the last prepared map: where the aqueduct of Caesar ends near the city of a player without water
+ * @return 0 when the player has no aqueduct of Caesar
+ */
+int mp_mapgen_caesar_aqueduct_end(int player_id, int *x, int *y);
+
+/**
  * On the last prepared map: where the river of the central lake leaves the map (ships come and go there)
  */
 void mp_mapgen_river_point(int *x, int *y);

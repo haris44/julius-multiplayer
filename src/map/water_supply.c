@@ -190,8 +190,8 @@ static void fill_aqueducts_from_offset(int grid_offset)
             int new_offset = grid_offset + ADJACENT_OFFSETS(i);
             building *b = building_get(map_building_at(new_offset));
             int owner = map_owner_get_claimed(new_offset);
-            if (owner != MAP_OWNER_NONE && owner != player_context_current_player) {
-                continue; // the aqueducts of another city do not carry the water of this one
+            if (owner != MAP_OWNER_NONE && owner != player_context_current_player && owner != MAP_OWNER_CAESAR) {
+                continue; // the aqueducts of another city do not carry the water of this one; those of Caesar do
             }
             if (b->id && b->type == BUILDING_RESERVOIR && BUILDING_IS_OWN(b->id)) {
                 // check if aqueduct connects to reservoir --> doesn't connect to corner
@@ -249,6 +249,17 @@ void map_water_supply_update_reservoir_fountain_of_city(void)
                 b->has_water_access = 2;
             } else {
                 b->has_water_access = 0;
+            }
+        }
+    }
+    if (several_cities()) {
+        // the reservoirs of Caesar fill his aqueduct for every city (D-034)
+        for (int i = BUILDING_CAESAR_FIRST; i < BUILDING_CAESAR_END; i++) {
+            building *b = building_get(i);
+            if (b->state == BUILDING_STATE_IN_USE && b->type == BUILDING_RESERVOIR) {
+                building_list_large_add(i);
+                b->has_water_access =
+                    map_terrain_exists_tile_in_area_with_type(b->x - 1, b->y - 1, 5, TERRAIN_WATER) ? 2 : 0;
             }
         }
     }

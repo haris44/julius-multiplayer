@@ -2,6 +2,7 @@
 
 #include "building/building.h"
 #include "building/storage.h"
+#include "core/image.h"
 #include "city/data.h"
 #include "city/map.h"
 #include "figure/enemy_army.h"
@@ -10,7 +11,9 @@
 #include "figure/route.h"
 #include "game/file.h"
 #include "game/player_context.h"
+#include "map/aqueduct.h"
 #include "map/building.h"
+#include "map/building_tiles.h"
 #include "map/data.h"
 #include "map/elevation.h"
 #include "map/figure.h"
@@ -42,6 +45,8 @@ static struct {
     int size;
     int num_players; // arrival points on the map (a prepared map for 4 may have 3 players)
     int prepared;
+    int aqueduct_end_x[MP_MAPGEN_MAX_PLAYERS]; // end of the aqueduct of Caesar near a city, -1 without it
+    int aqueduct_end_y[MP_MAPGEN_MAX_PLAYERS];
     int river_x; // where the river of the central lake leaves the map, -1 without it
     int river_y;
     int center_x[MP_MAPGEN_MAX_PLAYERS];
@@ -434,10 +439,12 @@ static void place_slot(int slot)
 
 // a lake in the middle, for the reservoir of Caesar (D-034), joined to the north-east corner by a river: ships of
 // the empire sail up to the docks built on its shores. Neither crosses a main road.
+static void lake_center(int *x, int *y);
+
 static void place_central_lake(void)
 {
-    int x = data.size / 2 + 14;
-    int y = data.size / 2 - 14;
+    int x, y;
+    lake_center(&x, &y);
     set_blob(x, y, 6, TERRAIN_WATER);
     for (int step = 0;; step++) {
         for (int dy = -2; dy <= 2; dy++) {
@@ -465,6 +472,89 @@ static void place_central_lake(void)
     }
     data.river_x = x;
     data.river_y = y;
+}
+
+static void lake_center(int *x, int *y)
+{
+    *x = data.size / 2 + 14;
+    *y = data.size / 2 - 14;
+}
+
+static void set_caesar_aqueduct(int x, int y)
+{
+    int grid_offset = map_grid_offset(x, y);
+    if (map_terrain_is(grid_offset, TERRAIN_ROAD)) {
+        map_terrain_add(grid_offset, TERRAIN_AQUEDUCT); // over the main road, across it
+    } else {
+        map_terrain_set(grid_offset, TERRAIN_AQUEDUCT);
+    }
+    map_owner_set(grid_offset, MAP_OWNER_CAESAR);
+}
+
+static int is_land_for_reservoir(int x, int y)
+{
+    for (int yy = y; yy < y + 3; yy++) {
+        for (int xx = x; xx < x + 3; xx++) {
+            if (map_terrain_is(map_grid_offset(xx, yy), TERRAIN_WATER | TERRAIN_ROAD) || in_settlement(xx, yy)) {
+                return 0;
+            }
+        }
+    }
+    return map_terrain_exists_tile_in_area_with_type(x - 1, y - 1, 5, TERRAIN_WATER);
+}
+
+// the reservoir of Caesar on the west shore of the central lake, and his aqueduct to every player without water:
+// westwards to the city of the west, northwards to the city of the north (D-034). He never lets them dry up.
+static int place_caesar_water(void)
+{
+    int lx, ly;
+    lake_center(&lx, &ly);
+    int rx = -1, ry = ly - 1;
+    for (int x = lx - 14; x < lx; x++) {
+        if (is_land_for_reservoir(x, ry)) {
+            rx = x;
+        }
+    }
+    if (rx < 0) {
+        return 0;
+    }
+    for (int yy = ry; yy < ry + 3; yy++) {
+        for (int xx = rx; xx < rx + 3; xx++) {
+            map_terrain_set(map_grid_offset(xx, yy), 0);
+        }
+    }
+    building *reservoir = building_create_for_caesar(BUILDING_RESERVOIR, rx, ry);
+    if (!BUILDING_IS_CAESAR(reservoir->id)) {
+        return 0;
+    }
+    map_building_tiles_add(reservoir->id, rx, ry, 3, image_group(GROUP_BUILDING_RESERVOIR), TERRAIN_BUILDING);
+    map_aqueduct_set(map_grid_offset(rx, ry), 0);
+    for (int slot = 0; slot < data.num_players; slot++) {
+        data.aqueduct_end_x[slot] = data.aqueduct_end_y[slot] = -1;
+        if (slot_of(slot)->has_water) {
+            continue;
+        }
+        if (data.entry_x[slot] == 0) {
+            // west: from the middle of the west side of the reservoir
+            int end = data.center_x[slot] + CITY_RADIUS / 2 + 1;
+            for (int x = rx - 1; x >= end; x--) {
+                set_caesar_aqueduct(x, ry + 1);
+            }
+            data.aqueduct_end_x[slot] = end;
+            data.aqueduct_end_y[slot] = ry + 1;
+        } else if (data.entry_y[slot] == 0) {
+            // north: from the middle of the north side
+            int end = data.center_y[slot] + CITY_RADIUS / 2 + 1;
+            for (int y = ry - 1; y >= end; y--) {
+                set_caesar_aqueduct(rx + 1, y);
+            }
+            data.aqueduct_end_x[slot] = rx + 1;
+            data.aqueduct_end_y[slot] = end;
+        } else {
+            return 0; // the lake is in the north-east: the prepared maps keep water in the east and south
+        }
+    }
+    return 1;
 }
 
 // the main road of Caesar: from every arrival point to the middle of the map
@@ -513,6 +603,13 @@ void mp_mapgen_entry_point(int player_id, int *x, int *y)
     *y = data.entry_y[player_id];
 }
 
+int mp_mapgen_caesar_aqueduct_end(int player_id, int *x, int *y)
+{
+    *x = data.prepared ? data.aqueduct_end_x[player_id] : -1;
+    *y = data.prepared ? data.aqueduct_end_y[player_id] : -1;
+    return *x >= 0;
+}
+
 void mp_mapgen_river_point(int *x, int *y)
 {
     *x = data.prepared ? data.river_x : -1;
@@ -545,7 +642,11 @@ int mp_mapgen_create_prepared(const char *template_file, int num_players)
     place_central_lake();
     map_owner_clear_all();
     place_main_road();
+    if (!place_caesar_water()) {
+        return 0;
+    }
     update_tile_images();
+    map_tiles_update_all_aqueducts(0);
     scenario_editor_set_river_entry_point(data.river_x, data.river_y);
     scenario_editor_set_river_exit_point(data.river_x, data.river_y);
     if (!add_cities(num_players)) {

@@ -41,6 +41,7 @@
 #include "game/undo.h"
 #include "map/figure.h"
 #include "map/water_supply.h"
+#include "map/building.h"
 #include "map/owner.h"
 #include "mp/endgame.h"
 #include "mp/permissions.h"
@@ -1545,6 +1546,46 @@ static int command_preparedmap(const char *file, int num_players, int ticks)
         printf("DIFFERENT: the prepared map changed between two creations\n");
         return 1;
     }
+    // as in a network game, the map goes through a file
+    char map_file[64];
+    snprintf(map_file, sizeof(map_file), "prepared-%d.mpmap", num_players);
+    if (!mp_savegame_write(map_file) || !mp_savegame_read(map_file)) {
+        printf("Unable to write and read the map\n");
+        return 2;
+    }
+    remove(map_file);
+
+    // the players without water build a reservoir at the end of the aqueduct of Caesar: it fills; another one,
+    // away from any water, stays dry
+    for (int p = 0; p < num_players; p++) {
+        int ax, ay;
+        if (!mp_mapgen_caesar_aqueduct_end(p, &ax, &ay)) {
+            continue;
+        }
+        int cx, cy;
+        mp_mapgen_city_center(p, &cx, &cy);
+        int ex, ey;
+        mp_mapgen_entry_point(p, &ex, &ey);
+        int west = ex == 0; // the west branch runs along a row, the north one along a column; its end touches
+                            // the middle of a side of the reservoir
+        int x = west ? ax - 2 : ax;
+        int y = west ? ay : ay - 2;
+        mp_command fed = { .type = MP_COMMAND_BUILD, .player_id = p, .args = { BUILDING_DRAGGABLE_RESERVOIR, 0, x, y, x, y, 0, 0 } };
+        mp_command_execute(&fed);
+        mp_command dry = { .type = MP_COMMAND_BUILD, .player_id = p, .args = { BUILDING_DRAGGABLE_RESERVOIR, 0, cx - 6, cy - 6, cx - 6, cy - 6, 0, 0 } };
+        mp_command_execute(&dry);
+        player_context_switch(p);
+        map_water_supply_update_reservoir_fountain();
+        building *fed_reservoir = building_get(map_building_at(map_grid_offset(x, y)));
+        building *dry_reservoir = building_get(map_building_at(map_grid_offset(cx - 6, cy - 6)));
+        player_context_switch(0);
+        int fed_ok = fed_reservoir->type == BUILDING_RESERVOIR && fed_reservoir->has_water_access;
+        int dry_ok = dry_reservoir->type == BUILDING_RESERVOIR && !dry_reservoir->has_water_access;
+        printf("player %d: reservoir on the aqueduct of Caesar %s, reservoir away from water %s\n", p + 1,
+            fed_ok ? "has water" : "HAS NO WATER", dry_ok ? "dry" : "NOT DRY OR NOT BUILT");
+        failures += !fed_ok || !dry_ok;
+    }
+
     for (int p = 0; p < num_players; p++) {
         settle_city(p, size);
     }

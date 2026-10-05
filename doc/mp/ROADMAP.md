@@ -239,7 +239,12 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
   `mp_prepared_map_*` (terre accessible, matériaux et autorisations de chaque emplacement, carte identique d'une
   création à l'autre, cités qui grandissent) ; image : `MAPGEN_PICTURE=carte.ppm simtool preparedmap`. Les
   cartes sont recalculées au lancement à partir des données du joueur : aucune `.mpmap` dans git (I4).
-- [ ] **MC.3** Aqueduc de César et son réservoir indestructible, près des joueurs loin de l'eau (avec ME.1).
+- [x] **MC.3** Aqueduc de César et son réservoir indestructible, près des joueurs loin de l'eau.
+  *Fait* : tranche de bâtiments de César (ids 8001 à 9999), qu'aucune cité ne fait tourner, sauvegardée dans le
+  `.mpsav` (format large) ; réservoir au bord du lac central, aqueduc vers l'ouest et le nord ; chaque cité le
+  remplit dans son calcul de l'eau et ses réservoirs branchés dessus reçoivent l'eau. Test `mp_prepared_map_*`
+  (après passage par un fichier, comme en partie) : réservoir branché plein, réservoir à l'écart sec ; captures du
+  vrai jeu (`goto X Y`).
 
 ## ME — Eau (D-035)
 - [ ] **ME.1** Réservoirs à niveau en multijoueur : vidage en environ 5 minutes, remplissage en environ 1 minute

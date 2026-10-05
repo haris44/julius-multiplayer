@@ -450,6 +450,15 @@ static int execute(char *line)
         mp_compose_city_area(n - 1, MP_COMPOSE_CITY_GAP, &x, &y, &size);
         city_view_go_to_grid_offset(map_grid_offset(x + size / 2, y + size / 2));
         return 0;
+    } else if (strcmp(command, "goto") == 0) {
+        // the view goes to a tile, in map coordinates
+        int x, y;
+        if (sscanf(rest, "%d %d", &x, &y) != 2 || x < 0 || y < 0 || x >= map_grid_width() || y >= map_grid_height()) {
+            fail("invalid goto:", rest);
+            return 1;
+        }
+        city_view_go_to_grid_offset(map_grid_offset(x, y));
+        return 0;
     } else if (strcmp(command, "mpcheck") == 0) {
         char value[160];
         snprintf(value, sizeof(value), "state %d, verified turns %d: %s", mp_lockstep_get_state(),

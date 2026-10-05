@@ -20,6 +20,7 @@
 #include "figure/figure.h"
 #include "figure/formation.h"
 #include "game/player_clone.h"
+#include "game/save_format.h"
 
 #include <string.h>
 
@@ -56,10 +57,26 @@ building *building_next(building *b)
     return building_get(b->next_part_building_id);
 }
 
+static building *create_in_slice(int first, int end, building_type type, int x, int y);
+
 building *building_create(building_type type, int x, int y)
 {
+    return create_in_slice(BUILDING_FIRST, BUILDING_END, type, x, y);
+}
+
+building *building_create_for_caesar(building_type type, int x, int y)
+{
+    building *b = create_in_slice(BUILDING_CAESAR_FIRST, BUILDING_CAESAR_END, type, x, y);
+    if (BUILDING_IS_CAESAR(b->id)) {
+        b->state = BUILDING_STATE_IN_USE; // no city runs his buildings, which never go through "created"
+    }
+    return b;
+}
+
+static building *create_in_slice(int first, int end, building_type type, int x, int y)
+{
     building *b = 0;
-    for (int i = BUILDING_FIRST; i < BUILDING_END; i++) {
+    for (int i = first; i < end; i++) {
         if (all_buildings[i].state == BUILDING_STATE_UNUSED && !game_undo_contains_building(i)) {
             b = &all_buildings[i];
             break;
@@ -331,6 +348,35 @@ void building_clear_all(void)
     extra.created_sequence = 0;
     extra.incorrect_houses = 0;
     extra.unfixable_houses = 0;
+}
+
+// only in multiplayer saved games: always in the wide format, which holds the ids and offsets of large maps
+void building_save_caesar_state(buffer *buf)
+{
+    save_format_wide = 1;
+    for (int i = 0; i < MAX_BUILDINGS; i++) {
+        building_state_save_to_buffer(buf, &all_buildings[BUILDING_CAESAR_FIRST - 1 + i]);
+    }
+    save_format_wide = 0;
+}
+
+void building_load_caesar_state(buffer *buf)
+{
+    save_format_wide = 1;
+    for (int i = 0; i < MAX_BUILDINGS; i++) {
+        int id = BUILDING_CAESAR_FIRST - 1 + i;
+        building_state_load_from_buffer(buf, &all_buildings[id]);
+        all_buildings[id].id = id;
+    }
+    save_format_wide = 0;
+}
+
+void building_clear_caesar_state(void)
+{
+    for (int i = BUILDING_CAESAR_FIRST - 1; i < BUILDING_CAESAR_END; i++) {
+        memset(&all_buildings[i], 0, sizeof(building));
+        all_buildings[i].id = i;
+    }
 }
 
 void building_save_state(buffer *buf, buffer *highest_id, buffer *highest_id_ever,
