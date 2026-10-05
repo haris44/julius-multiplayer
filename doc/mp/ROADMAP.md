@@ -214,7 +214,12 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
   minicarte supposent une carte centrée, comme les cartes classiques ; elle est maintenant centrée. Test
   `mp_generated_map_view_*` : la caméra atteint les quatre coins (trois hors d'atteinte avant).
 - [ ] **T1.3** Défilement au bord haut de l'écran bloqué par la barre de menu (plein écran).
-- [ ] **T1.4** 1920×1080 et 2K proposées dans la liste des résolutions.
+  *Fait, à vérifier par Alexandre* (impossible sans vraie fenêtre) : la barre de menu du jeu laisse passer la
+  souris ; c'est celle de macOS qui descendait sur le jeu en plein écran « Space ». Le plein écran du jeu n'utilise
+  plus de Space sur macOS (`SDL_HINT_VIDEO_MAC_FULLSCREEN_SPACES`) : barre de menu et Dock restent cachés.
+- [x] **T1.4** 1920×1080 et 2K proposées dans la liste des résolutions.
+  *Fait* : 1280 × 720, 1920 × 1080 et 2560 × 1440 après les trois tailles d'origine (capture : fenêtre de
+  1920 × 1080 obtenue).
 - [ ] **T1.5** Routes de la carte à César : neutres (pas à la couleur d'un joueur), indestructibles (D-034).
 - [ ] **T1.6** Le salon ne propose plus que les cartes multijoueur (D-033).
 

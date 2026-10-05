@@ -443,6 +443,11 @@ static int init_sdl(void)
 #if SDL_VERSION_ATLEAST(2, 0, 2)
     SDL_SetHint(SDL_HINT_ACCELEROMETER_AS_JOYSTICK, "0");
 #endif
+#if defined(__APPLE__) && SDL_VERSION_ATLEAST(2, 0, 2)
+    // fullscreen without a separate Space: the menu bar of macOS no longer slides down over the game when the
+    // mouse reaches the top of the screen, which stopped the map from scrolling up
+    SDL_SetHint(SDL_HINT_VIDEO_MAC_FULLSCREEN_SPACES, "0");
+#endif
 
     if (SDL_Init(SDL_INIT_AUDIO | SDL_INIT_VIDEO | SDL_INIT_JOYSTICK) != 0) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Could not initialize SDL: %s", SDL_GetError());
