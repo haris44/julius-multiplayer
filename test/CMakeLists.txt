@@ -219,8 +219,10 @@ if(UNIX)
     # a network game goes on from a multiplayer saved game (its number of cities sets the number of players)
     add_test(NAME mp_lan_resume_mpsav COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/sim/lan_resume_test.sh $<TARGET_FILE:simtool> 27439)
     add_test(NAME mp_lan_other_game_data_refused COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/sim/lan_test.sh $<TARGET_FILE:simtool> 27440 2 tower.sav 400 baddata)
+    # T4.11: the rules changed in the lobby after "Host" are those of the game, for the host and the players
+    add_test(NAME mp_lan_lobby_rules COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/sim/lan_test.sh $<TARGET_FILE:simtool> 27443 3 tower.sav 400 rules cities)
     set_tests_properties(mp_lan_pause mp_lan_player_leaves mp_lan_resume_mpsav mp_lan_other_game_data_refused
-        PROPERTIES TIMEOUT 120)
+        mp_lan_lobby_rules PROPERTIES TIMEOUT 120)
     set_tests_properties(mp_lan_2_players mp_lan_4_players mp_lan_desync_detected mp_lan_cities_2_players
         mp_lan_cities_4_players mp_lan_cities_desync_detected PROPERTIES TIMEOUT 120)
 endif()
@@ -280,6 +282,8 @@ endforeach()
 foreach(save inv0 kknight)
     add_test(NAME mp_ai_invasions_${save} COMMAND simtool aiinvasions ${save}.sav 20000)
 endforeach()
+# T4.4, T4.11: the lobby proposes an easy game; a game hosted alone starts with the rules changed after "Host"
+add_test(NAME mp_lobby_rules COMMAND simtool lobbyrules tower.sav)
 # T4.11: "AI invasions: no" stops every source of attack (armies and local uprisings of the scenario, the uprising
 # sent by an angry Mars), which all come in a classic game and with the option on
 add_test(NAME mp_attack_source_army COMMAND simtool attacksource inv0.sav army 20000)

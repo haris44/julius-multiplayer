@@ -35,9 +35,16 @@ typedef enum {
 int mp_lockstep_host(int port, int num_players, const char *saved_game, int separate_cities);
 
 /**
- * Rules of the next hosted game (default multiplayer rules otherwise)
+ * Rules of the next hosted game (default multiplayer rules otherwise); while the host waits for the players, the
+ * rules of its game, sent at once to the players already there
  */
 void mp_lockstep_set_rules(const game_rules_settings *rules);
+
+/**
+ * Rules of the game being prepared, as known on this computer: the host's own, or those the host sent to this
+ * client (0 before they come, or without a network game)
+ */
+const game_rules_settings *mp_lockstep_lobby_rules(void);
 
 /**
  * Host: with a manual start (lobby), the game starts on mp_lockstep_start_game once every player is there;

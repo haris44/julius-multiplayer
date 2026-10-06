@@ -8,6 +8,8 @@
 # With 'pause': the last client pauses the game at half time and resumes it; everyone must see the pause.
 # With 'leave': the last client leaves at half time; the others must finish the game together.
 # With 'baddata': 2 players, the client pretends to have other game data; the host must refuse it.
+# With 'rules': the host changes every rule of the lobby once the players are there, then starts the game; every
+# player must play with the changed rules, which the clients saw in their lobby (T4.11).
 SIMTOOL=$1; PORT=$2; PLAYERS=$3; SAVE=$4; TICKS=$5; MODE=$6
 CITIES=""
 for arg in "$@"; do
@@ -20,6 +22,7 @@ DIR=$(mktemp -d)
 HOST_ARGS=""
 [ "$MODE" = "desync" ] && HOST_ARGS="expect-desync"
 [ "$MODE" = "baddata" ] && HOST_ARGS="expect-reject"
+[ "$MODE" = "rules" ] && HOST_ARGS="rules"
 "$SIMTOOL" mpnode host "$PORT" "$PLAYERS" "$SAVE" "$TICKS" $CITIES $HOST_ARGS > "$DIR/host.log" 2>&1 &
 HOST=$!
 sleep 0.3
@@ -32,6 +35,7 @@ while [ $i -lt "$PLAYERS" ]; do
     [ "$MODE" = "pause" ] && [ $i -eq $((PLAYERS - 1)) ] && CLIENT_MODE="pause"
     [ "$MODE" = "leave" ] && [ $i -eq $((PLAYERS - 1)) ] && CLIENT_MODE="leave"
     [ "$MODE" = "baddata" ] && CLIENT_MODE="baddata"
+    [ "$MODE" = "rules" ] && CLIENT_MODE="rules"
     "$SIMTOOL" mpnode join 127.0.0.1 "$PORT" "$TICKS" $CLIENT_MODE > "$DIR/client$i.log" 2>&1 &
     PIDS="$PIDS $!"
     i=$((i + 1))
@@ -48,6 +52,11 @@ done
 if [ "$MODE" = "pause" ]; then
     SEEN=$(grep -h "pause seen: 1" "$DIR"/*.log | wc -l | tr -d ' ')
     [ "$SEEN" = "$PLAYERS" ] || { echo "The pause was not seen by every player"; FAILED=1; }
+fi
+if [ "$MODE" = "rules" ]; then
+    SEEN=$(grep -h "^game rules:" "$DIR"/*.log | wc -l | tr -d ' ')
+    DIFFERENT=$(grep -h "^game rules:" "$DIR"/*.log | sort -u | wc -l | tr -d ' ')
+    [ "$SEEN" = "$PLAYERS" ] && [ "$DIFFERENT" = "1" ] || { echo "The players do not play with the same rules"; FAILED=1; }
 fi
 if [ "$MODE" != "desync" ] && [ "$MODE" != "baddata" ]; then
     COUNT=$(grep -h "checksum" "$DIR"/*.log | awk '{print $4}' | sort -u | wc -l | tr -d ' ')

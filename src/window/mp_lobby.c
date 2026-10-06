@@ -26,6 +26,7 @@
 #include "mp/compose.h"
 #include "mp/discovery.h"
 #include "mp/endgame.h"
+#include "mp/lobby.h"
 #include "mp/lockstep.h"
 #include "mp/mapgen.h"
 #include "mp/missionary.h"
@@ -97,11 +98,6 @@ static generic_button action_buttons[] = {
     {16, 370, 296, 20, button_fog, button_none, 0, 0},
 };
 
-// end of the game: Caesar makes his heir of the first city to one of these scores (D-053), or none (0)
-static const int END_SCORES[] = { 500, 1000, 1500, 2000, 0 };
-#define NUM_END_CHOICES 5
-#define DEFAULT_END_CHOICE 1
-
 static generic_button game_buttons[] = {
     {336, 104, 280, 20, button_select_game, button_none, 0, 0},
     {336, 124, 280, 20, button_select_game, button_none, 1, 0},
@@ -118,12 +114,6 @@ static struct {
     int num_files;
     int selected_file;
     int num_players;
-    int end_choice;
-    int ai_invasions;
-    int fog_of_war;
-    int difficulty;
-    int gods;
-    int rules_initialized;
     int missing_template;
     uint8_t address[ADDRESS_LENGTH];
     char local_address[16];
@@ -161,16 +151,7 @@ static void init(void)
     if (data.num_players < 1) {
         data.num_players = 2;
     }
-    if (!data.rules_initialized) {
-        data.rules_initialized = 1;
-        data.end_choice = DEFAULT_END_CHOICE;
-        game_rules_settings rules;
-        game_rules_default_multiplayer_settings(&rules);
-        data.ai_invasions = rules.ai_invasions;
-        data.fog_of_war = rules.fog_of_war;
-        data.difficulty = rules.difficulty;
-        data.gods = rules.gods_enabled;
-    }
+    mp_lobby_rules_init();
     scrollbar_init(&scrollbar, 0, data.num_files);
     net_local_address(data.local_address);
     mp_discovery_start();
@@ -255,6 +236,12 @@ static void draw_status(void)
     }
 }
 
+// a rule under the mouse is white, unless it is a rule of the host, which a player who joined cannot change
+static font_t rule_font(int button, int editable)
+{
+    return editable && data.focus_action == button + 1 ? FONT_NORMAL_WHITE : FONT_NORMAL_BLACK;
+}
+
 static void draw_foreground(void)
 {
     graphics_in_dialog();
@@ -268,27 +255,30 @@ static void draw_foreground(void)
     draw_files();
     int width = text_draw(translation_for(TR_MP_PLAYERS), 16, 285, FONT_NORMAL_BLACK, 0);
     text_draw_number(data.num_players, 0, "", 16 + width, 285, FONT_NORMAL_BLACK);
-    font_t difficulty_font = data.focus_action == BUTTON_DIFFICULTY + 1 ? FONT_NORMAL_WHITE : FONT_NORMAL_BLACK;
+    // a player who joined sees the rules of the host, and cannot change them (T4.11)
+    const game_rules_settings *rules = mp_lobby_rules_shown();
+    int editable = mp_lobby_rules_editable();
+    font_t difficulty_font = rule_font(BUTTON_DIFFICULTY, editable);
     width = text_draw(translation_for(TR_MP_DIFFICULTY), 16, 308, difficulty_font, 0);
-    text_draw(translation_for(TR_MP_DIFFICULTY_0 + data.difficulty), 16 + width, 308, difficulty_font, 0);
-    font_t gods_font = data.focus_action == BUTTON_GODS + 1 ? FONT_NORMAL_WHITE : FONT_NORMAL_BLACK;
+    text_draw(translation_for(TR_MP_DIFFICULTY_0 + rules->difficulty), 16 + width, 308, difficulty_font, 0);
+    font_t gods_font = rule_font(BUTTON_GODS, editable);
     width = text_draw(translation_for(TR_MP_GODS), 212, 308, gods_font, 0);
-    text_draw(translation_for(data.gods ? TR_MP_YES : TR_MP_NO), 212 + width, 308, gods_font, 0);
-    font_t end_font = data.focus_action == BUTTON_END + 1 ? FONT_NORMAL_WHITE : FONT_NORMAL_BLACK;
+    text_draw(translation_for(rules->gods_enabled ? TR_MP_YES : TR_MP_NO), 212 + width, 308, gods_font, 0);
+    font_t end_font = rule_font(BUTTON_END, editable);
     width = text_draw(translation_for(TR_MP_END), 16, 330, end_font, 0);
-    if (END_SCORES[data.end_choice]) {
+    if (rules->end_condition == GAME_END_CAESAR) {
         width += text_draw(translation_for(TR_MP_END_CAESAR), 16 + width, 330, end_font, 0);
-        width += text_draw_number(END_SCORES[data.end_choice], 0, "", 16 + width, 330, end_font);
+        width += text_draw_number(rules->caesar_score, 0, "", 16 + width, 330, end_font);
         text_draw(translation_for(TR_MP_LAURELS), 16 + width, 330, end_font, 0);
     } else {
         text_draw(translation_for(TR_MP_END_NONE), 16 + width, 330, end_font, 0);
     }
-    font_t invasions_font = data.focus_action == BUTTON_INVASIONS + 1 ? FONT_NORMAL_WHITE : FONT_NORMAL_BLACK;
+    font_t invasions_font = rule_font(BUTTON_INVASIONS, editable);
     width = text_draw(translation_for(TR_MP_INVASIONS), 16, 352, invasions_font, 0);
-    text_draw(translation_for(data.ai_invasions ? TR_MP_YES : TR_MP_NO), 16 + width, 352, invasions_font, 0);
-    font_t fog_font = data.focus_action == BUTTON_FOG + 1 ? FONT_NORMAL_WHITE : FONT_NORMAL_BLACK;
+    text_draw(translation_for(rules->ai_invasions ? TR_MP_YES : TR_MP_NO), 16 + width, 352, invasions_font, 0);
+    font_t fog_font = rule_font(BUTTON_FOG, editable);
     width = text_draw(translation_for(TR_MP_FOG_OF_WAR), 16, 374, fog_font, 0);
-    text_draw(translation_for(data.fog_of_war ? TR_MP_YES : TR_MP_NO), 16 + width, 374, fog_font, 0);
+    text_draw(translation_for(rules->fog_of_war ? TR_MP_YES : TR_MP_NO), 16 + width, 374, fog_font, 0);
     draw_button(&action_buttons[BUTTON_LESS], string_from_ascii("-"), data.focus_action == BUTTON_LESS + 1);
     draw_button(&action_buttons[BUTTON_MORE], string_from_ascii("+"), data.focus_action == BUTTON_MORE + 1);
     // once hosting, the same button starts the game when every player is there
@@ -359,36 +349,37 @@ static void button_players(int change, int param2)
     }
 }
 
+// while hosting, a change goes to the game and to the players already there (mp_lobby_change_rule)
 static void button_end(int param1, int param2)
 {
-    data.end_choice = (data.end_choice + 1) % NUM_END_CHOICES;
+    mp_lobby_change_rule(MP_LOBBY_RULE_END);
 }
 
 static void button_fog(int param1, int param2)
 {
-    data.fog_of_war = !data.fog_of_war;
+    mp_lobby_change_rule(MP_LOBBY_RULE_FOG);
 }
 
 static void button_invasions(int param1, int param2)
 {
-    data.ai_invasions = !data.ai_invasions;
+    mp_lobby_change_rule(MP_LOBBY_RULE_INVASIONS);
 }
 
 static void button_difficulty(int param1, int param2)
 {
-    data.difficulty = (data.difficulty + 1) % 5;
+    mp_lobby_change_rule(MP_LOBBY_RULE_DIFFICULTY);
 }
 
 static void button_gods(int param1, int param2)
 {
-    data.gods = !data.gods;
+    mp_lobby_change_rule(MP_LOBBY_RULE_GODS);
 }
 
 static void button_host(int param1, int param2)
 {
     if (mp_lockstep_get_state() == MP_LOCKSTEP_WAITING_FOR_PLAYERS && mp_lockstep_is_host()) {
         if (mp_lockstep_connected_players() == data.num_players) {
-            mp_lockstep_start_game();
+            mp_lobby_start_game(); // with the rules of this moment (T4.11)
         }
         return;
     }
@@ -402,15 +393,7 @@ static void button_host(int param1, int param2)
         return;
     }
     game_rules_settings rules;
-    game_rules_default_multiplayer_settings(&rules);
-    rules.ai_invasions = data.ai_invasions;
-    rules.fog_of_war = data.fog_of_war;
-    rules.difficulty = data.difficulty;
-    rules.gods_enabled = data.gods;
-    rules.end_condition = END_SCORES[data.end_choice] ? GAME_END_CAESAR : GAME_END_NONE;
-    if (END_SCORES[data.end_choice]) {
-        rules.caesar_score = END_SCORES[data.end_choice];
-    }
+    mp_lobby_rules_settings(&rules);
     mp_lockstep_set_rules(&rules);
     mp_lockstep_set_started_callback(window_mp_lobby_show_started_game);
     if (mp_lockstep_host(MP_LOCKSTEP_DEFAULT_PORT, data.num_players, file, 1)) {
