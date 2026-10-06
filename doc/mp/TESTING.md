@@ -75,6 +75,7 @@ MAPGEN_PICTURE=carte.ppm ./simtool preparedmap SAVE 2 10   # ... et son image (s
 ./simtool inspect PARTIE.mpsav              # joueurs, règles, climat, commerce, missionnaires d'une sauvegarde
 ./simtool caravans SAVE                     # caravanes entre joueurs ; tradepreference, tradeconservation,
                                             # traderesume : l'empire en repli, conservation, reprise
+./simtool caesarstate SAVE                  # lauriers et colère de César : somme de contrôle, sauvegarde, reprise
 ```
 
 ## 3. Pilotage du vrai jeu : `--automation` (captures d'écran)

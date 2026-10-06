@@ -5,6 +5,32 @@
 
 ---
 
+## 2026-10-06 — Réponses d'Alexandre sur César (D-053), module `mp/caesar` (M9.1)
+
+**Fait**
+- Les sept points de CESAR.md §13 posés à Alexandre et reportés dans le plan (D-053) :
+  - **victoire au score** : la première cité à 1 000 lauriers (au choix 500 à 2 000) gagne ;
+  - guerre **honorable** (3 mois de préavis) ou **brutale** (immédiate, −15 lauriers et colère ×1,5) ;
+  - **demandes de César à toute la province**, une cagnotte partagée selon les envois, frappes permises sur la
+    ressource ;
+  - le reste confirmé tel quel.
+  T1.3 et T2.5 cochés (vérifiés par Alexandre).
+- M9.1 : `mp/caesar` (lauriers par cité et par source, en dixièmes ; jauge de colère et part de chacun) et
+  `mp/caesar_rules.h` (tous les réglages du plan). Pièce `mp_caesar` du `.mpsav`, protocole 10. Test
+  `mp_caesar_state`.
+
+**Appris**
+- Une vérification tick par tick sur deux mois coûte environ 65 s (somme de contrôle complète à chaque tick) ;
+  quatre jours suffisent quand l'état testé n'évolue pas seul (8 s).
+
+**Prochaine étape** : M9.2, les cinq notes et `simtool notes SAVE`, calibrées sur les cités de `test/data`.
+
+**Points ouverts**
+- Interprétation à confirmer par Alexandre : pendant une demande de César, intercepter les caravanes de la
+  ressource ne fâche pas César, mais l'interception demande toujours une guerre déclarée.
+
+---
+
 ## 2026-10-06 — On va partout, le bois pour le joueur des terres, emplacements tirés au sort (T3.4 à T3.6, D-052)
 
 **Fait**

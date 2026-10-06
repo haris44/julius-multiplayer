@@ -23,10 +23,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define PROTOCOL_VERSION 9 // 3: the rules of the game travel with the welcome message; 4: territories; 5: fog;
-                           // 6: one forest map, games alone (D-044); 7: missions at the start (D-045);
-                           // 8: a caravan per resource, the empire the dearer source (D-048);
-                           // 9: wide places in messages, the missionary goes to the nearest walkable tile
+#define PROTOCOL_VERSION 10 // 3: the rules of the game travel with the welcome message; 4: territories; 5: fog;
+                            // 6: one forest map, games alone (D-044); 7: missions at the start (D-045);
+                            // 8: a caravan per resource, the empire the dearer source (D-048);
+                            // 9: wide places in messages, the missionary goes to the nearest walkable tile;
+                            // 10: laurels and wrath of Caesar in the state (M9.1)
 #define TURN_TICKS 4
 #define TURN_DELAY 2
 #define HISTORY 256

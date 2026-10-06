@@ -50,6 +50,8 @@
 #include "map/water_supply.h"
 #include "map/building.h"
 #include "map/owner.h"
+#include "mp/caesar.h"
+#include "mp/caesar_rules.h"
 #include "mp/endgame.h"
 #include "mp/permissions.h"
 #include "mp/mapgen.h"
@@ -138,6 +140,7 @@ static int usage(void)
     printf("  simtool tradepreference SAVE           the empire sells a city nothing a player sells it cheaper\n");
     printf("  simtool tradeconservation SAVE         trade between players makes and loses no goods nor money\n");
     printf("  simtool traderesume SAVE               a game saved while caravans travel goes on the same\n");
+    printf("  simtool caesarstate SAVE               laurels and wrath of Caesar: in the checksum, saved, resumed\n");
     printf("  simtool terrain MAP PLAYERS X Y W H [raw]  the terrain of a part of the prepared map (or of an .mpsav),\n");
     printf("                                         one letter a tile; raw: terrain bits, image and elevation too\n");
     printf("  simtool tradecities MAP                trade cities of the empire of a map, by land and by sea\n");
@@ -2784,6 +2787,88 @@ static int command_traderesume(const char *file)
     return 0;
 }
 
+// Caesar the judge (M9.1, CESAR.md): the laurels of every city and the common wrath of Caesar are in the checksum, a
+// saved game brings them back and goes on the same tick by tick, and a classic game has none
+static int command_caesarstate(const char *file)
+{
+    if (!start_trade_game(file)) {
+        return 2;
+    }
+    int failures = 0;
+#define CHECK(condition, text) do { int ok_ = (condition); printf("%-62s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
+    CHECK(mp_caesar_is_active() && mp_caesar_laurels(0) == 0 && mp_caesar_laurels(1) == 0 && mp_caesar_wrath() == 0,
+        "a new game: Caesar judges, no laurels, no wrath");
+
+    uint64_t before = mp_checksum_state();
+    mp_caesar_add_laurels(0, MP_LAURELS_PROSPERITY, 25);
+    mp_caesar_add_laurels(0, MP_LAURELS_FESTIVALS, 40);
+    mp_caesar_add_laurels(1, MP_LAURELS_TRADE, 13);
+    mp_caesar_add_laurels(1, MP_LAURELS_WARS, MP_CAESAR_UNJUST_WAR_LAURELS);
+    mp_caesar_add_laurels(2, MP_LAURELS_GIFTS, 70);
+    CHECK(mp_checksum_state() != before, "the laurels are in the checksum");
+    CHECK(mp_caesar_laurels(0) == 65 && mp_caesar_city_laurels(0) == 25 &&
+        mp_caesar_laurels_from(0, MP_LAURELS_FESTIVALS) == 40, "player 1: 6.5 laurels, 2.5 of them from his city");
+    CHECK(mp_caesar_laurels(1) == 13 + MP_CAESAR_UNJUST_WAR_LAURELS && mp_caesar_city_laurels(1) == 13,
+        "player 2: an unjust war takes him below zero");
+    CHECK(mp_caesar_laurels(2) == 0, "no laurels for a player who is not in the game");
+
+    before = mp_checksum_state();
+    mp_caesar_add_wrath(1, 240);
+    mp_caesar_add_wrath(0, 60);
+    CHECK(mp_checksum_state() != before, "the wrath is in the checksum");
+    CHECK(mp_caesar_wrath() == 300 && mp_caesar_belligerence(1) == 240 && mp_caesar_belligerence(0) == 60,
+        "one gauge for all, a share for each");
+    mp_caesar_add_wrath(1, 2 * MP_CAESAR_WRATH_MAX);
+    CHECK(mp_caesar_wrath() == MP_CAESAR_WRATH_MAX, "the gauge stops at its top");
+    mp_caesar_add_wrath(1, -5 * MP_CAESAR_WRATH_MAX);
+    CHECK(mp_caesar_wrath() == 0 && mp_caesar_belligerence(1) == 0 && mp_caesar_belligerence(0) == 60,
+        "and at zero, as the share of player 2");
+    mp_caesar_add_wrath(1, 240);
+
+    const char *mpsav = "caesarstate.mpsav";
+    if (!mp_savegame_write(mpsav)) {
+        printf("Unable to save\n");
+        return 2;
+    }
+    static uint64_t continued[MAX_SAMPLES], resumed[MAX_SAMPLES];
+    int ticks = 4 * 50;
+    int n = run_trace(ticks, 1, continued, 0);
+    mp_caesar_add_laurels(0, MP_LAURELS_GIFTS, 100); // gone when the game is loaded
+    if (!mp_savegame_read(mpsav)) {
+        printf("Unable to read the saved game\n");
+        return 2;
+    }
+    remove(mpsav);
+    CHECK(mp_caesar_laurels(0) == 65 && mp_caesar_laurels_from(0, MP_LAURELS_PROSPERITY) == 25 &&
+        mp_caesar_laurels(1) == 13 + MP_CAESAR_UNJUST_WAR_LAURELS, "the saved game brings the laurels back");
+    CHECK(mp_caesar_wrath() == 240 && mp_caesar_belligerence(1) == 240 && mp_caesar_belligerence(0) == 60,
+        "and the wrath with the share of each");
+    run_trace(ticks, 1, resumed, 0);
+    int same = 1;
+    for (int i = 0; i < n && i < MAX_SAMPLES && same; i++) {
+        if (continued[i] != resumed[i]) {
+            printf("the resumed game diverges at tick %d after loading\n", i);
+            same = 0;
+        }
+    }
+    CHECK(same, "the resumed game goes on the same, tick by tick");
+
+    // a classic game: nothing from the multiplayer game, and Caesar does not judge
+    player_context_switch(0);
+    player_context_set_num_players(1);
+    if (!load(file)) {
+        return 2;
+    }
+    mp_caesar_add_laurels(0, MP_LAURELS_FESTIVALS, 40);
+    mp_caesar_add_wrath(0, 100);
+    CHECK(!mp_caesar_is_active() && mp_caesar_laurels(0) == 0 && mp_caesar_wrath() == 0,
+        "a classic game: no laurels, no wrath");
+#undef CHECK
+    printf("%s\n", failures ? "DIFFERENT: the laurels and the wrath of Caesar are not kept as designed" :
+        "Identical: the laurels and the wrath of Caesar are kept as designed");
+    return failures ? 1 : 0;
+}
+
 // the camera of a player reaches every corner of a generated map, after it went through a .mpmap file as in a game
 static int command_viewcorners(const char *file, int num_players)
 {
@@ -3305,6 +3390,8 @@ int main(int argc, char **argv)
         result = command_tradeconservation(file);
     } else if (strcmp(command, "traderesume") == 0) {
         result = command_traderesume(file);
+    } else if (strcmp(command, "caesarstate") == 0) {
+        result = command_caesarstate(file);
     } else if (strcmp(command, "inspect") == 0) {
         result = command_inspect(file);
     } else if (strcmp(command, "tradecities") == 0) {

@@ -33,6 +33,7 @@
 #include "game/extra_state.h"
 #include "game/rules.h"
 #include "game/player_context.h"
+#include "mp/caesar.h"
 #include "mp/command.h"
 #include "mp/endgame.h"
 #include "mp/savegame.h"
@@ -290,6 +291,7 @@ static int start_scenario(const uint8_t *scenario_name, const char *scenario_fil
     game_rules_set_classic();
     mp_command_queue_clear();
     mp_endgame_reset();
+    mp_caesar_reset();
     map_bookmarks_clear();
     if (scenario_is_custom()) {
         if (!load_custom_scenario(scenario_name, scenario_file)) {
@@ -365,6 +367,7 @@ int game_file_load_saved_game(const char *filename)
     game_rules_set_classic();
     mp_command_queue_clear();
     mp_endgame_reset();
+    mp_caesar_reset();
     if (!game_file_io_read_saved_game(filename, 0)) {
         return 0;
     }

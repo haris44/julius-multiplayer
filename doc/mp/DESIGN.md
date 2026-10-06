@@ -213,6 +213,12 @@ réseau et à trouver par dichotomie le premier tick fautif dans les tests.
 > **Revu par D-050 (2026-10-06)** : César revient comme arbitre (lauriers, faveur, campagnes, colère). Le plan
 > complet est dans [CESAR.md](CESAR.md) ; la liste ci-dessous décrit l'état actuel du code, qui sera rouvert
 > mécanique par mécanique aux jalons M9 et M10.
+>
+> Depuis M9.1, `mp/caesar` tient les lauriers de chaque cité (en dixièmes, détaillés par source : les cinq notes,
+> puis fêtes, dons, campagnes, demandes, guerres, armée, punition) et la jauge commune de colère avec la part de
+> chacun. C'est une pièce commune du `.mpsav` (`mp_caesar`), comptée dans la somme de contrôle ; une partie
+> classique repart toujours d'un état vide. Tous les réglages chiffrés sont dans `mp/caesar_rules.h`, la seule
+> table à modifier (CESAR §10.1).
 
 ### 5.1 Interventions de César neutralisées (liste complète : code-map/04 §3)
 

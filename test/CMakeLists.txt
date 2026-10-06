@@ -327,6 +327,8 @@ add_test(NAME mp_trade_conservation COMMAND simtool tradeconservation brugle-mas
 # The empire is the dearer source (M8.9, D-048): its traders sell nothing a player sells cheaper
 add_test(NAME mp_trade_preference COMMAND simtool tradepreference brugle-massilia-start.sav)
 add_test(NAME mp_trade_resume COMMAND simtool traderesume brugle-massilia-start.sav)
+# Caesar the judge (M9.1, D-050): laurels and wrath in the checksum, saved and resumed, none in a classic game
+add_test(NAME mp_caesar_state COMMAND simtool caesarstate brugle-massilia-start.sav)
 
 # T1.5 (D-034): the roads of Caesar stay, untinted, and serve every city
 add_test(NAME mp_caesar_roads COMMAND simtool caesarroads brugle-massilia-start.sav)

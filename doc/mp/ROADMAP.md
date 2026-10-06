@@ -408,9 +408,12 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
 
 ## M9 — César juge (D-050, [CESAR.md](CESAR.md) §4 à §6)
 César revient comme arbitre de la partie. Jouable en paix et **seul** : livré à Alexandre avant la guerre.
-- [ ] **M9.1** Module `mp/caesar` : par cité les lauriers (en dixièmes) et leur détail par source ; la jauge commune
+- [x] **M9.1** Module `mp/caesar` : par cité les lauriers (en dixièmes) et leur détail par source ; la jauge commune
   de colère ; sauvegarde, somme de contrôle ; table de réglages `mp/caesar_rules.h`. *Critères* : ctest
   sauvegarde et reprise identiques tick par tick ; parité verte (classique intact).
+  *Fait* : pièce `mp_caesar` du `.mpsav`, remise à zéro par toute partie classique ; protocole 10. Test
+  `mp_caesar_state` : lauriers et colère dans la somme de contrôle, jauge bornée de 0 à 100, partie reprise
+  identique tick par tick, rien en classique ; il échoue dès la tick 0 si le chargement oublie la pièce.
 - [ ] **M9.2** Les cinq notes (prospérité, commerce, habitat, culture-éducation, grandeur ; CESAR §5) et
   `simtool notes SAVE`. Références calibrées sur les cités de `test/data` (CESAR §10.2), valeurs notées dans
   DECISIONS. *Critères* : ctest des notes sur des sauvegardes connues ; flux nets et prix de référence pour le

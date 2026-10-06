@@ -4,6 +4,7 @@
 #include "core/buffer.h"
 #include "core/log.h"
 #include "game/extra_state.h"
+#include "mp/caesar.h"
 #include "mp/endgame.h"
 #include "game/file.h"
 #include "game/file_io.h"
@@ -65,6 +66,7 @@ void mp_savegame_visit(mp_savegame_visitor visitor, void *userdata)
     visit_buffer(visitor, userdata, "mp_header", save_header, 256);
     visit_buffer(visitor, userdata, "owner_grid", map_owner_save_state, GRID_MAX_TILES);
     visit_buffer(visitor, userdata, "mp_endgame", mp_endgame_save_state, 64);
+    visit_buffer(visitor, userdata, "mp_caesar", mp_caesar_save_state, 1024);
     visit_buffer(visitor, userdata, "caesar_buildings", building_save_caesar_state, MAX_BUILDINGS * 256);
     visit_buffer(visitor, userdata, "territory_grid", mp_territory_save_state, GRID_MAX_TILES);
     visit_buffer(visitor, userdata, "fog_grid", mp_fog_save_state, GRID_MAX_TILES);
@@ -264,6 +266,14 @@ static int load_pieces(void)
         mp_endgame_load_state(&endgame_buf);
     } else {
         mp_endgame_reset();
+    }
+    const piece *judge = find_piece("mp_caesar", 0, reading.num_pieces);
+    if (judge) {
+        buffer judge_buf;
+        buffer_init(&judge_buf, (uint8_t *) judge->data, judge->size);
+        mp_caesar_load_state(&judge_buf);
+    } else {
+        mp_caesar_reset();
     }
     const piece *caesar = find_piece("caesar_buildings", 0, reading.num_pieces);
     if (caesar) {
