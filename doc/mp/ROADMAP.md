@@ -487,7 +487,7 @@ le note « à valider ».
   pas ouverte chez lui ; sa propre route recalcule son menu. Le test échouait avant le correctif. `mp_permissions_*`
   règle maintenant le joueur local de chaque cité qu'il interroge.
   *En attendant* (essais du soir) : sauvegarder et reprendre depuis le salon recalcule le bon menu.
-- [ ] **T4.14** **Deux cartes préparées de plus** (Alexandre : « avant de terminer, tu me généreras 2 cartes de
+- [~] **T4.14** **Deux cartes préparées de plus** (Alexandre : « avant de terminer, tu me généreras 2 cartes de
   plus »), à faire en fin de nuit.
   *Choix provisoire, à valider* :
   - d'abord **refaire la carte à 4** selon D-062 : deux joueurs des terres (l'aqueduc de César les atteint tous
@@ -497,6 +497,29 @@ le note « à valider ».
     emplacements tirés au sort ;
   - la carte est choisie dans le salon, ou tirée au sort.
   *Tests* : ceux des cartes préparées (`mp_prepared_map*`), appliqués à chaque carte.
+  *Fait* (D-069, *à valider* par Alexandre, qui doit les essayer) :
+  - **carte 2 pour 2 joueurs** (220 cases) : bras de mer en diagonale, du nord-ouest au sud-est ; les deux joueurs
+    au sud-ouest de la mer. Joueur des terres dans le coin sud-ouest (arrivée à l'ouest), son réservoir de César sur
+    la côte au nord-est de lui ; joueur de la côte au sud, sur le rivage (arrivée au sud). Le pont de César mène au
+    grand nord-est sauvage ;
+  - **carte 2 pour 3 ou 4 joueurs** (240 cases) : bras de mer sinueux au sud. Les deux joueurs des terres sur la
+    grande rive nord, reliés par une route d'ouest en est (olives à l'ouest, vignes à l'est), chacun avec son
+    réservoir de César sur la côte nord ; les deux côtiers sur la rive sud. À 3, le sud-est (côte) reste libre ;
+  - mêmes règles que la carte 1 : ressources et nourriture du plan, aucune eau à moins de 45 cases des joueurs des
+    terres, pont, routes de César jusqu'à chaque joueur, point de pêche et navires des côtiers, tirage des
+    emplacements (graine 0 : ordre du plan) ;
+  - **le salon choisit la carte** : « Carte 1 », « Carte 2 » ou « Carte au hasard » (par défaut, *à valider*), à côté
+    des invasions. Nouvelle règle `prepared_map` dans les règles de la partie : sauvegardée, envoyée avec l'accueil et
+    avec les règles du salon (protocole 16). Au hasard, l'hôte tire la carte avec la graine du salon ; la partie garde
+    la carte tirée, les clients la reçoivent avec la sauvegarde. Les cartes actuelles sont la carte 1, celle des
+    tests et de la ligne de commande ;
+  - *tests* : `simtool --map 2` fait passer chaque test des cartes sur la carte 2 : `mp_prepared_map2_{2,3,4}_players`,
+    `mp_prepared_map2_drying_{1,2,4}_players`, `mp_caesar_aqueduct_map2_{2,3,4}_players`, `mp_prepared_map2_placement`,
+    `mp_prepared_map2_reachable_{2,4}_players`, `mp_missionary_bridge_map2`, `mp_long_routes_map2_{2,4}_players` et
+    `mp_long_routes_2_players` ; `mp_prepared_map_choice` (`simtool mapchoice` : règle du salon, tirage identique pour
+    une même graine, cartes différentes, carte gardée par la sauvegarde et par la partie hébergée) ;
+    `mp_lan_generated_map2` (3 joueurs en réseau sur la carte 2, port 27451). Les scripts d'automatisation du salon
+    choisissent la carte 1.
 - [x] **T4.15** **Nourritures inexploitées sur la carte** (Alexandre : « quelles sont les ressources qui restent
   et que nous n'exploitons pas sur cette carte ? porc ? »). *Mesuré* (`simtool preparedmap`, modèle Lindum, qui
   affiche désormais ce que chaque cité peut produire) : chacun n'a que le **blé et les légumes** ; les côtiers ont
@@ -555,6 +578,8 @@ le note « à valider ».
   8 chargements de marbre entre les deux joueurs les plus éloignés (arrivée en 90 jours), bateau qui parcourt tout le
   bras de mer, puis une mer grande comme la grille dont l'autre coin est atteint (échouait avant le correctif).
   *À refaire* pour chaque nouvelle carte de T4.14 : `simtool longroutes` (chemin le plus long sous 500 pas).
+  *Fait* (T4.14) : `simtool longroutes` vérifie aussi moins de 400 pas, sur chaque carte. Plus longs chemins par les
+  routes : carte 1, 153 pas à 2 et 298 à 4 ; carte 2, 117 pas à 2 et 241 à 4.
 
 ## MC — Cartes multijoueur préparées et César (D-033, D-034)
 - [ ] **MC.1** Ouvrages de César dessinés en blanc (la teinte actuelle ne fait que foncer les images) ; son aqueduc
