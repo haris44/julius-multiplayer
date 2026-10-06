@@ -387,8 +387,12 @@ le note « à valider ».
   *Réponse d'Alexandre* (D-060) : plus de prix d'achat et de vente différents. Chaque ressource a un **prix fixe de
   l'empire**, et une **taxe de douane, le portorium**, s'applique à l'entrée et à la sortie de la province. C'est
   elle qui fera monter les prix (T4.3). À traiter avec T4.3.
-  *Précision d'Alexandre* : le prix de départ est le prix du jeu, le même pour tout le monde ; l'international
-  paie la douane ; ensuite, chaque joueur fait évoluer ses prix comme il le souhaite.
+  *Précision d'Alexandre* (D-060, D-061) : le prix de départ est le prix de Rome, le même pour tout le monde ;
+  acheter à l'étranger coûte le prix de Rome **+ 50 %** de douane ; entre joueurs, le prix de Rome par défaut, que le
+  vendeur modifie comme il le souhaite.
+  *À faire* : un seul prix par ressource (`empire/trade_prices`), le portorium à 50 % à l'achat et à la vente à
+  l'empire (taux de sortie à valider), le prix de Rome par défaut entre joueurs, la page du commerce qui montre
+  prix de Rome, douane et prix payé. Tests : prix payés et reçus avec l'empire, prix par défaut entre joueurs.
 - [ ] **T4.13** **Bug : le joueur côtier perd l'argile et reçoit le fer et le marbre** (essai du soir : « les
   ressources ne sont plus les bonnes entre le joueur terrestre et le joueur côtier »).
   *Diagnostic* : les permissions de chaque cité sont justes, dans la carte et dans la sauvegarde. Le menu de
@@ -397,9 +401,13 @@ le note « à valider ».
   dans **sa** cité, chez tous les joueurs : chacun voit alors le menu de ce joueur. Si le joueur des terres ouvre
   une route, le côtier perd l'argile et reçoit le fer et le marbre ; et inversement. La simulation n'est pas
   touchée (le menu ne sert qu'à l'interface), d'où l'absence de désynchronisation.
+  *Règle d'Alexandre* (D-061) : le commerce avec l'étranger n'est pas partagé entre joueurs ; le menu de
+  construction de chacun ne montre que les matières premières de son emplacement (argile et bois pour les côtiers,
+  marbre et fer pour les terriens), quoi que fasse un autre joueur avec l'étranger.
   *Correctif prévu* : le menu ne se recalcule que dans la cité du joueur local (garde dans `building_menu_update`,
-  sans effet en classique). *Test* : `simtool`, J1 ouvre une route pendant que J2 est le joueur local ; le menu de J2
-  garde l'argile, sans fer ni marbre.
+  sans effet en classique), et jamais pendant la commande d'un autre joueur. *Tests* : `simtool`, J1 ouvre une
+  route pendant que J2 est le joueur local ; le menu de J2 garde l'argile, sans fer ni marbre ; puis l'inverse.
+  Vérifier aussi qu'une route ouverte par J1 n'apparaît pas dans le commerce de J2.
   *En attendant* (essais du soir) : sauvegarder et reprendre depuis le salon recalcule le bon menu.
 - [ ] **T4.14** **Deux cartes préparées de plus** (Alexandre : « avant de terminer, tu me généreras 2 cartes de
   plus »), à faire en fin de nuit.

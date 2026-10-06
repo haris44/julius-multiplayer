@@ -783,7 +783,29 @@
   - seul le commerce avec l'empire paie le portorium. Entre joueurs, pas de douane : le commerce ne quitte pas la
     province ;
   - chaque joueur fait ensuite évoluer ses prix comme il le souhaite, joueur par joueur (D-043).
-- **À préciser** (je tranche provisoirement s'il le faut, en le notant) :
-  - le taux de départ du portorium (pour garder l'écart actuel, environ 25 %) ;
-  - qui le voit augmenter, de combien et combien de temps, et ce qu'est « arrêter le commerce » (T4.3).
+- **Taux de départ : 50 %** (Alexandre : « un joueur local peut commercer avec l'étranger au prix de Rome + taxes
+  douanières (50 %) »). Marbre : prix de Rome 200 ; acheté à l'empire 300. À la sortie, le même taux : vendu à
+  l'empire 100. *Le taux de sortie est à valider* (l'original l'achetait 140).
+- **À préciser** (je tranche provisoirement s'il le faut, en le notant) : qui voit le portorium augmenter, de
+  combien et combien de temps, et ce qu'est « arrêter le commerce » (T4.3).
+- Classique : inchangé.
+
+### D-061 — Le commerce avec l'étranger n'est pas partagé ; le menu de construction suit l'emplacement (précise D-020, D-043, D-060)
+- 2026-10-06 · **adoptée** (Alexandre, après le bug T4.13 : « on ne partage pas le commerce qu'on fait avec
+  l'étranger entre joueurs locaux. Un joueur local peut commercer avec l'étranger au prix de Rome + taxes douanières
+  (50 %). Il pourra aussi commercer avec un autre joueur local, avec le prix de Rome par défaut, modifiable par le
+  vendeur. En revanche, sur les ressources disponibles dans les menus de construction de chacun des joueurs :
+  argile et bois pour les côtiers, marbre et fer pour les terriens »)
+- **Chaque joueur a son propre commerce avec l'étranger** : ses routes ouvertes, ses achats et ses ventes. Rien
+  n'en passe à un autre joueur, ni les routes, ni les prix, ni les matières qu'une route rend disponibles. Il paie
+  le prix de Rome plus le portorium (D-060).
+- **Entre joueurs** : le prix de Rome par défaut, que le vendeur modifie comme il veut, joueur par joueur (D-043).
+- **Le menu de construction d'un joueur ne montre que les matières premières de son emplacement** : argile et bois
+  pour les joueurs de la côte, marbre et fer pour le joueur des terres. Il ne doit jamais montrer celles d'un autre
+  joueur, quoi que fasse celui-ci avec l'étranger. Le menu est recalculé dans la seule cité du joueur local.
+- *À valider* :
+  - les cartes actuelles donnent aussi au joueur des terres le bois (T3.5, « je parle des chantiers de bois ») et les
+    olives, et aux côtiers les vignes ; je les garde, sauf avis contraire ;
+  - l'original permet l'atelier d'une matière qu'une route de l'empire fournit (D-020) ; cette règle reste, dans la
+    cité de chaque joueur. Un achat à un autre joueur n'ouvre pas d'atelier tant que ce n'est pas tranché.
 - Classique : inchangé.
