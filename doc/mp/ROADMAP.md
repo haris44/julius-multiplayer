@@ -362,9 +362,15 @@ le note « à valider ».
   *À faire* :
   - le salon des joueurs qui rejoignent montre les réglages de l'hôte, en lecture seule (un message du salon,
     changement de protocole) ;
-  - « non » coupe toutes les attaques qui ne viennent pas des joueurs : invasions, soulèvements, Mars, et sans doute
-    les gladiateurs, à trancher ;
+  - « non » coupe toutes les invasions et tous les soulèvements, ceux du scénario comme celui de Mars, dès le
+    début de la partie. Les **révoltes de gladiateurs restent** (Alexandre) ;
   - un test par source d'attaque.
+  *Précisions d'Alexandre* :
+  - il était l'**hôte**, il a vu « Soulèvement local », en début de partie, invasions désactivées dans le salon ;
+  - il pense que le démarrage en difficile y contribue : la difficulté du salon (difficile par défaut) s'applique
+    quel que soit le réglage du menu principal (T4.10).
+  Piste principale : Mars en colère, avec dieux activés et difficulté difficile. Reproduire d'abord ce cas, hôte et
+  invasions coupées, sur les premières années, avant de corriger.
 
 ## MC — Cartes multijoueur préparées et César (D-033, D-034)
 - [ ] **MC.1** Ouvrages de César dessinés en blanc (la teinte actuelle ne fait que foncer les images) ; son aqueduc
