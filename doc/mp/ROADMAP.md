@@ -351,6 +351,20 @@ le note « à valider ».
   - en multijoueur, le menu Difficulté est désactivé, et l'affichage montre la difficulté du salon ;
   - vérifier ce que voient les clients dans le salon (la difficulté de l'hôte) ;
   - « facile » par défaut (T4.4).
+- [ ] **T4.11** **Les réglages du salon ne sont pas synchronisés ; les insurrections ne se désactivent pas** (essai du
+  soir : « même les insurrections IA ne sont pas désactivées même si on les désactive »).
+  *Diagnostic* :
+  - le salon d'un joueur qui rejoint affiche et laisse cliquer ses propres réglages, sans effet : seuls ceux de
+    l'hôte partent avec la partie (message d'accueil), et les autres ne les voient qu'au lancement ;
+  - « Invasions IA : non » coupe les invasions et les soulèvements locaux du scénario, mais pas le **soulèvement
+    envoyé par Mars** en colère (`scenario_invasion_start_from_mars`, dieux activés), ni les révoltes de gladiateurs
+    du scénario.
+  *À faire* :
+  - le salon des joueurs qui rejoignent montre les réglages de l'hôte, en lecture seule (un message du salon,
+    changement de protocole) ;
+  - « non » coupe toutes les attaques qui ne viennent pas des joueurs : invasions, soulèvements, Mars, et sans doute
+    les gladiateurs, à trancher ;
+  - un test par source d'attaque.
 
 ## MC — Cartes multijoueur préparées et César (D-033, D-034)
 - [ ] **MC.1** Ouvrages de César dessinés en blanc (la teinte actuelle ne fait que foncer les images) ; son aqueduc
