@@ -784,8 +784,8 @@
     province ;
   - chaque joueur fait ensuite évoluer ses prix comme il le souhaite, joueur par joueur (D-043).
 - **Taux de départ : 50 %** (Alexandre : « un joueur local peut commercer avec l'étranger au prix de Rome + taxes
-  douanières (50 %) »). Marbre : prix de Rome 200 ; acheté à l'empire 300. À la sortie, le même taux : vendu à
-  l'empire 100. *Le taux de sortie est à valider* (l'original l'achetait 140).
+  douanières (50 %) » ; confirmé : « 50 % de droits de douane oui »). Marbre : prix de Rome 200 ; acheté à
+  l'empire 300 ; vendu à l'empire 100 (l'original l'achetait 140).
 - **À préciser** (je tranche provisoirement s'il le faut, en le notant) : qui voit le portorium augmenter, de
   combien et combien de temps, et ce qu'est « arrêter le commerce » (T4.3).
 - Classique : inchangé.

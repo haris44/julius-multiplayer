@@ -391,7 +391,7 @@ le note « à valider ».
   acheter à l'étranger coûte le prix de Rome **+ 50 %** de douane ; entre joueurs, le prix de Rome par défaut, que le
   vendeur modifie comme il le souhaite.
   *À faire* : un seul prix par ressource (`empire/trade_prices`), le portorium à 50 % à l'achat et à la vente à
-  l'empire (taux de sortie à valider), le prix de Rome par défaut entre joueurs, la page du commerce qui montre
+  l'empire (confirmé par Alexandre), le prix de Rome par défaut entre joueurs, la page du commerce qui montre
   prix de Rome, douane et prix payé. Tests : prix payés et reçus avec l'empire, prix par défaut entre joueurs.
 - [ ] **T4.13** **Bug : le joueur côtier perd l'argile et reçoit le fer et le marbre** (essai du soir : « les
   ressources ne sont plus les bonnes entre le joueur terrestre et le joueur côtier »).
