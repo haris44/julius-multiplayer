@@ -165,7 +165,9 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
   le salon reprend une partie depuis un `.mpsav` (nombre de joueurs fixé par le fichier). Tests : `mp_lan_pause`,
   `mp_lan_player_leaves`, `mp_lan_resume_mpsav`.
 - [ ] **M5.6** Intégration continue multiplateforme (macOS arm64, Windows x64, Linux) qui compare les traces de
-  rejeu. *Nécessite un dépôt GitHub : à demander à Alexandre.*
+  rejeu. *En cours* (D-054) : dépôt `haris44/julius-multiplayer` ; `.github/workflows/multiplayer.yml` lance tous
+  les tests sous Linux et Windows (MinGW 64 bits) et fabrique l'AppImage et le dossier Windows. Reste : une tâche
+  qui compare les traces d'une même partie multijoueur calculées sur Mac, Linux et Windows.
 - [ ] **M5.7** Première vraie partie en LAN avec Alexandre (Mac et PC) et retour d'expérience.
 - [x] **M5.8** Salon complet : choix des règles (difficulté, dieux), joueurs « prêts » avant le lancement par l'hôte,
   vérification que tous ont les mêmes données du jeu.

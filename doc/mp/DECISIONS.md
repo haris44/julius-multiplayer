@@ -633,3 +633,20 @@
     L'interception demande toujours une guerre déclarée : c'est une interprétation, **à confirmer** par Alexandre.
 - **Seconde expédition punitive fatale** : option du salon, désactivée par défaut. Sans elle, la seconde expédition
   frappe comme la première.
+
+### D-054 — Dépôt GitHub public et versions Linux et Windows (M5.6)
+- 2026-10-06 · **adoptée** (Alexandre : « est-ce que ça serait compliqué de faire une version Linux Wayland
+  Fedora 44 ? », puis « j'ai fait un fork de Julius pour être plus lisible »)
+- Dépôt : `github.com/haris44/julius-multiplayer`, un fork **public** de Julius. Le code part dans la branche
+  `multiplayer` (remote `github`) ; `origin` reste le Julius d'origine, pour en récupérer les correctifs.
+- Aucune donnée du jeu dans le dépôt, ni dans son historique (vérifié avant le premier envoi). Les sauvegardes de
+  `test/data` viennent du dépôt public de Julius.
+- Auteur des commits : l'adresse privée GitHub d'Alexandre (`…@users.noreply.github.com`), pas son adresse
+  professionnelle. Les 88 commits déjà faits ont été réécrits avant l'envoi (Alexandre l'a choisi) : leurs anciens
+  numéros, cités dans le JOURNAL, ne pointent plus vers rien.
+- Compilation automatique : `.github/workflows/multiplayer.yml`, à chaque envoi sur `multiplayer`. Tous les tests
+  sous Linux et sous Windows (MinGW 64 bits), puis une AppImage Linux et un dossier Windows, avec le LISEZMOI et
+  le code source. Les fichiers de compilation de Julius (`main.yml`, `codeql.yml`) restent dans le dépôt, mais sont
+  désactivés sur le fork, pour garder les fusions avec Julius simples.
+- Linux : l'AppImage tourne sur toute distribution récente, sous Wayland comme sous X11. Le pare-feu de Fedora
+  doit laisser passer les ports 27400 (TCP, la partie) et 27401 (UDP, le salon) : c'est dans le LISEZMOI.

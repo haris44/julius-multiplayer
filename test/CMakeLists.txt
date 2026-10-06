@@ -92,6 +92,12 @@ add_executable(simtool
     ${MP_FILES}
 )
 
+# the network code of the multiplayer game (src/platform/net.c) needs Winsock on Windows
+if(WIN32)
+    target_link_libraries(autopilot ws2_32)
+    target_link_libraries(simtool ws2_32)
+endif()
+
 file(COPY data/c3.emp DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 file(COPY data/c32.emp DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
