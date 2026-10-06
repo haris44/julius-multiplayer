@@ -343,6 +343,9 @@ add_test(NAME mp_prepared_map_placement COMMAND simtool placement brugle-massili
 foreach(players 2 4)
     add_test(NAME mp_prepared_map_reachable_${players}_players COMMAND simtool reachable brugle-massilia-start.sav ${players})
 endforeach()
+# Is the multiplayer game more restrictive than the original? The same small city built by commands and played two years
+# under classic and multiplayer rules, alone and with four cities, at two difficulties: the numbers stay alike (T4.16, D-072)
+add_test(NAME mp_restrictiveness COMMAND simtool restrictiveness brugle-massilia-start.sav)
 # The message of a disaster far on a large map goes to it (Alexandre, 2026-10-06)
 add_test(NAME mp_message_location COMMAND simtool messagelocation brugle-massilia-start.sav)
 

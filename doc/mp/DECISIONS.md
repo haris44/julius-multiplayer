@@ -959,3 +959,65 @@
 - **Lien avec T4.14** : un aqueduc ne traverse pas la mer. Si les deux joueurs des terres (D-062) sont sur deux
   rives, il faut un réservoir de César sur chacune. *À valider* avec le plan de la carte.
 - Classique : inchangé (rien de tout cela n'existe hors des cartes multijoueur).
+
+### D-072 — Mesure : le jeu multijoueur n'est pas plus restrictif qu'en classique, hors zone et difficulté (T4.16)
+- 2026-10-07 · **à valider** (Alexandre : « le jeu paraît plus restrictif : distance d'effet des bâtiments, emplacement
+  des habitations, manque de main-d'œuvre »). Aucune règle n'a changé : c'est une mesure, gardée par un test.
+- **Méthode** : `simtool restrictiveness brugle-massilia-start.sav` (ctest `mp_restrictiveness`). La même petite cité
+  est bâtie **par commandes** sur le même terrain, puis jouée **deux ans** (19 200 ticks) : une boucle de routes,
+  44 cases de maisons (en deux bandes), 5 puits, grenier (3 200 de blé), marché, temple de Cérès, préfecture, bureau
+  d'ingénieur, 3 ateliers, 2 fermes de blé sur prairie (57 bâtiments, environ 1 400 Dn). Mêmes fonds (100 000 Dn pour
+  que l'argent n'explique rien), pas de dieux, pas d'armées ni de demandes de César. Quatre séries, en **facile** et en
+  **difficile** (par les règles du jeu : réglage local en classique, règles du salon en multijoueur) :
+  1. *classique*, une cité seule sur la carte préparée (terrain libre, sans zone) ;
+  2. *multijoueur*, une cité seule (partie d'Alexandre : zone, réservoirs qui retiennent l'eau) ;
+  3. les mêmes à **quatre joueurs** sur la carte à 4 (deux terres, deux côtes), chaque cité bâtit le même plan ;
+  4. multijoueur à 4 où **un seul** joueur bâtit : une cité n'est pas gênée par les trois autres.
+  Il n'y a pas de sauvegarde classique vide dans `test/data` (toutes sont des cités déjà grandes) : le « classique »
+  est donc le **même terrain** joué avec les règles classiques (un joueur, pas de zone). Cela isole les règles du
+  terrain, ce qui est le but.
+- **Résultats** (2 ans ; population à 6, 12 et 24 mois ; maisons habitées ; couverture : maisons avec eau / nourriture /
+  religion ; employés ; chômeurs ; moral de la cité ; migration) :
+
+  | Cité | Pop. 6 / 12 / 24 mois | Maisons | Eau / nourr. / religion | Employés | Chômeurs | Moral | Migration |
+  |------|----------------------|---------|-------------------------|----------|----------|-------|-----------|
+  | Seule, facile, **classique = multijoueur** | 257 / 302 / 255 | 11 | 8 / 3 / 11 | 64 | 56 | 70 | 75 % |
+  | Seule, difficile, **classique = multijoueur** | 239 / 304 / 243 | 11 | 8 / 2 / 11 | 64 | 48 | 50 | 50 % |
+  | À 4, facile, J1 (classique = MP) | 219 / 294 / 216 | 15 | 9 / 3 / 15 | 74 | 28 | 70 | 75 % |
+  | À 4, facile, J2 | 203 / 280 / 274 | 17 | 10 / 4 / 17 | 64 | 67 | 70 | 75 % |
+  | À 4, facile, J3 (classique / MP) | 193 / 304 / 252 ; 193 / 278 / 250 | 16 | 9 / 0 / 16 | 54 | 56 ; 54 | 70 | 75 % |
+  | À 4, facile, J4 | 179 / 300 / 264 | 15 | 9 / 2 / 15 | 64 | 50 | 70 | 75 % |
+  | À 4, difficile, J1 à J4 (classique = MP, sauf J3) | 215 / 288 / 216 ; 184 / 280 / 281 ; 185 / 303 / 252 ; 173 / 298 / 272 | 15 à 19 | 9–10 / 0–4 / 15–19 | 54 à 74 | 23 à 65 | 50 | 50 % |
+
+  Identiques au chiffre près entre classique et multijoueur (population, maisons, niveau des maisons, couverture du
+  marché, du temple, de la préfecture et des ingénieurs, employés, chômeurs, désirabilité, immigrants, moral), et
+  identiques entre « les quatre bâtissent » et « un seul bâtit ». Personne ne manque d'ouvriers (`lack` = 0 partout).
+  Les écarts de J1 à J4 entre eux sont ceux du **terrain** de chaque emplacement (arbres, côte), les mêmes en classique.
+- **Ce qui explique les écarts qui restent (aucun bug)** :
+  1. **La difficulté** : fonds de départ 6 000 Dn en difficile contre 12 000 en facile (identiques en classique et en
+     multijoueur) ; moral de base 50 contre 70, donc migration 50 % contre 75 % du lot de 12 : à six mois la cité
+     seule compte 239 habitants en difficile contre 257 en facile. Le plan ne coûte que 1 400 Dn.
+  2. **La mission de départ** : en classique, une mission est un bâtiment normal qui réclame **20 employés** ; en
+     multijoueur elle n'en réclame aucun (son missionnaire est appelé à la demande, D-037). Le multijoueur a donc
+     **20 bras libres de plus**, pas de moins. Pour comparer, la mission est retirée des cités classiques de la mesure.
+  3. **La zone** (D-036) : J3 (côte, difficile ou facile) n'obtient qu'**une ferme sur deux** en multijoueur, la
+     seconde étant à plus de 20 cases d'un bâtiment pourvu (la case n'est à personne) ; sa population diffère de 1 %.
+     Après deux ans, la zone d'une cité de ce plan couvre 2 250 à 2 770 cases libres.
+  4. **La faveur de César** : la carte préparée la laisse à 0. En classique, cela ferait venir les légions de César
+     après 14 mois (règle de l'original : faveur ≤ 10). En multijoueur elle ne sert plus (D-026). La mesure la met
+     à celle de la difficulté dans les deux séries.
+- **Conclusion : pas de bug.** Dans une cité multijoueur, portée des promeneurs, habitations, embauche, migration et
+  couverture sont celles de l'original. Les trois impressions d'Alexandre s'expliquent par : le **défaut « difficile »**
+  (avant D-063 : moitié moins d'argent, migration réduite d'un tiers, croissance plus lente) ; la **zone** (on ne bâtit
+  qu'à 20 cases d'une maison habitée ou d'un bâtiment pourvu, et un bâtiment resté hors zone s'effondre après 3 mois :
+  une cité sans bras voit donc sa zone se réduire) ; le **terrain** de forêt de la carte préparée (il faut défricher,
+  les emplacements diffèrent beaucoup d'un joueur à l'autre : niveau moyen des maisons de 4 à 8 au bout de deux ans).
+- **Garde** : le test `mp_restrictiveness` échoue si une règle multijoueur change la population, les maisons, leur
+  niveau, la couverture, les employés, le chômage, la désirabilité, l'immigration ou le moral d'une cité au-delà d'une
+  petite tolérance (8 à 25 % selon la mesure) ; ou si le plan n'est plus bâti en entier, si des bras manquent, ou si
+  le moral et la migration ne sont plus ceux de la difficulté. Vérifié par deux fautes volontaires, retirées ensuite :
+  migration divisée par deux en multijoueur, 40 % d'ouvriers en moins en multijoueur : le test rouge les voit.
+- **Limite** : le terrain n'est pas celui d'une carte classique (pas de carte classique vide dans les données de
+  test) ; la mesure prouve que les règles sont les mêmes, pas que la forêt est aussi facile à bâtir qu'une plaine.
+  *À valider* : si Alexandre sent encore une gêne en « facile », lui demander où et quand (une capture), car les
+  chiffres ne montrent aucun écart de règle.

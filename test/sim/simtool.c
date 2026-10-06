@@ -8,6 +8,7 @@
 #include "building/type.h"
 #include "building/count.h"
 #include "building/menu.h"
+#include "building/model.h"
 #include "building/storage.h"
 #include "city/view.h"
 #include "city/buildings.h"
@@ -22,6 +23,7 @@
 #include "city/ratings.h"
 #include "scenario/data.h"
 #include "scenario/editor_map.h"
+#include "scenario/invasion.h"
 #include "scenario/property.h"
 #include "scenario/request.h"
 #include "city/data_private.h"
@@ -34,12 +36,14 @@
 #include "empire/type.h"
 #include "core/buffer.h"
 #include "core/time.h"
+#include "game/difficulty.h"
 #include "game/file.h"
 #include "game/game.h"
 #include "game/rules.h"
 #include "game/settings.h"
 #include "core/image.h"
 #include "map/bridge.h"
+#include "map/building_tiles.h"
 #include "map/elevation.h"
 #include "map/aqueduct.h"
 #include "map/image.h"
@@ -139,6 +143,9 @@ static int usage(void)
     printf("  simtool preparedmap SAVE PLAYERS TICKS prepared map: land reached from the main road, food and\n");
     printf("                                         materials of each arrival point, permissions, farms;\n");
     printf("                                         MAPGEN_PICTURE=F.ppm\n");
+    printf("  simtool restrictiveness SAVE           the same small city built by commands and played two years under\n");
+    printf("                                         classic and multiplayer rules, alone and with four cities, easy\n");
+    printf("                                         and hard: table of the numbers, fails if they differ (T4.16)\n");
     printf("  simtool reservoirlevel SAVE            prepared map: a reservoir cut off from its source empties\n");
     printf("                                         slowly, joined again it fills\n");
     printf("  simtool drying SAVE PLAYERS            prepared map: no pond; the city of the rocks dries up when\n");
@@ -4711,6 +4718,605 @@ static int command_idempotence(const char *file, int ticks, int step)
     return 0;
 }
 
+// ---------------------------------------------------------------------------------------------------------------
+// T4.16, D-072: is the game more restrictive than the original? The same small city is built by commands on the
+// same land, played two years, and measured, under classic rules and under the multiplayer rules, at two
+// difficulties. A difference that neither the difficulty, nor the money, nor the zone rule explains is a bug.
+// ---------------------------------------------------------------------------------------------------------------
+
+#define RESTRICT_MONTHS 24
+#define RESTRICT_TICKS_PER_MONTH 800 // 16 days of 50 ticks
+#define RESTRICT_FUNDS 100000        // the same treasury for every variant: money explains nothing here
+#define RESTRICT_WANTED 57           // 44 houses, 5 wells, granary, market, temple, prefecture, engineers, 3 workshops
+
+typedef struct {
+    int built;             // buildings of the plan the commands put on the land (farms and mission not included)
+    int farms;
+    int population, peak, population_month6, population_year1;
+    int houses, inhabited; // merged houses count once; vacant lots are not inhabited
+    int level_sum;         // sum of the house levels of the inhabited houses
+    int water, food, religion, entertainment, education, health; // inhabited houses served
+    int cover_market, cover_temple, cover_prefecture, cover_engineers; // houses reached by each service building
+    int desirability;      // average of the inhabited houses, times 10
+    int staffed, mission_workers, workers_available, shortage, unemployed, unemployment;
+    int sentiment, migration_percentage;
+    int immigrated, emigrated, refused;
+    int culture, prosperity, peace, favor;
+    int spent, treasury;
+    int zone;              // clear tiles of the zone of the city (multiplayer rules only)
+} restrict_result;
+
+typedef struct {
+    int multiplayer;   // multiplayer rules (zone, reservoirs that hold water) instead of the classic ones
+    int num_players;   // cities on the map
+    int difficulty;    // DIFFICULTY_*
+    int only;          // the only city that builds (the others stay as the map made them), or -1 for all
+} restrict_setup;
+
+static void set_local_difficulty(int difficulty)
+{
+    for (int i = 0; i < 5; i++) {
+        setting_decrease_difficulty();
+    }
+    for (int i = 0; i < difficulty; i++) {
+        setting_increase_difficulty();
+    }
+}
+
+static int restrict_area_clear(int x, int y, int width, int height)
+{
+    if (x < 0 || y < 0 || x + width > map_grid_width() || y + height > map_grid_height()) {
+        return 0;
+    }
+    for (int yy = y; yy < y + height; yy++) {
+        for (int xx = x; xx < x + width; xx++) {
+            if (map_terrain_is(map_grid_offset(xx, yy), TERRAIN_NOT_CLEAR)) {
+                return 0;
+            }
+        }
+    }
+    return 1;
+}
+
+// the plan occupies a block of RESTRICT_SIZE x RESTRICT_SIZE tiles: the clear block nearest to the city center
+#define RESTRICT_SIZE 13
+
+static int restrict_find_origin(int cx, int cy, int max_distance, int *ox, int *oy)
+{
+    int x0 = cx - RESTRICT_SIZE / 2, y0 = cy - RESTRICT_SIZE / 2;
+    for (int d = 0; d <= max_distance; d++) {
+        for (int y = y0 - d; y <= y0 + d; y++) {
+            for (int x = x0 - d; x <= x0 + d; x++) {
+                int dx = x > x0 ? x - x0 : x0 - x, dy = y > y0 ? y - y0 : y0 - y;
+                if ((dx > dy ? dx : dy) == d && restrict_area_clear(x - 1, y - 1, RESTRICT_SIZE + 2, RESTRICT_SIZE + 2)) {
+                    *ox = x;
+                    *oy = y;
+                    return 1;
+                }
+            }
+        }
+    }
+    return 0;
+}
+
+// a 3x3 place with some meadow for a farm, beside the plan, clear of it and of the farm already placed (px, py)
+static int restrict_find_farm(int ox, int oy, int px, int py, int *fx, int *fy)
+{
+    for (int d = 1; d <= 14; d++) {
+        for (int y = oy - 3 - d; y <= oy + RESTRICT_SIZE + d; y++) {
+            for (int x = ox - 3 - d; x <= ox + RESTRICT_SIZE + d; x++) {
+                int outside = x + 3 < ox - 1 || x > ox + RESTRICT_SIZE || y + 3 < oy - 1 || y > oy + RESTRICT_SIZE;
+                int near_first = px >= 0 && x < px + 5 && x + 5 > px && y < py + 5 && y + 5 > py;
+                if (!outside || near_first || !restrict_area_clear(x - 1, y - 1, 5, 5)) {
+                    continue;
+                }
+                int meadow = 0;
+                for (int yy = y; yy < y + 3; yy++) {
+                    for (int xx = x; xx < x + 3; xx++) {
+                        meadow += (map_terrain_get(map_grid_offset(xx, yy)) & TERRAIN_MEADOW) != 0;
+                    }
+                }
+                int dx = x + 1 > ox + RESTRICT_SIZE / 2 ? x + 1 - ox - RESTRICT_SIZE / 2 : ox + RESTRICT_SIZE / 2 - x - 1;
+                int dy = y + 1 > oy + RESTRICT_SIZE / 2 ? y + 1 - oy - RESTRICT_SIZE / 2 : oy + RESTRICT_SIZE / 2 - y - 1;
+                if (meadow && (dx > dy ? dx : dy) <= RESTRICT_SIZE / 2 + d + 2) {
+                    *fx = x;
+                    *fy = y;
+                    return 1;
+                }
+            }
+        }
+    }
+    return 0;
+}
+
+static void restrict_road(int player_id, int x1, int y1, int x2, int y2)
+{
+    mp_command road = { .type = MP_COMMAND_BUILD, .player_id = player_id, .args = { BUILDING_ROAD, 0, x1, y1, x2, y2, 0, 0 } };
+    mp_command_execute(&road);
+}
+
+static int restrict_place(int player_id, int type, int x, int y)
+{
+    int ok = build_as(player_id, type, x, y, x, y);
+    if (!ok) {
+        // the only reason in these games: the tile is out of the zone of the player (a farm 20 tiles from the houses)
+        printf("    player %d: type %d at (%d, %d) was not built (zone owner: player %d, 0 nobody)\n", player_id + 1, type, x, y,
+            mp_territory_is_active() ? mp_territory_owner(map_grid_offset(x, y)) + 1 : 0);
+    }
+    return ok;
+}
+
+// the plan, in coordinates of the block (0, 0) to (12, 12): roads every three tiles with two rows of houses
+// between them, a service row (wells, granary, market, temple, prefecture, engineers), workshops to the south
+static int restrict_build_city(int player_id, int cx, int cy, int max_distance, restrict_result *r)
+{
+    int ox, oy;
+    if (!restrict_find_origin(cx, cy, max_distance, &ox, &oy)) {
+        printf("    player %d: no clear block near (%d, %d)\n", player_id + 1, cx, cy);
+        return 0;
+    }
+    player_context_switch(player_id);
+    city_data.finance.treasury = RESTRICT_FUNDS;
+    int ex = city_map_entry_point()->x, ey = city_map_entry_point()->y;
+    player_context_switch(0);
+    // the entry point is joined to the nearest middle of a side of the loop
+    int tx[4] = { ox + 6, ox + 6, ox, ox + 12 }, ty[4] = { oy, oy + 10, oy + 5, oy + 5 };
+    int best = 0, best_distance = 1 << 30;
+    for (int i = 0; i < 4; i++) {
+        int dx = tx[i] > ex ? tx[i] - ex : ex - tx[i], dy = ty[i] > ey ? ty[i] - ey : ey - ty[i];
+        if (dx + dy < best_distance) {
+            best_distance = dx + dy;
+            best = i;
+        }
+    }
+    restrict_road(player_id, ex, ey, tx[best], ty[best]);
+    restrict_road(player_id, ox, oy, ox + 12, oy);
+    restrict_road(player_id, ox, oy + 3, ox + 12, oy + 3);
+    restrict_road(player_id, ox, oy + 7, ox + 12, oy + 7);
+    restrict_road(player_id, ox, oy + 10, ox + 12, oy + 10);
+    restrict_road(player_id, ox, oy, ox, oy + 10);
+    restrict_road(player_id, ox + 12, oy, ox + 12, oy + 10);
+    mp_command band1 = { .type = MP_COMMAND_BUILD, .player_id = player_id,
+        .args = { BUILDING_HOUSE_VACANT_LOT, 0, ox + 1, oy + 1, ox + 11, oy + 2, 0, 0 } };
+    mp_command_execute(&band1);
+    mp_command band3 = { .type = MP_COMMAND_BUILD, .player_id = player_id,
+        .args = { BUILDING_HOUSE_VACANT_LOT, 0, ox + 1, oy + 8, ox + 11, oy + 9, 0, 0 } };
+    mp_command_execute(&band3);
+    restrict_place(player_id, BUILDING_WELL, ox + 1, oy + 4);
+    restrict_place(player_id, BUILDING_GRANARY, ox + 2, oy + 4);
+    restrict_place(player_id, BUILDING_MARKET, ox + 5, oy + 4);
+    restrict_place(player_id, BUILDING_SMALL_TEMPLE_CERES, ox + 7, oy + 4);
+    restrict_place(player_id, BUILDING_PREFECTURE, ox + 9, oy + 4);
+    restrict_place(player_id, BUILDING_ENGINEERS_POST, ox + 10, oy + 4);
+    restrict_place(player_id, BUILDING_WELL, ox + 11, oy + 4);
+    restrict_place(player_id, BUILDING_WELL, ox + 5, oy + 6);
+    restrict_place(player_id, BUILDING_WELL, ox + 8, oy + 6);
+    restrict_place(player_id, BUILDING_WELL, ox + 11, oy + 6);
+    restrict_place(player_id, BUILDING_POTTERY_WORKSHOP, ox + 1, oy + 11);
+    restrict_place(player_id, BUILDING_FURNITURE_WORKSHOP, ox + 4, oy + 11);
+    restrict_place(player_id, BUILDING_WEAPONS_WORKSHOP, ox + 7, oy + 11);
+    // two wheat farms on meadow, each joined to the loop by a road. The food of the first months comes from the
+    // granary, which the test fills: the farms are slow
+    int fx = -1, fy = -1;
+    for (int i = 0; i < 2; i++) {
+        int x, y;
+        if (!restrict_find_farm(ox, oy, fx, fy, &x, &y)) {
+            break;
+        }
+        if (restrict_place(player_id, BUILDING_WHEAT_FARM, x, y)) {
+            r->farms++;
+            fx = x;
+            fy = y;
+            // a road from the side of the farm that faces the loop, to the nearest tile of the loop
+            int to_x = x + 1 < ox ? ox : x + 1 > ox + 12 ? ox + 12 : x + 1;
+            int to_y = y + 1 < oy ? oy : y + 1 > oy + 10 ? oy + 10 : y + 1;
+            int from_x = x + 1 < ox ? x + 3 : x + 1 > ox + 12 ? x - 1 : x + 1;
+            int from_y = y + 1 < oy ? y + 3 : y + 1 > oy + 10 ? y - 1 : y + 1;
+            if (from_x == x + 1 && from_y == y + 1) {
+                continue; // the farm is on the block: cannot be (the block is clear and the farm is outside)
+            }
+            restrict_road(player_id, from_x, from_y, to_x, to_y);
+        }
+    }
+    return 1;
+}
+
+static void restrict_stock_granary(int player_id, int amount)
+{
+    player_context_switch(player_id);
+    for (int i = BUILDING_FIRST; i < BUILDING_END; i++) {
+        building *b = building_get(i);
+        if (b->state == BUILDING_STATE_IN_USE && b->type == BUILDING_GRANARY) {
+            b->data.granary.resource_stored[RESOURCE_WHEAT] = amount;
+        }
+    }
+    player_context_switch(0);
+}
+
+// a classic game has no mission posts at the start: the one of the prepared map, and its missionary, are removed
+static void restrict_remove_missions(int player_id)
+{
+    player_context_switch(player_id);
+    for (int i = BUILDING_FIRST; i < BUILDING_END; i++) {
+        building *b = building_get(i);
+        if (b->state == BUILDING_STATE_IN_USE && b->type == BUILDING_MISSION_POST) {
+            map_building_tiles_remove(b->id, b->x, b->y);
+            b->state = BUILDING_STATE_UNUSED;
+        }
+    }
+    for (int i = FIGURE_FIRST; i < FIGURE_END; i++) {
+        figure *f = figure_get(i);
+        if (f->state == FIGURE_STATE_ALIVE && f->type == FIGURE_MISSIONARY) {
+            f->state = FIGURE_STATE_DEAD;
+        }
+    }
+    player_context_switch(0);
+}
+
+static int restrict_count_buildings(int player_id)
+{
+    int count = 0;
+    player_context_switch(player_id);
+    for (int i = BUILDING_FIRST; i < BUILDING_END; i++) {
+        building *b = building_get(i);
+        count += (b->state == BUILDING_STATE_IN_USE || b->state == BUILDING_STATE_CREATED) &&
+            b->type != BUILDING_WHEAT_FARM && b->type != BUILDING_MISSION_POST;
+    }
+    player_context_switch(0);
+    return count;
+}
+
+static void restrict_measure(int player_id, restrict_result *r)
+{
+    player_context_switch(player_id);
+    r->population = city_population();
+    long desirability = 0;
+    for (int i = BUILDING_FIRST; i < BUILDING_END; i++) {
+        building *b = building_get(i);
+        if (b->state != BUILDING_STATE_IN_USE) {
+            continue;
+        }
+        if (!b->house_size) {
+            // the mission post of a multiplayer map is no job of the original: counted apart
+            if (b->type == BUILDING_MISSION_POST) {
+                r->mission_workers += b->num_workers;
+            } else {
+                r->staffed += b->num_workers;
+            }
+            r->cover_market += b->type == BUILDING_MARKET ? b->houses_covered : 0;
+            r->cover_temple += b->type == BUILDING_SMALL_TEMPLE_CERES ? b->houses_covered : 0;
+            r->cover_prefecture += b->type == BUILDING_PREFECTURE ? b->houses_covered : 0;
+            r->cover_engineers += b->type == BUILDING_ENGINEERS_POST ? b->houses_covered : 0;
+            continue;
+        }
+        r->houses++;
+        if (b->house_population <= 0) {
+            continue;
+        }
+        r->inhabited++;
+        r->level_sum += b->type - BUILDING_HOUSE_VACANT_LOT;
+        desirability += b->desirability;
+        r->water += b->has_water_access || b->has_well_access;
+        r->food += b->data.house.num_foods > 0;
+        r->religion += b->data.house.num_gods > 0;
+        r->entertainment += b->data.house.entertainment > 0;
+        r->education += b->data.house.education > 0;
+        r->health += b->data.house.health > 0;
+    }
+    r->desirability = r->inhabited ? (int) (10 * desirability / r->inhabited) : 0;
+    r->workers_available = city_data.labor.workers_available;
+    r->shortage = city_labor_workers_needed();
+    r->unemployed = city_labor_workers_unemployed();
+    r->unemployment = city_labor_unemployment_percentage();
+    r->sentiment = city_sentiment();
+    r->migration_percentage = city_data.migration.percentage;
+    r->culture = city_rating_culture();
+    r->prosperity = city_rating_prosperity();
+    r->peace = city_rating_peace();
+    r->favor = city_rating_favor();
+    r->treasury = city_finance_treasury();
+    if (mp_territory_is_active()) {
+        for (int y = 0; y < map_grid_height(); y++) {
+            for (int x = 0; x < map_grid_width(); x++) {
+                int o = map_grid_offset(x, y);
+                r->zone += mp_territory_owner(o) == player_id && !map_terrain_is(o, TERRAIN_NOT_CLEAR);
+            }
+        }
+    }
+    player_context_switch(0);
+}
+
+// plays the two years; the result of every city goes in results[player]
+static int restrict_play(const char *file, const restrict_setup *setup, restrict_result *results)
+{
+    player_context_switch(0);
+    player_context_set_num_players(1);
+    memset(results, 0, sizeof(restrict_result) * MP_MAPGEN_MAX_PLAYERS);
+    game_rules_set_classic();
+    int max_distance = 18;
+    if (!mp_mapgen_create_prepared(file, setup->num_players, 0)) {
+        printf("Unable to create the prepared map\n");
+        return 0;
+    }
+    // nothing of the template that harms a city either way: armies, earthquake, revolt, requests, random events
+    memset(scenario.invasions, 0, sizeof(scenario.invasions));
+    memset(scenario.requests, 0, sizeof(scenario.requests));
+    memset(&scenario.random_events, 0, sizeof(scenario.random_events));
+    scenario.earthquake.severity = 0;
+    scenario.emperor_change.enabled = 0;
+    scenario.gladiator_revolt.enabled = 0;
+    scenario_invasion_clear();
+    set_local_difficulty(setup->difficulty);
+    if (setting_gods_enabled()) {
+        setting_toggle_gods_enabled();
+    }
+    if (setup->multiplayer) {
+        game_rules_settings rules;
+        game_rules_default_multiplayer_settings(&rules);
+        rules.difficulty = setup->difficulty;
+        rules.gods_enabled = 0;
+        rules.ai_invasions = 0;
+        rules.territories = 1;
+        game_rules_set_multiplayer(&rules);
+    } else {
+        game_rules_set_classic();
+    }
+    for (int p = 0; p < setup->num_players; p++) {
+        if (setup->only >= 0 && p != setup->only) {
+            continue;
+        }
+        int cx, cy;
+        mp_mapgen_city_center(p, &cx, &cy);
+        // a classic game starts with the favor of its difficulty; the prepared map leaves it at zero, which would
+        // bring the legions of Caesar after a year: that is the rule of the original, not what is measured here
+        player_context_switch(p);
+        city_data.ratings.favor = city_data.ratings.favor_last_year = difficulty_starting_favor();
+        player_context_switch(0);
+        if (!restrict_build_city(p, cx, cy, max_distance, &results[p])) {
+            return 0;
+        }
+        restrict_stock_granary(p, 3200);
+        if (!setup->multiplayer) {
+            restrict_remove_missions(p);
+        }
+        results[p].built = restrict_count_buildings(p);
+        player_context_switch(p);
+        results[p].spent = RESTRICT_FUNDS - city_finance_treasury();
+        player_context_switch(0);
+    }
+    map_road_network_update_grid();
+    for (int p = 0; p < setup->num_players; p++) {
+        player_context_switch(p);
+        map_road_network_update_largest();
+    }
+    player_context_switch(0);
+    setting_reset_speeds(500, setting_scroll_speed());
+    for (int tick = 1; tick <= RESTRICT_MONTHS * RESTRICT_TICKS_PER_MONTH; tick++) {
+        run_one_tick();
+        for (int p = 0; p < setup->num_players; p++) {
+            player_context_switch(p);
+            if (game_time_tick() == 24) { // after the migration of the day
+                results[p].immigrated += city_data.migration.immigrated_today;
+                results[p].emigrated += city_data.migration.emigrated_today;
+                results[p].refused += city_data.migration.refused_immigrants_today;
+            }
+            if (tick % RESTRICT_TICKS_PER_MONTH == 0) {
+                int population = city_population();
+                if (getenv("RESTRICT_TRACE")) {
+                    printf("  month %d player %d: population %d, sentiment %d, unemployed %d, lack %d, favor %d\n",
+                        tick / RESTRICT_TICKS_PER_MONTH, p + 1, population, city_sentiment(),
+                        city_labor_workers_unemployed(), city_labor_workers_needed(), city_rating_favor());
+                }
+                if (population > results[p].peak) {
+                    results[p].peak = population;
+                }
+                if (tick == 6 * RESTRICT_TICKS_PER_MONTH) {
+                    results[p].population_month6 = population;
+                }
+                if (tick == 12 * RESTRICT_TICKS_PER_MONTH) {
+                    results[p].population_year1 = population;
+                }
+            }
+        }
+        player_context_switch(0);
+    }
+    for (int p = 0; p < setup->num_players; p++) {
+        restrict_result keep = results[p];
+        memset(&results[p], 0, sizeof(restrict_result));
+        restrict_measure(p, &results[p]);
+        results[p].built = keep.built;
+        results[p].farms = keep.farms;
+        results[p].peak = keep.peak;
+        results[p].population_month6 = keep.population_month6;
+        results[p].population_year1 = keep.population_year1;
+        results[p].immigrated = keep.immigrated;
+        results[p].emigrated = keep.emigrated;
+        results[p].refused = keep.refused;
+        results[p].spent = keep.spent;
+    }
+    return 1;
+}
+
+// the funds a city starts with, at a difficulty: the same money for both sets of rules (the difficulty decides)
+static int restrict_starting_funds(const char *file, int multiplayer, int difficulty)
+{
+    player_context_switch(0);
+    player_context_set_num_players(1);
+    set_local_difficulty(difficulty);
+    if (multiplayer) {
+        game_rules_settings rules;
+        game_rules_default_multiplayer_settings(&rules);
+        rules.difficulty = difficulty;
+        game_rules_set_multiplayer(&rules);
+    } else {
+        game_rules_set_classic();
+    }
+    if (!mp_mapgen_create_prepared(file, 1, 0)) {
+        return -1;
+    }
+    int funds = city_finance_treasury();
+    game_rules_set_classic();
+    return funds;
+}
+
+static void restrict_print_header(void)
+{
+    printf("%-22s %4s %4s %7s %5s %5s %4s %4s %4s %4s %4s %4s %4s %4s %4s %4s %4s %5s %5s %5s %4s %4s\n", "variant", "blds",
+        "pop", "p6/p12", "hous", "level", "wat", "food", "rel", "mkt", "tem", "pre", "eng", "staf", "mwrk", "lack", "idle",
+        "desir", "immig", "emig", "sent", "pct");
+}
+
+static void restrict_print(const char *label, const restrict_result *r)
+{
+    printf("%-22s %4d %4d %3d/%-3d %2d/%-2d %5d %4d %4d %4d %4d %4d %4d %4d %4d %4d %4d %4d %5d %5d %5d %4d %4d\n", label,
+        r->built, r->population, r->population_month6, r->population_year1, r->inhabited, r->houses, r->inhabited ? 10 * r->level_sum / r->inhabited : 0,
+        r->water, r->food, r->religion, r->cover_market, r->cover_temple, r->cover_prefecture, r->cover_engineers,
+        r->staffed, r->mission_workers, r->shortage, r->workers_available - r->staffed - r->mission_workers,
+        r->desirability, r->immigrated, r->emigrated, r->sentiment, r->migration_percentage);
+}
+
+// the two cities are alike: each figure within `percent` percent, plus a slack for the small numbers
+static int restrict_close(int a, int b, int percent, int slack)
+{
+    int difference = a > b ? a - b : b - a;
+    int larger = a > b ? a : b;
+    return difference <= slack + larger * percent / 100;
+}
+
+static int restrict_alike(const char *what, const restrict_result *a, const restrict_result *b)
+{
+    int level_a = a->inhabited ? 10 * a->level_sum / a->inhabited : 0;
+    int level_b = b->inhabited ? 10 * b->level_sum / b->inhabited : 0;
+    int ok = a->built == b->built &&
+        restrict_close(a->population, b->population, 8, 6) &&               // the people
+        restrict_close(a->inhabited, b->inhabited, 15, 1) &&                 // the houses that are lived in
+        restrict_close(level_a, level_b, 15, 3) &&                           // how far they evolved
+        restrict_close(a->water, b->water, 15, 1) && restrict_close(a->food, b->food, 15, 1) &&
+        restrict_close(a->religion, b->religion, 15, 1) &&                   // the houses served
+        restrict_close(a->cover_market, b->cover_market, 10, 10) &&          // the reach of the buildings
+        restrict_close(a->cover_temple, b->cover_temple, 10, 10) &&
+        restrict_close(a->cover_prefecture, b->cover_prefecture, 10, 10) &&
+        restrict_close(a->cover_engineers, b->cover_engineers, 10, 10) &&
+        restrict_close(a->staffed, b->staffed, 8, 6) && a->shortage == b->shortage && // the workers
+        restrict_close(a->workers_available - a->staffed - a->mission_workers,
+            b->workers_available - b->staffed - b->mission_workers, 25, 8) &&
+        restrict_close(a->desirability, b->desirability, 15, 15) &&          // the land
+        restrict_close(a->immigrated, b->immigrated, 10, 20) &&              // the newcomers
+        a->sentiment == b->sentiment && a->migration_percentage == b->migration_percentage;
+    if (!ok) {
+        printf("  DIFFERENT: %s\n", what);
+    }
+    return ok;
+}
+
+// A: classic rules, a city alone; B: multiplayer rules, a city alone; C, D: the same with four cities on the map
+// for four; E: multiplayer rules, four cities on the map but only one builds. Prints the table, checks that A and B,
+// C and D, D and E are alike (the zone rule and the mission post excepted: the mission post of the prepared map is
+// removed from the classic cities, the farms outside the zone are not built, and that is all they differ by)
+static int command_restrictiveness(const char *file)
+{
+    static const char *NAMES[] = { "very easy", "easy", "normal", "hard", "very hard" };
+    static const int DIFFICULTIES[2] = { DIFFICULTY_EASY, DIFFICULTY_HARD };
+    int failures = 0;
+    for (int d = 0; d < 2; d++) {
+        int classic = restrict_starting_funds(file, 0, DIFFICULTIES[d]);
+        int multiplayer = restrict_starting_funds(file, 1, DIFFICULTIES[d]);
+        printf("starting funds, %s: %d Dn in a classic game, %d Dn in a multiplayer game\n", NAMES[DIFFICULTIES[d]], classic,
+            multiplayer);
+        if (classic != multiplayer || classic <= 0) {
+            printf("  DIFFERENT: the funds depend on more than the difficulty\n");
+            failures++;
+        }
+    }
+    restrict_print_header();
+    for (int d = 0; d < 2; d++) {
+        int difficulty = DIFFICULTIES[d];
+        restrict_result alone[2][MP_MAPGEN_MAX_PLAYERS], four[2][MP_MAPGEN_MAX_PLAYERS], only[MP_MAPGEN_MAX_PLAYERS];
+        for (int multiplayer = 0; multiplayer < 2; multiplayer++) {
+            restrict_setup setup = { multiplayer, 1, difficulty, -1 };
+            if (!restrict_play(file, &setup, alone[multiplayer])) {
+                return 2;
+            }
+            setup.num_players = 4;
+            if (!restrict_play(file, &setup, four[multiplayer])) {
+                return 2;
+            }
+        }
+        // the city builds alone on the map for four: one inland and one on the coast, to save time, at the hard level
+        int checked_only[MP_MAPGEN_MAX_PLAYERS] = { 0 };
+        for (int p = 0; p < 4 && difficulty == DIFFICULTY_HARD; p++) {
+            int coastal = mp_mapgen_slot_is_coastal(p);
+            int twin_seen = 0;
+            for (int q = 0; q < p; q++) {
+                twin_seen |= checked_only[q] && mp_mapgen_slot_is_coastal(q) == coastal;
+            }
+            if (twin_seen) {
+                continue;
+            }
+            restrict_setup setup = { 1, 4, difficulty, p };
+            restrict_result results[MP_MAPGEN_MAX_PLAYERS];
+            if (!restrict_play(file, &setup, results)) {
+                return 2;
+            }
+            only[p] = results[p];
+            checked_only[p] = 1;
+        }
+        char label[64];
+        for (int multiplayer = 0; multiplayer < 2; multiplayer++) {
+            snprintf(label, sizeof(label), "%s %s alone", NAMES[difficulty], multiplayer ? "MP" : "classic");
+            restrict_print(label, &alone[multiplayer][0]);
+        }
+        for (int multiplayer = 0; multiplayer < 2; multiplayer++) {
+            for (int p = 0; p < 4; p++) {
+                snprintf(label, sizeof(label), "%s %s 4p #%d", NAMES[difficulty], multiplayer ? "MP" : "classic", p + 1);
+                restrict_print(label, &four[multiplayer][p]);
+            }
+        }
+        for (int p = 0; p < 4; p++) {
+            if (checked_only[p]) {
+                snprintf(label, sizeof(label), "%s MP 4p #%d only", NAMES[difficulty], p + 1);
+                restrict_print(label, &only[p]);
+            }
+        }
+        printf("zone of the multiplayer city after two years, in clear tiles (%s): alone %d; with four %d %d %d %d\n",
+            NAMES[difficulty], alone[1][0].zone, four[1][0].zone, four[1][1].zone, four[1][2].zone, four[1][3].zone);
+        snprintf(label, sizeof(label), "%s: classic and multiplayer rules, alone", NAMES[difficulty]);
+        failures += !restrict_alike(label, &alone[0][0], &alone[1][0]);
+        for (int p = 0; p < 4; p++) {
+            snprintf(label, sizeof(label), "%s: classic and multiplayer rules, player %d of 4", NAMES[difficulty], p + 1);
+            failures += !restrict_alike(label, &four[0][p], &four[1][p]);
+            if (checked_only[p]) {
+                snprintf(label, sizeof(label), "%s: player %d of 4, with and without the other builders",
+                    NAMES[difficulty], p + 1);
+                failures += !restrict_alike(label, &four[1][p], &only[p]);
+            }
+        }
+        // the whole plan stands, nobody lacks workers (the plan asks for about 75 of the 100 that the people
+        // provide), and the difficulty is the only difference between the two sets of numbers: the sentiment of
+        // its table and the migration that follows
+        int expected_sentiment = difficulty == DIFFICULTY_EASY ? 70 : 50;
+        int expected_migration = difficulty == DIFFICULTY_EASY ? 75 : 50;
+        const restrict_result *every[10] = { &alone[0][0], &alone[1][0], &four[0][0], &four[0][1], &four[0][2],
+            &four[0][3], &four[1][0], &four[1][1], &four[1][2], &four[1][3] };
+        for (int i = 0; i < 10; i++) {
+            const restrict_result *r = every[i];
+            if (r->built != RESTRICT_WANTED || r->shortage != 0 || r->sentiment != expected_sentiment ||
+                r->migration_percentage != expected_migration || r->population < 150) {
+                printf("  DIFFERENT: %s, city %d of 10: %d buildings of %d, lack %d, sentiment %d, migration %d, "
+                    "population %d\n", NAMES[difficulty], i + 1, r->built, RESTRICT_WANTED, r->shortage, r->sentiment,
+                    r->migration_percentage, r->population);
+                failures++;
+            }
+        }
+    }
+    player_context_switch(0);
+    player_context_set_num_players(1);
+    game_rules_set_classic();
+    printf("%s\n", failures ? "DIFFERENT: the multiplayer game is more restrictive than the classic one" :
+        "Identical: the multiplayer rules change nothing inside a city (zone and mission post apart)");
+    return failures ? 1 : 0;
+}
+
 int main(int argc, char **argv)
 {
     int first = 1;
@@ -4857,6 +5463,8 @@ int main(int argc, char **argv)
         result = command_buildequiv(file);
     } else if (strcmp(command, "run") == 0 && argc > 4) {
         result = command_run(file, ticks, argv[4]);
+    } else if (strcmp(command, "restrictiveness") == 0) {
+        result = command_restrictiveness(file);
     } else if (strcmp(command, "trace") == 0 && argc > 3) {
         result = command_trace(file, ticks, step);
     } else if (strcmp(command, "pieces") == 0) {
