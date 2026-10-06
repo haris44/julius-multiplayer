@@ -340,14 +340,14 @@ int mp_mapgen_create(const char *template_file, int num_players, int size, unsig
 // crosses the map from the west edge to the east edge; on the map for 2 both players live on its south shore, on the
 // map for 4 two players live on each shore, joined by the main road of Caesar over his bridge. The player of the
 // rocks lives far from the sea and gets no water but the aqueduct of Caesar; the others live on the coast, where the
-// ships of their empire come along the sea. Each arrival point offers meadows and only the materials its player may
-// exploit.
+// ships of their empire come along the sea. No pond anywhere: the sea is the only water of the map, so that cutting
+// the aqueduct of Caesar dries the city of the rocks up (D-055). Each arrival point offers meadows and only the
+// materials its player may exploit.
 #define PREPARED_SEED 2026
 #define MAX_SLOT_RESOURCES 4
 #define WILD_DISTANCE 30
-#define ROCK_DRY_DISTANCE 60 // no pond this close to the city of the player of the rocks
 #define SMALL_CLEARING 16 // a clearing shut in by woods and smaller than this becomes woods
-#define WOODS_THRESHOLD 167 // noise above which the wild land is wooded, lower further from the cities
+#define WOODS_THRESHOLD 168 // noise above which the wild land is wooded, lower further from the cities
 #define SEA_HALF_WIDTH 12
 #define ROAD_MARGIN 2
 #define MAX_ROADS 8
@@ -510,16 +510,6 @@ static int distance_to_nearest_city(int x, int y)
     return nearest;
 }
 
-static int near_dry_city(int x, int y)
-{
-    for (int p = 0; p < data.num_players; p++) {
-        if (slot_of(p)->caesar_aqueduct && distance(x, y, data.center_x[p], data.center_y[p]) < ROCK_DRY_DISTANCE) {
-            return 1;
-        }
-    }
-    return 0;
-}
-
 // two octaves: shapes less square than the lattice of the noise
 static int soft_noise(int x, int y, int layer)
 {
@@ -531,12 +521,9 @@ static int prepared_terrain(int x, int y)
     if (in_settlement(x, y)) {
         return soft_noise(x, y, 4) > 150 ? TERRAIN_MEADOW : 0;
     }
-    // far from every city, forests with clearings and ponds, thicker further away; near the cities, nothing that
-    // one player may exploit and another not (D-044); no pond near the player of the rocks (D-047)
+    // far from every city, forests with clearings, thicker further away, and no pond (D-055); near the cities,
+    // nothing that one player may exploit and another not (D-044)
     int wild = distance_to_nearest_city(x, y) - WILD_DISTANCE;
-    if (wild > 6 && soft_noise(x, y, 9) < 58 && !near_dry_city(x, y)) {
-        return TERRAIN_WATER;
-    }
     if (wild > 0 && soft_noise(x, y, 1) > WOODS_THRESHOLD - (wild < 20 ? wild : 20)) {
         return TERRAIN_TREE;
     }
@@ -758,8 +745,8 @@ static int place_start_mission(int p)
     return 1;
 }
 
-// land cut off from the main road by water and rocks: a pond more, so that every player reaches all the land (the
-// bridge of Caesar leads to the other shore)
+// land cut off from the main road by the sea and rocks becomes rocks, so that every player reaches all the land (the
+// bridge of Caesar leads to the other shore); never a pond, which would water the city of the rocks (D-055)
 static void fill_cut_off_land(void)
 {
     static uint8_t reached[GRID_MAX_SIZE * GRID_MAX_SIZE];
@@ -792,7 +779,7 @@ static void fill_cut_off_land(void)
         for (int x = 0; x < data.size; x++) {
             int grid_offset = map_grid_offset(x, y);
             if (!reached[y * data.size + x] && !map_terrain_is(grid_offset, TERRAIN_WATER | TERRAIN_ROCK)) {
-                map_terrain_set(grid_offset, TERRAIN_WATER);
+                map_terrain_set(grid_offset, TERRAIN_ROCK);
             }
         }
     }

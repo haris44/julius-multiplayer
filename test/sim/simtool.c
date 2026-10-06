@@ -132,6 +132,8 @@ static int usage(void)
     printf("                                         each arrival point, permissions; MAPGEN_PICTURE=F.ppm\n");
     printf("  simtool reservoirlevel SAVE            prepared map: a reservoir cut off from its source empties\n");
     printf("                                         slowly, joined again it fills\n");
+    printf("  simtool drying SAVE PLAYERS            prepared map: no pond; the city of the rocks dries up when\n");
+    printf("                                         the aqueduct of Caesar is cut, fills again when mended\n");
     printf("  simtool caravans SAVE                  a caravan of player 2 brings marble to player 1, who pays\n");
     printf("  simtool tradeprices SAVE               prices between players and notices to the buyer\n");
     printf("  simtool importprice SAVE               buying from the empire costs 50%% more in multiplayer\n");
@@ -1519,6 +1521,43 @@ static int count_terrain_near(int cx, int cy, int radius, int terrain)
     return count;
 }
 
+// water that ships cannot reach from the ends of the sea: ponds, which would water the city of the rocks (D-055)
+static int count_ponds(int size)
+{
+    static uint8_t seen[GRID_MAX_SIZE * GRID_MAX_SIZE];
+    static int queue[GRID_MAX_SIZE * GRID_MAX_SIZE];
+    memset(seen, 0, sizeof(seen));
+    int head = 0, tail = 0;
+    for (int east = 0; east < 2; east++) {
+        int x, y;
+        mp_mapgen_sea_end(east, &x, &y);
+        queue[tail++] = y * size + x;
+        seen[y * size + x] = 1;
+    }
+    while (head < tail) {
+        int i = queue[head++];
+        int x = i % size, y = i / size;
+        static const int DX[] = { 1, -1, 0, 0 };
+        static const int DY[] = { 0, 0, 1, -1 };
+        for (int d = 0; d < 4; d++) {
+            int nx = x + DX[d], ny = y + DY[d];
+            if (nx < 0 || ny < 0 || nx >= size || ny >= size || seen[ny * size + nx] ||
+                !map_terrain_is(map_grid_offset(nx, ny), TERRAIN_WATER)) {
+                continue;
+            }
+            seen[ny * size + nx] = 1;
+            queue[tail++] = ny * size + nx;
+        }
+    }
+    int ponds = 0;
+    for (int y = 0; y < size; y++) {
+        for (int x = 0; x < size; x++) {
+            ponds += !seen[y * size + x] && map_terrain_is(map_grid_offset(x, y), TERRAIN_WATER);
+        }
+    }
+    return ponds;
+}
+
 // the prepared maps (D-033, D-047): all land reached from the main road (over the bridge of Caesar), an arm of the
 // sea from edge to edge, each arrival point with its materials only, no water near the player of the rocks but the
 // aqueduct of Caesar, the others on the coast, permissions that match, the same map every time, cities that grow
@@ -1536,7 +1575,10 @@ static int command_preparedmap(const char *file, int num_players, int ticks)
     int unreachable = count_unreachable_land(size);
     printf("land out of reach of the main road: %d tiles\n", unreachable);
     failures += unreachable != 0;
-    // a map of forests and lakes (D-044)
+    // a map of forests and of the sea, without ponds (D-044, D-055)
+    int ponds = count_ponds(size);
+    printf("water away from the sea: %d tiles\n", ponds);
+    failures += ponds != 0;
     int water = count_terrain_near(size / 2, size / 2, size / 2 - 1, TERRAIN_WATER);
     int trees = count_terrain_near(size / 2, size / 2, size / 2 - 1, TERRAIN_TREE);
     printf("water: %d%% of the map, forest: %d%%, climate %d\n", 100 * water / (size * size),
@@ -1544,7 +1586,7 @@ static int command_preparedmap(const char *file, int num_players, int ticks)
     // fewer woods since D-052 (mp_prepared_map_reachable: 12 to 18 %)
     if (100 * water / (size * size) < 8 || 100 * trees / (size * size) < 12 ||
         scenario_property_climate() != CLIMATE_NORTHERN) {
-        printf("  not a map of forests and lakes\n");
+        printf("  not a map of forests and of the sea\n");
         failures++;
     }
     // the meadows show as meadows: drawn after the grass of empty land, as when the game loads a map
@@ -1792,6 +1834,98 @@ static int command_reservoirlevel(const char *file)
     player_context_set_num_players(1);
     printf("%s\n", failures ? "DIFFERENT: reservoirs do not hold water as designed" :
         "Identical: reservoirs hold water as designed");
+    return failures ? 1 : 0;
+}
+
+// the aqueduct of Caesar is the only water of the city of the rocks (D-034, D-055): no pond on the map; his reservoir
+// at the end of the aqueduct fills and waters its range. Once the aqueduct is cut, as soldiers will do at war (M10),
+// the reservoir keeps serving while it holds water, then dries up with its range; mended, it fills again. Alone on
+// the map, as Alexandre tries every version, as well as with others.
+static int command_drying(const char *file, int num_players)
+{
+    // as a game prepared by the lobby: the map goes through a file, then the rules of the game come, with
+    // territories, alone too; no enemy army comes to destroy the reservoir
+    char map_file[64];
+    snprintf(map_file, sizeof(map_file), "drying-%d.mpmap", num_players);
+    if (!mp_mapgen_create_prepared(file, num_players, 0) || !mp_savegame_write(map_file) ||
+        !mp_savegame_read(map_file)) {
+        printf("Unable to create the prepared map\n");
+        return 2;
+    }
+    remove(map_file);
+    game_rules_settings rules;
+    game_rules_default_multiplayer_settings(&rules);
+    rules.territories = 1;
+    rules.ai_invasions = 0;
+    game_rules_set_multiplayer(&rules);
+    int size = mp_mapgen_prepared_size(num_players);
+    int failures = 0;
+    int ponds = count_ponds(size);
+    printf("water away from the sea: %d tiles\n", ponds);
+    failures += ponds != 0;
+    int p = 0, ax, ay;
+    while (p < num_players && !mp_mapgen_caesar_aqueduct_end(p, &ax, &ay)) {
+        p++;
+    }
+    if (p == num_players) {
+        printf("Nobody has the aqueduct of Caesar\n");
+        return 2;
+    }
+    // the aqueduct comes from the east along a row: a reservoir at its end, the cut a few tiles upstream
+    int cut_x = ax + 5;
+    int cut = map_grid_offset(cut_x, ay);
+    if (!map_terrain_is(cut, TERRAIN_AQUEDUCT) || map_owner_get_claimed(cut) != MAP_OWNER_CAESAR) {
+        printf("No aqueduct of Caesar at (%d, %d)\n", cut_x, ay);
+        return 2;
+    }
+    mp_command reservoir = { .type = MP_COMMAND_BUILD, .player_id = p, .args = { BUILDING_DRAGGABLE_RESERVOIR, 0, ax - 2, ay, ax - 2, ay, 0, 0 } };
+    mp_command_execute(&reservoir);
+    int ranged = map_grid_offset(ax - 2, ay + 8); // a fountain there would have water from the reservoir
+    mp_command clear = { .type = MP_COMMAND_BUILD, .player_id = p, .args = { BUILDING_CLEAR_LAND, 0, cut_x, ay, cut_x, ay, 0, 0 } };
+    mp_command mend = { .type = MP_COMMAND_BUILD, .player_id = p, .args = { BUILDING_AQUEDUCT, 0, cut_x, ay, cut_x, ay, 0, 0 } };
+    int full = map_water_supply_reservoir_level_full();
+    setting_reset_speeds(500, setting_scroll_speed()); // one tick per run_one_tick()
+    struct { int days; int cut_it; int mend_it; int water; int is_full; const char *label; } steps[] = {
+        { 60, 0, 0, 1, 1, "fed by Caesar, 60 days" },
+        { 100, 1, 0, 1, 0, "cut off, 100 days later" },
+        { 200, 0, 0, 0, 0, "300 days after the cut" },
+        { 3, 0, 1, 1, 0, "mended, 3 days later" },
+    };
+    for (int i = 0; i < 4; i++) {
+        if (steps[i].cut_it) {
+            // war will let soldiers break the aqueduct of Caesar (D-034): here the player clears it himself
+            map_owner_set(cut, MAP_OWNER_NONE);
+            mp_command_execute(&clear);
+            if (map_terrain_is(cut, TERRAIN_AQUEDUCT)) {
+                printf("The aqueduct of Caesar is not cut\n");
+                return 2;
+            }
+        }
+        if (steps[i].mend_it) {
+            mp_command_execute(&mend);
+        }
+        for (int day = 0; day < steps[i].days; day++) {
+            for (int tick = 0; tick < 50; tick++) {
+                run_one_tick();
+            }
+            // no engineer here: keep the reservoir from collapsing
+            building_get(map_building_at(map_grid_offset(ax - 2, ay)))->damage_risk = 0;
+        }
+        player_context_switch(p);
+        int level;
+        int water = reservoir_at(ax - 2, ay, &level);
+        int range = map_water_supply_has_range(ranged, TERRAIN_RESERVOIR_RANGE);
+        player_context_switch(0);
+        int ok = water == steps[i].water && range == steps[i].water && (!steps[i].is_full || level == full) &&
+            (steps[i].water || level == 0);
+        printf("%-26s reservoir of player %d %s (%d/%d), fountains %s%s\n", steps[i].label, p + 1,
+            water ? "water" : "dry", level, full, range ? "with water" : "dry", ok ? "" : "  <-- UNEXPECTED");
+        failures += !ok;
+    }
+    player_context_switch(0);
+    player_context_set_num_players(1);
+    printf("%s\n", failures ? "DIFFERENT: the city of the rocks does not dry up when the aqueduct of Caesar is cut" :
+        "Identical: the city of the rocks dries up when the aqueduct of Caesar is cut");
     return failures ? 1 : 0;
 }
 
@@ -3378,6 +3512,8 @@ int main(int argc, char **argv)
         result = command_preparedmap(file, atoi(argv[3]), atoi(argv[4]));
     } else if (strcmp(command, "reservoirlevel") == 0) {
         result = command_reservoirlevel(file);
+    } else if (strcmp(command, "drying") == 0 && argc > 3) {
+        result = command_drying(file, atoi(argv[3]));
     } else if (strcmp(command, "caravans") == 0) {
         result = command_caravans(file);
     } else if (strcmp(command, "tradeprices") == 0) {

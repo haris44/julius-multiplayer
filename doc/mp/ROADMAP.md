@@ -324,6 +324,11 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
 - [x] **MC.5** Les prés fertiles n'apparaissaient qu'après un coup de pelle (retour d'Alexandre). *Fait* : le
   générateur dessinait les prés avant l'herbe, qui les recouvrait ; même ordre que le chargement d'une carte. Test
   `mp_prepared_map_*` : aucun pré dessiné autrement (5 785 l'étaient avant le correctif).
+- [x] **MC.6** Plus d'étangs : la mer est la seule eau, l'aqueduc de César la seule eau du joueur des terres
+  (D-055, demande d'Alexandre). *Fait* : plus d'étangs dans les forêts, terre isolée changée en rocher, même part de
+  forêt ; protocole 11. Tests `mp_prepared_map_*` (aucune eau hors de la mer ; 800 cases d'étangs avant) et
+  `mp_prepared_map_drying_{1,2,4}_players` (seul, à 2 et à 4 : réservoir plein au bout de l'aqueduc ; coupé, de
+  l'eau encore 100 jours après, sec à 300 jours avec la portée de ses fontaines ; réparé, de nouveau de l'eau).
 
 ## ME — Eau (D-035)
 - [x] **ME.1** Réservoirs à niveau en multijoueur : vidage en environ 5 minutes, remplissage en environ 1 minute

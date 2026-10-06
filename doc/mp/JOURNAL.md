@@ -5,6 +5,36 @@
 
 ---
 
+## 2026-10-06 — Plus d'étangs : l'aqueduc de César, seule eau du joueur des terres (MC.6, D-055)
+
+**Demande d'Alexandre** : « retire les points d'eau, il faut que le mécanisme d'assèchement via l'aqueduc
+fonctionne ».
+
+**Fait**
+- `mp/mapgen` : plus d'étangs dans les forêts lointaines ; une terre isolée par la mer et les rochers devient rocher
+  au lieu d'un étang ; seuil des bois 168 (même part de forêt qu'avant : 13,7 et 17,5 %). Protocole 11.
+- Test `mp_prepared_map_*` : aucune eau hors du bras de mer (800 cases d'étangs sur la carte pour 2 avant).
+- Nouveau test `mp_prepared_map_drying_{1,2,4}_players` (`simtool drying SAVE JOUEURS`), sur la carte passée par un
+  fichier puis les règles de partie, comme depuis le salon : réservoir au bout de l'aqueduc de César plein en
+  60 jours ; aqueduc coupé (le test retire une case de César, ce que feront les soldats en M10), encore de l'eau
+  100 jours après, sec à 300 jours avec la portée de ses fontaines ; réparé, de nouveau de l'eau. 176 tests verts.
+- Images avant/après : `../CARTES_4/`.
+- Travail fait dans un worktree (`../julius-cartes`, branche `cartes-sans-etangs`) : une autre session travaillait
+  dans `julius/` en même temps.
+
+**Appris**
+- Dans un test, les règles de partie se posent **après** la création de la carte : le chargement du modèle remet le
+  mode classique. Posées avant, une partie seule n'a pas l'eau de César (`game_rules_multiplayer_map()` faux) ;
+  dans le vrai jeu, le salon les pose après (`start_session`), donc la partie seule d'Alexandre l'a bien.
+
+**Prochaine étape** : qu'Alexandre essaie la carte ; puis M9.2.
+
+**Points ouverts**
+- D-055, à valider : le joueur des terres peut encore tirer un aqueduc depuis la mer (mission sur la côte, environ
+  80 cases).
+
+---
+
 ## 2026-10-06 — Dépôt GitHub, versions Linux et Windows (M5.6, D-054)
 
 **Fait**

@@ -298,6 +298,11 @@ endforeach()
 
 # Reservoirs hold water (ME.1, D-035): cut off, a reservoir empties in about 270 days; joined again, it fills
 add_test(NAME mp_reservoir_level COMMAND simtool reservoirlevel brugle-massilia-start.sav)
+# No pond on the prepared maps (D-055): the aqueduct of Caesar is the only water of the city of the rocks, which dries
+# up when it is cut and fills again when it is mended; alone on the map too
+foreach(players 1 2 4)
+    add_test(NAME mp_prepared_map_drying_${players}_players COMMAND simtool drying brugle-massilia-start.sav ${players})
+endforeach()
 
 # Territories (MT.1, D-036): build only in one's zone, which follows the settled buildings and the missions
 add_test(NAME mp_territory COMMAND simtool territory brugle-massilia-start.sav)

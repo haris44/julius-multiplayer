@@ -453,13 +453,14 @@
   l'année et les fonds viennent de la première carte trouvée dans les données parmi Lindum, Londinium, Valentia,
   Tarraco, Caesarea, Cyrene et Carthago (empire qui commerce par terre et par mer, Bretagne d'abord).
 - **Climat du nord** (forêts) quelle que soit la carte modèle. Loin des cités (au-delà de 30 cases), forêts avec
-  clairières et étangs ; près d'elles, toujours rien qu'un joueur puisse exploiter et pas un autre.
+  clairières et étangs (*plus d'étangs depuis D-055*) ; près d'elles, toujours rien qu'un joueur puisse exploiter et
+  pas un autre.
 - **Chaque joueur a son lac** (rayon 12), du côté de son point d'arrivée et loin du lac central, relié au bord par
   une rivière de 7 cases (les ponts la franchissent) : docks, navires de son empire, pêche (un point de pêche par lac
   et au lac central). Le joueur des rochers a donc aussi de l'eau (remplace « sans eau » de D-041/D-042) ; il garde
   l'aqueduc de César, comme J3 sur la carte à 4.
 - Environ 8 % d'eau et 35 à 40 % de forêt (14 à 18 % depuis D-052). Une terre que l'eau et les rochers isoleraient
-  de la route devient un étang.
+  de la route devient un étang (*un rocher depuis D-055*).
 - **Partie seule** (1 joueur dans le salon) : elle se joue sur la carte pour 2 avec les règles de la carte (zones,
   missionnaire, eau de César, réservoirs à niveau, brouillard). `game_rules_multiplayer_map()` : plusieurs cités, ou
   une carte préparée jouée seul.
@@ -650,3 +651,22 @@
   désactivés sur le fork, pour garder les fusions avec Julius simples.
 - Linux : l'AppImage tourne sur toute distribution récente, sous Wayland comme sous X11. Le pare-feu de Fedora
   doit laisser passer les ports 27400 (TCP, la partie) et 27401 (UDP, le salon) : c'est dans le LISEZMOI.
+
+### D-055 — Plus d'étangs : l'aqueduc de César, seule eau du joueur des terres (précise D-034, D-044, D-047)
+- 2026-10-06 · **adoptée** (Alexandre : « retire les points d'eau, il faut que le mécanisme d'assèchement via
+  l'aqueduc fonctionne »)
+- **Plus aucun étang** sur les cartes préparées : la seule eau est le bras de mer. Les forêts lointaines en avaient
+  (800 cases sur la carte pour 2, aucune à moins de 60 cases du joueur des terres) : en y fondant une mission, ce
+  joueur pouvait y bâtir un réservoir et se passer de César, ce qui rendait vaine la coupure de son aqueduc (D-034).
+- Une terre que la mer et les rochers isoleraient de la route devient **rocher**, plus jamais un étang (le cas ne se
+  présente pas avec la graine des cartes).
+- Les bois prennent la place des étangs : seuil du bruit des bois 168 au lieu de 167, pour garder 14 et 17,5 % de
+  forêt (D-052).
+- Le mécanisme est vérifié sur les vraies cartes, seul, à 2 et à 4 : un réservoir au bout de l'aqueduc de César se
+  remplit ; l'aqueduc coupé, il sert encore environ 270 jours (D-035), puis s'assèche avec la portée de ses
+  fontaines ; réparé, il se remplit de nouveau. Aujourd'hui personne ne peut casser l'aqueduc de César : ce sera
+  l'affaire des soldats en guerre (M10).
+- **À valider** : le joueur des terres peut encore aller chercher l'eau de la mer, en fondant une mission sur la
+  côte (4 marbres), en y bâtissant un réservoir et en tirant son propre aqueduc (environ 80 cases). C'est loin et
+  cher, et cet aqueduc-là se coupe aussi en guerre : je le laisse. Si Alexandre veut fermer cette porte : interdire
+  le bord de mer aux réservoirs du joueur des terres.
