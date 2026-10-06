@@ -18,7 +18,7 @@ mpwait 400
 # trade advisor, the marble row: I buy; then back to the city
 key 5
 wait 5
-click 554 357
+click 598 357
 wait 5
 screenshot build/automation/trade-client-buys.png
 rclick 400 300

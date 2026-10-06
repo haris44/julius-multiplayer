@@ -29,6 +29,7 @@
 #include "empire/city.h"
 #include "empire/empire.h"
 #include "empire/trade_prices.h"
+#include "empire/trade_route.h"
 #include "empire/type.h"
 #include "core/time.h"
 #include "game/file.h"
@@ -3237,13 +3238,17 @@ static int command_tradecities(const char *file)
     return 0;
 }
 
-// buying from the empire costs 50% more in multiplayer (M8.2, D-043)
+// the empire in multiplayer (T4.12, D-060): one price of Rome per resource, the original buying price; buying from
+// the empire costs it plus the portorium of 50%, selling to it earns it minus the portorium; the price changes of the
+// game still apply; a classic game keeps the buying and selling prices of the original
 static int command_importprice(const char *file)
 {
     if (!mp_mapgen_create_prepared(file, 2, 0)) {
         printf("Unable to create the prepared map\n");
         return 2;
     }
+    int failures = 0;
+#define CHECK(condition, text) do { int ok_ = (condition); printf("%-62s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
     game_rules_settings rules;
     game_rules_default_multiplayer_settings(&rules);
     rules.territories = 1;
@@ -3255,19 +3260,43 @@ static int command_importprice(const char *file)
     run_trace(50, 50, 0, 0);
     build_as(0, BUILDING_WAREHOUSE, mx - 6, my - 6, mx - 6, my - 6);
     building *space = building_next(building_get(map_building_at(map_grid_offset(mx - 6, my - 6))));
-    int base = trade_price_buy_base(RESOURCE_MARBLE);
+    int rome = trade_price_rome(RESOURCE_MARBLE);
+    printf("marble: price of Rome %d, portorium %d, bought %d, sold %d\n", rome, trade_price_duty(RESOURCE_MARBLE),
+        trade_price_buy(RESOURCE_MARBLE), trade_price_sell(RESOURCE_MARBLE));
+    CHECK(rome == 200, "marble: the price of Rome is the original buying price, 200");
+    CHECK(trade_price_duty(RESOURCE_MARBLE) == 100, "the portorium is 50% of it: 100");
     int treasury = city_finance_treasury();
+    int imports = city_data.finance.this_year.expenses.imports;
     building_warehouse_space_add_import(space, RESOURCE_MARBLE);
-    int paid = treasury - city_finance_treasury();
-    printf("marble: price of the empire %d, paid %d in multiplayer\n", base, paid);
-    int failures = paid != base * 3 / 2;
+    CHECK(treasury - city_finance_treasury() == 300 && city_data.finance.this_year.expenses.imports - imports == 300,
+        "a load bought from the empire costs 300 (1.5 times)");
+    treasury = city_finance_treasury();
+    int exports = city_data.finance.this_year.income.exports;
+    building_warehouse_space_remove_export(space, RESOURCE_MARBLE);
+    CHECK(city_finance_treasury() - treasury == 100 && city_data.finance.this_year.income.exports - exports == 100,
+        "a load sold to the empire earns 100 (0.5 times)");
+    int all = 1;
+    for (int r = RESOURCE_MIN; r < RESOURCE_MAX; r++) {
+        int price = trade_price_rome(r);
+        int duty = price / 2;
+        all &= trade_price_duty(r) == duty && trade_price_buy(r) == price + duty && trade_price_sell(r) == price - duty;
+    }
+    CHECK(all, "every resource: the price of Rome plus or minus the portorium");
+    trade_price_change(RESOURCE_MARBLE, 20);
+    CHECK(trade_price_rome(RESOURCE_MARBLE) == 220 && trade_price_buy(RESOURCE_MARBLE) == 330 &&
+        trade_price_sell(RESOURCE_MARBLE) == 110, "a price change of the game moves the price of Rome");
+    trade_price_change(RESOURCE_MARBLE, -20);
+
     game_rules_set_classic();
-    printf("classic game: buying price %d\n", trade_price_buy(RESOURCE_MARBLE));
-    failures += trade_price_buy(RESOURCE_MARBLE) != base;
+    printf("classic game: buying price %d, selling price %d\n", trade_price_buy(RESOURCE_MARBLE),
+        trade_price_sell(RESOURCE_MARBLE));
+    CHECK(trade_price_buy(RESOURCE_MARBLE) == 200 && trade_price_sell(RESOURCE_MARBLE) == 140 &&
+        trade_price_duty(RESOURCE_MARBLE) == 0, "classic game: the original prices, 200 and 140, no portorium");
     player_context_switch(0);
     player_context_set_num_players(1);
-    printf("%s\n", failures ? "DIFFERENT: the empire does not cost 50% more in multiplayer only" :
-        "Identical: the empire costs 50% more in multiplayer only");
+#undef CHECK
+    printf("%s\n", failures ? "DIFFERENT: the prices of the empire are not those of Rome and the portorium" :
+        "Identical: the empire trades at the price of Rome, with the portorium, in multiplayer only");
     return failures ? 1 : 0;
 }
 
@@ -3327,8 +3356,16 @@ static int command_tradeprices(const char *file)
     }
     int failures = 0;
 #define CHECK(condition, text) do { int ok_ = (condition); printf("%-62s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
-    int base = trade_price_buy_base(RESOURCE_MARBLE);
-    CHECK(mp_trade_price(1, 0, RESOURCE_MARBLE) == base, "by default, the price of the empire without surcharge");
+    game_rules_settings rules;
+    game_rules_default_multiplayer_settings(&rules);
+    rules.ai_invasions = 0;
+    game_rules_set_multiplayer(&rules);
+    // by default, the price of Rome, without the portorium: trade between players stays in the province (D-060)
+    int base = trade_price_rome(RESOURCE_MARBLE);
+    CHECK(base == 200 && mp_trade_price(1, 0, RESOURCE_MARBLE) == base && mp_trade_price(0, 2, RESOURCE_MARBLE) == base,
+        "by default, the price of Rome: 200");
+    CHECK(trade_price_buy(RESOURCE_MARBLE) != base && trade_price_sell(RESOURCE_MARBLE) != base,
+        "no portorium between players");
     city_action(1, MP_ACTION_SET_SELL_PRICE, 0, RESOURCE_MARBLE, 150);
     city_action(1, MP_ACTION_SET_SELL_PRICE, 2, RESOURCE_MARBLE, 250);
     CHECK(mp_trade_price(1, 0, RESOURCE_MARBLE) == 150 && mp_trade_price(1, 2, RESOURCE_MARBLE) == 250,
@@ -3597,9 +3634,22 @@ static int command_tradeconservation(const char *file)
     return failures ? 1 : 0;
 }
 
-// the empire is the dearer source (M8.9, D-048): its traders sell a city nothing a player sells it cheaper over an
-// open route; the player sets the price higher, the buyer stops buying or the route closes: the empire sells again
-static int command_tradepreference(const char *file)
+// a city of the empire, open to trade or not yet, that sells the resource, or -1
+static int empire_city_selling(int resource)
+{
+    for (int i = 0; i < 41; i++) {
+        empire_city *c = empire_city_get(i);
+        if (c && c->in_use && (c->type == EMPIRE_CITY_TRADE || c->type == EMPIRE_CITY_FUTURE_TRADE) &&
+            c->sells_resource[resource]) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+// the empire always sells (T4.3, D-060, replaces D-048): its traders bring a city what it imports even when a
+// player sells it cheaper over an open route, and when that player has none left
+static int command_empiresells(const char *file)
 {
     if (!start_trade_game(file)) {
         return 2;
@@ -3607,62 +3657,127 @@ static int command_tradepreference(const char *file)
     int failures = 0;
 #define CHECK(condition, text) do { int ok_ = (condition); printf("%-62s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
     int empire_price = trade_price_buy(RESOURCE_MARBLE);
-    printf("the empire sells marble at %d (surcharge included), player 2 at 150\n", empire_price);
+    printf("the empire sells marble at %d (portorium included), player 2 at 150\n", empire_price);
     CHECK(empire_price > 150, "the test needs player 2 cheaper than the empire");
-    CHECK(mp_trade_empire_may_sell(RESOURCE_MARBLE), "no route between players: the empire sells");
+    int city_id = empire_city_selling(RESOURCE_MARBLE);
+    CHECK(city_id >= 0, "a city of the empire sells marble");
+    if (city_id < 0) {
+        return 1;
+    }
+    city_action(0, MP_ACTION_OPEN_TRADE_ROUTE, city_id, 0, 0);
+    for (int i = 0; i < 3 && city_resource_trade_status(RESOURCE_MARBLE) != TRADE_STATUS_IMPORT; i++) {
+        city_action(0, MP_ACTION_CYCLE_TRADE_STATUS, RESOURCE_MARBLE, 0, 0);
+    }
+    CHECK(empire_city_get(city_id)->is_open && city_resource_trade_status(RESOURCE_MARBLE) == TRADE_STATUS_IMPORT,
+        "player 1 opens the route and imports marble");
+    CHECK(empire_can_import_resource_from_city(city_id, RESOURCE_MARBLE), "no route between players: the empire sells");
     setup_trade(8, 0, 1);
-    CHECK(mp_trade_cheaper_player(RESOURCE_MARBLE) == 1 && !mp_trade_empire_may_sell(RESOURCE_MARBLE),
-        "player 2 sells cheaper over an open route: the empire does not");
-    city_action(1, MP_ACTION_SET_SELL_PRICE, 0, RESOURCE_MARBLE, empire_price);
-    CHECK(mp_trade_empire_may_sell(RESOURCE_MARBLE), "player 2 asks the price of the empire: the empire sells");
-    city_action(1, MP_ACTION_SET_SELL_PRICE, 0, RESOURCE_MARBLE, 150);
-    city_action(0, MP_ACTION_SET_BUYS_FROM, 1, RESOURCE_MARBLE, 0);
-    CHECK(mp_trade_empire_may_sell(RESOURCE_MARBLE), "player 1 no longer buys from him: the empire sells");
-    city_action(0, MP_ACTION_SET_BUYS_FROM, 1, RESOURCE_MARBLE, 1);
-    city_action(1, MP_ACTION_PROPOSE_ROUTE, 0, 0, 0);
-    CHECK(mp_trade_empire_may_sell(RESOURCE_MARBLE), "the route is closed: the empire sells");
-    city_action(1, MP_ACTION_PROPOSE_ROUTE, 0, 1, 0);
-    CHECK(!mp_trade_empire_may_sell(RESOURCE_MARBLE), "open again: the empire does not");
-    // player 2 out of marble: the empire does not take over, drying up the stock of a rival is part of the game
+    CHECK(mp_trade_cheaper_player(RESOURCE_MARBLE) == 1, "player 2 sells cheaper over an open route (shown green)");
+    CHECK(empire_can_import_resource_from_city(city_id, RESOURCE_MARBLE), "the empire still sells");
+    // player 2 out of marble: the empire still sells, as it always does
     int x1, y1;
     mp_mapgen_city_center(1, &x1, &y1);
     player_context_switch(1);
     building *store = building_get(map_building_at(map_grid_offset(x1 - 6, y1 + 1)));
     building_warehouse_remove_resource(store, RESOURCE_MARBLE, 8);
     player_context_switch(0);
-    CHECK(marble_of(1) == 0 && !mp_trade_empire_may_sell(RESOURCE_MARBLE),
-        "player 2 has no marble left: the empire still does not sell");
-
-    // through the traders of the empire themselves, with a city of the empire that sells marble
-    int city_id = -1;
-    for (int i = 0; i < 41 && city_id < 0; i++) {
-        empire_city *c = empire_city_get(i);
-        if (c && c->in_use && (c->type == EMPIRE_CITY_TRADE || c->type == EMPIRE_CITY_FUTURE_TRADE) &&
-            c->sells_resource[RESOURCE_MARBLE]) {
-            city_id = i;
-        }
-    }
-    if (city_id >= 0) {
-        empire_city_open_trade(city_id);
-        for (int i = 0; i < 3 && city_resource_trade_status(RESOURCE_MARBLE) != TRADE_STATUS_IMPORT; i++) {
-            city_resource_cycle_trade_status(RESOURCE_MARBLE);
-        }
-        CHECK(city_resource_trade_status(RESOURCE_MARBLE) == TRADE_STATUS_IMPORT, "player 1 imports marble");
-        CHECK(!empire_can_import_resource_from_city(city_id, RESOURCE_MARBLE),
-            "the traders of the empire leave marble to player 2");
-        city_action(1, MP_ACTION_SET_SELL_PRICE, 0, RESOURCE_MARBLE, empire_price + 50);
-        CHECK(empire_can_import_resource_from_city(city_id, RESOURCE_MARBLE),
-            "player 2 dearer: the traders of the empire bring marble");
-    } else {
-        printf("no city of the empire sells marble on this map: traders not tried\n");
-    }
-    // the classic game is untouched: one city, the empire always sells
+    CHECK(marble_of(1) == 0 && empire_can_import_resource_from_city(city_id, RESOURCE_MARBLE),
+        "player 2 has no marble left: the empire sells");
+    city_action(1, MP_ACTION_SET_SELL_PRICE, 0, RESOURCE_MARBLE, empire_price + 50);
+    CHECK(mp_trade_cheaper_player(RESOURCE_MARBLE) < 0 && empire_can_import_resource_from_city(city_id, RESOURCE_MARBLE),
+        "player 2 dearer: the empire is the cheaper, and sells");
     player_context_switch(0);
     player_context_set_num_players(1);
-    CHECK(mp_trade_empire_may_sell(RESOURCE_MARBLE), "alone, the empire always sells");
 #undef CHECK
-    printf("%s\n", failures ? "DIFFERENT: the empire is not the dearer source as designed" :
-        "Identical: the empire is the dearer source as designed");
+    printf("%s\n", failures ? "DIFFERENT: the empire does not always sell" : "Identical: the empire always sells");
+    return failures ? 1 : 0;
+}
+
+// the state of the trade of a player with the empire (D-061): the cities and routes of his empire, the amounts
+// traded, the prices, his trade settings and what he paid and earned with the empire this year
+static int empire_trade_state(int player_id, uint8_t *data, int size)
+{
+    player_context_switch(player_id);
+    buffer buf, limits, traded;
+    int part = size / 4;
+    buffer_init(&buf, data, part);
+    empire_city_save_state(&buf);
+    trade_prices_save_state(&buf);
+    for (int r = RESOURCE_MIN; r < RESOURCE_MAX; r++) {
+        buffer_write_i32(&buf, city_resource_trade_status(r));
+        buffer_write_i32(&buf, city_resource_export_over(r));
+        buffer_write_i32(&buf, city_resource_is_stockpiled(r));
+    }
+    buffer_write_i32(&buf, city_data.finance.this_year.expenses.imports);
+    buffer_write_i32(&buf, city_data.finance.this_year.income.exports);
+    buffer_init(&limits, data + part, part);
+    buffer_init(&traded, data + 2 * part, part);
+    trade_routes_save_state(&limits, &traded);
+    player_context_switch(0);
+    return !buf.overflow && !limits.overflow && !traded.overflow;
+}
+
+// each player trades with the empire on his own (T4.12, D-061): player 1 opens a route of the empire, imports and
+// exports, buys and sells loads, traders come for 60 days; the trade of player 2 with the empire stays the same
+static int command_tradeisolation(const char *file)
+{
+    if (!start_trade_game(file)) {
+        return 2;
+    }
+    int failures = 0;
+#define CHECK(condition, text) do { int ok_ = (condition); printf("%-62s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
+    setup_trade(0, 0, 0);
+    // the routes the map opens from the start are closed: player 2 trades with nobody, player 1 opens his own
+    for (int p = 0; p < 2; p++) {
+        player_context_switch(p);
+        for (int i = 0; i < 41; i++) {
+            empire_city_get(i)->is_open = 0;
+        }
+    }
+    player_context_switch(0);
+    static uint8_t before[4 * 8192], after[4 * 8192], first[4 * 8192];
+    memset(before, 0, sizeof(before));
+    memset(after, 0, sizeof(after));
+    memset(first, 0, sizeof(first));
+    CHECK(empire_trade_state(1, before, sizeof(before)) && empire_trade_state(0, first, sizeof(first)),
+        "the trade state of each player fits the test buffers");
+
+    int city_id = empire_city_selling(RESOURCE_MARBLE);
+    CHECK(city_id >= 0, "a city of the empire sells marble");
+    if (city_id < 0) {
+        return 1;
+    }
+    city_action(0, MP_ACTION_OPEN_TRADE_ROUTE, city_id, 0, 0);
+    for (int i = 0; i < 3 && city_resource_trade_status(RESOURCE_MARBLE) != TRADE_STATUS_IMPORT; i++) {
+        city_action(0, MP_ACTION_CYCLE_TRADE_STATUS, RESOURCE_MARBLE, 0, 0);
+    }
+    city_action(0, MP_ACTION_CYCLE_TRADE_STATUS, RESOURCE_POTTERY, 0, 0);
+    city_action(0, MP_ACTION_CHANGE_EXPORT_OVER, RESOURCE_POTTERY, 5, 0);
+    // a load bought and a load sold by player 1, as a trader would
+    int x0, y0;
+    mp_mapgen_city_center(0, &x0, &y0);
+    building *space = building_next(building_get(map_building_at(map_grid_offset(x0 - 6, y0 + 1))));
+    building_warehouse_space_add_import(space, RESOURCE_MARBLE);
+    building_warehouse_space_remove_export(space, RESOURCE_MARBLE);
+    run_trace(60 * 50, 60 * 50, 0, 0);
+    CHECK(empire_city_get(city_id)->is_open && city_resource_trade_status(RESOURCE_MARBLE) == TRADE_STATUS_IMPORT,
+        "player 1 opened the route and imports marble");
+    CHECK(empire_trade_state(0, after, sizeof(after)) && memcmp(first, after, sizeof(after)) != 0,
+        "the trade of player 1 with the empire changed");
+
+    memset(after, 0, sizeof(after));
+    CHECK(empire_trade_state(1, after, sizeof(after)) && memcmp(before, after, sizeof(after)) == 0,
+        "the trade of player 2 with the empire is unchanged");
+    player_context_switch(1);
+    CHECK(!empire_city_get(city_id)->is_open && city_resource_trade_status(RESOURCE_MARBLE) != TRADE_STATUS_IMPORT,
+        "player 2: the route is closed, he does not import marble");
+    player_context_switch(0);
+
+    player_context_switch(0);
+    player_context_set_num_players(1);
+#undef CHECK
+    printf("%s\n", failures ? "DIFFERENT: the trade of a player with the empire leaks to another" :
+        "Identical: each player trades with the empire on his own");
     return failures ? 1 : 0;
 }
 
@@ -4440,8 +4555,10 @@ int main(int argc, char **argv)
     } else if (strcmp(command, "terrain") == 0 && argc > 7) {
         result = command_terrain(file, atoi(argv[3]), atoi(argv[4]), atoi(argv[5]), atoi(argv[6]), atoi(argv[7]),
             argc > 8 && strcmp(argv[8], "raw") == 0);
-    } else if (strcmp(command, "tradepreference") == 0) {
-        result = command_tradepreference(file);
+    } else if (strcmp(command, "empiresells") == 0) {
+        result = command_empiresells(file);
+    } else if (strcmp(command, "tradeisolation") == 0) {
+        result = command_tradeisolation(file);
     } else if (strcmp(command, "tradeconservation") == 0) {
         result = command_tradeconservation(file);
     } else if (strcmp(command, "traderesume") == 0) {

@@ -542,6 +542,7 @@
   ressource qu'elle achète à un joueur moins cher (prix majoré de l'empire comparé) par une route ouverte. **Même si
   ce joueur n'en a plus** : assécher le stock d'un rival est un levier de jeu. Pour revenir à l'empire, l'acheteur
   cesse d'acheter à ce joueur, ou la route se ferme, ou le vendeur monte son prix au niveau de l'empire.
+  *Remplacé par D-060 et D-066 : l'empire vend toujours.*
 - Chaque livraison est annoncée à l'acheteur ; la fenêtre « Joueurs » montre le prix de l'empire et le moins cher
   en vert.
 - Le trajet d'une caravane suit la vitesse du jeu (environ 15 ticks par case) : d'un bout à l'autre de la carte
@@ -881,6 +882,36 @@
 - *À valider* : les ateliers ne sont pas vérifiés par les commandes (le menu les règle encore seul, D-020, D-061).
 - Effet de l'original à connaître : quand les quais sont permis, la viande est dessinée en poisson (icônes, charrettes,
   entrepôts), aussi celle des porcs des joueurs des terres.
+
+### D-066 — Prix de Rome et portorium en place ; la hausse des prix à l'arrêt du commerce reste à choisir (précise D-060, D-061, T4.3, T4.12)
+- 2026-10-07 · **appliquée** pour les prix ; **à valider** pour la hausse (travail de nuit, sans Alexandre)
+- **Prix de Rome** : le prix d'achat de base de l'original (marbre 200), qui suit toujours les variations de prix du
+  scénario. Le prix de vente de l'original ne sert plus en multijoueur.
+- **Portorium** : 50 % du prix de Rome, arrondi vers le bas. Acheter à l'empire coûte Rome + portorium, vendre lui
+  rapporte Rome − portorium. Marbre : 300 et 100. Vin (215) : 322 et 108. Cela vaut partout où l'empire paie ou est
+  payé : marchands et navires aux entrepôts, recettes et dépenses du commerce, fenêtre « Prix de l'empire ».
+- **L'empire vend toujours** : la règle D-048 qui le faisait s'effacer devant un joueur moins cher est retirée. La
+  page du commerce montre toujours en vert la source la moins chère, à titre d'information.
+- **Entre joueurs** : prix de Rome par défaut, sans portorium, puis le prix fixé par le vendeur (D-043).
+- **Chaque joueur a son commerce avec l'empire** (D-061) : routes, quantités, prix et réglages sont dans l'état de
+  sa cité. Le test `mp_trade_empire_isolation` le vérifie octet par octet.
+- **Page du commerce** : titre « Empire, portorium 50 % », colonnes « Rome » et « Payé/reçu » ; la partie du joueur
+  choisi est décalée à droite, la page tient toujours en 640 × 480.
+- **Partie seule** (un joueur sur la carte) : c'est une partie multijoueur, la règle s'y applique aussi. *À valider*.
+- **Hausse des prix quand un joueur arrête le commerce** (T4.3), non codée. Trois propositions, *à valider* :
+  - **A. La route fermée** : quand un joueur ferme sa route avec un autre, le portorium de l'autre monte à 100 % sur
+    les ressources qu'il lui achetait, pendant 12 mois, puis redescend de 10 points par mois. Simple et lisible ;
+    seule la victime paie plus cher.
+  - **B. L'embargo par ressource** : quand un vendeur cesse de livrer une ressource achetée (route fermée, prix
+    monté de plus de 50 %, ou stock vide tout un mois), le portorium de cette ressource monte de 25 points par mois
+    pour l'acheteur (au plus 150 %), et redescend de 10 points par mois après la reprise. Plus fin, plus de règles à
+    expliquer.
+  - **C. Rome punit le fautif** : celui qui coupe le commerce voit son propre portorium monter de 50 points sur
+    toutes les ressources pendant 12 mois. L'embargo devient coûteux au lieu d'être une arme.
+  - Ma préférence : **A**, la plus simple à comprendre et à afficher (une ligne « portorium 100 % » sur la page
+    du commerce). Dans les trois cas, le portorium devient un état de chaque cité (sauvegardé, dans la somme de
+    contrôle), changé par les commandes déjà en place (route, prix) : le déterminisme est gardé.
+- Classique : inchangé (prix d'achat et de vente de l'original, pas de portorium).
 
 ### D-068 — Le pont de César dans la guerre : terre de César, ouvert en paix, tenu en guerre (T4.8)
 - 2026-10-06 · **à valider** (proposition de Claude, demande d'Alexandre : « réfléchir à l'impact du pont de César,

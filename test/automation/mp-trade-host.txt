@@ -27,9 +27,9 @@ wait 5
 screenshot build/automation/trade-window.png
 # the marble row: + (the client marked it bought around tick 400)
 mpwait 800
-click 460 357
+click 504 357
 wait 2
-click 460 357
+click 504 357
 wait 5
 screenshot build/automation/trade-window-raised.png
 mpwait 1000

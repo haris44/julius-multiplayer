@@ -32,12 +32,13 @@
 
 // columns: the resource and its stock, the empire, the selected player
 #define X_STOCK 132
-#define X_EMPIRE_STATUS 176
-#define X_EMPIRE_PRICE 260
-#define X_MY_PRICE 316
-#define X_HIS_PRICE 392
-#define X_BUY 446
-#define X_ON_THE_WAY 510
+#define X_EMPIRE_STATUS 176 // 72 wide
+#define X_ROME_PRICE 252 // 40 wide
+#define X_EMPIRE_PRICE 296 // 60 wide: paid on imports, received on exports
+#define X_MY_PRICE 360
+#define X_HIS_PRICE 436
+#define X_BUY 490
+#define X_ON_THE_WAY 554
 
 static void button_partner(int index, int param2);
 static void button_route(int param1, int param2);
@@ -89,7 +90,7 @@ static void init_buttons(void)
         int resource = RESOURCE_MIN + i;
         int y = FIRST_ROW_Y + ROW_HEIGHT * i;
         add_button(20, y - 1, X_STOCK + 40 - 20, ROW_HEIGHT - 2, button_resource, resource, 0);
-        add_button(X_EMPIRE_STATUS, y - 1, 80, ROW_HEIGHT - 2, button_empire_status, resource, 0);
+        add_button(X_EMPIRE_STATUS, y - 1, 72, ROW_HEIGHT - 2, button_empire_status, resource, 0);
         add_button(X_MY_PRICE, y - 1, 16, ROW_HEIGHT - 2, button_price, resource, -PRICE_STEP);
         add_button(X_MY_PRICE + 56, y - 1, 16, ROW_HEIGHT - 2, button_price, resource, PRICE_STEP);
         add_button(X_BUY, y - 1, 56, ROW_HEIGHT - 2, button_buy, resource, 0);
@@ -140,31 +141,33 @@ static void draw_button(int index)
     button_border_draw(b->x, b->y, b->width, b->height, data.focus_button_id == index + 1);
 }
 
-// the empire: what the city does with it, and the price that applies (paid on imports, earned on exports)
+// the empire: what the city does with it, the price of Rome, and the price that applies, portorium included (paid
+// on imports, received on exports, D-060)
 static void draw_empire(int resource, int y, int index, int cheaper_player)
 {
     int can_import = empire_can_import_resource(resource);
     int can_export = empire_can_export_resource(resource);
     int status = city_resource_trade_status(resource);
     if (city_resource_is_stockpiled(resource)) {
-        lang_text_draw_centered(54, 3, X_EMPIRE_STATUS, y + 3, 80, FONT_NORMAL_WHITE);
+        lang_text_draw_centered(54, 3, X_EMPIRE_STATUS, y + 3, 72, FONT_NORMAL_WHITE);
     } else if (can_import || can_export) {
         draw_button(index);
         int text = status == TRADE_STATUS_IMPORT ? TR_MP_EMPIRE_IMPORTS :
             status == TRADE_STATUS_EXPORT ? TR_MP_EMPIRE_EXPORTS : TR_MP_EMPIRE_NO_TRADE;
-        text_draw_centered(translation_for(text), X_EMPIRE_STATUS, y + 3, 80, FONT_NORMAL_WHITE, 0);
+        text_draw_centered(translation_for(text), X_EMPIRE_STATUS, y + 3, 72, FONT_NORMAL_WHITE, 0);
     } else {
-        text_draw_centered((const uint8_t *) "-", X_EMPIRE_STATUS, y + 3, 80, FONT_NORMAL_WHITE, 0);
+        text_draw_centered((const uint8_t *) "-", X_EMPIRE_STATUS, y + 3, 72, FONT_NORMAL_WHITE, 0);
     }
+    text_draw_number_centered(trade_price_rome(resource), X_ROME_PRICE, y + 3, 40, FONT_NORMAL_WHITE);
     if (status == TRADE_STATUS_EXPORT && can_export) {
-        text_draw_number_centered(trade_price_sell(resource), X_EMPIRE_PRICE, y + 3, 50, FONT_NORMAL_WHITE);
+        text_draw_number_centered(trade_price_sell(resource), X_EMPIRE_PRICE, y + 3, 60, FONT_NORMAL_WHITE);
     } else if (empire_can_import_resource_potentially(resource)) {
         // green when the empire is where the city buys it
         int supplies = status == TRADE_STATUS_IMPORT && can_import && cheaper_player < 0;
-        text_draw_number_centered(trade_price_buy(resource), X_EMPIRE_PRICE, y + 3, 50,
+        text_draw_number_centered(trade_price_buy(resource), X_EMPIRE_PRICE, y + 3, 60,
             supplies ? FONT_NORMAL_GREEN : FONT_NORMAL_WHITE);
     } else {
-        text_draw_centered((const uint8_t *) "-", X_EMPIRE_PRICE, y + 3, 50, FONT_NORMAL_WHITE, 0);
+        text_draw_centered((const uint8_t *) "-", X_EMPIRE_PRICE, y + 3, 60, FONT_NORMAL_WHITE, 0);
     }
 }
 
@@ -191,12 +194,18 @@ static void draw_partner(int resource, int y, int index, int cheaper_player)
 
 static void draw_headers(void)
 {
-    text_draw_centered(translation_for(TR_MP_TRADE_EMPIRE), X_EMPIRE_STATUS, 62, X_MY_PRICE - 8 - X_EMPIRE_STATUS,
-        FONT_NORMAL_WHITE, 0);
+    // "Empire, portorium 50 %"
+    uint8_t empire[64] = { 0 };
+    string_copy(translation_for(TR_MP_TRADE_EMPIRE), empire, 60);
+    string_copy(translation_for(TR_MP_TRADE_PORTORIUM), empire + string_length(empire), 60 - string_length(empire));
+    string_from_int(empire + string_length(empire), trade_price_portorium_percent(), 0);
+    string_copy((const uint8_t *) " %", empire + string_length(empire), 60 - string_length(empire));
+    text_draw_centered(empire, X_EMPIRE_STATUS, 62, X_MY_PRICE - 8 - X_EMPIRE_STATUS, FONT_NORMAL_WHITE, 0);
     draw_player_name(data.partner, X_MY_PRICE, 62, X_ON_THE_WAY + 50 - X_MY_PRICE);
     text_draw_centered(translation_for(TR_MP_TRADE_STOCK), X_STOCK, 78, 40, FONT_SMALL_PLAIN, COLOR_WHITE);
-    text_draw_centered(translation_for(TR_MP_TRADE_STATUS), X_EMPIRE_STATUS, 78, 80, FONT_SMALL_PLAIN, COLOR_WHITE);
-    text_draw_centered(translation_for(TR_MP_TRADE_PRICE), X_EMPIRE_PRICE, 78, 50, FONT_SMALL_PLAIN, COLOR_WHITE);
+    text_draw_centered(translation_for(TR_MP_TRADE_STATUS), X_EMPIRE_STATUS, 78, 72, FONT_SMALL_PLAIN, COLOR_WHITE);
+    text_draw_centered(translation_for(TR_MP_TRADE_ROME), X_ROME_PRICE, 78, 40, FONT_SMALL_PLAIN, COLOR_WHITE);
+    text_draw_centered(translation_for(TR_MP_TRADE_PRICE), X_EMPIRE_PRICE, 78, 60, FONT_SMALL_PLAIN, COLOR_WHITE);
     text_draw_centered(translation_for(TR_MP_TRADE_I_SELL), X_MY_PRICE, 78, 72, FONT_SMALL_PLAIN, COLOR_WHITE);
     text_draw_centered(translation_for(TR_MP_TRADE_HE_SELLS), X_HIS_PRICE, 78, 50, FONT_SMALL_PLAIN, COLOR_WHITE);
     text_draw_centered(translation_for(TR_MP_TRADE_I_BUY), X_BUY, 78, 56, FONT_SMALL_PLAIN, COLOR_WHITE);
@@ -241,7 +250,7 @@ void window_mp_trade_draw_foreground(void)
             24, y - 4);
         lang_text_draw(23, resource, 52, y + 3, FONT_NORMAL_WHITE);
         text_draw_number_centered(city_resource_count(resource), X_STOCK, y + 3, 40, FONT_NORMAL_WHITE);
-        // the cheaper source supplies (D-048): in green, the empire or this player
+        // in green, the cheaper source: the empire or this player (the empire always sells, D-060)
         int cheaper_player = mp_trade_cheaper_player(resource);
         draw_empire(resource, y, button + 1, cheaper_player);
         draw_partner(resource, y, button + 2, cheaper_player);
