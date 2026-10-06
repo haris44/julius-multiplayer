@@ -439,6 +439,17 @@ le note « à valider ».
   aux joueurs des terres, qui n'ont pas la pêche ; les **fruits** aux côtiers (D-062).
   *Et plus de bois dans les terres* (Alexandre, D-062) : retirer le bois des emplacements des terres, inverser le
   test `inland_timber` de `mp_prepared_map_placement`.
+- [ ] **T4.16** **Le jeu paraît plus restrictif qu'en classique** (Alexandre : distance d'effet des bâtiments,
+  emplacement des habitations, manque de main-d'œuvre ; « peut-être lié à la difficulté en difficile par
+  défaut »).
+  *Lu dans le code* : rien en multijoueur ne touche la portée des promeneurs, l'embauche ni la migration ; les
+  seuls écarts avec une partie classique sont la **zone** (on ne bâtit qu'à 20 cases des maisons habitées et des
+  bâtiments pourvus) et la **difficulté** : en difficile, moitié moins d'argent qu'en facile (100 % contre 200 % des
+  fonds de départ) et un moral de base de 50 contre 70, d'où des départs et un manque de bras. La taille de la
+  carte n'y change rien : les promeneurs comptent leurs pas, pas la carte.
+  *À faire* : ne pas toucher aux règles intérieures (I2) ; « facile » par défaut (T4.4) ; puis **mesurer** : la
+  même petite cité bâtie par script sur une carte classique et sur la carte préparée, même difficulté, comparer
+  population, employés et couverture après deux ans. Un écart serait un bug à chercher, pas une règle à desserrer.
 
 ## MC — Cartes multijoueur préparées et César (D-033, D-034)
 - [ ] **MC.1** Ouvrages de César dessinés en blanc (la teinte actuelle ne fait que foncer les images) ; son aqueduc
