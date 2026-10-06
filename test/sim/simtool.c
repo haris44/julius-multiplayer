@@ -44,6 +44,7 @@
 #include "mp/audit.h"
 #include "map/road_network.h"
 #include "map/routing.h"
+#include "map/routing_path.h"
 #include "map/routing_terrain.h"
 #include "building/construction_routed.h"
 #include "game/undo.h"
@@ -137,7 +138,10 @@ static int usage(void)
     printf("                                         the aqueduct of Caesar is cut, fills again when mended\n");
     printf("  simtool inlandwater SAVE PLAYERS       prepared map: the aqueduct of Caesar waters the player inland\n");
     printf("                                         whichever arrival point he draws (players 2 to 4 too)\n");
-    printf("  simtool menuowner SAVE                 prepared map: the build menu of the local player keeps his\n");
+    printf("  simtool longroutes SAVE                prepared map for 4: paths between the cities within the limit of\n");
+    printf("                                         a figure, a caravan between the farthest players arrives,\n");
+    printf("                                         a ship sails a sea as large as the grid\n");
+    printf("  simtool menuowner SAVE                prepared map: the build menu of the local player keeps his\n");
     printf("                                         materials when another player opens a route with the empire\n");
     printf("  simtool caravans SAVE                 a caravan of player 2 brings marble to player 1, who pays\n");
     printf("  simtool tradeprices SAVE               prices between players and notices to the buyer\n");
@@ -2583,6 +2587,105 @@ static int command_terrain(const char *file, int num_players, int x0, int y0, in
 
 // a template whose empire does not trade by land and by sea is refused for the prepared maps
 static void city_action(int player_id, int action, int a1, int a2, int a3);
+static int stock_of(int player_id, int resource);
+
+// long trips on the large map (T4.17, D-064): between the cities the paths of the walkers stay within what a figure
+// can store (500 steps), a caravan between the two farthest players arrives, and a ship can sail the whole sea of a
+// map as large as the grid
+static int command_longroutes(const char *file)
+{
+    if (!mp_mapgen_create_prepared(file, 4, 0)) {
+        printf("Unable to create the prepared map\n");
+        return 2;
+    }
+    game_rules_settings rules;
+    game_rules_default_multiplayer_settings(&rules);
+    rules.ai_invasions = 0;
+    game_rules_set_multiplayer(&rules);
+    int failures = 0;
+#define CHECK(condition, text) do { int ok_ = (condition); printf("%-70s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
+    int cx[4], cy[4];
+    for (int p = 0; p < 4; p++) {
+        mp_mapgen_city_center(p, &cx[p], &cy[p]);
+    }
+    static uint8_t path[2000];
+    int far_a = 0, far_b = 1, far_length = 0, longest_land = 0, all_paths = 1;
+    for (int a = 0; a < 4; a++) {
+        for (int b = a + 1; b < 4; b++) {
+            int road = map_routing_citizen_can_travel_over_road_garden(cx[a], cy[a], cx[b], cy[b]) ?
+                map_routing_get_path(path, cx[a], cy[a], cx[b], cy[b], 8) : 0;
+            int land = map_routing_citizen_can_travel_over_land(cx[a], cy[a], cx[b], cy[b]) ?
+                map_routing_get_path(path, cx[a], cy[a], cx[b], cy[b], 8) : 0;
+            printf("players %d and %d: path of %d steps by the roads, %d over the land\n", a + 1, b + 1, road, land);
+            all_paths &= road > 0 && land > 0;
+            if (road > far_length) {
+                far_length = road;
+                far_a = a;
+                far_b = b;
+            }
+            longest_land = land > longest_land ? land : longest_land;
+        }
+    }
+    CHECK(all_paths, "a path joins every pair of cities, by the roads and over the land");
+    CHECK(far_length < 500 && longest_land < 500, "the longest path of the map is within the 500 steps of a figure");
+    printf("farthest by the roads: players %d and %d, %d steps (longest over the land: %d)\n", far_a + 1, far_b + 1,
+        far_length, longest_land);
+
+    // a caravan between the two of them: the buyer is the first, the seller the second
+    int buyer = far_a, seller = far_b;
+    int wx[2] = { cx[buyer] - 6, cx[seller] - 6 }, wy[2] = { cy[buyer] + 1, cy[seller] + 1 };
+    build_as(buyer, BUILDING_WAREHOUSE, wx[0], wy[0], wx[0], wy[0]);
+    build_as(seller, BUILDING_WAREHOUSE, wx[1], wy[1], wx[1], wy[1]);
+    player_context_switch(seller);
+    building *store = building_get(map_building_at(map_grid_offset(wx[1], wy[1])));
+    for (int i = 0; i < 8; i++) {
+        building_warehouse_add_resource(store, RESOURCE_MARBLE);
+    }
+    player_context_switch(0);
+    city_action(seller, MP_ACTION_SET_SELL_PRICE, buyer, RESOURCE_MARBLE, 150);
+    city_action(buyer, MP_ACTION_SET_BUYS_FROM, seller, RESOURCE_MARBLE, 1);
+    city_action(buyer, MP_ACTION_PROPOSE_ROUTE, seller, 1, 0);
+    city_action(seller, MP_ACTION_PROPOSE_ROUTE, buyer, 1, 0);
+    run_trace(50, 50, 0, 0); // the warehouses come into use
+    int days = 0;
+    for (; days < 400 && stock_of(buyer, RESOURCE_MARBLE) < 8; days++) {
+        run_trace(50, 50, 0, 0);
+    }
+    printf("the caravan of player %d reaches player %d after %d days: %d of 8 loads, %d left with the seller\n",
+        seller + 1, buyer + 1, days, stock_of(buyer, RESOURCE_MARBLE), stock_of(seller, RESOURCE_MARBLE));
+    CHECK(stock_of(buyer, RESOURCE_MARBLE) == 8, "the 8 loads of marble arrive between the two farthest players");
+
+    // the arm of the sea from one edge of the map to the other: a ship sails along all of it
+    int sea_wx, sea_wy, sea_ex, sea_ey;
+    mp_mapgen_sea_end(0, &sea_wx, &sea_wy);
+    mp_mapgen_sea_end(1, &sea_ex, &sea_ey);
+    map_routing_calculate_distances_water_boat(sea_wx, sea_wy);
+    int ship_path = map_routing_get_path_on_water(path, sea_ex, sea_ey, 0);
+    printf("the sea from (%d, %d) to (%d, %d): a ship's path of %d steps\n", sea_wx, sea_wy, sea_ex, sea_ey, ship_path);
+    CHECK(ship_path > 0 && ship_path < 500, "a ship sails the whole arm of the sea, from one edge of the map to the other");
+
+    // the sea is as large as the map: a ship sails to its last tile, the search of the route is not cut short
+    int width = map_grid_width(), height = map_grid_height();
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+            map_terrain_set(map_grid_offset(x, y), TERRAIN_WATER);
+        }
+    }
+    map_routing_update_water();
+    int far_x = width - 2, far_y = height - 2;
+    map_routing_calculate_distances_water_boat(1, 1);
+    printf("sea of %d tiles: distance to the opposite corner %d\n", width * height,
+        map_routing_distance(map_grid_offset(far_x, far_y)));
+    CHECK(map_routing_distance(map_grid_offset(far_x, far_y)) > 0, "a ship finds the far end of a sea of the size of the map");
+    map_routing_calculate_distances_water_flotsam(1, 1);
+    CHECK(map_routing_distance(map_grid_offset(far_x, far_y)) > 0, "so does the flotsam");
+    player_context_switch(0);
+    player_context_set_num_players(1);
+#undef CHECK
+    printf("%s\n", failures ? "DIFFERENT: the long routes do not work on the large map" :
+        "Identical: the long routes work on the large map");
+    return failures ? 1 : 0;
+}
 
 static void ignore_command(mp_command *command)
 {
@@ -3910,6 +4013,8 @@ int main(int argc, char **argv)
         result = command_drying(file, atoi(argv[3]));
     } else if (strcmp(command, "inlandwater") == 0 && argc > 3) {
         result = command_inlandwater(file, atoi(argv[3]));
+    } else if (strcmp(command, "longroutes") == 0) {
+        result = command_longroutes(file);
     } else if (strcmp(command, "menuowner") == 0) {
         result = command_menuowner(file);
     } else if (strcmp(command, "caravans") == 0) {

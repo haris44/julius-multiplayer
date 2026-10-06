@@ -312,6 +312,10 @@ endforeach()
 # The build menu is the one of the local player: a route opened by another player does not change it (T4.13, D-061)
 add_test(NAME mp_build_menu_owner COMMAND simtool menuowner brugle-massilia-start.sav)
 
+# Long routes on the large map (T4.17): paths within the limit of a figure, a caravan between the farthest players,
+# ships on a sea as large as the grid
+add_test(NAME mp_long_routes COMMAND simtool longroutes brugle-massilia-start.sav)
+
 # Territories (MT.1, D-036): build only in one's zone, which follows the settled buildings and the missions
 add_test(NAME mp_territory COMMAND simtool territory brugle-massilia-start.sav)
 # Missions and missionaries (MT.2, MT.3, D-037): near a missionary, free then marble, trained for money

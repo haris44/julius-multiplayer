@@ -12,7 +12,11 @@
 
 // circular queue as large as the grid: same wrap-around behaviour as the original on classic maps
 #define MAX_QUEUE (GRID_SIZE * GRID_SIZE)
-#define GUARD 50000
+// The searches of the ships and the flotsam stop after so many tiles. 50000 is more than twice the 26244 tiles of the
+// largest map of the original, so it never cut a search there; on a large multiplayer map it follows the size of the
+// grid: every tile once, and the extra visits of the tiles at the edge of the map, where ships slow down
+#define GUARD_MIN 50000
+#define GUARD (GRID_SIZE * GRID_SIZE * 3 / 2 > GUARD_MIN ? GRID_SIZE * GRID_SIZE * 3 / 2 : GUARD_MIN)
 
 #define UNTIL_STOP 0
 #define UNTIL_CONTINUE 1

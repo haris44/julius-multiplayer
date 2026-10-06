@@ -835,4 +835,9 @@
 - **Le menu de construction est celui du joueur local seulement.** `building_menu_update` ne fait rien quand la
   cité courante est celle d'un autre joueur. Une commande d'un autre joueur (route de commerce, arc de triomphe...)
   ne change donc plus ce que voit le joueur local (D-061). Classique : jamais « cité d'un autre joueur ».
+- **Recherches de chemin sur les grandes cartes (T4.17).** `GUARD` (`map/routing.c`) ne limite que les recherches des
+  bateaux et de la dérive ; les marcheurs et les caravanes n'ont aucune limite de cases. En multijoueur, la garde est
+  d'une fois et demie la taille de la grille, au moins 50 000 : le classique (26 244 cases) garde 50 000. La limite de
+  500 pas d'un chemin de figure (`MAX_PATH`) est conservée : le plus long chemin de la carte à 4 fait 253 pas, et
+  l'élargir changerait le format des sauvegardes (*à revoir* si une nouvelle carte de T4.14 dépasse 400 pas).
 

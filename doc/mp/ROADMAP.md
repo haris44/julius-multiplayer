@@ -462,7 +462,7 @@ le note « à valider ».
   *À faire* : ne pas toucher aux règles intérieures (I2) ; « facile » par défaut (T4.4) ; puis **mesurer** : la
   même petite cité bâtie par script sur une carte classique et sur la carte préparée, même difficulté, comparer
   population, employés et couverture après deux ans. Un écart serait un bug à chercher, pas une règle à desserrer.
-- [ ] **T4.17** **Circulation des marchandises sur les grandes cartes** (Alexandre : « la circulation des
+- [x] **T4.17** **Circulation des marchandises sur les grandes cartes** (Alexandre : « la circulation des
   marchands n'est pas altérée pour toi ? »). *Lu dans le code* : charretiers, marchés (40 cases, comme l'original),
   entrepôts et greniers travaillent chacun dans sa cité, sans changement ; chaque cité a bien son propre point
   d'entrée, près d'elle (`set_arrival`), d'où partent ses immigrants. **Une limite nouvelle** : toute recherche de
@@ -473,6 +473,18 @@ le note « à valider ».
   *À faire* : en multijoueur, la garde suit la taille de la grille (le classique garde 50 000, jamais atteint :
   parité intacte) ; test : un chemin entre les deux joueurs les plus éloignés de la carte à 4, et la caravane qui
   arrive. À faire aussi pour les cartes de T4.14.
+  *Fait* (D-064) : relecture du code, la garde est plus étroite que prévu : `GUARD` ne borne que les recherches des
+  **bateaux et de la dérive** (`route_queue_boat`, `route_queue_dir8`), jamais celles des marcheurs et des caravanes
+  (`route_queue`, sans limite). La carte à 4 n'a que 9 % d'eau (environ 6 000 cases) : elle n'était pas atteinte
+  non plus, mais un grand lac l'aurait coupée. Elle suit maintenant la grille en multijoueur (une fois et demie le
+  nombre de cases, les cases du bord de carte étant revues par les bateaux ; le classique garde 50 000 : parité
+  intacte). Limite des figures (`MAX_PATH` 500, `routing_path.c` et `figure/route.c`) : mesurée, le plus long chemin
+  entre deux cités de la carte à 4 fait 253 pas par les routes (J1 et J3, par le pont), 198 sur terre, et la mer de
+  bord à bord 259 pas : large marge, donc inchangée (l'élargir changerait le format des sauvegardes, `route_paths`).
+  Test `mp_long_routes` (`simtool longroutes`) : chemins entre toutes les paires de cités sous 500 pas, caravane de
+  8 chargements de marbre entre les deux joueurs les plus éloignés (arrivée en 90 jours), bateau qui parcourt tout le
+  bras de mer, puis une mer grande comme la grille dont l'autre coin est atteint (échouait avant le correctif).
+  *À refaire* pour chaque nouvelle carte de T4.14 : `simtool longroutes` (chemin le plus long sous 500 pas).
 
 ## MC — Cartes multijoueur préparées et César (D-033, D-034)
 - [ ] **MC.1** Ouvrages de César dessinés en blanc (la teinte actuelle ne fait que foncer les images) ; son aqueduc

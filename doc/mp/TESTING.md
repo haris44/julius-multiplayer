@@ -74,6 +74,7 @@ MAPGEN_PICTURE=carte.ppm ./simtool preparedmap SAVE 2 10   # ... et son image (s
 ./simtool terrain SAVE 2 60 40 30 20 [raw]  # une lettre par case d'une zone de la carte (W eau, R route, B pont...)
 ./simtool inspect PARTIE.mpsav              # joueurs, règles, climat, commerce, missionnaires d'une sauvegarde
 ./simtool inlandwater SAVE 4                # l'aqueduc de César arrose le joueur des terres, J1 à J4 (placement tiré au sort)
+./simtool longroutes SAVE                   # carte à 4 : chemins les plus longs, caravane entre les joueurs les plus éloignés, mer
 ./simtool menuowner SAVE                    # le menu de construction du joueur local ignore ce que font les autres
 ./simtool caravans SAVE                     # caravanes entre joueurs ; tradepreference, tradeconservation,
                                             # traderesume : l'empire en repli, conservation, reprise
