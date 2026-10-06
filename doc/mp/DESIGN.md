@@ -322,6 +322,37 @@ Les conditions de fin se choisissent dans le salon :
 - Moral, totaux et sons de combat sont propres à chaque camp. Les arcs de triomphe, qui venaient des batailles
   lointaines, récompenseront les victoires contre un joueur.
 
+### 7.1 Le pont de César (T4.8, D-068, *à valider* ; règles de jeu : [CESAR.md](CESAR.md) §7.6)
+
+Sur la carte à 4, le pont de César est le seul passage terrestre entre les deux rives : caravanes entre rives,
+missionnaire et armées y passent ; le commerce avec l'étranger, les immigrants, les campagnes et les expéditions de
+César n'en ont pas besoin. Il est indestructible et appartient à César (D-034, D-047). Proposition retenue en
+attendant Alexandre : la **terre de César**.
+- **Où** : les cases à 15 au plus de chaque entrée du pont (réglage de départ), marquées à la création de la carte
+  (`mp/mapgen`, qui connaît le pont : `mp_mapgen_caesar_bridge`) dans une grille sauvegardée, par exemple celle des
+  zones avec César pour propriétaire.
+- **Zones** (`mp/territory`) : aucune zone ne s'étend sur ces cases. Une porte, une tour ou un fort y sont donc
+  refusés par la règle de zone existante (`mp_territory_allows_building`). La mission, qui ne demande pas de zone
+  (`mp_mission_allows_place`), reçoit le même refus.
+- **Murs** : ils se construisent partout (D-036), sauf sur la terre de César : un refus de plus, en multijoueur
+  seulement. Les routes des joueurs restent permises.
+- **Aujourd'hui** (lu dans le code, à vérifier par un test), une porte peut être posée sur une route de César si
+  l'endroit est dans la zone du joueur (`building_construction_place_building` accepte une route sous une porte).
+  Avec la terre de César, ce n'est plus possible près du pont. Ailleurs sur les routes de César, la question reste
+  ouverte (D-068).
+- **Hostilité par paire** (M10.1) : les soldats n'attaquent que les figures des joueurs en guerre avec leur
+  propriétaire. Les personnages ne se bloquent pas entre eux (règle d'origine) : un joueur neutre passe toujours.
+- **Colère** (M10.5) : dans le terme de puissance, une légion dont le centre est sur la terre de César compte comme
+  une légion dans le territoire adverse.
+- **Paix** (M10.1, M10.5) : au bilan du mois qui suit la paix, les légions restées sur la terre de César rentrent à
+  leur fort. C'est la simulation qui l'ordonne, pas une commande d'un joueur : même effet sur toutes les machines.
+- **Eau** : un aqueduc ne se pose ni sur l'eau ni sur un pont (règle d'origine), le pont ne porte donc jamais d'eau.
+  La carte à 4 refaite (D-062, T4.14) doit placer un réservoir de César sur chaque rive qui a un joueur des terres.
+- **Tests prévus** (M10) :
+  - porte, mur et mission refusés sur la terre de César ; route permise ; partie seule comprise ;
+  - J1 et J3 en guerre : une caravane de J2 vers J4 traverse le pont, celle de J3 vers J1 est interceptée ;
+  - une légion sur le pont ajoute sa puissance à la colère ; à la paix, elle rentre à son fort.
+
 ## 8. Cartes multijoueur
 
 - Le jeu se joue sur **deux cartes préparées** (D-033, D-044, D-047), recalculées à chaque partie par `mp/mapgen`

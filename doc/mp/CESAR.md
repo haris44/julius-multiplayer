@@ -383,6 +383,84 @@ Chaque mois, chaque guerre en cours ajoute à la jauge :
 - Cela freine la course aux armements, et la guerre « trop puissante d'un coup » devient coûteuse avant même d'être
   déclarée.
 
+### 7.6 Le pont de César (T4.8, D-068, *à valider*)
+
+**Le lieu.**
+- Sur la carte à 4, le bras de mer coupe la carte d'ouest en est : deux joueurs sur chaque rive (D-047). La seule
+  route d'une rive à l'autre passe sur le **pont de César**, au milieu de la carte : un pont pour navires d'environ
+  25 cases, à environ 70 cases de chaque cité.
+- Il appartient à César, comme ses routes : il est **indestructible** (D-034, D-047). Les navires passent dessous.
+- Sur la carte pour 2, les deux joueurs vivent sur la même rive. Le pont ne mène qu'à la rive nord, sauvage : il
+  ne compte que pour s'y installer (missions).
+
+**Ce qui passe par le pont.**
+
+| Qui | Par le pont ? | Pourquoi |
+|-----|---------------|----------|
+| Caravanes entre joueurs de rives différentes | **oui**, seul chemin | elles ne marchent que sur les routes. À 4 joueurs, 4 paires sur 6 ; à 3, 2 sur 3 |
+| Commerce avec l'étranger | non | chaque cité a son point d'arrivée sur sa rive ; les navires passent sous le pont |
+| Missionnaire qui s'installe sur l'autre rive | **oui** | il suit les règles de terrain des soldats (D-037) |
+| Armées d'une rive à l'autre | **oui**, seul passage | le jeu n'a pas de transport de troupes par mer |
+| Troupes prêtées aux campagnes de César (§6.3) | non | elles partent de leur cité, par la carte de l'empire |
+| Expédition punitive (§7.4), invasions de l'IA | non | elles arrivent dans chaque cité |
+| Immigrants | non | ils arrivent au point d'arrivée de leur cité |
+| Eau | **non** | un aqueduc ne se pose ni sur l'eau ni sur un pont (règle d'origine) : l'aqueduc de César reste sur sa rive |
+
+**Peut-on le couper, le bloquer, le tenir ? Avec le code d'aujourd'hui :**
+- **le couper** : non, il est indestructible ;
+- **le bloquer en paix** :
+  - des soldats garés sur le pont n'arrêtent personne : les personnages ne se gênent pas, comme dans l'original ;
+  - un mur ne se pose pas sur une route ;
+  - mais une **porte** se pose sur une route. Rien n'interdit aujourd'hui d'en bâtir une sur la route de César, à
+    l'entrée du pont, si l'endroit est dans sa zone (une mission à moins de 20 cases). Quand les portes ne laisseront
+    passer que leur propriétaire (M10.2), elle fermera le pont à tout le monde. *À vérifier par un test* ;
+- **le tenir en guerre** : oui, avec des soldats. M10 leur fait attaquer les soldats, les civils et les caravanes de
+  l'ennemi.
+
+**Que faire, et que fait César si un joueur le ferme ?** Trois options :
+
+| Option | Règle | Pour | Contre |
+|--------|-------|------|--------|
+| **1. Terre de César** (recommandée) | personne ne bâtit ni ne revendique de zone près du pont. En paix, il est ouvert à tous. En guerre, on le tient avec des soldats, et des légions sur la terre de César comptent dans la colère comme si elles étaient chez l'adversaire | simple et lisible ; les joueurs neutres ne sont jamais gênés ; tenir le pont coûte de la colère, comme une invasion | le défenseur garde l'avantage : il attend juste derrière la terre de César, sans colère |
+| **2. Blocus permis, puni** | une porte ou un fort à l'entrée du pont est permis. Fermer le pont aux autres est un **blocus** : lettre de César, puis colère chaque mois, puis « ennemi de Rome » | plus de diplomatie | plus de règles ; le blocus frappe aussi les neutres ; une tête de pont fortifiée fige la carte |
+| **3. Pont destructible** | en guerre, les soldats peuvent casser le pont, comme l'aqueduc (D-034). César le rebâtit en 6 mois, aux frais du fautif (deniers et lauriers), et sa colère monte | un vrai coup de guerre, spectaculaire | coupe toute la province en deux, neutres compris, pendant 6 mois ; il faut savoir reconstruire un pont pour navires |
+
+**Recommandation : l'option 1** (*à valider*, D-068).
+- **Terre de César** : 15 cases autour de chaque entrée du pont (réglage de départ). Aucune zone ne s'y étend. On n'y
+  bâtit rien : ni mission, ni porte, ni mur, ni tour, ni fort. Seules les routes y sont permises. Le pont ne peut
+  donc jamais être fermé par une construction.
+- **En paix**, tout le monde passe. Rien ne ferme le pont.
+- **En guerre**, les deux camps peuvent s'y battre. Les soldats n'attaquent que leurs ennemis (hostilité par paire de
+  joueurs, M10.1) : une guerre entre J1 et J3 ne gêne ni les caravanes ni le missionnaire de J2 et de J4.
+- **Ce qu'en pense César** :
+  - des légions d'un belligérant sur la terre de César comptent dans la **puissance** (§7.2) comme si elles étaient
+    dans le territoire adverse. Tenir le pont 6 mois avec 2 légions coûte autant qu'une invasion de 2 légions :
+    8 de colère par mois ;
+  - une caravane interceptée sur le pont compte comme ailleurs (+2) ;
+  - à la paix (signée ou imposée par l'ultimatum, §7.3), les soldats restés sur sa terre rentrent d'office à leur
+    fort.
+- **Conséquences voulues** :
+  - **le commerce entre rives est le plus exposé** : une guerre entre rives coupe d'abord ces caravanes. C'est la
+    frappe commerciale naturelle du prédateur (§8), et une raison de commercer aussi avec son voisin de rive ;
+  - **l'eau** : couper l'aqueduc d'un joueur de l'autre rive oblige à passer le pont. Le pont protège donc l'eau du
+    joueur des terres contre l'autre rive, pas contre son voisin de rive ;
+  - **s'étendre sur l'autre rive** : une mission au-delà du pont est une enclave. En guerre, l'ennemi peut la
+    couper de sa cité ;
+  - **franchir le pont en force** est difficile : 25 cases à découvert, en colonne, face à des javeliniers qui
+    tirent à 10 cases (D-058). La guerre entre rives est une guerre de siège. C'est voulu : elle doit rester courte
+    et rare (principe 4, §2).
+- **Lien avec la carte à 4 refaite** (D-062, T4.14) : deux joueurs des terres vivent de l'aqueduc de César. Comme un
+  aqueduc ne traverse pas la mer :
+  - s'ils sont sur la même rive, un seul réservoir suffit, et l'autre rive ne peut l'atteindre que par le pont ;
+  - s'ils sont sur deux rives, il faut un réservoir de César sur chaque rive.
+  Question pour Alexandre ci-dessous.
+
+**Questions pour Alexandre** :
+1. Option 1, 2 ou 3 ?
+2. La terre de César (15 cases autour du pont, rien n'y est bâti) vous va-t-elle ?
+3. Faut-il que tenir le pont coûte de la colère, ou seulement les combats qui s'y déroulent ?
+4. Carte à 4 refaite : les deux joueurs des terres sur la même rive, ou un sur chaque rive ?
+
 ## 8. Les deux chemins vers la victoire
 
 **Le bâtisseur courtisan.** Il développe les cinq notes et sert César : deux fêtes par an, un don annuel, des troupes
@@ -425,6 +503,7 @@ Chaque mois, chaque guerre en cours ajoute à la jauge :
 | Se liguer à deux contre un (3 ou 4 joueurs) | permis (c'est de la diplomatie), mais chaque agresseur porte sa part de la colère |
 | Attaquer un joueur dont les légions sont chez César | −40 lauriers, colère pleine : la pire faute du jeu |
 | Frapper avant que le défenseur ait rappelé ses troupes | guerre brutale : −15 lauriers de plus, colère ×1,5 |
+| Fermer le pont de César par une porte ou un fort, pour couper l'autre rive | terre de César : rien ne s'y bâtit ; le tenir en guerre coûte de la colère comme une invasion (§7.6, à valider) |
 | Envoyer un seul chargement à une demande pour toucher sa part | part au prorata : un chargement sur vingt rapporte un vingtième |
 | Une cité file seule vers le score | classement public : les autres la voient venir, peuvent la frapper ou se liguer |
 

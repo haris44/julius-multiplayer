@@ -859,3 +859,26 @@
   d'une fois et demie la taille de la grille, au moins 50 000 : le classique (26 244 cases) garde 50 000. La limite de
   500 pas d'un chemin de figure (`MAX_PATH`) est conservée : le plus long chemin de la carte à 4 fait 253 pas, et
   l'élargir changerait le format des sauvegardes (*à revoir* si une nouvelle carte de T4.14 dépasse 400 pas).
+
+### D-068 — Le pont de César dans la guerre : terre de César, ouvert en paix, tenu en guerre (T4.8)
+- 2026-10-06 · **à valider** (proposition de Claude, demande d'Alexandre : « réfléchir à l'impact du pont de César,
+  seul passage terrestre entre les deux rives à 4 joueurs […] Peut-on le bloquer, le tenir, le couper ? Que fait
+  César si un joueur le ferme ? »). Détail et options : [CESAR.md](CESAR.md) §7.6 ; technique : DESIGN §7.1.
+- **Constat** : à 4 joueurs, caravanes entre rives, missionnaire et armées n'ont que ce pont. Le commerce avec
+  l'étranger, les immigrants, les campagnes et les expéditions de César n'en ont pas besoin. Il ne porte pas d'eau :
+  un aqueduc ne se pose ni sur l'eau ni sur un pont.
+- **Aujourd'hui** : indestructible (D-047). Mais une porte peut se poser sur une route de César, si l'endroit est
+  dans la zone du joueur (lu dans le code, à vérifier). Quand les portes ne laisseront passer que leur propriétaire
+  (M10.2), une porte à l'entrée du pont le fermerait à tous.
+- **Proposé** (option 1 sur 3) :
+  - **terre de César** : 15 cases autour de chaque entrée du pont, où personne n'a de zone ni ne bâtit (ni
+    mission, ni porte, ni mur, ni tour, ni fort) ; seules les routes y sont permises ;
+  - le pont reste **indestructible** et **ouvert à tous en paix** ;
+  - **en guerre**, on le tient avec des soldats, qui n'attaquent que l'ennemi : les joueurs neutres passent ;
+  - des légions sur la terre de César comptent dans la colère comme dans le territoire adverse ; à la paix, elles
+    rentrent d'office à leur fort.
+- **Écartés pour l'instant** : le blocus permis puis puni (option 2 : plus de règles, frappe les neutres) ; le pont
+  destructible et rebâti par César (option 3 : coupe toute la province, reconstruction à écrire).
+- **Lien avec T4.14** : un aqueduc ne traverse pas la mer. Si les deux joueurs des terres (D-062) sont sur deux
+  rives, il faut un réservoir de César sur chacune. *À valider* avec le plan de la carte.
+- Classique : inchangé (rien de tout cela n'existe hors des cartes multijoueur).
