@@ -25,6 +25,7 @@ fi
 cmake --build "$BUILD_DIR" -j"$JOBS"
 
 echo "== Parity tests (autopilot vs original Caesar III saves) =="
-(cd "$BUILD_DIR" && ctest -j"$JOBS" --output-on-failure)
+# one worktree at a time: the network tests use fixed ports
+tools/serial.sh sh -c "cd '$BUILD_DIR' && ctest -j$JOBS --output-on-failure"
 
 echo "== All checks passed =="

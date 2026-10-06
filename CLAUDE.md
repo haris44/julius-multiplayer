@@ -30,7 +30,8 @@ La commande `/suite` enchaîne tout cela, puis les tâches du jalon.
 ## Commandes
 | Besoin | Commande |
 |--------|----------|
-| Compiler et lancer tous les tests | `tools/check.sh` |
+| Compiler et lancer tous les tests | `tools/check.sh` (les tests réseau passent un worktree à la fois) |
+| Lancer un script d'automatisation depuis un worktree | `tools/serial.sh tools/mp-solo-test.sh` (ports fixes, données du jeu partagées) |
 | Un test de parité précis | `cd build && ctest -R sav_caesar1 --output-on-failure` |
 | Comparer deux sauvegardes | `build/test/compare attendu.sav obtenu.sav` |
 | Lancer le vrai jeu sans fenêtre, piloté par un script | `tools/run-automation.sh test/automation/smoke.txt` (captures dans `build/automation/`, à regarder avec `Read`) |
