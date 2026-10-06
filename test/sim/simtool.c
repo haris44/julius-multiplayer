@@ -1897,6 +1897,8 @@ static int building_type_at(int x, int y)
 }
 
 // the food of the plan in the build menu and in the build commands (T4.15, D-065): pig farms inland only, fruit
+static void ignore_command(mp_command *command);
+
 // farms on the coast only. Pig farms and wharves both give meat: the coast fishes, but raises no pigs
 static int farms_follow_plan(int player_id)
 {
@@ -1906,8 +1908,11 @@ static int farms_follow_plan(int player_id)
         printf("  player %d: no place for a farm near the city\n", player_id + 1);
         return 0;
     }
+    // the build menu is the local player's only (D-064): look at it as this player
     player_context_switch(player_id);
+    mp_session_init_network(player_id, ignore_command);
     building_menu_update();
+    mp_session_init_offline();
     int pig_menu = building_menu_is_enabled(BUILDING_PIG_FARM);
     int fruit_menu = building_menu_is_enabled(BUILDING_FRUIT_FARM);
     int wheat_menu = building_menu_is_enabled(BUILDING_WHEAT_FARM) && building_menu_is_enabled(BUILDING_VEGETABLE_FARM);
