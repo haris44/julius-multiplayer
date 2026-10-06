@@ -23,20 +23,34 @@ void trade_prices_reset(void)
     }
 }
 
-int trade_price_buy(resource_type resource)
-{
-    // multiplayer: buying from the empire costs 50% more, trading between players is cheaper (D-043)
-    return game_rules_is_multiplayer() ? prices[resource].buy * 3 / 2 : prices[resource].buy;
-}
+// multiplayer: the portorium, the duty on what enters and leaves the province, in percent of the price of Rome (D-060)
+#define PORTORIUM_PERCENT 50
 
-int trade_price_buy_base(resource_type resource)
+int trade_price_rome(resource_type resource)
 {
     return prices[resource].buy;
 }
 
+int trade_price_portorium_percent(void)
+{
+    return game_rules_is_multiplayer() ? PORTORIUM_PERCENT : 0;
+}
+
+int trade_price_duty(resource_type resource)
+{
+    return prices[resource].buy * trade_price_portorium_percent() / 100;
+}
+
+int trade_price_buy(resource_type resource)
+{
+    // multiplayer: the price of Rome plus the portorium (D-060)
+    return game_rules_is_multiplayer() ? trade_price_rome(resource) + trade_price_duty(resource) : prices[resource].buy;
+}
+
 int trade_price_sell(resource_type resource)
 {
-    return prices[resource].sell;
+    // multiplayer: the price of Rome minus the portorium (D-060)
+    return game_rules_is_multiplayer() ? trade_price_rome(resource) - trade_price_duty(resource) : prices[resource].sell;
 }
 
 int trade_price_change(resource_type resource, int amount)

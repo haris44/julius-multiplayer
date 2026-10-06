@@ -326,7 +326,7 @@ add_test(NAME mp_message_location COMMAND simtool messagelocation brugle-massili
 # The prepared maps need an empire trading by land and by sea (D-041)
 add_test(NAME mp_prepared_map_needs_trade_routes COMMAND simtool notrade brugle-lugdunum.sav)
 
-# Buying from the empire costs 50% more in multiplayer (M8.2, D-043)
+# The empire trades at the price of Rome: buying costs it + 50% of portorium, selling earns it - 50% (T4.12, D-060)
 add_test(NAME mp_empire_import_price COMMAND simtool importprice brugle-massilia-start.sav)
 
 # Prices between players, notice to the buyer (M8.3, D-043)
@@ -335,8 +335,10 @@ add_test(NAME mp_trade_prices COMMAND simtool tradeprices brugle-massilia-start.
 add_test(NAME mp_trade_caravans COMMAND simtool caravans brugle-massilia-start.sav)
 # Trade between players makes and loses nothing, and survives a save while caravans travel (M8.8)
 add_test(NAME mp_trade_conservation COMMAND simtool tradeconservation brugle-massilia-start.sav)
-# The empire is the dearer source (M8.9, D-048): its traders sell nothing a player sells cheaper
-add_test(NAME mp_trade_preference COMMAND simtool tradepreference brugle-massilia-start.sav)
+# The empire always sells, even what a player sells cheaper (T4.3, D-060, replaces D-048)
+add_test(NAME mp_trade_empire_always_sells COMMAND simtool empiresells brugle-massilia-start.sav)
+# Each player trades with the empire on his own: nothing of it leaks to another player (T4.12, D-061)
+add_test(NAME mp_trade_empire_isolation COMMAND simtool tradeisolation brugle-massilia-start.sav)
 add_test(NAME mp_trade_resume COMMAND simtool traderesume brugle-massilia-start.sav)
 # Caesar the judge (M9.1, D-050): laurels and wrath in the checksum, saved and resumed, none in a classic game
 add_test(NAME mp_caesar_state COMMAND simtool caesarstate brugle-massilia-start.sav)

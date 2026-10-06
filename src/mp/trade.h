@@ -6,15 +6,15 @@
 
 /**
  * @file
- * Trade between players (doc/mp/DECISIONS.md D-019, D-043, D-048): every seller sets a price for each resource and
- * each buying player; every buyer says which resources he buys from which player. When a seller changes the price of
- * a resource a player buys from him, that player sees a full-screen alert. The empire only sells a city what no
- * player sells it cheaper.
+ * Trade between players (doc/mp/DECISIONS.md D-019, D-043, D-048, D-060): every seller sets a price for each
+ * resource and each buying player; every buyer says which resources he buys from which player. When a seller changes
+ * the price of a resource a player buys from him, that player sees a full-screen alert. No portorium between players;
+ * the empire always sells, at the price of Rome plus the portorium.
  */
 
 /**
- * Price a seller asks a buyer for a load of the resource: his own price, else the price of the empire before its
- * multiplayer surcharge
+ * Price a seller asks a buyer for a load of the resource: his own price, else the price of Rome (no portorium
+ * between players, D-060)
  */
 int mp_trade_price(int seller, int buyer, int resource);
 
@@ -77,17 +77,12 @@ void mp_trade_propose_route(int other, int propose);
 void mp_trade_dispatch_caravans(void);
 
 /**
- * The player who sells the resource to the current city cheaper than the empire does, over an open route, and from
- * whom it buys it, whether or not he has some to sell: drying up his stock is part of the game (D-048)
+ * The player who sells the resource to the current city cheaper than the empire does (portorium included), over an
+ * open route, and from whom it buys it, whether or not he has some to sell (interface: shown in green). The empire
+ * sells anyway (D-060): this does not stop its traders.
  * @return His id, or -1 when the empire is the cheapest source (always in a classic game)
  */
 int mp_trade_cheaper_player(int resource);
-
-/**
- * Whether the traders of the empire may sell the resource to the current city: not when it buys it from a player
- * who sells it cheaper (D-048), even when he has none left. Always in a classic game.
- */
-int mp_trade_empire_may_sell(int resource);
 
 /**
  * The player the current city buys the resource from at the lowest price over an open route, whether or not the

@@ -21,9 +21,21 @@ void trade_prices_reset(void);
 int trade_price_buy(resource_type resource);
 
 /**
- * Price of the empire before the multiplayer surcharge
+ * Price of Rome (multiplayer, doc/mp/DECISIONS.md D-060): the one price of the empire for the resource, the original
+ * buying price with the price changes of the game. Also the price a player asks another one by default (D-043).
  */
-int trade_price_buy_base(resource_type resource);
+int trade_price_rome(resource_type resource);
+
+/**
+ * Rate of the portorium, in percent of the price of Rome (multiplayer, D-060): 50. Always 0 in a classic game.
+ */
+int trade_price_portorium_percent(void);
+
+/**
+ * Portorium on a load of the resource traded with the empire: added to the price of Rome when buying, taken off when
+ * selling (multiplayer, D-060). Always 0 in a classic game.
+ */
+int trade_price_duty(resource_type resource);
 
 /**
  * Get the sell price for the resource

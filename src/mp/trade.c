@@ -55,7 +55,7 @@ int mp_trade_price(int seller, int buyer, int resource)
         return 0;
     }
     int price = asked_prices[seller][buyer][resource];
-    return price > 0 ? price : trade_price_buy_base(resource);
+    return price > 0 ? price : trade_price_rome(resource);
 }
 
 static void append(uint8_t *text, const uint8_t *part)
@@ -399,7 +399,7 @@ static void deliver(figure *f)
     }
 }
 
-// ---------- the empire as the dearer source ----------
+// ---------- the cheaper source, for the interface ----------
 
 int mp_trade_cheaper_player(int resource)
 {
@@ -408,7 +408,7 @@ int mp_trade_cheaper_player(int resource)
         return -1;
     }
     int cheapest = -1;
-    int best = trade_price_buy(resource); // the empire, with its multiplayer surcharge
+    int best = trade_price_buy(resource); // the empire, portorium included
     for (int seller = 0; seller < player_context_num_players(); seller++) {
         if (seller == buyer || !buys[buyer][seller][resource] || !mp_trade_route_is_open(buyer, seller)) {
             continue;
@@ -420,11 +420,6 @@ int mp_trade_cheaper_player(int resource)
         }
     }
     return cheapest;
-}
-
-int mp_trade_empire_may_sell(int resource)
-{
-    return mp_trade_cheaper_player(resource) < 0;
 }
 
 int mp_trade_cheapest_seller(int resource)
