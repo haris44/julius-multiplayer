@@ -20,6 +20,7 @@
 #include "empire/trade_prices.h"
 #include "game/player_context.h"
 #include "game/resource.h"
+#include "game/rules.h"
 #include "mp/session.h"
 #include "translation/translation.h"
 
@@ -30,6 +31,11 @@
 // state of each city: the prices it asks each buyer (0: the price of the empire), what it buys from each seller
 static int16_t asked_prices[PLAYER_CONTEXT_MAX_PLAYERS][PLAYER_CONTEXT_MAX_PLAYERS][RESOURCE_MAX];
 static uint8_t buys[PLAYER_CONTEXT_MAX_PLAYERS][PLAYER_CONTEXT_MAX_PLAYERS][RESOURCE_MAX];
+
+// state of each city: the stock of each resource at which it stops buying it (0: no limit of its own, T4.5, D-070)
+static int16_t buy_limits[PLAYER_CONTEXT_MAX_PLAYERS][RESOURCE_MAX];
+
+#define BOUNDS_VERSION 1
 
 static int notifications;
 
@@ -151,11 +157,93 @@ int mp_trade_notifications(void)
     return notifications;
 }
 
+// ---------- stock limits (T4.5, D-070) ----------
+
+int mp_trade_buy_limit(int player_id, int resource)
+{
+    if (!game_rules_is_multiplayer() || player_id < 0 || player_id >= PLAYER_CONTEXT_MAX_PLAYERS ||
+        !is_resource(resource)) {
+        return 0;
+    }
+    return buy_limits[player_id][resource];
+}
+
+static int16_t valid_limit(int limit)
+{
+    return (int16_t) (limit < 0 ? 0 : limit > MP_TRADE_MAX_BUY_LIMIT ? MP_TRADE_MAX_BUY_LIMIT : limit);
+}
+
+void mp_trade_change_buy_limit(int resource, int delta)
+{
+    if (!game_rules_is_multiplayer() || !is_resource(resource)) {
+        return;
+    }
+    int16_t *limit = &buy_limits[player_context_current_player][resource];
+    *limit = valid_limit(*limit + delta);
+}
+
+int mp_trade_empire_buy_limit(int resource)
+{
+    return mp_trade_buy_limit(player_context_current_player, resource);
+}
+
+// loads the buyer may still receive before his stock reaches his limit, counting what caravans bring him; -1: no limit
+static int room_under_limit(int buyer, int resource)
+{
+    int limit = mp_trade_buy_limit(buyer, resource);
+    if (limit <= 0) {
+        return -1;
+    }
+    int previous = player_context_current();
+    player_context_switch(buyer);
+    int stock = city_resource_count(resource);
+    player_context_switch(previous);
+    for (int seller = 0; seller < player_context_num_players(); seller++) {
+        stock += mp_trade_loads_on_the_way(seller, buyer, resource);
+    }
+    return stock < limit ? limit - stock : 0;
+}
+
+void mp_trade_reset_bounds(void)
+{
+    memset(buy_limits, 0, sizeof(buy_limits));
+}
+
+void mp_trade_save_bounds(buffer *buf)
+{
+    buffer_write_i32(buf, BOUNDS_VERSION);
+    buffer_write_i32(buf, PLAYER_CONTEXT_MAX_PLAYERS);
+    buffer_write_i32(buf, RESOURCE_MAX);
+    for (int p = 0; p < PLAYER_CONTEXT_MAX_PLAYERS; p++) {
+        for (int r = 0; r < RESOURCE_MAX; r++) {
+            buffer_write_i16(buf, buy_limits[p][r]);
+        }
+    }
+}
+
+void mp_trade_load_bounds(buffer *buf)
+{
+    mp_trade_reset_bounds();
+    int version = buffer_read_i32(buf);
+    int num_players = buffer_read_i32(buf);
+    int num_resources = buffer_read_i32(buf);
+    if (version < 1 || version > BOUNDS_VERSION || num_players != PLAYER_CONTEXT_MAX_PLAYERS ||
+        num_resources != RESOURCE_MAX) {
+        return;
+    }
+    for (int p = 0; p < PLAYER_CONTEXT_MAX_PLAYERS; p++) {
+        for (int r = 0; r < RESOURCE_MAX; r++) {
+            buy_limits[p][r] = valid_limit(buffer_read_i16(buf));
+        }
+    }
+}
+
 void mp_trade_reset_extra_state(void)
 {
     memset(asked_prices, 0, sizeof(asked_prices));
     memset(buys, 0, sizeof(buys));
     memset(proposed, 0, sizeof(proposed));
+    mp_trade_reset_bounds();
     alerts.count = 0;
 }
 
@@ -299,6 +387,11 @@ static void dispatch_to(int buyer)
         int affordable = price > 0 ? budget / price : 0;
         int loads = available < MAX_CARAVAN_LOADS ? available : MAX_CARAVAN_LOADS;
         loads = loads < affordable ? loads : affordable;
+        // no more than his stock limit leaves room for (T4.5)
+        int room = room_under_limit(buyer, resource);
+        if (room >= 0 && loads > room) {
+            loads = room;
+        }
         if (!v.warehouse_id || loads <= 0) {
             continue;
         }
@@ -374,11 +467,18 @@ static void deliver(figure *f)
     int price = mp_trade_price(seller, buyer, resource);
     int loads = f->loads_sold_or_carrying;
     int stored = 0;
+    // the stock of the buyer may have reached his limit on the way: he takes only what it leaves room for (T4.5)
+    int wanted = loads;
+    int limit = mp_trade_buy_limit(buyer, resource);
     player_context_switch(buyer);
-    for (int i = BUILDING_FIRST; i < BUILDING_END && stored < loads; i++) {
+    if (limit > 0) {
+        int room = limit - city_resource_count(resource);
+        wanted = room < 0 ? 0 : room < loads ? room : loads;
+    }
+    for (int i = BUILDING_FIRST; i < BUILDING_END && stored < wanted; i++) {
         building *b = building_get(i);
         if (b->state == BUILDING_STATE_IN_USE && b->type == BUILDING_WAREHOUSE) {
-            while (stored < loads && building_warehouse_add_resource(b, resource)) {
+            while (stored < wanted && building_warehouse_add_resource(b, resource)) {
                 stored++;
             }
         }

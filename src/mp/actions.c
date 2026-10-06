@@ -184,6 +184,11 @@ void mp_action_donate(int amount)
     submit(MP_ACTION_DONATE, amount, 0);
 }
 
+void mp_action_change_buy_limit(int resource, int delta)
+{
+    submit(MP_ACTION_CHANGE_BUY_LIMIT, resource, delta);
+}
+
 // Legion that can receive orders; the user interface made the same checks before
 static formation *legion_of(int formation_id)
 {
@@ -352,6 +357,9 @@ void mp_actions_execute(const mp_command *command)
             break;
         case MP_ACTION_PROPOSE_ROUTE:
             mp_trade_propose_route(arg1, arg2);
+            break;
+        case MP_ACTION_CHANGE_BUY_LIMIT:
+            mp_trade_change_buy_limit(arg1, arg2);
             break;
         case MP_ACTION_SEND_REQUEST:
             scenario_request_dispatch(arg1);

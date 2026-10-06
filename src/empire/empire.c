@@ -10,6 +10,7 @@
 #include "empire/city.h"
 #include "empire/object.h"
 #include "empire/trade_route.h"
+#include "mp/trade.h"
 
 #include <string.h>
 
@@ -178,6 +179,11 @@ int empire_can_import_resource_from_city(int city_id, int resource)
     }
 
     int in_stock = city_resource_count(resource);
+    int limit = mp_trade_empire_buy_limit(resource);
+    if (limit > 0) {
+        // multiplayer: the stock limit the player chose replaces the one of the original (T4.5, D-070)
+        return in_stock < limit;
+    }
     int max_in_stock = 0;
     int finished_good = RESOURCE_NONE;
     switch (resource) {

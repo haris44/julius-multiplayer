@@ -43,6 +43,7 @@ typedef enum {
     MP_ACTION_SEND_GIFT = 28,             /**< size (GIFT_MODEST to GIFT_LAVISH): to Caesar, from the savings */
     MP_ACTION_SET_SALARY = 29,            /**< salary rank (0 to 10, at most the rank in multiplayer) */
     MP_ACTION_DONATE = 30,                /**< amount of denarii, from the savings to the treasury */
+    MP_ACTION_CHANGE_BUY_LIMIT = 31,      /**< resource, delta: stock at which the city stops buying it (T4.5) */
     MP_ACTION_MAX
 } mp_action_type;
 
@@ -76,6 +77,7 @@ void mp_action_send_request(int request_id);
 void mp_action_send_gift(int size);
 void mp_action_set_salary(int rank);
 void mp_action_donate(int amount);
+void mp_action_change_buy_limit(int resource, int delta);
 
 /**
  * Applies an MP_COMMAND_CITY_ACTION command to the simulation

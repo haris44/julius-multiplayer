@@ -16,6 +16,7 @@
 #include "mp/command.h"
 #include "mp/fog.h"
 #include "mp/territory.h"
+#include "mp/trade.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -67,6 +68,7 @@ void mp_savegame_visit(mp_savegame_visitor visitor, void *userdata)
     visit_buffer(visitor, userdata, "owner_grid", map_owner_save_state, GRID_MAX_TILES);
     visit_buffer(visitor, userdata, "mp_endgame", mp_endgame_save_state, 64);
     visit_buffer(visitor, userdata, "mp_caesar", mp_caesar_save_state, 1024);
+    visit_buffer(visitor, userdata, "mp_trade_bounds", mp_trade_save_bounds, 1024);
     visit_buffer(visitor, userdata, "caesar_buildings", building_save_caesar_state, MAX_BUILDINGS * 256);
     visit_buffer(visitor, userdata, "territory_grid", mp_territory_save_state, GRID_MAX_TILES);
     visit_buffer(visitor, userdata, "fog_grid", mp_fog_save_state, GRID_MAX_TILES);
@@ -274,6 +276,14 @@ static int load_pieces(void)
         mp_caesar_load_state(&judge_buf);
     } else {
         mp_caesar_reset();
+    }
+    const piece *bounds = find_piece("mp_trade_bounds", 0, reading.num_pieces);
+    if (bounds) {
+        buffer bounds_buf;
+        buffer_init(&bounds_buf, (uint8_t *) bounds->data, bounds->size);
+        mp_trade_load_bounds(&bounds_buf);
+    } else {
+        mp_trade_reset_bounds(); // a game saved before the stock limits (T4.5): no limit
     }
     const piece *caesar = find_piece("caesar_buildings", 0, reading.num_pieces);
     if (caesar) {

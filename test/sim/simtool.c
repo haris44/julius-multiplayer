@@ -3844,6 +3844,170 @@ static int command_traderesume(const char *file)
     return 0;
 }
 
+// the multiplayer saved game without one of its pieces, as an older version wrote it
+static int remove_saved_piece(const char *mpsav, const char *name)
+{
+    FILE *fp = fopen(mpsav, "rb");
+    if (!fp) {
+        return 0;
+    }
+    static uint8_t data[32 * 1024 * 1024];
+    int size = (int) fread(data, 1, sizeof(data), fp);
+    fclose(fp);
+    int length = (int) strlen(name);
+    int index = 8; // magic and version
+    while (index + 5 <= size) {
+        int name_length = data[index];
+        int piece_size = data[index + 1 + name_length] | data[index + 2 + name_length] << 8 |
+            data[index + 3 + name_length] << 16 | data[index + 4 + name_length] << 24;
+        int end = index + 5 + name_length + piece_size;
+        if (name_length == length && memcmp(&data[index + 1], name, length) == 0) {
+            memmove(&data[index], &data[end], size - end);
+            size -= end - index;
+            fp = fopen(mpsav, "wb");
+            int ok = fp && fwrite(data, 1, size, fp) == (size_t) size;
+            if (fp) {
+                fclose(fp);
+            }
+            return ok;
+        }
+        index = end;
+    }
+    return 0;
+}
+
+// the bounds of the trade bring the marble where they say: player 1 stops buying from player 2 at 5 loads, then, with
+// no limit, gets what player 2 sells beyond the 8 loads he keeps
+static int play_trade_bounds(int show)
+{
+    int failures = 0;
+#define CHECK(condition, text) do { int ok_ = (condition); if (show) printf("%-62s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
+    city_action(0, MP_ACTION_CHANGE_BUY_LIMIT, RESOURCE_MARBLE, 5, 0);
+    CHECK(mp_trade_buy_limit(0, RESOURCE_MARBLE) == 5, "player 1 buys marble up to 5 loads");
+    run_trace(100 * 50, 50, 0, 0);
+    if (show) {
+        printf("after 100 days: player 1 has %d marble, player 2 has %d\n", marble_of(0), marble_of(1));
+    }
+    CHECK(marble_of(0) == 5 && marble_of(1) == 11 && in_transit(RESOURCE_MARBLE) == 0,
+        "he stops buying from player 2 at 5 loads");
+
+    city_action(0, MP_ACTION_CHANGE_BUY_LIMIT, RESOURCE_MARBLE, -5, 0);
+    city_action(1, MP_ACTION_CHANGE_EXPORT_OVER, RESOURCE_MARBLE, 8, 0);
+    CHECK(mp_trade_buy_limit(0, RESOURCE_MARBLE) == 0, "no limit any more");
+    run_trace(100 * 50, 50, 0, 0);
+    if (show) {
+        printf("100 days later: player 1 has %d marble, player 2 has %d\n", marble_of(0), marble_of(1));
+    }
+    CHECK(marble_of(0) == 8 && marble_of(1) == 8 && in_transit(RESOURCE_MARBLE) == 0,
+        "player 2 sells only beyond the 8 loads he keeps");
+#undef CHECK
+    return failures;
+}
+
+// stock minimum and maximum of the trade (T4.5, D-070): a buyer stops buying from a player and from the empire when
+// his stock reaches his limit, a seller keeps his threshold for himself; the bounds are commands, in the checksum,
+// saved and loaded; an older game loads with no limit; a classic game has none
+static int command_tradebounds(const char *file)
+{
+    if (!start_trade_game(file)) {
+        return 2;
+    }
+    int failures = 0;
+#define CHECK(condition, text) do { int ok_ = (condition); printf("%-62s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
+    CHECK(mp_trade_buy_limit(0, RESOURCE_MARBLE) == 0 && mp_trade_buy_limit(1, RESOURCE_MARBLE) == 0,
+        "a new game: no limit");
+    setup_trade(16, 0, 1);
+    const char *start = "tradebounds.mpsav";
+    if (!mp_savegame_write(start)) {
+        printf("Unable to save\n");
+        return 2;
+    }
+    uint64_t before = mp_checksum_state();
+    city_action(0, MP_ACTION_CHANGE_BUY_LIMIT, RESOURCE_MARBLE, 1, 0);
+    CHECK(mp_checksum_state() != before, "the limit is in the checksum");
+    city_action(0, MP_ACTION_CHANGE_BUY_LIMIT, RESOURCE_MARBLE, -1, 0);
+    CHECK(mp_checksum_state() == before, "(back to no limit)");
+    city_action(0, MP_ACTION_CHANGE_BUY_LIMIT, RESOURCE_MARBLE, -1, 0);
+    city_action(0, MP_ACTION_CHANGE_BUY_LIMIT, 0, 5, 0);
+    city_action(0, MP_ACTION_CHANGE_BUY_LIMIT, RESOURCE_MAX, 5, 0);
+    CHECK(mp_checksum_state() == before && mp_trade_buy_limit(0, RESOURCE_MARBLE) == 0,
+        "no limit below zero, nor for what is not a resource");
+
+    failures += play_trade_bounds(1);
+    uint64_t first = mp_checksum_state();
+    // the second machine plays the same commands from the same start
+    if (!mp_savegame_read(start)) {
+        printf("Unable to read the saved game\n");
+        return 2;
+    }
+    CHECK(mp_trade_buy_limit(0, RESOURCE_MARBLE) == 0 && marble_of(1) == 16, "the start is back");
+    play_trade_bounds(0);
+    CHECK(mp_checksum_state() == first, "two machines playing the same commands end with the same checksum");
+
+    // the empire: player 1 imports marble from a city of the empire
+    int city_id = empire_city_selling(RESOURCE_MARBLE);
+    CHECK(city_id >= 0, "a city of the empire sells marble");
+    if (city_id < 0) {
+        return 1;
+    }
+    city_action(0, MP_ACTION_OPEN_TRADE_ROUTE, city_id, 0, 0);
+    for (int i = 0; i < 3 && city_resource_trade_status(RESOURCE_MARBLE) != TRADE_STATUS_IMPORT; i++) {
+        city_action(0, MP_ACTION_CYCLE_TRADE_STATUS, RESOURCE_MARBLE, 0, 0);
+    }
+    player_context_switch(0);
+    printf("player 1 has %d loads of marble, and imports it\n", city_resource_count(RESOURCE_MARBLE));
+    CHECK(city_resource_count(RESOURCE_MARBLE) == 8 && empire_can_import_resource_from_city(city_id, RESOURCE_MARBLE),
+        "no limit: the empire sells, under the 10 loads of the original");
+    city_action(0, MP_ACTION_CHANGE_BUY_LIMIT, RESOURCE_MARBLE, 8, 0);
+    CHECK(!empire_can_import_resource_from_city(city_id, RESOURCE_MARBLE),
+        "at his limit of 8 loads, he buys nothing from the empire");
+    city_action(0, MP_ACTION_CHANGE_BUY_LIMIT, RESOURCE_MARBLE, 12, 0);
+    int x0, y0;
+    mp_mapgen_city_center(0, &x0, &y0);
+    building *store = building_get(map_building_at(map_grid_offset(x0 - 6, y0 + 1)));
+    for (int i = 0; i < 4; i++) {
+        building_warehouse_add_resource(store, RESOURCE_MARBLE);
+    }
+    CHECK(city_resource_count(RESOURCE_MARBLE) == 12 && empire_can_import_resource_from_city(city_id, RESOURCE_MARBLE),
+        "his limit of 20 replaces the 10 loads of the original");
+    for (int i = 0; i < 8; i++) {
+        building_warehouse_add_resource(store, RESOURCE_MARBLE);
+    }
+    CHECK(city_resource_count(RESOURCE_MARBLE) == 20 && !empire_can_import_resource_from_city(city_id, RESOURCE_MARBLE),
+        "at 20 loads, he buys nothing from the empire");
+
+    // saved and loaded
+    const char *saved = "tradebounds-saved.mpsav";
+    if (!mp_savegame_write(saved) || !mp_savegame_read(saved)) {
+        printf("Unable to write and read the game\n");
+        return 2;
+    }
+    player_context_switch(1);
+    int kept = city_resource_export_over(RESOURCE_MARBLE);
+    player_context_switch(0);
+    CHECK(mp_trade_buy_limit(0, RESOURCE_MARBLE) == 20 && kept == 8, "the bounds are saved and loaded");
+
+    // a game saved before the bounds: it loads, with no limit
+    CHECK(remove_saved_piece(saved, "mp_trade_bounds"), "(the bounds taken out of the saved game)");
+    CHECK(mp_savegame_read(saved) && mp_trade_buy_limit(0, RESOURCE_MARBLE) == 0 && marble_of(0) == 20,
+        "an older saved game loads, with no limit");
+    remove(saved);
+    remove(start);
+
+    // a classic game: no limit, the command does nothing
+    player_context_switch(0);
+    player_context_set_num_players(1);
+    if (!load(file)) {
+        return 2;
+    }
+    city_action(0, MP_ACTION_CHANGE_BUY_LIMIT, RESOURCE_MARBLE, 5, 0);
+    CHECK(mp_trade_buy_limit(0, RESOURCE_MARBLE) == 0, "a classic game: no limit");
+#undef CHECK
+    printf("%s\n", failures ? "DIFFERENT: the bounds of the trade are not as designed" :
+        "Identical: the bounds of the trade are as designed");
+    return failures ? 1 : 0;
+}
+
 // Caesar the judge (M9.1, CESAR.md): the laurels of every city and the common wrath of Caesar are in the checksum, a
 // saved game brings them back and goes on the same tick by tick, and a classic game has none
 static int command_caesarstate(const char *file)
@@ -4813,6 +4977,8 @@ int main(int argc, char **argv)
         result = command_tradeconservation(file);
     } else if (strcmp(command, "traderesume") == 0) {
         result = command_traderesume(file);
+    } else if (strcmp(command, "tradebounds") == 0) {
+        result = command_tradebounds(file);
     } else if (strcmp(command, "caesarstate") == 0) {
         result = command_caesarstate(file);
     } else if (strcmp(command, "caesarlaurels") == 0) {
