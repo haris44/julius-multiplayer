@@ -120,6 +120,38 @@ void mp_caesar_add_wrath(int player_id, int tenths);
 int mp_caesar_belligerence(int player_id);
 
 /**
+ * Gifts to Caesar (CESAR §6.1): one gift counts every MP_CAESAR_GIFT_PERIOD months, whatever its size. The others
+ * are paid all the same and bring nothing.
+ */
+
+/**
+ * Tenths of laurels a gift of this size (GIFT_MODEST to GIFT_LAVISH) brings when it counts, 0 for another size
+ */
+int mp_caesar_gift_laurels(int size);
+
+/**
+ * Months before the next gift of a city counts (0: the next one counts)
+ */
+int mp_caesar_gift_cooldown(int player_id);
+
+/**
+ * A city has sent a gift of this size, already paid: gives the laurels if one counts now, and starts the wait
+ * @return Tenths of laurels given
+ */
+int mp_caesar_gift_sent(int player_id, int size);
+
+/**
+ * Highest salary rank of a city: its rank (CESAR §6.1)
+ */
+int mp_caesar_salary_rank_limit(int player_id);
+
+/**
+ * Monthly, before the salary is paid: brings the salary of the current city down to its rank, if it is above, and
+ * to the amount of the table for the rank it has
+ */
+void mp_caesar_limit_salary(void);
+
+/**
  * Letters of Caesar waiting for the local player
  */
 int mp_caesar_num_letters(void);

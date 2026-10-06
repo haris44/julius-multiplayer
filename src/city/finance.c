@@ -7,6 +7,7 @@
 #include "game/difficulty.h"
 #include "game/rules.h"
 #include "game/time.h"
+#include "mp/caesar.h"
 
 #define MAX_HOUSE_LEVELS 20
 
@@ -270,9 +271,8 @@ void city_finance_handle_month_change(void)
     collect_monthly_taxes();
     pay_monthly_wages();
     pay_monthly_interest();
-    if (!game_rules_is_multiplayer()) {
-        pay_monthly_salary(); // the governor is paid by Caesar (D-026)
-    }
+    mp_caesar_limit_salary(); // multiplayer: the salary cannot be above the rank (D-067)
+    pay_monthly_salary();
 }
 
 static void reset_taxes(void)

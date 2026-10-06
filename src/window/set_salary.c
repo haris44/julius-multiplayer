@@ -13,6 +13,10 @@
 #include "graphics/text.h"
 #include "graphics/window.h"
 #include "input/input.h"
+#include "mp/actions.h"
+#include "mp/caesar.h"
+#include "mp/session.h"
+#include "translation/translation.h"
 #include "window/advisors.h"
 
 #define MIN_DIALOG_WIDTH 384
@@ -36,6 +40,17 @@ static generic_button buttons[] = {
 };
 
 static int focus_button_id;
+
+// multiplayer: the rank gives the highest salary, a hard limit instead of the penalty of the original (CESAR §6.1)
+static int is_multiplayer(void)
+{
+    return mp_caesar_is_active();
+}
+
+static int rank_is_too_high(int rank)
+{
+    return is_multiplayer() && rank > mp_caesar_salary_rank_limit(mp_session_local_player_id());
+}
 
 static int get_dialog_width(void)
 {
@@ -62,11 +77,16 @@ static void draw_foreground(void)
 
     for (int rank = 0; rank < 11; rank++) {
         font_t font = focus_button_id == rank + 2 ? FONT_NORMAL_RED : FONT_NORMAL_WHITE;
+        if (rank_is_too_high(rank)) {
+            font = FONT_NORMAL_BLACK; // out of reach, in dark letters
+        }
         int width = lang_text_draw(52, rank + 4, 176, 90 + 20 * rank, font);
         text_draw_money(city_emperor_salary_for_rank(rank), 176 + width, 90 + 20 * rank, font);
     }
 
-    if (!city_victory_has_won()) {
+    if (is_multiplayer()) {
+        text_draw_multiline(translation_for(TR_MP_SALARY_LIMIT), 152, 336, 336, FONT_NORMAL_BLACK, 0);
+    } else if (!city_victory_has_won()) {
         if (city_emperor_salary_rank() <= city_emperor_rank()) {
             lang_text_draw_multiline(52, 76, 152, 336, 336, FONT_NORMAL_BLACK);
         } else {
@@ -98,7 +118,12 @@ static void button_cancel(int param1, int param2)
 
 static void button_set_salary(int rank, int param2)
 {
-    if (!city_victory_has_won()) {
+    if (is_multiplayer()) {
+        if (!rank_is_too_high(rank)) {
+            mp_action_set_salary(rank);
+            window_advisors_show();
+        }
+    } else if (!city_victory_has_won()) {
         city_emperor_set_salary_rank(rank);
         city_finance_update_salary();
         city_ratings_update_favor_explanation();

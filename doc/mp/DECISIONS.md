@@ -913,6 +913,30 @@
     contrôle), changé par les commandes déjà en place (route, prix) : le déterminisme est gardé.
 - Classique : inchangé (prix d'achat et de vente de l'original, pas de portorium).
 
+### D-067 — Une mission coûte 30 chargements de marbre ; les cadeaux à César passent par des commandes (T4.7, T4.2)
+- 2026-10-07 · **adoptée** (Alexandre, essai du soir : T4.7 et T4.2) · précise D-037 et D-057
+- **Mission supplémentaire : 30 chargements de marbre** (4 auparavant), pour éviter les extensions trop sauvages. La
+  première mission reste gratuite tant que le joueur n'a pas de terre.
+- **Cadeaux, salaire et dons à César : trois commandes réseau** (`MP_ACTION_SEND_GIFT`, `MP_ACTION_SET_SALARY`,
+  `MP_ACTION_DONATE`), appliquées dans la cité de l'expéditeur. Les boutons du conseiller impérial reviennent en
+  multijoueur (ils étaient cachés, D-057). Dans les fenêtres, le choix en cours (taille du cadeau, montant du don)
+  est un état de la fenêtre et n'écrit rien dans la simulation, pour ne pas désynchroniser les machines. Classique :
+  les mêmes appels qu'avant.
+- **Cadeau** : les trois tailles de l'original, payées sur l'épargne personnelle (épargne / 8 + 20, / 4 + 50,
+  / 2 + 100). Il rapporte 4, 7 ou 10 lauriers de cadeaux (`MP_CAESAR_GIFT_LAURELS`, CESAR §6).
+  **Un seul cadeau compte tous les 12 mois** (CESAR §6.1) : un cadeau envoyé pendant l'attente est payé et ne
+  rapporte rien, la fenêtre dit dans combien de mois le prochain comptera. L'attente est un compteur de mois par
+  joueur dans la pièce `mp_caesar` (`STATE_VERSION` 3 ; les anciennes parties se chargent, sans attente).
+  La faveur d'origine ne sert plus (D-026).
+- **Salaire : il est de nouveau versé en multijoueur** (ce que D-026 supprimait), sinon l'épargne reste vide et les
+  cadeaux sont impossibles. Chaque mois, il est prélevé sur le trésor et versé à l'épargne. Le salaire ne peut pas
+  dépasser le **rang** (CESAR §6.1) : la commande refuse un rang trop haut, et le salaire retombe au rang au mois
+  suivant si le joueur perd des lauriers. Les rangs de l'original donnent 0, 2, 5, 8, 12, 20, 30, 40, 60, 80, 100 Dn.
+- **Don à la cité** : de l'épargne vers le trésor, plafonné à l'épargne, sans lauriers.
+- *À valider* : le rang 0 au départ donne un salaire de 0, donc **pas d'épargne avant le rang 1** (100 lauriers pour
+  un score de 1 000) ; la partie commence donc sans cadeaux possibles, sauf épargne de départ de la carte. Faut-il
+  une épargne de départ ou un salaire plus tôt ?
+
 ### D-068 — Le pont de César dans la guerre : terre de César, ouvert en paix, tenu en guerre (T4.8)
 - 2026-10-06 · **à valider** (proposition de Claude, demande d'Alexandre : « réfléchir à l'impact du pont de César,
   seul passage terrestre entre les deux rives à 4 joueurs […] Peut-on le bloquer, le tenir, le couper ? Que fait

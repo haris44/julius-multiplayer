@@ -40,6 +40,9 @@ typedef enum {
     MP_ACTION_SET_SELL_PRICE = 25,        /**< buyer, resource, price */
     MP_ACTION_SET_BUYS_FROM = 26,         /**< seller, resource, 1 to buy or 0 */
     MP_ACTION_PROPOSE_ROUTE = 27,         /**< other player, 1 to propose or 0 to withdraw */
+    MP_ACTION_SEND_GIFT = 28,             /**< size (GIFT_MODEST to GIFT_LAVISH): to Caesar, from the savings */
+    MP_ACTION_SET_SALARY = 29,            /**< salary rank (0 to 10, at most the rank in multiplayer) */
+    MP_ACTION_DONATE = 30,                /**< amount of denarii, from the savings to the treasury */
     MP_ACTION_MAX
 } mp_action_type;
 
@@ -70,6 +73,9 @@ void mp_action_legion_toggle_empire_service(int formation_id);
 void mp_action_dispatch_distant_battle(void);
 void mp_action_clear_empire_service_legions(void);
 void mp_action_send_request(int request_id);
+void mp_action_send_gift(int size);
+void mp_action_set_salary(int rank);
+void mp_action_donate(int amount);
 
 /**
  * Applies an MP_COMMAND_CITY_ACTION command to the simulation

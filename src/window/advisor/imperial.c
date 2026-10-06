@@ -22,6 +22,7 @@
 #include "window/popup_dialog.h"
 #include "window/set_salary.h"
 #include "mp/actions.h"
+#include "mp/caesar.h"
 #include "mp/session.h"
 
 #define ADVISOR_HEIGHT 27
@@ -92,8 +93,8 @@ static void draw_request(int index, const scenario_request *request)
 
 static int draw_background(void)
 {
-    if (!mp_session_is_networked()) {
-        city_emperor_calculate_gift_costs();
+    if (!mp_session_is_networked() && !window_mp_imperial_is_active()) {
+        city_emperor_calculate_gift_costs(); // multiplayer: the gift command computes it (T4.2)
     }
     if (window_mp_imperial_is_active()) {
         // multiplayer: laurels, notes and ranking instead of the favor and the requests (doc/mp/CESAR.md §11)
@@ -184,21 +185,28 @@ static void draw_foreground(void)
 
     int width = lang_text_draw(52, 1, 72, 372, FONT_NORMAL_WHITE);
     text_draw_money(city_emperor_personal_savings(), 80 + width, 372, FONT_NORMAL_WHITE);
-    if (window_mp_imperial_is_active()) {
-        // gifts, salary and donations change the city directly: not in multiplayer until they are commands (M9.3)
-        return;
-    }
 
     button_border_draw(320, 367, 250, 20, focus_button_id == 1);
     lang_text_draw_centered(52, 2, 320, 372, 250, FONT_NORMAL_WHITE);
 
     button_border_draw(70, 393, 500, 20, focus_button_id == 2);
-    width = lang_text_draw(52, city_emperor_salary_rank() + 4, 120, 398, FONT_NORMAL_WHITE);
-    width += text_draw_number(city_emperor_salary_amount(), '@', " ", 120 + width, 398, FONT_NORMAL_WHITE);
+    int salary_rank = city_emperor_salary_rank();
+    int salary_amount = city_emperor_salary_amount();
+    if (window_mp_imperial_is_active() && salary_rank > mp_caesar_salary_rank_limit(mp_session_local_player_id())) {
+        // the rank limits the salary, applied at the month change: show what will be paid
+        salary_rank = mp_caesar_salary_rank_limit(mp_session_local_player_id());
+        salary_amount = city_emperor_salary_for_rank(salary_rank);
+    }
+    width = lang_text_draw(52, salary_rank + 4, 120, 398, FONT_NORMAL_WHITE);
+    width += text_draw_number(salary_amount, '@', " ", 120 + width, 398, FONT_NORMAL_WHITE);
     lang_text_draw(52, 3, 120 + width, 398, FONT_NORMAL_WHITE);
 
     button_border_draw(320, 341, 250, 20, focus_button_id == 3);
     lang_text_draw_centered(52, 49, 320, 346, 250, FONT_NORMAL_WHITE);
+
+    if (window_mp_imperial_is_active()) {
+        return; // no requests of Caesar in multiplayer (D-026)
+    }
 
     // Request buttons
     if (get_request_status(0)) {
@@ -220,11 +228,9 @@ static void draw_foreground(void)
 
 static int handle_mouse(const mouse *m)
 {
-    if (window_mp_imperial_is_active()) {
-        focus_button_id = 0;
-        return 0;
-    }
-    return generic_buttons_handle_mouse(m, 0, 0, imperial_buttons, 8, &focus_button_id);
+    // multiplayer: gift, salary and donation only (3 buttons), no requests of Caesar
+    return generic_buttons_handle_mouse(m, 0, 0, imperial_buttons, window_mp_imperial_is_active() ? 3 : 8,
+        &focus_button_id);
 }
 
 static void button_donate_to_city(int param1, int param2)

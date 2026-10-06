@@ -1,0 +1,36 @@
+# Gifts, salary and donations to Caesar in multiplayer (T4.2, D-067): the imperial advisor with its three buttons,
+# then each window. Run from the repository root, alone among the worktrees:
+#   tools/serial.sh tools/run-automation.sh test/automation/caesar-gifts.txt 180
+wait 10
+load test/data/valentia57.sav
+rules mp
+wait 5
+ticks 12500
+wait 3
+rclick 400 300
+wait 3
+key Return
+wait 3
+key 3
+wait 5
+screenshot build/automation/gifts-advisor.png
+# gift window
+click 525 411
+wait 5
+screenshot build/automation/gifts-gift.png
+key Escape
+wait 5
+# donation window
+click 525 437
+wait 5
+screenshot build/automation/gifts-donation.png
+key Escape
+wait 5
+# salary window
+click 400 463
+wait 5
+screenshot build/automation/gifts-salary.png
+key Escape
+wait 5
+screenshot build/automation/gifts-back.png
+quit

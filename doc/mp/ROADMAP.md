@@ -312,8 +312,13 @@ le note « à valider ».
   - l'estime devient le niveau de César envers la cité, et les lauriers s'accumulent chaque mois selon ce niveau ;
   - ou le pilier « Estime » montre les lauriers rapportés au score.
   Les autres piliers (culture, prospérité, paix) sont-ils gardés ?
-- [ ] **T4.2** **Cadeaux à César** : ils comptent dans son estime (avec T4.1). Ils doivent passer par des
+- [x] **T4.2** **Cadeaux à César** : ils comptent dans son estime (avec T4.1). Ils doivent passer par des
   commandes réseau (aujourd'hui, les boutons sont cachés en multijoueur, D-057).
+  *Fait* (D-067) : cadeau, salaire et don sont des commandes réseau (`MP_ACTION_SEND_GIFT`, `SET_SALARY`,
+  `DONATE`), les trois boutons du conseiller impérial reviennent en multijoueur. Un cadeau rapporte 4, 7 ou 10
+  lauriers, un seul compte tous les 12 mois (état sauvegardé, `mp_caesar` version 3) ; le salaire est limité par le
+  rang et de nouveau versé. Test `mp_caesar_gifts` : épargne et lauriers de l'expéditeur seul, deux machines au même
+  résultat (somme de contrôle), ancienne sauvegarde chargée, classique sans lauriers.
 - [ ] **T4.3** **L'empire vend toujours** : on peut toujours acheter à l'étranger, ce qui revoit D-048. En
   revanche, l'empire **augmente fortement ses prix quand un joueur arrête le commerce**.
   **?** Arrêter quel commerce :
@@ -340,9 +345,12 @@ le note « à valider ».
   fiche par ressource (prix par joueur, bornes de T4.5). Statistiques proposées d'abord : lauriers et notes, échanges
   par partenaire, prix. Données à enregistrer chaque mois (environ 450 octets par cité), la même pièce que la
   télémétrie de M9.9. Sept questions pour Alexandre (§10). Pas de code, donc pas de test.
-- [ ] **T4.7** **Une mission supplémentaire coûte 30 chargements de marbre** (4 aujourd'hui), pour éviter les
+- [x] **T4.7** **Une mission supplémentaire coûte 30 chargements de marbre** (4 aujourd'hui), pour éviter les
   extensions trop sauvages. Pas de changement pour la première, gratuite tant qu'on n'a pas de terre.
 - [~] **T4.8** Plan de la guerre : réfléchir à l'**impact du pont de César**, seul passage terrestre entre les deux
+  *Fait* : `MP_MISSION_MARBLE_LOADS` passe à 30 (D-067). La première mission reste gratuite. Textes du salon
+  (message de construction), README et LISEZMOI mis à jour. Test `mp_missions` : 29 chargements ne suffisent pas,
+  30 sont prélevés.
   rives à 4 joueurs, donc un endroit très stratégique. Peut-on le bloquer, le tenir, le couper ? Que fait César
   si un joueur le ferme ? Va dans CESAR.md §7 et DESIGN §7 avant M10.
 - [x] **T4.9** **Bug : l'aqueduc de César ne donne pas d'eau à J2, J3, J4** (essai du soir). *Diagnostic* : l'eau de

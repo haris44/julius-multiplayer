@@ -1,6 +1,7 @@
 #include "caesar.h"
 
 #include "building/building.h"
+#include "city/emperor.h"
 #include "city/finance.h"
 #include "city/population.h"
 #include "city/ratings.h"
@@ -12,7 +13,7 @@
 
 #include <string.h>
 
-#define STATE_VERSION 2 // 2: notes, remainders of the laurels of the city, ranks
+#define STATE_VERSION 3 // 2: notes, remainders of the laurels of the city, ranks; 3: waiting time of the gifts
 #define MAX_LETTERS 8
 #define HIGHEST_HOUSE_LEVEL 19
 
@@ -31,6 +32,7 @@ static struct {
     int notes[PLAYER_CONTEXT_MAX_PLAYERS][MP_NOTE_MAX];
     int remainders[PLAYER_CONTEXT_MAX_PLAYERS][MP_NOTE_MAX]; // hundredths of a tenth not yet given
     int ranks[PLAYER_CONTEXT_MAX_PLAYERS];
+    int gift_cooldown[PLAYER_CONTEXT_MAX_PLAYERS]; // months before the next gift counts
 } data;
 
 // display state of this computer, never saved
@@ -86,6 +88,46 @@ int mp_caesar_city_laurels(int player_id)
 int mp_caesar_note(int player_id, mp_note note)
 {
     return is_player(player_id) && note >= 0 && note < MP_NOTE_MAX ? data.notes[player_id][note] : 0;
+}
+
+// ---------- gifts and salary (CESAR §6.1) ----------
+
+int mp_caesar_gift_laurels(int size)
+{
+    static const int GIFT_LAURELS[] = MP_CAESAR_GIFT_LAURELS;
+    return size >= GIFT_MODEST && size <= GIFT_LAVISH ? GIFT_LAURELS[size] : 0;
+}
+
+int mp_caesar_gift_cooldown(int player_id)
+{
+    return is_player(player_id) ? data.gift_cooldown[player_id] : 0;
+}
+
+int mp_caesar_gift_sent(int player_id, int size)
+{
+    int tenths = mp_caesar_gift_laurels(size);
+    if (!mp_caesar_is_active() || !is_player(player_id) || !tenths || data.gift_cooldown[player_id] > 0) {
+        return 0;
+    }
+    data.laurels[player_id][MP_LAURELS_GIFTS] += tenths;
+    data.gift_cooldown[player_id] = MP_CAESAR_GIFT_PERIOD;
+    return tenths;
+}
+
+int mp_caesar_salary_rank_limit(int player_id)
+{
+    return mp_caesar_rank(player_id);
+}
+
+void mp_caesar_limit_salary(void)
+{
+    if (!mp_caesar_is_active()) {
+        return;
+    }
+    // the amount is always the one of the table for the rank chosen, never above the rank of the city
+    int rank = city_emperor_salary_rank();
+    int limit = mp_caesar_salary_rank_limit(player_context_current_player);
+    city_emperor_set_salary_rank(rank > limit ? limit : rank);
 }
 
 // ---------- the notes of the current city (CESAR §5) ----------
@@ -198,6 +240,9 @@ void mp_caesar_update_city_month(void)
         return;
     }
     int p = player_context_current_player;
+    if (data.gift_cooldown[p] > 0) {
+        data.gift_cooldown[p]--;
+    }
     compute_notes(data.notes[p]);
     for (int note = 0; note < MP_NOTE_MAX; note++) {
         // tenths of a laurel: weight * note / 100, the remainder kept for the next months
@@ -311,6 +356,7 @@ void mp_caesar_save_state(buffer *buf)
     write_table(buf, &data.notes[0][0], PLAYER_CONTEXT_MAX_PLAYERS * MP_NOTE_MAX);
     write_table(buf, &data.remainders[0][0], PLAYER_CONTEXT_MAX_PLAYERS * MP_NOTE_MAX);
     write_table(buf, data.ranks, PLAYER_CONTEXT_MAX_PLAYERS);
+    write_table(buf, data.gift_cooldown, PLAYER_CONTEXT_MAX_PLAYERS);
 }
 
 void mp_caesar_load_state(buffer *buf)
@@ -331,6 +377,9 @@ void mp_caesar_load_state(buffer *buf)
         read_table(buf, &data.notes[0][0], PLAYER_CONTEXT_MAX_PLAYERS * MP_NOTE_MAX);
         read_table(buf, &data.remainders[0][0], PLAYER_CONTEXT_MAX_PLAYERS * MP_NOTE_MAX);
         read_table(buf, data.ranks, PLAYER_CONTEXT_MAX_PLAYERS);
+        if (version >= 3) {
+            read_table(buf, data.gift_cooldown, PLAYER_CONTEXT_MAX_PLAYERS);
+        }
     } else {
         for (int p = 0; p < PLAYER_CONTEXT_MAX_PLAYERS; p++) {
             data.ranks[p] = rank_of_laurels(sum_laurels(p, 0, MP_LAURELS_MAX_SOURCE));

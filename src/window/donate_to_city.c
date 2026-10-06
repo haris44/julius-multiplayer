@@ -12,6 +12,8 @@
 #include "graphics/text.h"
 #include "graphics/window.h"
 #include "input/input.h"
+#include "mp/actions.h"
+#include "mp/caesar.h"
 #include "window/advisors.h"
 
 static void button_set_amount(int amount_id, int param2);
@@ -37,7 +39,27 @@ static arrow_button arrow_buttons[] = {
 static struct {
     int focus_button_id;
     int focus_arrow_button_id;
+    int mp_amount; // multiplayer: the amount is the state of the window, never written in the simulation
 } data;
+
+static int is_multiplayer(void)
+{
+    return mp_caesar_is_active();
+}
+
+static int donate_amount(void)
+{
+    return is_multiplayer() ? data.mp_amount : city_emperor_donate_amount();
+}
+
+static void set_donate_amount(int amount)
+{
+    if (is_multiplayer()) {
+        data.mp_amount = calc_bound(amount, 0, city_emperor_personal_savings());
+    } else {
+        city_emperor_set_donation_amount(amount);
+    }
+}
 
 static void draw_background(void)
 {
@@ -66,7 +88,7 @@ static void draw_background(void)
     arrow_buttons[0].x_offset = button_start;
     arrow_buttons[1].x_offset = arrow_buttons[0].x_offset + arrow_buttons[0].size;
 
-    text_draw_number(city_emperor_donate_amount(), '@', " ", button_start + 76, 248, FONT_NORMAL_WHITE);
+    text_draw_number(donate_amount(), '@', " ", button_start + 76, 248, FONT_NORMAL_WHITE);
 
     lang_text_draw_centered(13, 4, 336, 288, 160, FONT_NORMAL_BLACK);
     lang_text_draw_centered(52, 18, 144, 288, 160, FONT_NORMAL_BLACK);
@@ -118,13 +140,17 @@ static void button_set_amount(int amount_id, int param2)
         case 4: amount = 1000000; break;
         default: return;
     }
-    city_emperor_set_donation_amount(amount);
+    set_donate_amount(amount);
     window_invalidate();
 }
 
 static void button_donate(int param1, int param2)
 {
-    city_emperor_donate_savings_to_city();
+    if (is_multiplayer()) {
+        mp_action_donate(data.mp_amount);
+    } else {
+        city_emperor_donate_savings_to_city();
+    }
     window_advisors_show();
 }
 
@@ -135,7 +161,7 @@ static void button_cancel(int param1, int param2)
 
 static void arrow_button_amount(int is_down, int param2)
 {
-    city_emperor_change_donation_amount(is_down ? -10 : 10);
+    set_donate_amount(donate_amount() + (is_down ? -10 : 10));
     window_invalidate();
 }
 
@@ -165,6 +191,10 @@ void window_donate_to_city_show(void)
         handle_input,
         get_tooltip
     };
-    city_emperor_init_donation_amount();
+    if (is_multiplayer()) {
+        set_donate_amount(data.mp_amount);
+    } else {
+        city_emperor_init_donation_amount();
+    }
     window_show(&window);
 }

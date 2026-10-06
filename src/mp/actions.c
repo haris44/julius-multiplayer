@@ -5,11 +5,15 @@
 #include "building/menu.h"
 #include "building/storage.h"
 #include "city/buildings.h"
+#include "city/emperor.h"
 #include "city/festival.h"
 #include "city/finance.h"
 #include "city/labor.h"
+#include "city/ratings.h"
 #include "city/resource.h"
 #include "empire/city.h"
+#include "game/player_context.h"
+#include "mp/caesar.h"
 #include "mp/missionary.h"
 #include "mp/session.h"
 #include "mp/trade.h"
@@ -163,6 +167,21 @@ void mp_action_clear_empire_service_legions(void)
 void mp_action_send_request(int request_id)
 {
     submit(MP_ACTION_SEND_REQUEST, request_id, 0);
+}
+
+void mp_action_send_gift(int size)
+{
+    submit(MP_ACTION_SEND_GIFT, size, 0);
+}
+
+void mp_action_set_salary(int rank)
+{
+    submit(MP_ACTION_SET_SALARY, rank, 0);
+}
+
+void mp_action_donate(int amount)
+{
+    submit(MP_ACTION_DONATE, amount, 0);
 }
 
 // Legion that can receive orders; the user interface made the same checks before
@@ -336,6 +355,30 @@ void mp_actions_execute(const mp_command *command)
             break;
         case MP_ACTION_SEND_REQUEST:
             scenario_request_dispatch(arg1);
+            break;
+        case MP_ACTION_SEND_GIFT:
+            if (arg1 >= GIFT_MODEST && arg1 <= GIFT_LAVISH) {
+                city_emperor_calculate_gift_costs();
+                int savings = city_emperor_personal_savings();
+                if (city_emperor_set_gift_size(arg1)) {
+                    city_emperor_send_gift();
+                    if (city_emperor_personal_savings() < savings) {
+                        mp_caesar_gift_sent(player_context_current_player, arg1);
+                    }
+                }
+            }
+            break;
+        case MP_ACTION_SET_SALARY:
+            if (arg1 >= 0 && arg1 <= 10 &&
+                (!mp_caesar_is_active() || arg1 <= mp_caesar_salary_rank_limit(player_context_current_player))) {
+                city_emperor_set_salary_rank(arg1);
+                city_finance_update_salary();
+                city_ratings_update_favor_explanation();
+            }
+            break;
+        case MP_ACTION_DONATE:
+            city_emperor_set_donation_amount(arg1);
+            city_emperor_donate_savings_to_city();
             break;
         default:
             break;
