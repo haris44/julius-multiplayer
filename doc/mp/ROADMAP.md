@@ -378,6 +378,16 @@ le note « à valider ».
   - les clients voient les réglages de l'hôte ;
   - test : changer chaque réglage après « Héberger », vérifier les règles de la partie chez l'hôte et chez un client.
   *En attendant* (essais du soir) : choisir les réglages **avant** de cliquer sur « Héberger ».
+  *Vérification de la boucle d'événements* (Alexandre : « c'est peut-être elle qui injecte des événements
+  d'invasion en dehors du moteur classique ») : non. Toutes les armées naissent dans `scenario/invasion.c`
+  (`start_invasion`), par quatre entrées : les invasions et soulèvements du scénario (`scenario_invasion_process`,
+  tick du mois, coupés par la règle), Mars (`city/gods.c`, pas coupé, voir ci-dessus), César (`city/emperor.c`,
+  jamais en multijoueur), la triche. La règle est en place avant le premier tick : l'hôte appelle
+  `start_session` avant d'envoyer l'accueil, le client la reçoit dans l'accueil et l'applique en dernier, après la
+  sauvegarde reçue. Seul le réglage lu au clic sur « Héberger » est faux. À noter : le scénario est copié par
+  cité, chaque cité traite donc le calendrier du modèle pour elle-même ; un soulèvement du modèle frappe chaque
+  cité, dans sa propre cité. Le correctif doit aussi mettre à jour `data.rules` de l'hôte, pas seulement
+  `host_rules` (`mp_lockstep_set_rules` ne touche que la copie lue par `mp_lockstep_host`).
 - [ ] **T4.12** **Les prix entre joueurs sont mal calculés par rapport à l'empire** (essai du soir).
   *Règle actuelle* (D-043, D-048) :
   - le prix par défaut d'un joueur est le prix d'achat de base de l'empire ;
