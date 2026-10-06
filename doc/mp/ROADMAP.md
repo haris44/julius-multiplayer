@@ -321,6 +321,9 @@ le note « à valider ».
     cette ressource à la victime ;
   - ou un joueur qui ferme sa route avec un autre ?
   Plus cher de combien, et pendant combien de temps ?
+  *Fait (première partie, avec T4.12)* : l'empire vend toujours, même ce qu'un joueur vend moins cher et même quand
+  ce joueur n'en a plus (fin de la règle D-048). Test `mp_trade_empire_always_sells`. *Reste* : la hausse des prix
+  quand un joueur arrête le commerce. Trois propositions dans D-066, *à valider*.
 - [ ] **T4.4** Le multijoueur proposé en **facile** par défaut (salon).
 - [ ] **T4.5** Page du commerce : un **stock minimum et maximum** dans les entrepôts, pour l'import et pour
   l'export. Pour mémoire : l'original a un seuil d'export, et Julius des réglages par entrepôt.
@@ -388,7 +391,7 @@ le note « à valider ».
   cité, chaque cité traite donc le calendrier du modèle pour elle-même ; un soulèvement du modèle frappe chaque
   cité, dans sa propre cité. Le correctif doit aussi mettre à jour `data.rules` de l'hôte, pas seulement
   `host_rules` (`mp_lockstep_set_rules` ne touche que la copie lue par `mp_lockstep_host`).
-- [ ] **T4.12** **Les prix entre joueurs sont mal calculés par rapport à l'empire** (essai du soir).
+- [x] **T4.12** **Les prix entre joueurs sont mal calculés par rapport à l'empire** (essai du soir).
   *Règle actuelle* (D-043, D-048) :
   - le prix par défaut d'un joueur est le prix d'achat de base de l'empire ;
   - acheter à l'empire coûte ce prix + 50 % ;
@@ -403,6 +406,19 @@ le note « à valider ».
   *À faire* : un seul prix par ressource (`empire/trade_prices`), le portorium à 50 % à l'achat et à la vente à
   l'empire (confirmé par Alexandre), le prix de Rome par défaut entre joueurs, la page du commerce qui montre
   prix de Rome, douane et prix payé. Tests : prix payés et reçus avec l'empire, prix par défaut entre joueurs.
+  *Fait* (D-066) :
+  - un seul prix par ressource, le **prix de Rome** (prix d'achat de base de l'original, les variations du jeu
+    s'appliquent) ; le portorium vaut 50 % de ce prix (`empire/trade_prices`, multijoueur seulement) ;
+  - acheter à l'empire coûte Rome + 50 % (marbre 300), vendre à l'empire rapporte Rome − 50 % (marbre 100). Cela vaut
+    pour les marchands et les navires aux entrepôts, les recettes et dépenses du commerce, et la fenêtre « Prix de
+    l'empire » ;
+  - entre joueurs : prix de Rome par défaut, sans douane ; chaque joueur a son propre commerce avec l'empire (D-061) ;
+  - la page du commerce montre, pour l'empire, le prix de Rome, le prix payé ou reçu, et « Empire, portorium 50 % »
+    en titre ;
+  - tests : `mp_empire_import_price` (1,5 fois à l'achat, 0,5 fois à la vente, toutes les ressources, variation de
+    prix, classique inchangé), `mp_trade_prices` (prix de Rome par défaut entre joueurs), `mp_trade_empire_isolation`
+    (le joueur 1 ouvre une route de l'empire, importe, achète et vend pendant 60 jours : le commerce du joueur 2
+    avec l'empire ne bouge pas d'un octet), `mp_trade_empire_always_sells` (T4.3). Capture : `tools/mp-trade-test.sh`.
 - [ ] **T4.13** **Bug : le joueur côtier perd l'argile et reçoit le fer et le marbre** (essai du soir : « les
   ressources ne sont plus les bonnes entre le joueur terrestre et le joueur côtier »).
   *Diagnostic* : les permissions de chaque cité sont justes, dans la carte et dans la sauvegarde. Le menu de
@@ -571,7 +587,8 @@ le note « à valider ».
   partagé entre elles ; `empire_can_import_resource_from_city` refuse en multijoueur une ressource achetée à un
   joueur moins cher par une route ouverte, même sans stock (Alexandre : « assécher le stock d'un adversaire fait
   partie du jeu »). Tests `mp_trade_caravans` (marbre et fer en route ensemble), `mp_trade_preference` (prix, achat,
-  route, stock vide, marchands de l'empire eux-mêmes, partie à une cité intacte).
+  route, stock vide, marchands de l'empire eux-mêmes, partie à une cité intacte). *Revu par D-060 (T4.3)* : l'empire
+  vend toujours ; `mp_trade_preference` est remplacé par `mp_trade_empire_always_sells`.
 - [x] **M8.10** Livraisons annoncées à l'acheteur (« Le joueur 2 vous a livré : 8 Marbre pour 1200 Dn », ou
   « n'a pu vous livrer (entrepôts pleins) »).
 - [x] **M8.11** Fenêtre « Joueurs » : colonne Empire (prix majoré, « - » si l'empire ne vend pas la ressource), le

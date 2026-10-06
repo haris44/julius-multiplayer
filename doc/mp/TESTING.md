@@ -73,8 +73,10 @@ Toute la suite de tests tourne en environ 3 s.
 MAPGEN_PICTURE=carte.ppm ./simtool preparedmap SAVE 2 10   # ... et son image (sips -s format png pour la lire)
 ./simtool terrain SAVE 2 60 40 30 20 [raw]  # une lettre par case d'une zone de la carte (W eau, R route, B pont...)
 ./simtool inspect PARTIE.mpsav              # joueurs, règles, climat, commerce, missionnaires d'une sauvegarde
-./simtool caravans SAVE                     # caravanes entre joueurs ; tradepreference, tradeconservation,
-                                            # traderesume : l'empire en repli, conservation, reprise
+./simtool caravans SAVE                     # caravanes entre joueurs ; tradeconservation, traderesume :
+                                            # conservation, reprise
+./simtool importprice SAVE                  # prix de Rome et portorium (D-060) ; empiresells : l'empire vend
+                                            # toujours ; tradeisolation : commerce avec l'empire propre à chacun
 ./simtool caesarstate SAVE                  # lauriers et colère de César : somme de contrôle, sauvegarde, reprise
 ./simtool caesarlaurels SAVE                # notes et lauriers mensuels, rangs, lettre, victoire au score
 ```
