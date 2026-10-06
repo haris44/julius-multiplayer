@@ -3,7 +3,7 @@
 #include "building/count.h"
 #include "city/gods.h"
 #include "city/houses.h"
-#include "game/settings.h"
+#include "game/rules.h"
 #include "graphics/image.h"
 #include "graphics/lang_text.h"
 #include "graphics/panel.h"
@@ -47,7 +47,7 @@ static void draw_god_row(god_type god, int y_offset, building_type small_temple,
 static int draw_background(void)
 {
     int height_blocks;
-    if (setting_gods_enabled()) {
+    if (game_rules_gods_enabled()) { // the rules of the lobby in a multiplayer game (T4.10)
         height_blocks = 17;
         outer_panel_draw(0, 0, 40, height_blocks);
     } else {

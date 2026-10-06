@@ -24,4 +24,17 @@ if [ -n "$violations" ]; then
     echo "$violations" >&2
     exit 1
 fi
+
+# The rules of a multiplayer game come from the lobby, the same on every computer (D-016, D-063): the local
+# settings they replace are read only through game/rules.c (game_rules_difficulty, game_rules_gods_enabled...).
+# Known exceptions: game/settings.c defines them; window/difficulty_options.c changes them and only opens in a
+# classic game (widget/top_menu.c); window/config.c is the configuration window.
+LOCAL_RULES='setting_difficulty[[:space:]]*\(|setting_gods_enabled[[:space:]]*\(|CONFIG_GP_FIX_(IMMIGRATION_BUG|100_YEAR_GHOSTS)'
+LOCAL_ALLOWED='^src/game/(rules|settings)\.[ch]:|^src/window/difficulty_options\.c:|^src/window/config\.c:|^src/core/config\.[ch]:'
+violations=$(grep -rnE "$LOCAL_RULES" src | grep -vE "$LOCAL_ALLOWED" | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|\*)' || true)
+if [ -n "$violations" ]; then
+    echo "ERROR: a local setting read instead of the rules of the game (use game/rules.h):" >&2
+    echo "$violations" >&2
+    exit 1
+fi
 echo "Determinism check passed"
