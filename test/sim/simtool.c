@@ -155,11 +155,15 @@ static int usage(void)
     printf("  simtool menuowner SAVE                prepared map: the build menu of the local player keeps his\n");
     printf("                                         materials when another player opens a route with the empire\n");
     printf("  simtool caravans SAVE                 a caravan of player 2 brings marble to player 1, who pays\n");
-    printf("  simtool tradeprices SAVE               prices between players and notices to the buyer\n");
-    printf("  simtool importprice SAVE               buying from the empire costs 50%% more in multiplayer\n");
+    printf("  simtool tradeprices SAVE               prices between players and notices to the buyer; a delivery\n");
+    printf("                                         is paid at the price of the seller, without portorium\n");
+    printf("  simtool importprice SAVE               multiplayer: the empire trades at the price of Rome, plus a\n");
+    printf("                                         portorium of 50%% to buy, minus it to sell; classic unchanged\n");
     printf("  simtool notrade SAVE                   a template without trade by land and by sea is refused\n");
     printf("  simtool inspect MPSAV                  players, rules, climate, trade, missionaries of a saved game\n");
-    printf("  simtool tradepreference SAVE           the empire sells a city nothing a player sells it cheaper\n");
+    printf("  simtool empiresells SAVE               the empire always sells, even when a player sells cheaper\n");
+    printf("  simtool tradeisolation SAVE            each player trades with the empire on his own: the trade of\n");
+    printf("                                         another player stays the same\n");
     printf("  simtool tradeconservation SAVE         trade between players makes and loses no goods nor money\n");
     printf("  simtool traderesume SAVE               a game saved while caravans travel goes on the same\n");
     printf("  simtool caesarstate SAVE               laurels and wrath of Caesar: in the checksum, saved, resumed\n");
@@ -3311,6 +3315,7 @@ static int command_terrain(const char *file, int num_players, int x0, int y0, in
 // a template whose empire does not trade by land and by sea is refused for the prepared maps
 static void city_action(int player_id, int action, int a1, int a2, int a3);
 static int stock_of(int player_id, int resource);
+static int treasury_of(int player_id);
 
 // long trips on the large map (T4.17, D-064): between the cities the paths of the walkers stay within what a figure
 // can store (500 steps), a caravan between the two farthest players arrives, and a ship can sail the whole sea of a
@@ -3831,8 +3836,7 @@ static int command_tradeprices(const char *file)
     int base = trade_price_rome(RESOURCE_MARBLE);
     CHECK(base == 200 && mp_trade_price(1, 0, RESOURCE_MARBLE) == base && mp_trade_price(0, 2, RESOURCE_MARBLE) == base,
         "by default, the price of Rome: 200");
-    CHECK(trade_price_buy(RESOURCE_MARBLE) != base && trade_price_sell(RESOURCE_MARBLE) != base,
-        "no portorium between players");
+    // no portorium between players: checked at the end by a delivery, paid at the price of the seller
     city_action(1, MP_ACTION_SET_SELL_PRICE, 0, RESOURCE_MARBLE, 150);
     city_action(1, MP_ACTION_SET_SELL_PRICE, 2, RESOURCE_MARBLE, 250);
     CHECK(mp_trade_price(1, 0, RESOURCE_MARBLE) == 150 && mp_trade_price(1, 2, RESOURCE_MARBLE) == 250,
@@ -3870,6 +3874,33 @@ static int command_tradeprices(const char *file)
     remove("tradeprices.mpsav");
     CHECK(mp_trade_price(1, 0, RESOURCE_MARBLE) == 180 && mp_trade_price(1, 2, RESOURCE_MARBLE) == 250 &&
         mp_trade_buys_from(0, 1, RESOURCE_MARBLE), "prices and purchases are saved");
+
+    // K-review-fixes (T4.12): a delivery of 4 loads from player 2 to player 1 is paid 180 a load, the price of the
+    // seller, by one and to the other: no portorium between players (the empire would take 50 %)
+    int x0, y0, x1, y1;
+    mp_mapgen_city_center(0, &x0, &y0);
+    mp_mapgen_city_center(1, &x1, &y1);
+    build_as(0, BUILDING_WAREHOUSE, x0 - 6, y0 + 1, x0 - 6, y0 + 1);
+    build_as(1, BUILDING_WAREHOUSE, x1 - 6, y1 + 1, x1 - 6, y1 + 1);
+    player_context_switch(1);
+    building *store = building_get(map_building_at(map_grid_offset(x1 - 6, y1 + 1)));
+    for (int i = 0; i < 4; i++) {
+        building_warehouse_add_resource(store, RESOURCE_MARBLE);
+    }
+    player_context_switch(0);
+    city_action(0, MP_ACTION_PROPOSE_ROUTE, 1, 1, 0);
+    city_action(1, MP_ACTION_PROPOSE_ROUTE, 0, 1, 0);
+    run_trace(50, 50, 0, 0); // the warehouses come into use
+    int buyer_money = treasury_of(0), seller_money = treasury_of(1);
+    int days = 0;
+    for (; days < 300 && stock_of(0, RESOURCE_MARBLE) < 4; days++) {
+        run_trace(50, 50, 0, 0);
+    }
+    int paid = buyer_money - treasury_of(0), earned = treasury_of(1) - seller_money;
+    printf("after %d days: %d loads delivered, player 1 paid %d, player 2 earned %d (portorium: %d a load)\n", days,
+        stock_of(0, RESOURCE_MARBLE), paid, earned, trade_price_buy(RESOURCE_MARBLE) - base);
+    CHECK(stock_of(0, RESOURCE_MARBLE) == 4, "player 2 delivers 4 loads of marble to player 1");
+    CHECK(paid == 4 * 180 && earned == 4 * 180, "paid 180 a load by one and to the other: no portorium between players");
 
     player_context_switch(0);
     player_context_set_num_players(1);
