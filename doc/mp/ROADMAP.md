@@ -325,10 +325,16 @@ le note « à valider ».
 - [ ] **T4.5** Page du commerce : un **stock minimum et maximum** dans les entrepôts, pour l'import et pour
   l'export. Pour mémoire : l'original a un seuil d'export, et Julius des réglages par entrepôt.
   **?** Les deux bornes valent-elles pour l'empire et pour les joueurs ?
-- [ ] **T4.6** **Statistiques et décisions** : trouver une manière propre de faire évoluer ces vues. On voudra des
+- [~] **T4.6** **Statistiques et décisions** : trouver une manière propre de faire évoluer ces vues. On voudra des
   statistiques et un commerce plus fin, sans surcharger l'écran.
   - Proposer d'abord des maquettes (pages de design à regarder ensemble), avant tout code.
   - **?** Quelles statistiques en premier : évolution des lauriers et des notes, échanges par partenaire, prix ?
+  *Fait* (maquettes écrites, **à valider**) : [MAQUETTES.md](MAQUETTES.md). Trois options dessinées à la taille de
+  l'écran (640 × 480) avec les pièces du jeu d'origine : onglets dans chaque conseiller, **les Annales** (une page
+  de courbes ouverte depuis les conseillers, recommandée), une vue d'ensemble en vignettes. Pour le commerce fin, une
+  fiche par ressource (prix par joueur, bornes de T4.5). Statistiques proposées d'abord : lauriers et notes, échanges
+  par partenaire, prix. Données à enregistrer chaque mois (environ 450 octets par cité), la même pièce que la
+  télémétrie de M9.9. Sept questions pour Alexandre (§10). Pas de code, donc pas de test.
 - [ ] **T4.7** **Une mission supplémentaire coûte 30 chargements de marbre** (4 aujourd'hui), pour éviter les
   extensions trop sauvages. Pas de changement pour la première, gratuite tant qu'on n'a pas de terre.
 - [ ] **T4.8** Plan de la guerre : réfléchir à l'**impact du pont de César**, seul passage terrestre entre les deux
