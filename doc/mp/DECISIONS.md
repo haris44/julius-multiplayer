@@ -519,10 +519,13 @@
   navires, indestructible).
   - Carte pour 2 (200 cases) : mer au nord ; J1 (pierre) au sud-ouest, J2 (bois, argile, vignes) sur la côte au
     sud-est ; le pont mène à la rive nord, sauvage.
-  - Carte pour 4 (260 cases) : mer au milieu ; rive nord J1 (pierre, ouest) et J2 (bois, argile, côte) ; rive sud J3
-    (olives, bois) et J4 (vignes, argile), tous deux sur la côte ; à 3 joueurs le sud-est reste libre.
+  - Carte pour 4 (260 cases) : mer au milieu ; ~~rive nord J1 (pierre, ouest) et J2 (bois, argile, côte) ; rive sud J3
+    (olives, bois) et J4 (vignes, argile), tous deux sur la côte~~. Depuis D-062 : à l'ouest, un joueur des terres sur
+    chaque rive (J1 au nord, J3 au sud), loin de la mer ; à l'est, un joueur sur chaque côte (J2 au nord, J4 au sud).
+    À 3 joueurs, le sud-est (côte) reste libre.
 - **Joueur de la pierre** : aucune eau à moins de 45 cases de sa ville, ni étang ; seul l'aqueduc de César, depuis
-  un réservoir sur la côte, lui apporte l'eau. Les autres joueurs n'ont plus de lac à eux ni d'aqueduc de César :
+  un réservoir sur la côte, lui apporte l'eau. À 4, chacun des deux joueurs des terres a son réservoir de César, sur
+  la côte de sa rive (D-062). Les autres joueurs n'ont plus de lac à eux ni d'aqueduc de César :
   leur rivage est dans leur zone de départ, les navires de leur empire arrivent par le bord de mer le plus proche, un
   point de pêche est au large de chacun.
 - Les quais de pierre dessinés sur le rivage près du réservoir de César sont ceux du jeu d'origine (« rive
@@ -823,6 +826,8 @@
   - côte : bois et argile pour les deux ; la pêche ; les fruits ;
   - blé et légumes pour tous.
   À 2 joueurs : terres = fer, marbre, olives, porcs ; côte = bois, argile, vignes, pêche, fruits.
+- *Fait* (T4.15, D-065) : cartes refaites selon ce plan ; tests `mp_prepared_map_placement` et
+  `mp_prepared_map_*_players`.
 - Classique : inchangé.
 
 ### D-063 — Les réglages du salon sont ceux de l'hôte, jusqu'au lancement ; « facile » par défaut (T4.4, T4.10, T4.11)
@@ -859,6 +864,23 @@
   d'une fois et demie la taille de la grille, au moins 50 000 : le classique (26 244 cases) garde 50 000. La limite de
   500 pas d'un chemin de figure (`MAX_PATH`) est conservée : le plus long chemin de la carte à 4 fait 253 pas, et
   l'élargir changerait le format des sauvegardes (*à revoir* si une nouvelle carte de T4.14 dépasse 400 pas).
+
+### D-065 — La nourriture du plan passe par les autorisations de la cité ; les commandes les vérifient (T4.15, précise D-020, D-062)
+- 2026-10-07 · **adoptée** (pour appliquer la nourriture validée par Alexandre, T4.15)
+- **Pas de nouvel état sauvegardé.** La nourriture suit la même autorisation que les matières premières : « notre
+  cité » de l'empire produit telle ressource (`empire_city_set_our_production_allowed`). Chaque cité a son empire,
+  sauvegardé avec elle : les clients, qui ne reçoivent que la sauvegarde, ont les mêmes autorisations (vérifié après
+  écriture et lecture de la carte).
+- **Porcs et quais donnent tous deux de la viande.** Dans l'original, les quais ne dépendent pas de l'autorisation
+  « viande » : la viande est offerte dès que les quais sont permis (`city/resource.c`). L'autorisation « viande »
+  ne commande donc que l'élevage de porcs. Les joueurs des terres l'ont ; ceux de la côte ne l'ont pas, mais
+  pêchent. Les cartes préparées permettent toujours les quais et les fermes, quel que soit le modèle.
+- **Les commandes de construction vérifient l'autorisation**, comme le menu (`mp_permissions_may_build`) : une ferme,
+  une carrière, une mine, une glaisière ou un chantier de bois d'une ressource que la cité ne peut pas produire est
+  refusé. Seulement sur une carte multijoueur (`game_rules_multiplayer_map`) : rien ne change en classique.
+- *À valider* : les ateliers ne sont pas vérifiés par les commandes (le menu les règle encore seul, D-020, D-061).
+- Effet de l'original à connaître : quand les quais sont permis, la viande est dessinée en poisson (icônes, charrettes,
+  entrepôts), aussi celle des porcs des joueurs des terres.
 
 ### D-068 — Le pont de César dans la guerre : terre de César, ouvert en paix, tenu en guerre (T4.8)
 - 2026-10-06 · **à valider** (proposition de Claude, demande d'Alexandre : « réfléchir à l'impact du pont de César,

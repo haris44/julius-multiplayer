@@ -23,13 +23,15 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define PROTOCOL_VERSION 13 // 3: the rules of the game travel with the welcome message; 4: territories; 5: fog;
+#define PROTOCOL_VERSION 14 // 3: the rules of the game travel with the welcome message; 4: territories; 5: fog;
                             // 6: one forest map, games alone (D-044); 7: missions at the start (D-045);
                             // 8: a caravan per resource, the empire the dearer source (D-048);
                             // 9: wide places in messages, the missionary goes to the nearest walkable tile;
                             // 10: laurels and wrath of Caesar in the state (M9.1); 11: no pond on the maps (D-055);
                             // 12: the score of Caesar in the rules, monthly laurels of the notes (M9.5);
-                            // 13: the rules of the host shown in the lobby of the players who join (T4.11)
+                            // 13: the rules of the host shown in the lobby of the players who join (T4.11);
+                            // 14: two players inland on the map for 4, food of the plan, build commands checked
+                            // against the permissions of the city (T4.15, D-065)
 #define TURN_TICKS 4
 #define TURN_DELAY 2
 #define HISTORY 256

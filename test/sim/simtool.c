@@ -133,8 +133,9 @@ static int usage(void)
     printf("                                         none of its buildings\n");
     printf("  simtool neighbours SAVE TICKS          two copies of the city joined by a road: walkers cross,\n");
     printf("                                         but no city acts on the buildings of the other\n");
-    printf("  simtool preparedmap SAVE PLAYERS TICKS prepared map: land reached from the main road, materials of\n");
-    printf("                                         each arrival point, permissions; MAPGEN_PICTURE=F.ppm\n");
+    printf("  simtool preparedmap SAVE PLAYERS TICKS prepared map: land reached from the main road, food and\n");
+    printf("                                         materials of each arrival point, permissions, farms;\n");
+    printf("                                         MAPGEN_PICTURE=F.ppm\n");
     printf("  simtool reservoirlevel SAVE            prepared map: a reservoir cut off from its source empties\n");
     printf("                                         slowly, joined again it fills\n");
     printf("  simtool drying SAVE PLAYERS            prepared map: no pond; the city of the rocks dries up when\n");
@@ -1834,6 +1835,98 @@ static int count_ponds(int size)
     return ponds;
 }
 
+// what the plan of the prepared maps gives or refuses to each arrival point: food and raw materials (T4.15, D-062)
+static const int PLAN_RESOURCES[] = { RESOURCE_WHEAT, RESOURCE_VEGETABLES, RESOURCE_FRUIT, RESOURCE_OLIVES,
+    RESOURCE_VINES, RESOURCE_MEAT, RESOURCE_IRON, RESOURCE_TIMBER, RESOURCE_CLAY, RESOURCE_MARBLE };
+#define NUM_PLAN_RESOURCES (int) (sizeof(PLAN_RESOURCES) / sizeof(PLAN_RESOURCES[0]))
+
+// whether the permissions of the city of a player, which its saved game carries, are those of his arrival point
+static int permissions_match_slot(int player_id)
+{
+    int ok = 1;
+    player_context_switch(player_id);
+    for (int i = 0; i < NUM_PLAN_RESOURCES; i++) {
+        int resource = PLAN_RESOURCES[i];
+        if (empire_city_our_production_allowed(resource) != mp_mapgen_slot_allows(player_id, resource)) {
+            printf("  player %d: permission for resource %d does not match the map\n", player_id + 1, resource);
+            ok = 0;
+        }
+    }
+    player_context_switch(0);
+    return ok;
+}
+
+// a place for a farm near the city of a player: three by three tiles of clear land or meadow, some meadow, away from
+// the rows of the houses, of the start mission and of the reservoirs that the test builds
+static int find_farm_place(int player_id, int *fx, int *fy)
+{
+    int cx, cy;
+    mp_mapgen_city_center(player_id, &cx, &cy);
+    for (int d = 4; d <= 22; d++) {
+        for (int y = cy - d; y <= cy + d; y++) {
+            for (int x = cx - d; x <= cx + d; x++) {
+                int dx = x > cx ? x - cx : cx - x, dy = y > cy ? y - cy : cy - y;
+                if ((dx > dy ? dx : dy) != d || (y + 2 >= cy - 7 && y <= cy + 3)) {
+                    continue;
+                }
+                int clear = 1, meadow = 0;
+                for (int yy = y; yy < y + 3; yy++) {
+                    for (int xx = x; xx < x + 3; xx++) {
+                        int terrain = map_terrain_get(map_grid_offset(xx, yy));
+                        clear &= (terrain & ~TERRAIN_MEADOW) == 0;
+                        meadow += (terrain & TERRAIN_MEADOW) != 0;
+                    }
+                }
+                if (clear && meadow) {
+                    *fx = x;
+                    *fy = y;
+                    return 1;
+                }
+            }
+        }
+    }
+    return 0;
+}
+
+static int building_type_at(int x, int y)
+{
+    return building_get(map_building_at(map_grid_offset(x, y)))->type;
+}
+
+// the food of the plan in the build menu and in the build commands (T4.15, D-065): pig farms inland only, fruit
+// farms on the coast only. Pig farms and wharves both give meat: the coast fishes, but raises no pigs
+static int farms_follow_plan(int player_id)
+{
+    int inland = !mp_mapgen_slot_is_coastal(player_id);
+    int x, y;
+    if (!find_farm_place(player_id, &x, &y)) {
+        printf("  player %d: no place for a farm near the city\n", player_id + 1);
+        return 0;
+    }
+    player_context_switch(player_id);
+    building_menu_update();
+    int pig_menu = building_menu_is_enabled(BUILDING_PIG_FARM);
+    int fruit_menu = building_menu_is_enabled(BUILDING_FRUIT_FARM);
+    int wheat_menu = building_menu_is_enabled(BUILDING_WHEAT_FARM) && building_menu_is_enabled(BUILDING_VEGETABLE_FARM);
+    int wharf_menu = building_menu_is_enabled(BUILDING_WHARF); // the coast fishes
+    player_context_switch(0);
+    int refused = inland ? BUILDING_FRUIT_FARM : BUILDING_PIG_FARM;
+    int allowed = inland ? BUILDING_PIG_FARM : BUILDING_FRUIT_FARM;
+    mp_command refused_command = { .type = MP_COMMAND_BUILD, .player_id = player_id, .args = { refused, 0, x, y, x, y, 0, 0 } };
+    mp_command_execute(&refused_command);
+    int refused_built = building_type_at(x, y) == refused;
+    mp_command allowed_command = { .type = MP_COMMAND_BUILD, .player_id = player_id, .args = { allowed, 0, x, y, x, y, 0, 0 } };
+    mp_command_execute(&allowed_command);
+    int allowed_built = building_type_at(x, y) == allowed;
+    int ok = pig_menu == inland && fruit_menu == !inland && wheat_menu && (inland || wharf_menu) && !refused_built &&
+        allowed_built;
+    printf("player %d (%s): menu pigs %s, fruit %s, wheat and vegetables %s, wharf %s; at (%d, %d) %s farm %s, "
+        "%s farm %s\n", player_id + 1, inland ? "inland" : "coast", pig_menu ? "yes" : "no", fruit_menu ? "yes" : "no",
+        wheat_menu ? "yes" : "no", wharf_menu ? "yes" : "no", x, y, inland ? "fruit" : "pig", refused_built ? "BUILT" : "refused",
+        inland ? "pig" : "fruit", allowed_built ? "built" : "NOT BUILT");
+    return ok;
+}
+
 // the prepared maps (D-033, D-047): all land reached from the main road (over the bridge of Caesar), an arm of the
 // sea from edge to edge, each arrival point with its materials only, no water near the player of the rocks but the
 // aqueduct of Caesar, the others on the coast, permissions that match, the same map every time, cities that grow
@@ -1928,15 +2021,9 @@ static int command_preparedmap(const char *file, int num_players, int ticks)
             }
         }
         printf("\n");
-        static const int MATERIALS[] = { RESOURCE_IRON, RESOURCE_CLAY, RESOURCE_TIMBER, RESOURCE_OLIVES,
-            RESOURCE_VINES, RESOURCE_MARBLE };
-        for (int i = 0; i < 6; i++) {
-            if (empire_city_our_production_allowed(MATERIALS[i]) != mp_mapgen_slot_allows(p, MATERIALS[i])) {
-                printf("  player %d: permission for material %d does not match the map\n", p + 1, MATERIALS[i]);
-                failures++;
-            }
-        }
         player_context_switch(0);
+        // food and raw materials: those of the plan (T4.15, D-062)
+        failures += !permissions_match_slot(p);
         int ex, ey;
         mp_mapgen_entry_point(p, &ex, &ey);
         int entry = map_grid_offset(ex, ey);
@@ -2001,14 +2088,24 @@ static int command_preparedmap(const char *file, int num_players, int ticks)
         return 2;
     }
     remove(map_file);
+    // the clients only get the saved game: it carries the permissions of every city, food included
+    for (int p = 0; p < num_players; p++) {
+        failures += !permissions_match_slot(p);
+        failures += !farms_follow_plan(p);
+    }
 
     // the players without water build a reservoir at the end of the aqueduct of Caesar: it fills; another one,
-    // away from any water, stays dry
+    // away from any water, stays dry. On the map for 4, two players live inland, also with three players (D-062)
+    int inland_players = 0, fed_players = 0;
+    for (int p = 0; p < num_players; p++) {
+        inland_players += !mp_mapgen_slot_is_coastal(p);
+    }
     for (int p = 0; p < num_players; p++) {
         int ax, ay;
         if (!mp_mapgen_caesar_aqueduct_end(p, &ax, &ay)) {
             continue;
         }
+        fed_players++;
         int cx, cy;
         mp_mapgen_city_center(p, &cx, &cy);
         int ex, ey;
@@ -2032,6 +2129,10 @@ static int command_preparedmap(const char *file, int num_players, int ticks)
             fed_ok ? "has water" : "HAS NO WATER", dry_ok ? "dry" : "NOT DRY OR NOT BUILT");
         failures += !fed_ok || !dry_ok;
     }
+    int expected_inland = num_players <= 2 ? 1 : 2;
+    printf("players inland: %d, served by the aqueduct of Caesar: %d, expected %d\n", inland_players, fed_players,
+        expected_inland);
+    failures += inland_players != expected_inland || fed_players != expected_inland;
 
     for (int p = 0; p < num_players; p++) {
         settle_city(p, size);
@@ -2587,13 +2688,30 @@ static int command_missionarybridge(const char *file)
     return failures ? 1 : 0;
 }
 
-// the players draw their arrival points by lot (Alexandre, 2026-10-06, D-052): player 1 does not always live inland
+// whether an arrival point offers what the plan gives its side, inland or on the coast (D-062, T4.15): wheat and
+// vegetables for everybody; inland iron, marble and pigs, no timber; on the coast timber, clay and fruit (and fish)
+static int slot_follows_plan(int player_id)
+{
+    int inland = !mp_mapgen_slot_is_coastal(player_id);
+    int ok = mp_mapgen_slot_allows(player_id, RESOURCE_WHEAT) && mp_mapgen_slot_allows(player_id, RESOURCE_VEGETABLES);
+    ok &= mp_mapgen_slot_allows(player_id, RESOURCE_IRON) == inland;
+    ok &= mp_mapgen_slot_allows(player_id, RESOURCE_MARBLE) == inland;
+    ok &= mp_mapgen_slot_allows(player_id, RESOURCE_MEAT) == inland; // pigs inland; on the coast, only wharves
+    ok &= mp_mapgen_slot_allows(player_id, RESOURCE_TIMBER) == !inland;
+    ok &= mp_mapgen_slot_allows(player_id, RESOURCE_CLAY) == !inland;
+    ok &= mp_mapgen_slot_allows(player_id, RESOURCE_FRUIT) == !inland;
+    return ok;
+}
+
+// the players draw their arrival points by lot (Alexandre, 2026-10-06, D-052): player 1 does not always live inland.
+// On the map for 4, two players live inland and two on the coast; three players leave a place on the coast (D-062)
 static int command_placement(const char *file)
 {
     int failures = 0;
 #define CHECK(condition, text) do { int ok_ = (condition); printf("%-62s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
     for (int num_players = 2; num_players <= 4; num_players++) {
-        int inland_seen[4] = { 0 }, distinct = 1, south_east_free = 1, inland_timber = 1;
+        int inland_seen[4] = { 0 }, distinct = 1, inland_count_ok = 1, inland_timber = 0, plan_ok = 1;
+        int permissions_ok = 1, olives_vines_ok = 1;
         for (unsigned int seed = 1; seed <= 12; seed++) {
             player_context_switch(0);
             player_context_set_num_players(1);
@@ -2601,6 +2719,7 @@ static int command_placement(const char *file)
                 printf("Unable to create the prepared map\n");
                 return 2;
             }
+            int inland = 0, coastal = 0, olives = 0, vines = 0;
             for (int p = 0; p < num_players; p++) {
                 int x, y;
                 mp_mapgen_city_center(p, &x, &y);
@@ -2609,30 +2728,55 @@ static int command_placement(const char *file)
                     mp_mapgen_city_center(q, &qx, &qy);
                     distinct &= qx != x || qy != y;
                 }
-                south_east_free &= num_players != 3 || x < 130 || y < 130;
+                plan_ok &= slot_follows_plan(p);
+                permissions_ok &= permissions_match_slot(p);
+                olives += mp_mapgen_slot_allows(p, RESOURCE_OLIVES);
+                vines += mp_mapgen_slot_allows(p, RESOURCE_VINES);
                 if (!mp_mapgen_slot_is_coastal(p)) {
                     inland_seen[p] = 1;
-                    // the player inland also has the timber yards (Alexandre: « je parle des chantiers de bois »)
-                    inland_timber &= mp_mapgen_slot_allows(p, RESOURCE_TIMBER);
+                    inland++;
+                    // no more timber inland (Alexandre, D-062: « ne mets plus le bois au joueur des terres »)
+                    inland_timber |= mp_mapgen_slot_allows(p, RESOURCE_TIMBER);
+                    // olives for one and vines for the other on the map for 4; olives on the map for 2
+                    olives_vines_ok &= mp_mapgen_slot_allows(p, RESOURCE_OLIVES) !=
+                        mp_mapgen_slot_allows(p, RESOURCE_VINES);
+                    olives_vines_ok &= num_players > 2 || mp_mapgen_slot_allows(p, RESOURCE_OLIVES);
+                } else {
+                    coastal++;
+                    // on the coast, vines on the map for 2 only
+                    olives_vines_ok &= !mp_mapgen_slot_allows(p, RESOURCE_OLIVES) &&
+                        mp_mapgen_slot_allows(p, RESOURCE_VINES) == (num_players <= 2);
                 }
             }
+            // two inland on the map for 4, also with three players: the place left free is on the coast
+            inland_count_ok &= inland == (num_players <= 2 ? 1 : 2) && coastal >= 1;
+            olives_vines_ok &= olives == 1 && vines == 1;
         }
         int inland_players = inland_seen[0] + inland_seen[1] + inland_seen[2] + inland_seen[3];
-        printf("%d players: the arrival point inland went to %d different players in 12 games\n", num_players,
+        printf("%d players: the arrival points inland went to %d different players in 12 games\n", num_players,
             inland_players);
         CHECK(distinct, "every player has his own arrival point");
-        CHECK(inland_players >= 2, "player 1 does not always live inland");
-        CHECK(south_east_free, "three players leave the south-east free");
-        CHECK(inland_timber, "the player inland may exploit timber");
+        CHECK(inland_players >= (num_players <= 2 ? 2 : 3), "player 1 does not always live inland");
+        CHECK(inland_count_ok, num_players == 2 ? "one player inland, one on the coast" :
+            num_players == 3 ? "two players inland, the free place is on the coast" :
+            "two players inland, two on the coast");
+        CHECK(!inland_timber, "the players inland may not exploit timber");
+        CHECK(plan_ok, "materials and food of each arrival point follow the plan");
+        CHECK(olives_vines_ok, "olives and vines as in the plan");
+        CHECK(permissions_ok, "the permissions of each city are those of its arrival point");
     }
     player_context_switch(0);
     player_context_set_num_players(1);
     CHECK(mp_mapgen_create_prepared(file, 2, 0) && !mp_mapgen_slot_is_coastal(0), "seed 0 keeps the plan (tests)");
     player_context_switch(0);
     player_context_set_num_players(1);
+    CHECK(mp_mapgen_create_prepared(file, 4, 0) && !mp_mapgen_slot_is_coastal(0) && mp_mapgen_slot_is_coastal(1) &&
+        !mp_mapgen_slot_is_coastal(2) && mp_mapgen_slot_is_coastal(3), "seed 0 keeps the plan for 4 (tests)");
+    player_context_switch(0);
+    player_context_set_num_players(1);
 #undef CHECK
-    printf("%s\n", failures ? "DIFFERENT: the arrival points are not drawn by lot" :
-        "Identical: the arrival points are drawn by lot");
+    printf("%s\n", failures ? "DIFFERENT: the arrival points are not drawn by lot as planned" :
+        "Identical: the arrival points are drawn by lot as planned");
     return failures ? 1 : 0;
 }
 

@@ -17,4 +17,11 @@
  */
 void mp_permissions_share_out(void);
 
+/**
+ * Whether the current city may build this farm or raw material building: the rule of the build menu, applied to the
+ * build commands of the players (a farm of a food its plan refuses, such as a pig farm on the coast, T4.15)
+ * @return 1 for every other building
+ */
+int mp_permissions_may_build(int building_type);
+
 #endif // MP_PERMISSIONS_H

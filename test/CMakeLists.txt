@@ -299,8 +299,9 @@ foreach(save brugle-lugdunum valentia57 kknight)
 endforeach()
 
 # Generated maps (M6.2): each player settles at its arrival point and gets immigrants; network game on one
-# Prepared multiplayer maps (MC.2, D-033): land reached from the main road, materials of each arrival point,
-# permissions, the same map every time, cities that grow; three players play on the map for four
+# Prepared multiplayer maps (MC.2, D-033): land reached from the main road, materials and food of each arrival point,
+# permissions (also after the map is saved and read), pig farms inland only (T4.15), the aqueduct of Caesar to every
+# player inland, the same map every time, cities that grow; three players play on the map for four
 foreach(players 2 3 4)
     add_test(NAME mp_prepared_map_${players}_players COMMAND simtool preparedmap brugle-massilia-start.sav ${players} 4000)
 endforeach()
@@ -335,7 +336,8 @@ add_test(NAME mp_outside_territory COMMAND simtool outside brugle-massilia-start
 add_test(NAME mp_fog_of_war COMMAND simtool fog brugle-massilia-start.sav)
 # The missionary crosses the bridge of Caesar (Alexandre, 2026-10-06)
 add_test(NAME mp_missionary_bridge COMMAND simtool missionarybridge brugle-massilia-start.sav)
-# The players draw their arrival points by lot; the player inland has timber too (D-052)
+# The players draw their arrival points by lot (D-052); two players inland on the map for 4, food and materials of
+# the plan, no timber inland (D-062, T4.15)
 add_test(NAME mp_prepared_map_placement COMMAND simtool placement brugle-massilia-start.sav)
 # We go everywhere (D-052): fewer woods, which stay impassable, and no clearing shut in by them
 foreach(players 2 4)

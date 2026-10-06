@@ -1,5 +1,6 @@
 #include "permissions.h"
 
+#include "building/type.h"
 #include "empire/city.h"
 #include "game/player_context.h"
 #include "game/resource.h"
@@ -40,4 +41,29 @@ void mp_permissions_share_out(void)
         }
     }
     player_context_switch(previous);
+}
+
+// the raw resource a farm, a pit, a mine, a quarry or a timber yard produces
+static int raw_resource_of(int building_type)
+{
+    switch (building_type) {
+        case BUILDING_WHEAT_FARM: return RESOURCE_WHEAT;
+        case BUILDING_VEGETABLE_FARM: return RESOURCE_VEGETABLES;
+        case BUILDING_FRUIT_FARM: return RESOURCE_FRUIT;
+        case BUILDING_PIG_FARM: return RESOURCE_MEAT;
+        case BUILDING_OLIVE_FARM: return RESOURCE_OLIVES;
+        case BUILDING_VINES_FARM: return RESOURCE_VINES;
+        case BUILDING_CLAY_PIT: return RESOURCE_CLAY;
+        case BUILDING_TIMBER_YARD: return RESOURCE_TIMBER;
+        case BUILDING_IRON_MINE: return RESOURCE_IRON;
+        case BUILDING_MARBLE_QUARRY: return RESOURCE_MARBLE;
+        default: return RESOURCE_NONE;
+    }
+}
+
+int mp_permissions_may_build(int building_type)
+{
+    // as the build menu: the wharves give meat too, but do not depend on this permission (D-065)
+    int resource = raw_resource_of(building_type);
+    return resource == RESOURCE_NONE || empire_can_produce_resource(resource);
 }
