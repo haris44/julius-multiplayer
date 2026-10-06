@@ -648,7 +648,8 @@
   numéros, cités dans le JOURNAL, ne pointent plus vers rien.
 - Compilation automatique : `.github/workflows/multiplayer.yml`, à chaque envoi sur `multiplayer`. Tous les tests
   sous Linux et sous Windows (MinGW 64 bits), puis une AppImage Linux et un dossier Windows, avec le LISEZMOI et
-  le code source. Les fichiers de compilation de Julius (`main.yml`, `codeql.yml`) restent dans le dépôt, mais sont
+  le code source. Depuis le même jour, aussi sous macOS (puce Apple) : tous les tests, puis le DMG de
+  `tools/package-mac.sh`, qui refuse toute image contenant un fichier du jeu original. Les fichiers de compilation de Julius (`main.yml`, `codeql.yml`) restent dans le dépôt, mais sont
   désactivés sur le fork, pour garder les fusions avec Julius simples.
 - Linux : l'AppImage tourne sur toute distribution récente, sous Wayland comme sous X11. Le pare-feu de Fedora
   doit laisser passer les ports 27400 (TCP, la partie) et 27401 (UDP, le salon) : c'est dans le LISEZMOI.

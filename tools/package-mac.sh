@@ -56,6 +56,11 @@ mkdir -p "$STAGE"
 ditto "$APP" "$STAGE/Caesar III Multijoueur.app"
 cp tools/dist/LISEZMOI.txt "$STAGE/LISEZMOI.txt"
 git archive --format=zip --prefix="julius-caesar-mp-$VERSION/" -o "$STAGE/code-source.zip" HEAD
+# never any file of the original game (Caesar III is still sold)
+if [ -n "$(find "$STAGE" -iname '*.555' -o -iname '*.sg2' -o -iname '*.map' -o -iname 'c3*.eng')" ]; then
+    echo "Files of the original game in the image: refused" >&2
+    exit 1
+fi
 
 echo "== Disk image"
 hdiutil create -volname "Caesar III Multijoueur" -srcfolder "$STAGE" -ov -format UDZO "$DIST/$NAME.dmg" > /dev/null

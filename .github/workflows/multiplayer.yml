@@ -1,4 +1,4 @@
-# Builds of the multiplayer fork (doc/mp/ROADMAP.md M5.6): every test, then a package for Linux and for Windows.
+# Builds of the multiplayer fork (doc/mp/ROADMAP.md M5.6): every test, then a package for Linux, Windows and macOS.
 # The Caesar III data is never in the packages: every player needs his own copy of the game.
 # The workflows of Julius (main.yml, codeql.yml) are disabled on this fork, not removed, to keep merges simple.
 name: Caesar III multiplayer
@@ -49,6 +49,31 @@ jobs:
         with:
           name: ${{ env.NAME }}
           path: dist/${{ env.NAME }}.tar.gz
+
+  macos:
+    name: macOS (DMG, Apple Silicon)
+    runs-on: macos-latest
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: 1
+      HOMEBREW_NO_INSTALL_CLEANUP: 1
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Install dependencies
+        run: brew install sdl2 sdl2_mixer
+      - name: Build and run every test
+        run: BUILD_DIR=build-tests tools/check.sh
+      - name: Package
+        run: |
+          tools/package-mac.sh
+          echo "NAME=$(basename dist/*.dmg .dmg)" >> "$GITHUB_ENV"
+      - name: Upload
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.NAME }}
+          path: dist/${{ env.NAME }}.dmg
 
   windows:
     name: Windows (64 bits)

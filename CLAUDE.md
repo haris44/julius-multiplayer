@@ -40,8 +40,8 @@ La commande `/suite` enchaîne tout cela, puis les tâches du jalon.
 | Partie en réseau dans de vraies fenêtres, **pour Alexandre uniquement** | `tools/play-mp.sh [JOUEURS] [SAUVEGARDE]` |
 | Vrai jeu contre simulation de test (mêmes sommes de contrôle ?) | `tools/cross-check.sh SAVE TICKS PAS` |
 | Reconfigurer après un ajout de fichier dans CMakeLists | `cmake -S . -B build` |
-| Envoyer sur GitHub (compile et teste sous Linux et Windows, D-054) | `git push github multiplayer` |
-| Suivre la compilation, récupérer l'AppImage et le dossier Windows | `gh run list -R haris44/julius-multiplayer`, `gh run download ID -R haris44/julius-multiplayer` |
+| Envoyer sur GitHub (compile et teste sous Linux, Windows et macOS, D-054) | `git push github multiplayer` |
+| Suivre la compilation, récupérer l'AppImage, le dossier Windows et le DMG | `gh run list -R haris44/julius-multiplayer`, `gh run download ID -R haris44/julius-multiplayer` |
 
 Syntaxe des scripts d'automatisation et pièges : `doc/mp/TESTING.md` §3.
 

@@ -166,7 +166,8 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
   `mp_lan_player_leaves`, `mp_lan_resume_mpsav`.
 - [ ] **M5.6** Intégration continue multiplateforme (macOS arm64, Windows x64, Linux) qui compare les traces de
   rejeu. *En cours* (D-054) : dépôt `haris44/julius-multiplayer` ; `.github/workflows/multiplayer.yml` lance tous
-  les tests sous Linux et Windows (MinGW 64 bits) et fabrique l'AppImage et le dossier Windows. Premier passage
+  les tests sous Linux, Windows (MinGW 64 bits) et macOS, et fabrique l'AppImage, le dossier Windows et le DMG.
+  Premier passage
   vert le 2026-10-06 : 173 tests sous Linux, 162 sous Windows (les parties en réseau sur un même ordinateur n'y
   tournent pas : leurs scripts sont en `sh`). Le `.exe` ne demande que SDL2 et SDL2_mixer, fournies, et des
   bibliothèques de Windows 10. Reste : une tâche qui compare les traces d'une même partie multijoueur calculées sur

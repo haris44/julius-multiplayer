@@ -93,11 +93,12 @@ La feuille de route complète est dans [doc/mp/ROADMAP.md](doc/mp/ROADMAP.md).
 
 1. **Il faut sa propre copie de Caesar III** (GOG ou Steam). Ce dépôt ne contient aucun fichier du jeu original, qui
    est toujours vendu.
-2. **Récupérer le programme** :
-   - Linux (AppImage) et Windows (64 bits) : dans l'onglet
-     [Actions](https://github.com/haris44/julius-multiplayer/actions/workflows/multiplayer.yml), en bas de chaque
-     compilation réussie (il faut être connecté à GitHub) ;
-   - Mac (puce Apple) : `tools/package-mac.sh` fabrique une image disque, ou voir la compilation ci-dessous.
+2. **Récupérer le programme** dans l'onglet
+   [Actions](https://github.com/haris44/julius-multiplayer/actions/workflows/multiplayer.yml), en bas de chaque
+   compilation réussie (il faut être connecté à GitHub) :
+   - Linux : une AppImage ;
+   - Windows (64 bits) : un dossier avec le `.exe` ;
+   - Mac (puce Apple) : une image disque `.dmg`, que `tools/package-mac.sh` fabrique aussi en local.
 3. **Tous les joueurs** sont sur le même réseau local, avec exactement la même version. Le pare-feu doit laisser
    passer les ports 27400 (TCP, la partie) et 27401 (UDP, le salon).
 4. **Menu principal, « Multijoueur »** : l'hôte crée la partie, les autres la voient apparaître et la rejoignent.
