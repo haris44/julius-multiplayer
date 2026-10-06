@@ -312,8 +312,13 @@ le note « à valider ».
   - l'estime devient le niveau de César envers la cité, et les lauriers s'accumulent chaque mois selon ce niveau ;
   - ou le pilier « Estime » montre les lauriers rapportés au score.
   Les autres piliers (culture, prospérité, paix) sont-ils gardés ?
-- [ ] **T4.2** **Cadeaux à César** : ils comptent dans son estime (avec T4.1). Ils doivent passer par des
+- [x] **T4.2** **Cadeaux à César** : ils comptent dans son estime (avec T4.1). Ils doivent passer par des
   commandes réseau (aujourd'hui, les boutons sont cachés en multijoueur, D-057).
+  *Fait* (D-067) : cadeau, salaire et don sont des commandes réseau (`MP_ACTION_SEND_GIFT`, `SET_SALARY`,
+  `DONATE`), les trois boutons du conseiller impérial reviennent en multijoueur. Un cadeau rapporte 4, 7 ou 10
+  lauriers, un seul compte tous les 12 mois (état sauvegardé, `mp_caesar` version 3) ; le salaire est limité par le
+  rang et de nouveau versé. Test `mp_caesar_gifts` : épargne et lauriers de l'expéditeur seul, deux machines au même
+  résultat (somme de contrôle), ancienne sauvegarde chargée, classique sans lauriers.
 - [ ] **T4.3** **L'empire vend toujours** : on peut toujours acheter à l'étranger, ce qui revoit D-048. En
   revanche, l'empire **augmente fortement ses prix quand un joueur arrête le commerce**.
   **?** Arrêter quel commerce :

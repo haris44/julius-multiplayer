@@ -342,6 +342,8 @@ add_test(NAME mp_trade_resume COMMAND simtool traderesume brugle-massilia-start.
 add_test(NAME mp_caesar_state COMMAND simtool caesarstate brugle-massilia-start.sav)
 # Monthly laurels of the five notes, ranks, the first city to the score wins (M9.2 provisional, M9.5, D-053)
 add_test(NAME mp_caesar_laurels COMMAND simtool caesarlaurels valentia57.sav)
+# Gifts, salary and donations to Caesar are network commands; a gift gives laurels, one counted a year (T4.2, D-067)
+add_test(NAME mp_caesar_gifts COMMAND simtool caesargifts brugle-massilia-start.sav)
 
 # T1.5 (D-034): the roads of Caesar stay, untinted, and serve every city
 add_test(NAME mp_caesar_roads COMMAND simtool caesarroads brugle-massilia-start.sav)

@@ -10,6 +10,10 @@
 #include "graphics/text.h"
 #include "graphics/window.h"
 #include "input/input.h"
+#include "mp/actions.h"
+#include "mp/caesar.h"
+#include "mp/session.h"
+#include "translation/translation.h"
 #include "window/advisors.h"
 
 static void button_set_gift(int gift_id, int param2);
@@ -25,10 +29,50 @@ static generic_button buttons[] = {
 };
 
 static int focus_button_id;
+// multiplayer: the size chosen is the state of the window, never written in the simulation
+static int mp_selected_size;
+
+static int is_multiplayer(void)
+{
+    return mp_caesar_is_active();
+}
+
+static int selected_size(void)
+{
+    return is_multiplayer() ? mp_selected_size : city_emperor_selected_gift_size();
+}
+
+static int gift_cost(int size)
+{
+    return is_multiplayer() ? city_emperor_gift_cost(size) : city_emperor_get_gift(size)->cost;
+}
+
+static int can_send(int size)
+{
+    return is_multiplayer() ? gift_cost(size) <= city_emperor_personal_savings() : city_emperor_can_send_gift(size);
+}
 
 static void init(void)
 {
+    if (is_multiplayer()) {
+        if (mp_selected_size == GIFT_LAVISH && !can_send(GIFT_LAVISH)) {
+            mp_selected_size = GIFT_GENEROUS;
+        }
+        if (mp_selected_size == GIFT_GENEROUS && !can_send(GIFT_GENEROUS)) {
+            mp_selected_size = GIFT_MODEST;
+        }
+        return;
+    }
     city_emperor_init_selected_gift();
+}
+
+// "+4 laurels" after the cost of a gift that counts (multiplayer)
+static void draw_laurels(int size, int x, int y, font_t font)
+{
+    if (is_multiplayer() && !mp_caesar_gift_cooldown(mp_session_local_player_id())) {
+        int width = text_draw_number(mp_caesar_gift_laurels(size) / 10, '+', "", x, y, font);
+        text_draw(translation_for(TR_MP_GIFT_LAURELS), x + width, y, font, 0);
+    }
 }
 
 static void draw_background(void)
@@ -41,8 +85,19 @@ static void draw_background(void)
     image_draw(image_group(GROUP_RESOURCE_ICONS) + RESOURCE_DENARII, 112, 160);
     lang_text_draw_centered(52, 69, 144, 160, 416, FONT_LARGE_BLACK);
 
-    int width = lang_text_draw(52, 50, 144, 304, FONT_NORMAL_BLACK);
-    lang_text_draw_amount(8, 4, city_emperor_months_since_gift(), 144 + width, 304, FONT_NORMAL_BLACK);
+    if (is_multiplayer()) {
+        // one gift counts every 12 months (CESAR §6.1): say when
+        int months = mp_caesar_gift_cooldown(mp_session_local_player_id());
+        if (months > 0) {
+            int width = text_draw(translation_for(TR_MP_GIFT_NEXT_COUNTS), 144, 304, FONT_NORMAL_BLACK, 0);
+            lang_text_draw_amount(8, 4, months, 144 + width, 304, FONT_NORMAL_BLACK);
+        } else {
+            text_draw_multiline(translation_for(TR_MP_GIFT_COUNTS_NOW), 144, 296, 400, FONT_NORMAL_BLACK, 0);
+        }
+    } else {
+        int width = lang_text_draw(52, 50, 144, 304, FONT_NORMAL_BLACK);
+        lang_text_draw_amount(8, 4, city_emperor_months_since_gift(), 144 + width, 304, FONT_NORMAL_BLACK);
+    }
     lang_text_draw_centered(13, 4, 400, 341, 160, FONT_NORMAL_BLACK);
 
     graphics_reset_dialog();
@@ -54,32 +109,35 @@ static void draw_foreground(void)
 
     inner_panel_draw(112, 208, 28, 5);
 
-    if (city_emperor_can_send_gift(GIFT_MODEST)) {
+    if (can_send(GIFT_MODEST)) {
         const emperor_gift *gift = city_emperor_get_gift(GIFT_MODEST);
         lang_text_draw(52, 63, 128, 218, FONT_NORMAL_WHITE);
         font_t font = focus_button_id == 1 ? FONT_NORMAL_RED : FONT_NORMAL_WHITE;
         int width = lang_text_draw(52, 51 + gift->id, 224, 218, font);
-        text_draw_money(gift->cost, 224 + width, 218, font);
+        width += text_draw_money(gift_cost(GIFT_MODEST), 224 + width, 218, font);
+        draw_laurels(GIFT_MODEST, 232 + width, 218, font);
     } else {
         lang_text_draw_multiline(52, 70, 160, 224, 352, FONT_NORMAL_WHITE);
     }
-    if (city_emperor_can_send_gift(GIFT_GENEROUS)) {
+    if (can_send(GIFT_GENEROUS)) {
         const emperor_gift *gift = city_emperor_get_gift(GIFT_GENEROUS);
         lang_text_draw(52, 64, 128, 238, FONT_NORMAL_WHITE);
         font_t font = focus_button_id == 2 ? FONT_NORMAL_RED : FONT_NORMAL_WHITE;
         int width = lang_text_draw(52, 55 + gift->id, 224, 238, font);
-        text_draw_money(gift->cost, 224 + width, 238, font);
+        width += text_draw_money(gift_cost(GIFT_GENEROUS), 224 + width, 238, font);
+        draw_laurels(GIFT_GENEROUS, 232 + width, 238, font);
     }
-    if (city_emperor_can_send_gift(GIFT_LAVISH)) {
+    if (can_send(GIFT_LAVISH)) {
         const emperor_gift *gift = city_emperor_get_gift(GIFT_LAVISH);
         lang_text_draw(52, 65, 128, 258, FONT_NORMAL_WHITE);
         font_t font = focus_button_id == 3 ? FONT_NORMAL_RED : FONT_NORMAL_WHITE;
         int width = lang_text_draw(52, 59 + gift->id, 224, 258, font);
-        text_draw_money(gift->cost, 224 + width, 258, font);
+        width += text_draw_money(gift_cost(GIFT_LAVISH), 224 + width, 258, font);
+        draw_laurels(GIFT_LAVISH, 232 + width, 258, font);
     }
     // can give at least one type
-    if (city_emperor_can_send_gift(GIFT_MODEST)) {
-        lang_text_draw_centered(52, 66 + city_emperor_selected_gift_size(), 118, 341, 260, FONT_NORMAL_BLACK);
+    if (can_send(GIFT_MODEST)) {
+        lang_text_draw_centered(52, 66 + selected_size(), 118, 341, 260, FONT_NORMAL_BLACK);
         button_border_draw(118, 336, 260, 20, focus_button_id == 4);
     }
     button_border_draw(400, 336, 160, 20, focus_button_id == 5);
@@ -99,15 +157,24 @@ static void handle_input(const mouse *m, const hotkeys *h)
 
 static void button_set_gift(int gift_id, int param2)
 {
-    if (city_emperor_set_gift_size(gift_id - 1)) {
+    if (is_multiplayer()) {
+        if (can_send(gift_id - 1)) {
+            mp_selected_size = gift_id - 1;
+            window_invalidate();
+        }
+    } else if (city_emperor_set_gift_size(gift_id - 1)) {
         window_invalidate();
     }
 }
 
 static void button_send_gift(int param1, int param2)
 {
-    if (city_emperor_can_send_gift(GIFT_MODEST)) {
-        city_emperor_send_gift();
+    if (can_send(GIFT_MODEST)) {
+        if (is_multiplayer()) {
+            mp_action_send_gift(mp_selected_size);
+        } else {
+            city_emperor_send_gift();
+        }
         window_advisors_show();
     }
 }

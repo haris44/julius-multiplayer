@@ -10,6 +10,7 @@
 #include "building/storage.h"
 #include "city/view.h"
 #include "city/buildings.h"
+#include "city/emperor.h"
 #include "city/festival.h"
 #include "city/finance.h"
 #include "city/message.h"
@@ -28,6 +29,7 @@
 #include "empire/empire.h"
 #include "empire/trade_prices.h"
 #include "empire/type.h"
+#include "core/buffer.h"
 #include "core/time.h"
 #include "game/file.h"
 #include "game/game.h"
@@ -3154,6 +3156,241 @@ static int command_caesarlaurels(const char *file)
     return failures ? 1 : 0;
 }
 
+// the personal savings of a player (his governor, not his treasury)
+static int savings_of(int player_id)
+{
+    player_context_switch(player_id);
+    int savings = city_emperor_personal_savings();
+    player_context_switch(0);
+    return savings;
+}
+
+static void set_savings(int player_id, int savings)
+{
+    player_context_switch(player_id);
+    city_data.emperor.personal_savings = savings;
+    player_context_switch(0);
+}
+
+static int salary_rank_of(int player_id)
+{
+    player_context_switch(player_id);
+    int rank = city_emperor_salary_rank();
+    player_context_switch(0);
+    return rank;
+}
+
+static int salary_amount_of(int player_id)
+{
+    player_context_switch(player_id);
+    int amount = city_emperor_salary_amount();
+    player_context_switch(0);
+    return amount;
+}
+
+// the sim to the next month, without a checksum at every tick (a large map makes it slow)
+static void run_to_next_month_fast(void)
+{
+    setting_reset_speeds(500, setting_scroll_speed());
+    int month = game_time_month();
+    for (int i = 0; i < 40 * 50 && game_time_month() == month; i++) {
+        run_one_tick();
+    }
+}
+
+// months of Caesar's laurels for the city of a player, without waiting for the sim
+static void caesar_months(int player_id, int months)
+{
+    player_context_switch(player_id);
+    for (int i = 0; i < months; i++) {
+        mp_caesar_update_city_month();
+    }
+    player_context_switch(0);
+}
+
+// One scripted game of gifts, salary and donations (T4.2, D-067). With verify, it checks every step; without, it
+// only plays it, so that a second machine can be compared with the first.
+static int play_gifts(int verify)
+{
+    int failures = 0;
+#define CHECK(condition, text) do { if (verify) { int ok_ = (condition); printf("%-62s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } } while (0)
+    // a gift costs savings / 8 + 20, / 4 + 50 or / 2 + 100, and is paid from the sender's savings only
+    int cost = 1000 / 8 + 20;
+    city_action(0, MP_ACTION_SEND_GIFT, GIFT_MODEST, 0, 0);
+    CHECK(savings_of(0) == 1000 - cost, "a modest gift lowers the savings of the sender");
+    CHECK(savings_of(1) == 1000 && mp_caesar_laurels(1) == 0, "and nothing for the other player");
+    CHECK(mp_caesar_laurels_from(0, MP_LAURELS_GIFTS) == 40 && mp_caesar_laurels(0) == 3000 + 40,
+        "it brings 4 laurels of gifts, to him only");
+    CHECK(mp_caesar_gift_cooldown(0) == MP_CAESAR_GIFT_PERIOD && mp_caesar_gift_cooldown(1) == 0,
+        "only one gift counts every 12 months");
+
+    // a second gift costs again but counts for nothing
+    int savings = savings_of(0);
+    city_action(0, MP_ACTION_SEND_GIFT, GIFT_GENEROUS, 0, 0);
+    CHECK(savings_of(0) == savings - (savings / 4 + 50), "a second gift is paid all the same");
+    CHECK(mp_caesar_laurels_from(0, MP_LAURELS_GIFTS) == 40, "but it brings no laurels within the 12 months");
+
+    // the other player, a lavish one
+    city_action(1, MP_ACTION_SEND_GIFT, GIFT_LAVISH, 0, 0);
+    CHECK(savings_of(1) == 1000 - (1000 / 2 + 100) && mp_caesar_laurels_from(1, MP_LAURELS_GIFTS) == 100,
+        "a lavish gift of player 2: 10 laurels, his savings only");
+    CHECK(mp_caesar_laurels_from(0, MP_LAURELS_GIFTS) == 40, "player 1 is not touched by it");
+
+    // what the savings cannot pay is not sent
+    set_savings(1, 10);
+    caesar_months(1, MP_CAESAR_GIFT_PERIOD);
+    city_action(1, MP_ACTION_SEND_GIFT, GIFT_MODEST, 0, 0);
+    CHECK(savings_of(1) == 10 && mp_caesar_laurels_from(1, MP_LAURELS_GIFTS) == 100,
+        "a gift above the savings is refused, and gives nothing");
+    savings = savings_of(0);
+    city_action(0, MP_ACTION_SEND_GIFT, 7, 0, 0);
+    city_action(0, MP_ACTION_SEND_GIFT, -1, 0, 0);
+    CHECK(savings_of(0) == savings, "an unknown size of gift is refused");
+
+    // the salary is limited by the rank (3 at 300 laurels), and takes effect for him only
+    int rank_of_1 = salary_rank_of(1);
+    CHECK(mp_caesar_rank(0) == 3, "player 1 is of rank 3");
+    city_action(0, MP_ACTION_SET_SALARY, 5, 0, 0);
+    CHECK(salary_rank_of(0) != 5, "a salary above the rank is refused");
+    city_action(0, MP_ACTION_SET_SALARY, 3, 0, 0);
+    CHECK(salary_rank_of(0) == 3 && salary_amount_of(0) == 8, "the salary of his rank, 8 denarii, is accepted");
+    city_action(0, MP_ACTION_SET_SALARY, 11, 0, 0);
+    city_action(0, MP_ACTION_SET_SALARY, -1, 0, 0);
+    CHECK(salary_rank_of(0) == 3, "no such rank, no change");
+    CHECK(salary_rank_of(1) == rank_of_1, "the salary of the other player stays");
+
+    // the salary is paid every month, from the treasury to the savings
+    int savings_0 = savings_of(0), savings_1 = savings_of(1);
+    run_to_next_month_fast();
+    CHECK(savings_of(0) == savings_0 + 8, "a month later, 8 denarii more in his savings");
+    CHECK(savings_of(1) == savings_1 && salary_amount_of(1) == 0, "while the player without rank is paid nothing");
+    CHECK(mp_caesar_gift_cooldown(0) == MP_CAESAR_GIFT_PERIOD - 1, "and the next gift is a month nearer");
+
+    // a donation: savings to the treasury
+    int treasury = treasury_of(0);
+    savings = savings_of(0);
+    city_action(0, MP_ACTION_DONATE, 300, 0, 0);
+    CHECK(savings_of(0) == savings - 300 && treasury_of(0) == treasury + 300, "a donation of 300: savings to treasury");
+    treasury = treasury_of(1);
+    city_action(1, MP_ACTION_DONATE, 1000000, 0, 0);
+    CHECK(savings_of(1) == 0 && treasury_of(1) == treasury + 10, "a donation cannot exceed the savings");
+    city_action(1, MP_ACTION_DONATE, -5, 0, 0);
+    CHECK(savings_of(1) == 0 && treasury_of(1) == treasury + 10, "nor be negative");
+
+    // a rank lost takes the salary with it
+    mp_caesar_add_laurels(0, MP_LAURELS_PROSPERITY, -3000);
+    savings_0 = savings_of(0);
+    run_to_next_month_fast();
+    CHECK(mp_caesar_rank(0) == 0 && salary_rank_of(0) == 0 && savings_of(0) == savings_0,
+        "a lost rank lowers the salary: nothing paid");
+
+    // after the 12 months, a gift counts again
+    caesar_months(0, MP_CAESAR_GIFT_PERIOD);
+    CHECK(mp_caesar_gift_cooldown(0) == 0, "12 months after the gift that counted, the next one counts");
+    set_savings(0, 1000);
+    city_action(0, MP_ACTION_SEND_GIFT, GIFT_LAVISH, 0, 0);
+    CHECK(mp_caesar_laurels_from(0, MP_LAURELS_GIFTS) == 40 + 100 && mp_caesar_gift_cooldown(0) == MP_CAESAR_GIFT_PERIOD,
+        "a lavish gift: 10 laurels more, and the wait begins again");
+#undef CHECK
+    return failures;
+}
+
+// state of version 2 of the piece of Caesar, as written before the gifts had a waiting time
+static void write_old_caesar_state(buffer *buf)
+{
+    buffer_write_i32(buf, 2);
+    buffer_write_i32(buf, PLAYER_CONTEXT_MAX_PLAYERS);
+    buffer_write_i32(buf, MP_LAURELS_MAX_SOURCE);
+    for (int p = 0; p < PLAYER_CONTEXT_MAX_PLAYERS; p++) {
+        for (int source = 0; source < MP_LAURELS_MAX_SOURCE; source++) {
+            buffer_write_i32(buf, source == MP_LAURELS_GIFTS ? 100 * (p + 1) : 0);
+        }
+    }
+    buffer_write_i32(buf, 250); // wrath
+    for (int p = 0; p < PLAYER_CONTEXT_MAX_PLAYERS; p++) {
+        buffer_write_i32(buf, 10 * p);
+    }
+    for (int i = 0; i < PLAYER_CONTEXT_MAX_PLAYERS * MP_NOTE_MAX * 2 + PLAYER_CONTEXT_MAX_PLAYERS; i++) {
+        buffer_write_i32(buf, 0); // notes, remainders, ranks
+    }
+}
+
+// Gifts, salary and donations to Caesar are network commands (T4.2, D-067): they act in the city of the sender,
+// give laurels as designed, and two machines playing them end up the same
+static int command_caesargifts(const char *file)
+{
+    if (!start_trade_game(file)) {
+        return 2;
+    }
+    int failures = 0;
+#define CHECK(condition, text) do { int ok_ = (condition); printf("%-62s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
+    set_savings(0, 1000);
+    set_savings(1, 1000);
+    mp_caesar_add_laurels(0, MP_LAURELS_PROSPERITY, 3000); // 300 laurels: rank 3
+    const char *start = "caesargifts.mpsav";
+    if (!mp_savegame_write(start)) {
+        printf("Unable to save\n");
+        return 2;
+    }
+    CHECK(mp_caesar_gift_laurels(GIFT_MODEST) == 40 && mp_caesar_gift_laurels(GIFT_GENEROUS) == 70 &&
+        mp_caesar_gift_laurels(GIFT_LAVISH) == 100 && mp_caesar_gift_laurels(3) == 0,
+        "the gifts bring 4, 7 and 10 laurels");
+    failures += play_gifts(1);
+    uint64_t first = mp_checksum_state();
+    int laurels_0 = mp_caesar_laurels(0), laurels_1 = mp_caesar_laurels(1);
+    int savings_0 = savings_of(0), savings_1 = savings_of(1);
+
+    // the second machine plays the same commands from the same start
+    if (!mp_savegame_read(start)) {
+        printf("Unable to read the saved game\n");
+        return 2;
+    }
+    CHECK(mp_caesar_laurels(0) == 3000 && savings_of(0) == 1000, "the start is back");
+    play_gifts(0);
+    CHECK(mp_checksum_state() == first, "two machines playing the same commands end with the same checksum");
+    CHECK(mp_caesar_laurels(0) == laurels_0 && mp_caesar_laurels(1) == laurels_1 && savings_of(0) == savings_0 &&
+        savings_of(1) == savings_1, "the same laurels and the same savings");
+
+    // the waiting time is in the saved game
+    set_savings(1, 1000);
+    city_action(1, MP_ACTION_SEND_GIFT, GIFT_MODEST, 0, 0);
+    int cooldown = mp_caesar_gift_cooldown(1);
+    static uint8_t bytes[1024];
+    buffer buf;
+    buffer_init(&buf, bytes, sizeof(bytes));
+    mp_caesar_save_state(&buf);
+    mp_caesar_reset();
+    CHECK(mp_caesar_gift_cooldown(1) == 0, "(a game without gifts has no waiting time)");
+    buffer_set(&buf, 0);
+    mp_caesar_load_state(&buf);
+    CHECK(cooldown > 0 && mp_caesar_gift_cooldown(1) == cooldown, "the waiting time of the gifts is saved and loaded");
+
+    // a game saved before: no waiting time, everything else kept
+    buffer_init(&buf, bytes, sizeof(bytes));
+    write_old_caesar_state(&buf);
+    buffer_set(&buf, 0);
+    mp_caesar_load_state(&buf);
+    CHECK(mp_caesar_laurels(0) == 100 && mp_caesar_laurels(1) == 200 && mp_caesar_wrath() == 250 &&
+        mp_caesar_belligerence(1) == 10, "an older saved game still loads, with its laurels and its wrath");
+    CHECK(mp_caesar_gift_cooldown(0) == 0 && mp_caesar_gift_cooldown(3) == 0, "and no waiting time for the gifts");
+    remove(start);
+
+    // a classic game: a gift costs savings, as before, and Caesar gives no laurels
+    player_context_switch(0);
+    player_context_set_num_players(1);
+    if (!load(file)) {
+        return 2;
+    }
+    set_savings(0, 1000);
+    city_action(0, MP_ACTION_SEND_GIFT, GIFT_MODEST, 0, 0);
+    CHECK(!mp_caesar_is_active() && mp_caesar_laurels(0) == 0 && savings_of(0) == 1000 - (1000 / 8 + 20),
+        "a classic game: the gift is paid, no laurels");
+#undef CHECK
+    printf("%s\n", failures ? "DIFFERENT: the gifts, the salary and the donations are not as designed" :
+        "Identical: the gifts, the salary and the donations are as designed");
+    return failures ? 1 : 0;
+}
+
 // the camera of a player reaches every corner of a generated map, after it went through a .mpmap file as in a game
 static int command_viewcorners(const char *file, int num_players)
 {
@@ -3681,6 +3918,8 @@ int main(int argc, char **argv)
         result = command_caesarstate(file);
     } else if (strcmp(command, "caesarlaurels") == 0) {
         result = command_caesarlaurels(file);
+    } else if (strcmp(command, "caesargifts") == 0) {
+        result = command_caesargifts(file);
     } else if (strcmp(command, "inspect") == 0) {
         result = command_inspect(file);
     } else if (strcmp(command, "tradecities") == 0) {
