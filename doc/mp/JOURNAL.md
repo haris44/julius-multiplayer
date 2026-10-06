@@ -27,7 +27,12 @@ joueurs sont trop belliqueux. Plan complet, centré sur l'équilibrage.
 - DESIGN §5.1 disait le tribut et le prêt de secours désactivés en multijoueur ; D-026 et le code les gardent.
   Corrigé. La dette fait encore baisser la faveur en multijoueur.
 
-**Prochaine étape** : réponses d'Alexandre aux points de CESAR.md §13, puis M9.1.
+**Révision (même jour)** : Alexandre trouve le multiplicateur de faveur trop compliqué et préfère « juste les
+points ». Les lauriers s'additionnent : lauriers de la cité (notes, au plus 120 par an) et lauriers de César (fête
++2/+4/+6 une par semestre, don +4/+7/+10 un par an, campagnes, triomphes ; guerre sans motif −15). La faveur
+d'origine reste figée et cachée. CESAR.md, D-050, ROADMAP et VISION mis à jour.
+
+**Prochaine étape** : réponses d'Alexandre aux 7 points restants de CESAR.md §13, puis M9.1.
 
 ---
 

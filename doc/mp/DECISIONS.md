@@ -561,11 +561,16 @@
 - 2026-10-06 · **adoptée** sur le principe (Alexandre : « César va ré-apparaître, c'est lui qui donnera la victoire à
   la cité la plus prospère […] César pourra être en colère contre des joueurs qui sont trop belliqueux entre eux, et
   envoyer son armée pour attaquer tous les joueurs de la carte »). Détails **à valider** : CESAR.md §13.
-- La victoire par défaut devient le **jugement de César** : chaque mois, une cité gagne des lauriers. Ce gain vaut
-  la valeur de la cité (cinq notes : prospérité, commerce, habitat, culture-éducation, grandeur), multipliée par la
-  faveur, de ×0,5 à ×1,5. Le plus de lauriers à la fin l'emporte. Ce mode remplace le score provisoire de M4.6.
-- La **faveur** revient, par cité : dons depuis l'épargne, salaire et rangs, fêtes, troupes prêtées aux campagnes
-  (batailles lointaines partagées), guerres justes. Elle revient lentement vers 50.
+- La victoire par défaut devient le **jugement de César** : le plus de lauriers à la fin l'emporte. Ce mode remplace
+  le score provisoire de M4.6. Les lauriers **s'additionnent** :
+  - les lauriers de la cité, chaque mois, d'après cinq notes : prospérité, commerce, habitat, culture-éducation,
+    grandeur ;
+  - les lauriers de César, d'après les actions envers lui : dons depuis l'épargne (salaire limité par le rang),
+    fêtes, troupes prêtées aux campagnes (batailles lointaines partagées), demandes, guerres justes, et en négatif
+    les agressions.
+- Révisée le jour même : un premier jet multipliait les lauriers par la faveur (×0,5 à ×1,5). Alexandre : « je
+  trouve le multiplicateur de faveur trop compliqué, je préfèrerais juste les points ». La faveur d'origine reste
+  donc figée et cachée (D-026), et chaque action vaut un nombre fixe de lauriers, plafonné par période.
 - La **guerre** entre joueurs se déclare, avec un motif déterminé par le jeu : riposte, mandat de César ou sans
   motif. Une **jauge de colère commune** monte avec la durée et la puissance des guerres, et ses seuils mènent à
   l'avertissement, à l'ultimatum, puis à l'expédition punitive dans toutes les cités ; le fautif paie le plus.

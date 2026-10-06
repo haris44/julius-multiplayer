@@ -1,7 +1,7 @@
 # Feuille de route
 
 > **Jalon en cours : M9, César juge** (D-050, plan complet : [CESAR.md](CESAR.md)). César revient comme arbitre :
-> lauriers, faveur, campagnes ; jouable en paix et seul avant la guerre (M10). Ordre : M9.1 → M9.9.
+> lauriers de la cité et de César, campagnes ; jouable en paix et seul avant la guerre (M10). Ordre : M9.1 → M9.9.
 
 ## M0 — Infrastructure de développement et de test ✅
 - [x] **M0.1** Environnement macOS : build, données `../donnees-c3`, branche `multiplayer`, tag `upstream-base`.
@@ -385,21 +385,21 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
 
 ## M9 — César juge (D-050, [CESAR.md](CESAR.md) §4 à §6)
 César revient comme arbitre de la partie. Jouable en paix et **seul** : livré à Alexandre avant la guerre.
-- [ ] **M9.1** Module `mp/caesar` : par cité la faveur, les lauriers (en dixièmes) et leur détail du mois ; la jauge
-  commune de colère ; sauvegarde, somme de contrôle ; table de réglages `mp/caesar_rules.h`. *Critères* : ctest
+- [ ] **M9.1** Module `mp/caesar` : par cité les lauriers (en dixièmes) et leur détail par source ; la jauge commune
+  de colère ; sauvegarde, somme de contrôle ; table de réglages `mp/caesar_rules.h`. *Critères* : ctest
   sauvegarde et reprise identiques tick par tick ; parité verte (classique intact).
 - [ ] **M9.2** Les cinq notes (prospérité, commerce, habitat, culture-éducation, grandeur ; CESAR §5) et
   `simtool notes SAVE`. Références calibrées sur les cités de `test/data` (CESAR §10.2), valeurs notées dans
   DECISIONS. *Critères* : ctest des notes sur des sauvegardes connues ; flux nets et prix de référence pour le
   commerce (ping-pong entre deux joueurs sans effet).
-- [ ] **M9.3** Faveur en multijoueur : retour vers 50, salaire et épargne, dons (formule d'origine, plafond annuel),
-  rangs selon les lauriers. Commandes réseau. *Critères* : ctest « les dons seuls plafonnent la faveur vers 75 »,
-  salaire au-dessus du rang pénalisé.
-- [ ] **M9.4** Fêtes comptées par César (une tous les 6 mois). *Critère* : ctest.
-- [ ] **M9.5** Lauriers mensuels, verdict de fin de partie, consulat anticipé, titre en partie seule ; remplace le
-  score provisoire de M4.6. *Critères* : ctest de fin de partie à 1 et 2 joueurs, égalités départagées par la
-  faveur.
-- [ ] **M9.6** Interface : conseiller impérial multijoueur (notes, faveur, rang, lauriers, dons), bandeau (lauriers
+- [ ] **M9.3** Dons en lauriers : salaire et épargne (coûts d'origine), un don compté par an, rangs selon les
+  lauriers, salaire limité par le rang. Commandes réseau. *Critères* : ctest (lauriers par taille de don, second
+  don de l'année sans lauriers, salaire au-dessus du rang refusé).
+- [ ] **M9.4** Fêtes en lauriers (une comptée tous les 6 mois). *Critère* : ctest.
+- [ ] **M9.5** Lauriers mensuels de la cité, verdict de fin de partie, consulat anticipé, titre en partie seule ;
+  remplace le score provisoire de M4.6. *Critères* : ctest de fin de partie à 1 et 2 joueurs, égalités départagées
+  par les lauriers de la cité.
+- [ ] **M9.6** Interface : conseiller impérial multijoueur (notes, rang, lauriers par source, dons), bandeau (lauriers
   et jauge), lettres de César en plein écran, salon (mode « Jugement de César », durée, options). *Critère* :
   captures sans fenêtre, en partie seule et à deux.
 - [ ] **M9.7** Campagnes de César : batailles lointaines partagées, troupes de tous les joueurs additionnées,
@@ -415,7 +415,7 @@ César revient comme arbitre de la partie. Jouable en paix et **seul** : livré 
 - [ ] **M10.2** Légions chez l'adversaire, ordre « attaquer », portes et murs qui ne laissent passer que leur
   propriétaire.
 - [ ] **M10.3** Interception des caravanes (ancien M8.7) : cargaison prise, route coupée.
-- [ ] **M10.4** Motifs de guerre (riposte, mandat de César, sans motif), triomphes, effets sur la faveur.
+- [ ] **M10.4** Motifs de guerre (riposte, mandat de César, sans motif), triomphes, lauriers gagnés ou perdus.
 - [ ] **M10.5** Jauge de colère : durée, puissance, dégâts, décrue, belligérance de chacun ; avertissement et
   ultimatum (paix imposée, « ennemi de Rome »).
 - [ ] **M10.6** Expédition punitive : invasion de César dans chaque cité, disgrâce de 12 mois, pertes du fautif ;
