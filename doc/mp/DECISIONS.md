@@ -775,10 +775,15 @@
   - on reçoit le prix moins le portorium.
 - **L'empire vend toujours** (fin de la règle D-048 qui le faisait s'effacer devant un joueur moins cher).
 - **La hausse des prix quand un joueur arrête le commerce** passe par le portorium, qui augmente.
+- **Prix de départ** (Alexandre : « le prix de départ est le prix du jeu pour tout le monde, l'international a les
+  frais de douane, et ensuite les joueurs le font évoluer comme ils le souhaitent ») :
+  - le prix fixe de l'empire est le prix du jeu, et c'est aussi le prix de départ de chaque joueur ;
+  - je prends le prix d'achat de base de l'original, déjà le prix par défaut des joueurs (D-043) : marbre 200.
+    *À valider* ;
+  - seul le commerce avec l'empire paie le portorium. Entre joueurs, pas de douane : le commerce ne quitte pas la
+    province ;
+  - chaque joueur fait ensuite évoluer ses prix comme il le souhaite, joueur par joueur (D-043).
 - **À préciser** (je tranche provisoirement s'il le faut, en le notant) :
-  - le prix fixe : le prix d'achat de l'original, ou la moyenne de l'achat et de la vente ;
-  - le taux de départ du portorium (pour garder l'écart actuel, environ 25 à 30 %) ;
-  - qui le voit augmenter, de combien et combien de temps, et ce qu'est « arrêter le commerce » (T4.3) ;
-  - le commerce entre joueurs reste sans douane (il ne quitte pas la province) ; le prix par défaut d'un joueur
-    devient le prix fixe de l'empire.
+  - le taux de départ du portorium (pour garder l'écart actuel, environ 25 %) ;
+  - qui le voit augmenter, de combien et combien de temps, et ce qu'est « arrêter le commerce » (T4.3).
 - Classique : inchangé.

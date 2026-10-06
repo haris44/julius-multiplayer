@@ -387,6 +387,28 @@ le note « à valider ».
   *Réponse d'Alexandre* (D-060) : plus de prix d'achat et de vente différents. Chaque ressource a un **prix fixe de
   l'empire**, et une **taxe de douane, le portorium**, s'applique à l'entrée et à la sortie de la province. C'est
   elle qui fera monter les prix (T4.3). À traiter avec T4.3.
+  *Précision d'Alexandre* : le prix de départ est le prix du jeu, le même pour tout le monde ; l'international
+  paie la douane ; ensuite, chaque joueur fait évoluer ses prix comme il le souhaite.
+- [ ] **T4.13** **Bug : le joueur côtier perd l'argile et reçoit le fer et le marbre** (essai du soir : « les
+  ressources ne sont plus les bonnes entre le joueur terrestre et le joueur côtier »).
+  *Diagnostic* : les permissions de chaque cité sont justes, dans la carte et dans la sauvegarde. Le menu de
+  construction est un état de l'interface, unique, recalculé par `building_menu_update` dans la cité courante.
+  Quand un joueur ouvre une route de commerce (`MP_ACTION_OPEN_TRADE_ROUTE`, `mp/actions.c`), la commande s'exécute
+  dans **sa** cité, chez tous les joueurs : chacun voit alors le menu de ce joueur. Si le joueur des terres ouvre
+  une route, le côtier perd l'argile et reçoit le fer et le marbre ; et inversement. La simulation n'est pas
+  touchée (le menu ne sert qu'à l'interface), d'où l'absence de désynchronisation.
+  *Correctif prévu* : le menu ne se recalcule que dans la cité du joueur local (garde dans `building_menu_update`,
+  sans effet en classique). *Test* : `simtool`, J1 ouvre une route pendant que J2 est le joueur local ; le menu de J2
+  garde l'argile, sans fer ni marbre.
+  *En attendant* (essais du soir) : sauvegarder et reprendre depuis le salon recalcule le bon menu.
+- [ ] **T4.14** **Deux cartes préparées de plus** (Alexandre : « avant de terminer, tu me généreras 2 cartes de
+  plus »), à faire en fin de nuit.
+  *Choix provisoire, à valider* :
+  - une nouvelle carte pour 2 joueurs et une pour 3 ou 4, avec un relief et une disposition différents ;
+  - les mêmes règles que les cartes actuelles : bras de mer, pont et aqueduc de César, un joueur des terres,
+    emplacements tirés au sort ;
+  - la carte est choisie dans le salon, ou tirée au sort.
+  *Tests* : ceux des cartes préparées (`mp_prepared_map*`), appliqués à chaque carte.
 
 ## MC — Cartes multijoueur préparées et César (D-033, D-034)
 - [ ] **MC.1** Ouvrages de César dessinés en blanc (la teinte actuelle ne fait que foncer les images) ; son aqueduc
