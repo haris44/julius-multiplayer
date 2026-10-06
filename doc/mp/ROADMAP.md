@@ -334,7 +334,7 @@ le note « à valider ».
 - [ ] **T4.8** Plan de la guerre : réfléchir à l'**impact du pont de César**, seul passage terrestre entre les deux
   rives à 4 joueurs, donc un endroit très stratégique. Peut-on le bloquer, le tenir, le couper ? Que fait César
   si un joueur le ferme ? Va dans CESAR.md §7 et DESIGN §7 avant M10.
-- [ ] **T4.9** **Bug : l'aqueduc de César ne donne pas d'eau à J2, J3, J4** (essai du soir). *Diagnostic* : l'eau de
+- [x] **T4.9** **Bug : l'aqueduc de César ne donne pas d'eau à J2, J3, J4** (essai du soir). *Diagnostic* : l'eau de
   chaque cité se calcule l'une après l'autre (`map_water_supply_update_reservoir_fountain_of_city`, tick 27), mais
   l'état « aqueduc en eau » de la grille n'est remis à zéro qu'au tour de la première cité. Au tour des suivantes,
   `fill_aqueducts_from_offset` saute les cases déjà en eau (`!map_aqueduct_at`) : la propagation depuis le réservoir
@@ -342,6 +342,12 @@ le note « à valider ».
   *Correctif prévu* : une marque « visitée » propre à chaque passage, en multijoueur seulement (le classique reste
   identique). *Test* : `simtool` avec le joueur des terres en J2, J3 et J4 (graines de placement), réservoir
   alimenté et maisons desservies.
+  *Fait* (D-064) : en multijoueur, `fill_aqueducts_from_offset` tient sa propre grille « atteint », remise à zéro au
+  tour de chaque cité, au lieu de lire l'eau de la grille des aqueducs ; le classique garde son test d'origine. Test
+  `mp_caesar_aqueduct_{2,3,4}_players` (`simtool inlandwater`) : pour chaque joueur, un tirage de placement le met
+  à l'intérieur des terres ; son réservoir au bout de l'aqueduc de César a de l'eau, une fontaine à portée aussi, la
+  maison voisine est desservie ; tout l'aqueduc de César porte l'eau ; un aqueduc isolé de chaque joueur reste à
+  sec ; deux parties identiques donnent la même somme de contrôle. Le test échouait avant le correctif.
 - [ ] **T4.10** **La difficulté est celle du salon, pour toute la partie** (essai du soir). Celle réglée dans le menu
   principal ne règle pas la partie, et on ne doit plus pouvoir la régler par joueur.
   *État* : la simulation lit bien la difficulté du salon (`game_rules_difficulty`). Mais le menu Options,
@@ -403,7 +409,7 @@ le note « à valider ».
   *À faire* : un seul prix par ressource (`empire/trade_prices`), le portorium à 50 % à l'achat et à la vente à
   l'empire (confirmé par Alexandre), le prix de Rome par défaut entre joueurs, la page du commerce qui montre
   prix de Rome, douane et prix payé. Tests : prix payés et reçus avec l'empire, prix par défaut entre joueurs.
-- [ ] **T4.13** **Bug : le joueur côtier perd l'argile et reçoit le fer et le marbre** (essai du soir : « les
+- [x] **T4.13** **Bug : le joueur côtier perd l'argile et reçoit le fer et le marbre** (essai du soir : « les
   ressources ne sont plus les bonnes entre le joueur terrestre et le joueur côtier »).
   *Diagnostic* : les permissions de chaque cité sont justes, dans la carte et dans la sauvegarde. Le menu de
   construction est un état de l'interface, unique, recalculé par `building_menu_update` dans la cité courante.
@@ -418,6 +424,12 @@ le note « à valider ».
   sans effet en classique), et jamais pendant la commande d'un autre joueur. *Tests* : `simtool`, J1 ouvre une
   route pendant que J2 est le joueur local ; le menu de J2 garde l'argile, sans fer ni marbre ; puis l'inverse.
   Vérifier aussi qu'une route ouverte par J1 n'apparaît pas dans le commerce de J2.
+  *Fait* (D-064) : `building_menu_update` ne fait rien quand la cité courante n'est pas celle du joueur local
+  (`mp_session_is_other_players_city()`, faux en classique) ; la route qu'ouvre le joueur local dans sa propre cité
+  recalcule bien son menu. Test `mp_build_menu_owner` (`simtool menuowner`) : à deux, chacun son tour joueur
+  local ; l'autre ouvre une route, le menu local garde les mêmes matières et n'est pas recalculé, la route n'est
+  pas ouverte chez lui ; sa propre route recalcule son menu. Le test échouait avant le correctif. `mp_permissions_*`
+  règle maintenant le joueur local de chaque cité qu'il interroge.
   *En attendant* (essais du soir) : sauvegarder et reprendre depuis le salon recalcule le bon menu.
 - [ ] **T4.14** **Deux cartes préparées de plus** (Alexandre : « avant de terminer, tu me généreras 2 cartes de
   plus »), à faire en fin de nuit.

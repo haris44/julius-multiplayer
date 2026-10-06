@@ -4,6 +4,7 @@
 #include "core/config.h"
 #include "empire/city.h"
 #include "game/tutorial.h"
+#include "mp/session.h"
 #include "scenario/building.h"
 
 #define BUILD_MENU_ITEM_MAX 30
@@ -247,6 +248,12 @@ static void disable_resources(int *enabled, building_type type)
 
 void building_menu_update(void)
 {
+    // The menu is the interface of the local player: what another player does in his city (a command run in his
+    // context on every computer) must not rebuild it with the permissions of that city (D-064). Never so in a
+    // classic game.
+    if (mp_session_is_other_players_city()) {
+        return;
+    }
     tutorial_build_buttons tutorial_buttons = tutorial_get_build_buttons();
     for (int sub = 0; sub < BUILD_MENU_MAX; sub++) {
         for (int item = 0; item < BUILD_MENU_ITEM_MAX; item++) {

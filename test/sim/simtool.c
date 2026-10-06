@@ -36,6 +36,7 @@
 #include "core/image.h"
 #include "map/bridge.h"
 #include "map/elevation.h"
+#include "map/aqueduct.h"
 #include "map/image.h"
 #include "map/terrain.h"
 #include "map/grid.h"
@@ -134,7 +135,11 @@ static int usage(void)
     printf("                                         slowly, joined again it fills\n");
     printf("  simtool drying SAVE PLAYERS            prepared map: no pond; the city of the rocks dries up when\n");
     printf("                                         the aqueduct of Caesar is cut, fills again when mended\n");
-    printf("  simtool caravans SAVE                  a caravan of player 2 brings marble to player 1, who pays\n");
+    printf("  simtool inlandwater SAVE PLAYERS       prepared map: the aqueduct of Caesar waters the player inland\n");
+    printf("                                         whichever arrival point he draws (players 2 to 4 too)\n");
+    printf("  simtool menuowner SAVE                 prepared map: the build menu of the local player keeps his\n");
+    printf("                                         materials when another player opens a route with the empire\n");
+    printf("  simtool caravans SAVE                 a caravan of player 2 brings marble to player 1, who pays\n");
     printf("  simtool tradeprices SAVE               prices between players and notices to the buyer\n");
     printf("  simtool importprice SAVE               buying from the empire costs 50%% more in multiplayer\n");
     printf("  simtool notrade SAVE                   a template without trade by land and by sea is refused\n");
@@ -1305,6 +1310,7 @@ static int command_permissions(const char *file, int num_cities)
     int holders[6] = { 0 };
     for (int p = 0; p < num_cities; p++) {
         player_context_switch(p);
+        mp_session_init_network(p, NULL); // the menu is the one of the local player: here, player p
         building_menu_update();
         printf("city %d:", p);
         for (int r = 0; r < 6; r++) {
@@ -1323,6 +1329,7 @@ static int command_permissions(const char *file, int num_cities)
         }
     }
     player_context_switch(0);
+    mp_session_init_offline();
     for (int r = 0; r < 6; r++) {
         if (originally[r] && holders[r] != 1) {
             printf("WRONG: %s may be produced by %d cities instead of one\n", RAW[r].name, holders[r]);
@@ -1940,6 +1947,150 @@ static int command_drying(const char *file, int num_players)
     return failures ? 1 : 0;
 }
 
+static int build_as(int player_id, int type, int x1, int y1, int x2, int y2);
+
+// the aqueduct of Caesar waters the player inland, wherever his arrival point is drawn (T4.9): every city fills the
+// aqueducts in turn on the same grid, the water of a pass must not stop the next one. Returns the number of failures
+// and the checksum of the state at the end, which must not depend on anything hidden
+static int inland_water_game(const char *file, int num_players, int seed, int p, uint64_t *checksum)
+{
+    char map_file[64];
+    snprintf(map_file, sizeof(map_file), "inlandwater-%d-%d.mpmap", num_players, p);
+    player_context_switch(0);
+    player_context_set_num_players(1);
+    if (!mp_mapgen_create_prepared(file, num_players, seed) || !mp_savegame_write(map_file) ||
+        !mp_savegame_read(map_file)) {
+        printf("Unable to create the prepared map\n");
+        return -1;
+    }
+    remove(map_file);
+    game_rules_settings rules;
+    game_rules_default_multiplayer_settings(&rules);
+    rules.territories = 1;
+    rules.ai_invasions = 0;
+    game_rules_set_multiplayer(&rules);
+    int ax, ay;
+    if (mp_mapgen_slot_is_coastal(p) || !mp_mapgen_caesar_aqueduct_end(p, &ax, &ay)) {
+        printf("Player %d is not the one inland\n", p + 1);
+        return -1;
+    }
+    int failures = 0;
+#define CHECK(condition, text) do { int ok_ = (condition); printf("  %-70s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
+    int built = build_as(p, BUILDING_DRAGGABLE_RESERVOIR, ax - 2, ay, ax - 2, ay);
+    built &= build_as(p, BUILDING_FOUNTAIN, ax - 2, ay + 6, ax - 2, ay + 6);
+    built &= build_as(p, BUILDING_HOUSE_VACANT_LOT, ax - 2, ay + 8, ax - 2, ay + 8);
+    // an aqueduct apart from everything, for each player: it stays dry
+    int dry_x[MP_MAPGEN_MAX_PLAYERS], dry_y[MP_MAPGEN_MAX_PLAYERS];
+    for (int q = 0; q < num_players; q++) {
+        if (q == p) {
+            dry_x[q] = ax - 6;
+            dry_y[q] = ay - 4;
+        } else {
+            mp_mapgen_city_center(q, &dry_x[q], &dry_y[q]);
+        }
+        build_as(q, BUILDING_AQUEDUCT, dry_x[q], dry_y[q], dry_x[q], dry_y[q]); // not a building: terrain only
+        built &= map_terrain_is(map_grid_offset(dry_x[q], dry_y[q]), TERRAIN_AQUEDUCT);
+    }
+    if (!built) {
+        printf("Unable to build in the zones of the players (reservoir %d fountain %d house %d)\n",
+            building_get(map_building_at(map_grid_offset(ax - 2, ay)))->type,
+            building_get(map_building_at(map_grid_offset(ax - 2, ay + 6)))->type,
+            building_get(map_building_at(map_grid_offset(ax - 2, ay + 8)))->type);
+        return -1;
+    }
+    setting_reset_speeds(500, setting_scroll_speed());
+    int reservoir_id = map_building_at(map_grid_offset(ax - 2, ay));
+    int fountain_id = map_building_at(map_grid_offset(ax - 2, ay + 6));
+    int house_id = map_building_at(map_grid_offset(ax - 2, ay + 8));
+    // two days, then to the tick before the water: the fountain has a worker (nobody lives here yet)
+    for (int day = 0; day < 2; day++) {
+        while (game_time_tick() != 27) {
+            run_one_tick();
+            building_get(reservoir_id)->damage_risk = 0;
+        }
+        player_context_switch(p);
+        building_get(fountain_id)->num_workers = 5;
+        player_context_switch(0);
+        run_one_tick();
+        run_one_tick();
+    }
+    player_context_switch(p);
+    building *reservoir = building_get(reservoir_id);
+    building *fountain = building_get(fountain_id);
+    building *house = building_get(house_id);
+    printf("player %d inland, aqueduct of Caesar ends at (%d, %d)\n", p + 1, ax, ay);
+    CHECK(reservoir->type == BUILDING_RESERVOIR && reservoir->has_water_access, "his reservoir has water");
+    CHECK(map_water_supply_has_range(fountain->grid_offset, TERRAIN_RESERVOIR_RANGE), "the fountain is in the water range");
+    CHECK(fountain->type == BUILDING_FOUNTAIN && fountain->has_water_access, "the fountain has water");
+    CHECK(house->house_size && house->has_water_access, "the house near the fountain is served");
+    int caesar_tiles = 0, caesar_wet = 0;
+    for (int y = 0; y < map_grid_height(); y++) {
+        for (int x = 0; x < map_grid_width(); x++) {
+            int o = map_grid_offset(x, y);
+            if (map_terrain_is(o, TERRAIN_AQUEDUCT) && map_owner_get_claimed(o) == MAP_OWNER_CAESAR) {
+                int mine = 0; // the dry aqueducts above, built in the road of Caesar of the city centers
+                for (int q = 0; q < num_players; q++) {
+                    mine |= x == dry_x[q] && y == dry_y[q];
+                }
+                if (!mine) {
+                    caesar_tiles++;
+                    caesar_wet += map_aqueduct_at(o) != 0;
+                }
+            }
+        }
+    }
+    printf("  aqueduct of Caesar: %d of %d tiles with water\n", caesar_wet, caesar_tiles);
+    CHECK(caesar_tiles > 0 && caesar_wet == caesar_tiles, "the whole aqueduct of Caesar carries water");
+    for (int q = 0; q < num_players; q++) {
+        int o = map_grid_offset(dry_x[q], dry_y[q]);
+        CHECK(map_terrain_is(o, TERRAIN_AQUEDUCT) && !map_aqueduct_at(o), q == p ?
+            "an aqueduct of his, joined to nothing, stays dry" : "an aqueduct of another player, joined to nothing, stays dry");
+    }
+    player_context_switch(0);
+    *checksum = mp_checksum_state();
+#undef CHECK
+    return failures;
+}
+
+static int command_inlandwater(const char *file, int num_players)
+{
+    int failures = 0;
+    for (int p = 0; p < num_players; p++) {
+        int seed = 1;
+        // a draw of the arrival points puts the player inland where the plan puts player 1
+        for (; seed <= 60; seed++) {
+            player_context_switch(0);
+            player_context_set_num_players(1);
+            if (mp_mapgen_create_prepared(file, num_players, seed) && !mp_mapgen_slot_is_coastal(p)) {
+                break;
+            }
+        }
+        if (seed > 60) {
+            printf("No draw puts player %d inland\n", p + 1);
+            return 2;
+        }
+        uint64_t first, second;
+        int result = inland_water_game(file, num_players, seed, p, &first);
+        if (result < 0) {
+            return 2;
+        }
+        failures += result;
+        result = inland_water_game(file, num_players, seed, p, &second);
+        if (result < 0) {
+            return 2;
+        }
+        failures += result;
+        printf("  same game twice: %016" PRIx64 " and %016" PRIx64 "%s\n", first, second,
+            first == second ? "" : "  <-- UNEXPECTED");
+        failures += first != second;
+    }
+    player_context_switch(0);
+    player_context_set_num_players(1);
+    printf("%s\n", failures ? "DIFFERENT: the aqueduct of Caesar does not water every inland player" :
+        "Identical: the aqueduct of Caesar waters every inland player");
+    return failures ? 1 : 0;
+}
+
 static int build_as(int player_id, int type, int x1, int y1, int x2, int y2)
 {
     mp_command command = { .type = MP_COMMAND_BUILD, .player_id = player_id, .args = { type, 0, x1, y1, x2, y2, 0, 0 } };
@@ -2431,6 +2582,111 @@ static int command_terrain(const char *file, int num_players, int x0, int y0, in
 }
 
 // a template whose empire does not trade by land and by sea is refused for the prepared maps
+static void city_action(int player_id, int action, int a1, int a2, int a3);
+
+static void ignore_command(mp_command *command)
+{
+}
+
+static const struct { int building; int resource; const char *name; } MENU_RAW[] = {
+    { BUILDING_CLAY_PIT, RESOURCE_CLAY, "clay" }, { BUILDING_TIMBER_YARD, RESOURCE_TIMBER, "timber" },
+    { BUILDING_IRON_MINE, RESOURCE_IRON, "iron" }, { BUILDING_MARBLE_QUARRY, RESOURCE_MARBLE, "marble" },
+};
+
+// the raw materials of the build menu of the local player, as a bit mask
+static int menu_raw_mask(void)
+{
+    int mask = 0;
+    for (int r = 0; r < 4; r++) {
+        mask |= building_menu_is_enabled(MENU_RAW[r].building) << r;
+    }
+    return mask;
+}
+
+static void print_menu_raw(const char *when, int mask)
+{
+    printf("  %-44s:", when);
+    for (int r = 0; r < 4; r++) {
+        if (mask & (1 << r)) {
+            printf(" %s", MENU_RAW[r].name);
+        }
+    }
+    printf("\n");
+}
+
+// the build menu is the local player's (T4.13, D-061): a route that another player opens, a command run in his
+// city on every computer, leaves it as it is; the player's own route refreshes it
+static int command_menuowner(const char *file)
+{
+    if (!mp_mapgen_create_prepared(file, 2, 0)) {
+        printf("Unable to create the prepared map\n");
+        return 2;
+    }
+    // the routes of the empire are open on the prepared map: close them, so that the players open them
+    for (int p = 0; p < 2; p++) {
+        player_context_switch(p);
+        for (int i = 1; i < 41; i++) {
+            empire_city *c = empire_city_get(i);
+            if (c->in_use && c->type == EMPIRE_CITY_TRADE) {
+                c->is_open = 0;
+            }
+        }
+    }
+    int failures = 0;
+#define CHECK(condition, text) do { int ok_ = (condition); printf("  %-60s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
+    for (int local = 0; local < 2; local++) {
+        int other = 1 - local;
+        printf("player %d is the local player (%s), player %d the other (%s)\n", local + 1,
+            mp_mapgen_slot_is_coastal(local) ? "coast" : "inland", other + 1,
+            mp_mapgen_slot_is_coastal(other) ? "coast" : "inland");
+        // what the menu of the other player would be: he is the local player of his own computer
+        mp_session_init_network(other, ignore_command);
+        player_context_switch(other);
+        building_menu_update();
+        int other_would_have = menu_raw_mask();
+        mp_session_init_network(local, ignore_command);
+        player_context_switch(local);
+        building_menu_update();
+        int own = menu_raw_mask();
+        print_menu_raw("menu of the local player", own);
+        print_menu_raw("menu the other one would have", other_would_have);
+        int expected = 0;
+        for (int r = 0; r < 4; r++) {
+            expected |= mp_mapgen_slot_allows(local, MENU_RAW[r].resource) << r;
+        }
+        CHECK(own == expected, "the menu shows the materials of his own arrival point");
+        CHECK(own != other_would_have, "the two arrival points do not have the same materials");
+        building_menu_has_changed(); // the interface has seen it
+        // the other player opens a route with the empire: his command runs in his city
+        player_context_switch(other);
+        int city = find_closed_trade_city();
+        player_context_switch(local);
+        CHECK(city > 0, "the empire has a route to open");
+        city_action(other, MP_ACTION_OPEN_TRADE_ROUTE, city, 0, 0);
+        player_context_switch(other);
+        CHECK(empire_city_get(city)->is_open, "the route of the other player is open");
+        player_context_switch(local);
+        print_menu_raw("menu after the route of the other player", menu_raw_mask());
+        CHECK(menu_raw_mask() == own, "his menu keeps the same materials");
+        CHECK(!building_menu_has_changed(), "his menu was not rebuilt");
+        CHECK(!empire_city_get(city)->is_open, "the route of the other player is not his");
+        // his own route
+        int mine = find_closed_trade_city();
+        CHECK(mine > 0, "he has a route to open too");
+        city_action(local, MP_ACTION_OPEN_TRADE_ROUTE, mine, 0, 0);
+        CHECK(empire_city_get(mine)->is_open, "his route is open");
+        CHECK(building_menu_has_changed(), "his menu was rebuilt by his own route");
+        CHECK(menu_raw_mask() == own, "and keeps the materials of his arrival point");
+    }
+    mp_session_init_offline();
+    player_context_switch(0);
+    player_context_set_num_players(1);
+#undef CHECK
+    printf("%s\n", failures ? "DIFFERENT: the build menu follows what the other players do" :
+        "Identical: the build menu is the one of the local player");
+    return failures ? 1 : 0;
+}
+
 static int command_notrade(const char *file)
 {
     int refused = !mp_mapgen_create_prepared(file, 2, 0) && mp_mapgen_lacks_trade_routes();
@@ -3652,6 +3908,10 @@ int main(int argc, char **argv)
         result = command_reservoirlevel(file);
     } else if (strcmp(command, "drying") == 0 && argc > 3) {
         result = command_drying(file, atoi(argv[3]));
+    } else if (strcmp(command, "inlandwater") == 0 && argc > 3) {
+        result = command_inlandwater(file, atoi(argv[3]));
+    } else if (strcmp(command, "menuowner") == 0) {
+        result = command_menuowner(file);
     } else if (strcmp(command, "caravans") == 0) {
         result = command_caravans(file);
     } else if (strcmp(command, "tradeprices") == 0) {

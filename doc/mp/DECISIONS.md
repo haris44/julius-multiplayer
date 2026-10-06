@@ -824,3 +824,15 @@
   - blé et légumes pour tous.
   À 2 joueurs : terres = fer, marbre, olives, porcs ; côte = bois, argile, vignes, pêche, fruits.
 - Classique : inchangé.
+
+### D-064 — Eau de César pour tous, menu du joueur local, garde des recherches de chemin (T4.9, T4.13, T4.17)
+- 2026-10-06 · **adoptée** (corrections de bugs du premier essai, sans changement de règle de jeu)
+- **L'eau d'une cité ne dépend plus de l'eau déjà posée par les cités précédentes.** Les cités calculent l'eau l'une
+  après l'autre sur la même grille d'aqueducs, remise à zéro au seul tour de la première (tick 27). En
+  multijoueur, la propagation de l'eau (`map/water_supply.c`) tient sa propre grille « atteint », remise à zéro au
+  début du tour de chaque cité ; elle n'est jamais sauvegardée (vide entre deux tours). Les aqueducs d'un autre
+  joueur ne portent toujours pas l'eau de celui-ci, ceux de César oui (D-034). Classique : test d'origine inchangé.
+- **Le menu de construction est celui du joueur local seulement.** `building_menu_update` ne fait rien quand la
+  cité courante est celle d'un autre joueur. Une commande d'un autre joueur (route de commerce, arc de triomphe...)
+  ne change donc plus ce que voit le joueur local (D-061). Classique : jamais « cité d'un autre joueur ».
+

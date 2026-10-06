@@ -304,6 +304,14 @@ foreach(players 1 2 4)
     add_test(NAME mp_prepared_map_drying_${players}_players COMMAND simtool drying brugle-massilia-start.sav ${players})
 endforeach()
 
+# The aqueduct of Caesar waters the player inland wherever his arrival point is drawn, players 2 to 4 included (T4.9)
+foreach(players 2 3 4)
+    add_test(NAME mp_caesar_aqueduct_${players}_players COMMAND simtool inlandwater brugle-massilia-start.sav ${players})
+endforeach()
+
+# The build menu is the one of the local player: a route opened by another player does not change it (T4.13, D-061)
+add_test(NAME mp_build_menu_owner COMMAND simtool menuowner brugle-massilia-start.sav)
+
 # Territories (MT.1, D-036): build only in one's zone, which follows the settled buildings and the missions
 add_test(NAME mp_territory COMMAND simtool territory brugle-massilia-start.sav)
 # Missions and missionaries (MT.2, MT.3, D-037): near a missionary, free then marble, trained for money

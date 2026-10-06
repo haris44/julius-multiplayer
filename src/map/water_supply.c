@@ -36,6 +36,11 @@ static struct {
 // cities (saved games, overlays), but a city only gets water from its own fountains and reservoirs (D-018)
 static grid_u8 ranges[PLAYER_CONTEXT_MAX_PLAYERS];
 
+// With several cities, the aqueducts reached by the water of the city being computed, cleared at the start of each
+// city's turn: the aqueduct grid keeps the water of the cities already computed this day, which must not stop the
+// water of the next city (the aqueduct of Caesar is the same for all). Never saved: empty between two turns (D-064)
+static grid_u8 reached;
+
 // With several cities, reservoirs hold water (D-035): cut off from their source, they still serve their fountains
 // and baths until they are empty; joined again, they fill. One update a day: at the normal speed (90%), a day lasts
 // about 1.1 second, so a full reservoir lasts about 5 minutes and fills in about 1 minute.
@@ -222,12 +227,16 @@ static void fill_aqueducts_from_offset(int grid_offset)
     memset(&queue, 0, sizeof(queue));
     int guard = 0;
     int next_offset;
+    int multiple = several_cities();
     int image_without_water = image_group(GROUP_BUILDING_AQUEDUCT_NO_WATER);
     do {
         if (++guard >= GRID_SIZE * GRID_SIZE) {
             break;
         }
         map_aqueduct_set(grid_offset, 1);
+        if (multiple) {
+            reached.items[grid_offset] = 1;
+        }
         int image_id = map_image_at(grid_offset);
         if (image_id >= image_without_water) {
             map_image_set(grid_offset, image_id - 15);
@@ -249,7 +258,7 @@ static void fill_aqueducts_from_offset(int grid_offset)
                     }
                 }
             } else if (map_terrain_is(new_offset, TERRAIN_AQUEDUCT)) {
-                if (!map_aqueduct_at(new_offset)) {
+                if (multiple ? !reached.items[new_offset] : !map_aqueduct_at(new_offset)) {
                     if (next_offset == -1) {
                         next_offset = new_offset;
                     } else {
@@ -285,6 +294,7 @@ void map_water_supply_update_reservoir_fountain_of_city(void)
 {
     if (several_cities()) {
         map_grid_clear_u8(ranges[player_context_current_player].items);
+        map_grid_clear_u8(reached.items);
     }
     building_list_large_clear(1);
     // mark reservoirs next to water
