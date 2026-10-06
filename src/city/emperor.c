@@ -227,7 +227,9 @@ void city_emperor_send_gift(void)
         return;
     }
 
-    if (city_data.emperor.gift_overdose_penalty <= 0) {
+    if (game_rules_is_multiplayer()) {
+        // no favor in multiplayer (D-026): the gift brings laurels instead (mp/caesar.c, D-067)
+    } else if (city_data.emperor.gift_overdose_penalty <= 0) {
         city_data.emperor.gift_overdose_penalty = 1;
         if (size == GIFT_MODEST) {
             city_ratings_change_favor(3);
@@ -265,7 +267,9 @@ void city_emperor_send_gift(void)
         }
     }
 
-    city_data.emperor.months_since_gift = 0;
+    if (!game_rules_is_multiplayer()) {
+        city_data.emperor.months_since_gift = 0;
+    }
     // rotate gift type
     city_data.emperor.gifts[size].id++;
     if (city_data.emperor.gifts[size].id >= 4) {

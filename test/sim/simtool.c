@@ -4690,10 +4690,23 @@ static int command_caesargifts(const char *file)
     CHECK(mp_caesar_laurels(0) == laurels_0 && mp_caesar_laurels(1) == laurels_1 && savings_of(0) == savings_0 &&
         savings_of(1) == savings_1, "the same laurels and the same savings");
 
-    // the waiting time is in the saved game
+    // the waiting time is in the saved game; K-review-fixes (T4.2): the favor of the original stays frozen (D-026,
+    // D-067), and so do the state that moves it (penalty of the gifts, months since the last gift)
     set_savings(1, 1000);
+    player_context_switch(1);
+    city_data.ratings.favor = 50;
+    city_data.emperor.gift_overdose_penalty = 0;
+    city_data.emperor.months_since_gift = 7;
+    player_context_switch(0);
     city_action(1, MP_ACTION_SEND_GIFT, GIFT_MODEST, 0, 0);
     int cooldown = mp_caesar_gift_cooldown(1);
+    player_context_switch(1);
+    printf("after a gift: favor %d, penalty %d, months since the gift %d, savings %d\n", city_rating_favor(),
+        city_data.emperor.gift_overdose_penalty, city_data.emperor.months_since_gift, city_emperor_personal_savings());
+    CHECK(city_rating_favor() == 50 && city_data.emperor.gift_overdose_penalty == 0 &&
+        city_data.emperor.months_since_gift == 7, "a gift leaves the favor of the original as it was");
+    CHECK(city_emperor_personal_savings() == 1000 - (1000 / 8 + 20), "and is paid from the savings");
+    player_context_switch(0);
     static uint8_t bytes[1024];
     buffer buf;
     buffer_init(&buf, bytes, sizeof(bytes));
