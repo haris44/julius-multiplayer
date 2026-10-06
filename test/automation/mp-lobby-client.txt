@@ -9,6 +9,10 @@ screenshot build/automation/mp-lobby-client-found.png
 click 530 174
 wait 5
 mpwait 0
+# Caesar's letter at the start of the game (doc/mp/CESAR.md §11): read, then closed
+wait 3
+key Return
+wait 2
 speed 300
 mpwait 400
 screenshot build/automation/mp-lobby-client.png

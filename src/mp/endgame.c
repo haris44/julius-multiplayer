@@ -5,6 +5,7 @@
 #include "game/player_context.h"
 #include "game/rules.h"
 #include "game/time.h"
+#include "mp/caesar.h"
 
 static struct {
     int end_year; // 0 until the first tick of the game
@@ -34,12 +35,34 @@ int mp_endgame_city_score(void)
     return city_rating_culture() + city_rating_prosperity() + city_rating_peace() + city_population() / 100;
 }
 
+// the first city to reach the score of laurels wins; several the same month: the most laurels (CESAR §4.3)
+static void check_caesar(void)
+{
+    int players[PLAYER_CONTEXT_MAX_PLAYERS];
+    int count = mp_caesar_ranking(players);
+    if (!count || mp_caesar_laurels(players[0]) < 10 * game_rules_caesar_score()) {
+        return;
+    }
+    for (int p = 0; p < count; p++) {
+        data.scores[p] = mp_caesar_laurels(p) / 10;
+    }
+    data.winner = players[0];
+    data.over = 1;
+}
+
 void mp_endgame_check(void)
 {
     if (game_rules_is_multiplayer() && player_context_num_players() > 1) {
         update_live_scores();
     }
-    if (data.over || !game_rules_is_multiplayer() || game_rules_end_condition() != GAME_END_SCORE) {
+    if (data.over || !game_rules_is_multiplayer()) {
+        return;
+    }
+    if (game_rules_end_condition() == GAME_END_CAESAR) {
+        check_caesar();
+        return;
+    }
+    if (game_rules_end_condition() != GAME_END_SCORE) {
         return;
     }
     if (!data.end_year) {

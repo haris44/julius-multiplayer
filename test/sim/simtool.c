@@ -143,6 +143,7 @@ static int usage(void)
     printf("  simtool tradeconservation SAVE         trade between players makes and loses no goods nor money\n");
     printf("  simtool traderesume SAVE               a game saved while caravans travel goes on the same\n");
     printf("  simtool caesarstate SAVE               laurels and wrath of Caesar: in the checksum, saved, resumed\n");
+    printf("  simtool caesarlaurels SAVE             notes and monthly laurels of a city, ranks, the score wins\n");
     printf("  simtool terrain MAP PLAYERS X Y W H [raw]  the terrain of a part of the prepared map (or of an .mpsav),\n");
     printf("                                         one letter a tile; raw: terrain bits, image and elevation too\n");
     printf("  simtool tradecities MAP                trade cities of the empire of a map, by land and by sea\n");
@@ -3008,6 +3009,123 @@ static int command_caesarstate(const char *file)
     return failures ? 1 : 0;
 }
 
+static void set_caesar_rules(int end_condition, int score)
+{
+    game_rules_settings rules;
+    game_rules_default_multiplayer_settings(&rules);
+    rules.ai_invasions = 0;
+    rules.end_condition = end_condition;
+    rules.caesar_score = score;
+    game_rules_set_multiplayer(&rules);
+}
+
+static void run_to_next_month(void)
+{
+    int month = game_time_month();
+    for (int i = 0; i < 40 * 50 && game_time_month() == month; i++) {
+        run_trace(1, 1, 0, 0);
+    }
+}
+
+// Caesar the judge, without its complex mechanics (M9.2 provisional, M9.5): every month a city gets the laurels of
+// its five notes; its rank follows its laurels, with a letter when it rises; the first city to the score wins
+static int command_caesarlaurels(const char *file)
+{
+    if (!load(file)) {
+        return 2;
+    }
+    set_caesar_rules(GAME_END_CAESAR, 500);
+    mp_caesar_reset();
+    int failures = 0;
+#define CHECK(condition, text) do { int ok_ = (condition); printf("%-62s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
+    static const int weights[MP_NOTE_MAX] = {
+        MP_CAESAR_WEIGHT_PROSPERITY, MP_CAESAR_WEIGHT_TRADE, MP_CAESAR_WEIGHT_HOUSING, MP_CAESAR_WEIGHT_CULTURE,
+        MP_CAESAR_WEIGHT_GREATNESS
+    };
+    run_to_next_month();
+    int expected = 0, in_range = 1;
+    for (int note = 0; note < MP_NOTE_MAX; note++) {
+        int value = mp_caesar_note(0, note);
+        in_range &= value >= 0 && value <= 100;
+        expected += weights[note] * value / 100;
+    }
+    printf("notes: prosperity %d, trade %d, housing %d, culture %d, greatness %d (population %d)\n",
+        mp_caesar_note(0, MP_NOTE_PROSPERITY), mp_caesar_note(0, MP_NOTE_TRADE), mp_caesar_note(0, MP_NOTE_HOUSING),
+        mp_caesar_note(0, MP_NOTE_CULTURE), mp_caesar_note(0, MP_NOTE_GREATNESS), city_population());
+    CHECK(in_range && mp_caesar_note(0, MP_NOTE_HOUSING) > 0 && mp_caesar_note(0, MP_NOTE_GREATNESS) > 0,
+        "a city with people: five notes from 0 to 100");
+    CHECK(mp_caesar_note(0, MP_NOTE_PROSPERITY) == city_rating_prosperity() &&
+        mp_caesar_note(0, MP_NOTE_CULTURE) == city_rating_culture(), "prosperity and culture: the original ratings");
+    int population = city_population();
+    CHECK(mp_caesar_note(0, MP_NOTE_GREATNESS) == 100 * population / (population + MP_CAESAR_GREATNESS_REFERENCE),
+        "greatness: 100 * population / (population + 8000)");
+    CHECK(mp_caesar_city_laurels(0) == expected && expected > 0, "the first month brings the laurels of the notes");
+    int first_month = mp_caesar_city_laurels(0);
+    run_to_next_month();
+    CHECK(mp_caesar_city_laurels(0) > first_month, "and the next month more");
+    CHECK(mp_caesar_laurels(0) == mp_caesar_city_laurels(0), "no laurels of Caesar without serving him");
+
+    // ranks: one for each tenth of the score, a letter to the local player when he rises
+    CHECK(mp_caesar_rank_laurels(1) == 50 && mp_caesar_rank_laurels(10) == 500, "a rank for each tenth of the score");
+    int letters_before = mp_caesar_num_letters();
+    mp_caesar_add_laurels(0, MP_LAURELS_GIFTS, 10 * 160);
+    CHECK(mp_caesar_rank(0) == 3, "160 laurels and more: the fourth rank");
+    run_to_next_month();
+    const mp_caesar_letter *letter = mp_caesar_get_letter(mp_caesar_num_letters() - 1);
+    CHECK(mp_caesar_num_letters() == letters_before + 1 && letter && letter->type == MP_CAESAR_LETTER_PROMOTION &&
+        letter->param == mp_caesar_rank(0), "Caesar writes to the player he promotes");
+    run_to_next_month();
+    CHECK(mp_caesar_num_letters() == letters_before + 1, "once only");
+
+    // the score wins
+    CHECK(!mp_endgame_is_over(), "below the score, the game goes on");
+    mp_caesar_add_laurels(0, MP_LAURELS_GIFTS, 10 * 500);
+    run_trace(1, 1, 0, 0);
+    CHECK(mp_endgame_is_over() && mp_endgame_winner() == 0 && mp_endgame_score(0) == mp_caesar_laurels(0) / 10,
+        "at the score, the city wins alone");
+
+    // two cities at the score the same month: the most laurels win, then the most laurels of the city
+    mp_endgame_reset();
+    if (!start_trade_game("brugle-massilia-start.sav")) {
+        return 2;
+    }
+    set_caesar_rules(GAME_END_CAESAR, 500);
+    mp_caesar_add_laurels(0, MP_LAURELS_PROSPERITY, 1000);
+    mp_caesar_add_laurels(0, MP_LAURELS_GIFTS, 4000);
+    mp_caesar_add_laurels(1, MP_LAURELS_PROSPERITY, 2000);
+    mp_caesar_add_laurels(1, MP_LAURELS_GIFTS, 3000);
+    run_trace(1, 1, 0, 0);
+    CHECK(mp_endgame_is_over() && mp_endgame_winner() == 1 && mp_endgame_score(0) == 500 &&
+        mp_endgame_score(1) == 500, "a tie: the city with the most laurels of its own");
+    int ranking[PLAYER_CONTEXT_MAX_PLAYERS];
+    CHECK(mp_caesar_ranking(ranking) == 2 && ranking[0] == 1 && ranking[1] == 0, "the ranking says the same");
+
+    // the score of the lobby travels with the saved game
+    const char *mpsav = "caesarlaurels.mpsav";
+    if (!mp_savegame_write(mpsav) || !mp_savegame_read(mpsav)) {
+        printf("Unable to save or read the saved game\n");
+        return 2;
+    }
+    remove(mpsav);
+    CHECK(game_rules_caesar_score() == 500 && game_rules_end_condition() == GAME_END_CAESAR &&
+        mp_caesar_laurels(1) == 5000, "the score of the lobby is in the saved game");
+    player_context_switch(0);
+    player_context_set_num_players(1);
+    mp_endgame_reset();
+
+    // a classic game: no notes, no laurels
+    options.multiplayer = 0;
+    if (!load(file)) {
+        return 2;
+    }
+    run_to_next_month();
+    CHECK(!mp_caesar_is_active() && mp_caesar_laurels(0) == 0 && mp_caesar_note(0, MP_NOTE_GREATNESS) == 0,
+        "a classic game: no notes, no laurels");
+#undef CHECK
+    printf("%s\n", failures ? "DIFFERENT: Caesar does not judge as designed" : "Identical: Caesar judges as designed");
+    return failures ? 1 : 0;
+}
+
 // the camera of a player reaches every corner of a generated map, after it went through a .mpmap file as in a game
 static int command_viewcorners(const char *file, int num_players)
 {
@@ -3533,6 +3651,8 @@ int main(int argc, char **argv)
         result = command_traderesume(file);
     } else if (strcmp(command, "caesarstate") == 0) {
         result = command_caesarstate(file);
+    } else if (strcmp(command, "caesarlaurels") == 0) {
+        result = command_caesarlaurels(file);
     } else if (strcmp(command, "inspect") == 0) {
         result = command_inspect(file);
     } else if (strcmp(command, "tradecities") == 0) {

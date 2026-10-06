@@ -22,6 +22,7 @@
 #include "input/input.h"
 #include "map/data.h"
 #include "map/grid.h"
+#include "mp/caesar.h"
 #include "mp/compose.h"
 #include "mp/discovery.h"
 #include "mp/endgame.h"
@@ -96,9 +97,10 @@ static generic_button action_buttons[] = {
     {16, 370, 296, 20, button_fog, button_none, 0, 0},
 };
 
-// end of the game: none, or by score after these years
-static const int END_YEARS[] = { 0, 5, 10, 20 };
-#define NUM_END_CHOICES 4
+// end of the game: Caesar makes his heir of the first city to one of these scores (D-053), or none (0)
+static const int END_SCORES[] = { 500, 1000, 1500, 2000, 0 };
+#define NUM_END_CHOICES 5
+#define DEFAULT_END_CHOICE 1
 
 static generic_button game_buttons[] = {
     {336, 104, 280, 20, button_select_game, button_none, 0, 0},
@@ -161,6 +163,7 @@ static void init(void)
     }
     if (!data.rules_initialized) {
         data.rules_initialized = 1;
+        data.end_choice = DEFAULT_END_CHOICE;
         game_rules_settings rules;
         game_rules_default_multiplayer_settings(&rules);
         data.ai_invasions = rules.ai_invasions;
@@ -273,10 +276,10 @@ static void draw_foreground(void)
     text_draw(translation_for(data.gods ? TR_MP_YES : TR_MP_NO), 212 + width, 308, gods_font, 0);
     font_t end_font = data.focus_action == BUTTON_END + 1 ? FONT_NORMAL_WHITE : FONT_NORMAL_BLACK;
     width = text_draw(translation_for(TR_MP_END), 16, 330, end_font, 0);
-    if (END_YEARS[data.end_choice]) {
-        width += text_draw(translation_for(TR_MP_END_SCORE), 16 + width, 330, end_font, 0);
-        width += text_draw_number(END_YEARS[data.end_choice], 0, "", 16 + width, 330, end_font);
-        text_draw(translation_for(TR_MP_YEARS), 16 + width, 330, end_font, 0);
+    if (END_SCORES[data.end_choice]) {
+        width += text_draw(translation_for(TR_MP_END_CAESAR), 16 + width, 330, end_font, 0);
+        width += text_draw_number(END_SCORES[data.end_choice], 0, "", 16 + width, 330, end_font);
+        text_draw(translation_for(TR_MP_LAURELS), 16 + width, 330, end_font, 0);
     } else {
         text_draw(translation_for(TR_MP_END_NONE), 16 + width, 330, end_font, 0);
     }
@@ -404,8 +407,10 @@ static void button_host(int param1, int param2)
     rules.fog_of_war = data.fog_of_war;
     rules.difficulty = data.difficulty;
     rules.gods_enabled = data.gods;
-    rules.end_condition = END_YEARS[data.end_choice] ? GAME_END_SCORE : GAME_END_NONE;
-    rules.score_years = END_YEARS[data.end_choice] ? END_YEARS[data.end_choice] : rules.score_years;
+    rules.end_condition = END_SCORES[data.end_choice] ? GAME_END_CAESAR : GAME_END_NONE;
+    if (END_SCORES[data.end_choice]) {
+        rules.caesar_score = END_SCORES[data.end_choice];
+    }
     mp_lockstep_set_rules(&rules);
     mp_lockstep_set_started_callback(window_mp_lobby_show_started_game);
     if (mp_lockstep_host(MP_LOCKSTEP_DEFAULT_PORT, data.num_players, file, 1)) {
@@ -456,6 +461,14 @@ void window_mp_lobby_show_started_game(void)
     input_box_stop(&address_input);
     building_menu_update(); // the buildings this city may build (interface state, rebuilt on loading)
     mp_endgame_set_over_callback(window_mp_results_show);
+    // a new game: Caesar tells how he will judge (not again when a game goes on from a saved one)
+    int laurels = 0;
+    for (int p = 0; p < player_context_num_players(); p++) {
+        laurels += mp_caesar_laurels(p);
+    }
+    if (!laurels) {
+        mp_caesar_add_letter(MP_CAESAR_LETTER_WELCOME, 0);
+    }
     // the view starts on the city of this player: its buildings, else its missionary, else its arrival point
     {
         int count = 0, x = 0, y = 0;

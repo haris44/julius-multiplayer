@@ -76,7 +76,11 @@ MAPGEN_PICTURE=carte.ppm ./simtool preparedmap SAVE 2 10   # ... et son image (s
 ./simtool caravans SAVE                     # caravanes entre joueurs ; tradepreference, tradeconservation,
                                             # traderesume : l'empire en repli, conservation, reprise
 ./simtool caesarstate SAVE                  # lauriers et colère de César : somme de contrôle, sauvegarde, reprise
+./simtool caesarlaurels SAVE                # notes et lauriers mensuels, rangs, lettre, victoire au score
 ```
+
+Pour voir César dans une vraie cité (lettre d'un nouveau rang, conseiller impérial) :
+`tools/run-automation.sh test/automation/caesar-advisor.txt 180`.
 
 ## 3. Pilotage du vrai jeu : `--automation` (captures d'écran)
 

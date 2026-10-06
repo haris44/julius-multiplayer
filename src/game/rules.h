@@ -19,7 +19,8 @@ typedef enum {
 
 typedef enum {
     GAME_END_NONE = 0,   /**< Endless game */
-    GAME_END_SCORE = 1   /**< After a number of years, the player with the best score wins */
+    GAME_END_SCORE = 1,  /**< After a number of years, the player with the best score wins (provisional, M4.6) */
+    GAME_END_CAESAR = 2  /**< The first city to reach the score of laurels wins (doc/mp/CESAR.md §4.3, D-053) */
 } game_end_condition;
 
 typedef struct {
@@ -32,6 +33,7 @@ typedef struct {
     int score_years;       /**< Length of a GAME_END_SCORE game */
     int territories;       /**< Players build only in their zone (prepared maps, doc/mp/DECISIONS.md D-036) */
     int fog_of_war;        /**< Players see only what they discovered (doc/mp/DECISIONS.md D-038) */
+    int caesar_score;      /**< Laurels that win a GAME_END_CAESAR game (0: the default score) */
 } game_rules_settings;
 
 /**
@@ -88,6 +90,11 @@ int game_rules_territories(void);
  */
 int game_rules_fog_of_war(void);
 int game_rules_score_years(void);
+
+/**
+ * Laurels the first city must reach to win a GAME_END_CAESAR game, also the scale of the ranks in every game
+ */
+int game_rules_caesar_score(void);
 
 /**
  * Whether the rules of the multiplayer maps apply (water of Caesar, reservoirs that hold water, territories, fog,

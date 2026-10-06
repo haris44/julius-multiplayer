@@ -14,7 +14,7 @@
  */
 
 typedef enum {
-    // laurels of the city, one source per note (CESAR §5)
+    // laurels of the city, one source per note (CESAR §5), in the order of mp_note
     MP_LAURELS_PROSPERITY = 0,
     MP_LAURELS_TRADE,
     MP_LAURELS_HOUSING,
@@ -34,6 +34,32 @@ typedef enum {
 #define MP_LAURELS_FIRST_CAESAR_SOURCE MP_LAURELS_FESTIVALS
 
 /**
+ * The five notes of a city (CESAR §5), from 0 to 100
+ */
+typedef enum {
+    MP_NOTE_PROSPERITY = 0,
+    MP_NOTE_TRADE,
+    MP_NOTE_HOUSING,
+    MP_NOTE_CULTURE,
+    MP_NOTE_GREATNESS,
+    MP_NOTE_MAX
+} mp_note;
+
+/**
+ * A letter of Caesar to the local player (window/mp_caesar_letter): display state of this computer only, never
+ * saved, never read by the simulation
+ */
+typedef enum {
+    MP_CAESAR_LETTER_WELCOME = 0, // the rules of the judgement, at the start of a game
+    MP_CAESAR_LETTER_PROMOTION    // param: the new rank
+} mp_caesar_letter_type;
+
+typedef struct {
+    mp_caesar_letter_type type;
+    int param;
+} mp_caesar_letter;
+
+/**
  * Whether Caesar judges this game: multiplayer rules, even alone
  */
 int mp_caesar_is_active(void);
@@ -51,6 +77,34 @@ int mp_caesar_laurels_from(int player_id, mp_laurels_source source);
 int mp_caesar_city_laurels(int player_id);
 
 /**
+ * A note of a city, from 0 to 100, as computed at the start of the month
+ */
+int mp_caesar_note(int player_id, mp_note note);
+
+/**
+ * Monthly, for the current city: its five notes, then the laurels they bring (CESAR §4.1), then its rank, with a
+ * letter of Caesar to the local player when he rises
+ */
+void mp_caesar_update_city_month(void);
+
+/**
+ * Rank of a city (0 to MP_CAESAR_NUM_RANKS - 1): one for each tenth of the score, the last one at the score
+ */
+int mp_caesar_rank(int player_id);
+
+/**
+ * Laurels (whole ones) where a rank starts
+ */
+int mp_caesar_rank_laurels(int rank);
+
+/**
+ * Players by laurels, the most first; on a tie, the most laurels of the city, then the lowest id
+ * @param players Filled with the ids of the players
+ * @return Number of players
+ */
+int mp_caesar_ranking(int *players);
+
+/**
  * The common gauge of Caesar's wrath, in tenths (0 to MP_CAESAR_WRATH_MAX)
  */
 int mp_caesar_wrath(void);
@@ -64,6 +118,14 @@ void mp_caesar_add_wrath(int player_id, int tenths);
  * What a city added to the wrath, in tenths: its share of the gauge
  */
 int mp_caesar_belligerence(int player_id);
+
+/**
+ * Letters of Caesar waiting for the local player
+ */
+int mp_caesar_num_letters(void);
+const mp_caesar_letter *mp_caesar_get_letter(int index);
+void mp_caesar_add_letter(mp_caesar_letter_type type, int param);
+void mp_caesar_remove_first_letter(void);
 
 void mp_caesar_reset(void);
 void mp_caesar_save_state(buffer *buf);

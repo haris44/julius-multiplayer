@@ -31,6 +31,7 @@
 #include "widget/sidebar/military.h"
 #include "window/advisors.h"
 #include "window/file_dialog.h"
+#include "window/mp_caesar_letter.h"
 #include "window/mp_price_alert.h"
 
 static void draw_background(void)
@@ -120,6 +121,7 @@ static void draw_foreground(void)
     if (window_is(WINDOW_CITY)) {
         city_message_process_queue();
         window_mp_price_alert_show_pending();
+        window_mp_caesar_letter_show_pending();
     }
 }
 

@@ -1,5 +1,9 @@
 # Real game, network game client (see tools/mp-real-test.sh)
 mpwait 0
+# Caesar's letter at the start of the game (doc/mp/CESAR.md §11): read, then closed
+wait 3
+key Return
+wait 2
 speed 300
 click 668 312
 wait 3

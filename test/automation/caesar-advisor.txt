@@ -1,0 +1,21 @@
+# Caesar the judge in a developed city (doc/mp/CESAR.md §11): the letter of a new rank, then the imperial advisor
+# with its notes, laurels and ranking. Run from the repository root:
+#   tools/run-automation.sh test/automation/caesar-advisor.txt
+wait 10
+load test/data/valentia57.sav
+rules mp
+wait 5
+# about fifteen months: more than 100 laurels, the second rank
+ticks 12500
+wait 3
+# the message of the game first (a right click closes it), then the letter of the new rank
+rclick 400 300
+wait 3
+screenshot build/automation/caesar-letter.png
+key Return
+wait 3
+key 3
+wait 5
+screenshot build/automation/caesar-advisor.png
+mpinfo
+quit

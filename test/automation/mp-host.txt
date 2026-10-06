@@ -1,6 +1,10 @@
 # Real game, network game host (see tools/mp-real-test.sh). Builds with the mouse and opens windows
 # while the game runs: nothing done through the user interface may desynchronise the players.
 mpwait 0
+# Caesar's letter at the start of the game (doc/mp/CESAR.md §11): read, then closed
+wait 3
+key Return
+wait 2
 speed 300
 click 768 312
 wait 3

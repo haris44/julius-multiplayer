@@ -340,6 +340,8 @@ add_test(NAME mp_trade_preference COMMAND simtool tradepreference brugle-massili
 add_test(NAME mp_trade_resume COMMAND simtool traderesume brugle-massilia-start.sav)
 # Caesar the judge (M9.1, D-050): laurels and wrath in the checksum, saved and resumed, none in a classic game
 add_test(NAME mp_caesar_state COMMAND simtool caesarstate brugle-massilia-start.sav)
+# Monthly laurels of the five notes, ranks, the first city to the score wins (M9.2 provisional, M9.5, D-053)
+add_test(NAME mp_caesar_laurels COMMAND simtool caesarlaurels valentia57.sav)
 
 # T1.5 (D-034): the roads of Caesar stay, untinted, and serve every city
 add_test(NAME mp_caesar_roads COMMAND simtool caesarroads brugle-massilia-start.sav)

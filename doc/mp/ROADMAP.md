@@ -428,16 +428,34 @@ César revient comme arbitre de la partie. Jouable en paix et **seul** : livré 
   `simtool notes SAVE`. Références calibrées sur les cités de `test/data` (CESAR §10.2), valeurs notées dans
   DECISIONS. *Critères* : ctest des notes sur des sauvegardes connues ; flux nets et prix de référence pour le
   commerce (ping-pong entre deux joueurs sans effet).
+  *En cours* (D-057) : les cinq notes en version provisoire, calculées chaque mois dans `mp/caesar`. La prospérité
+  et la culture sont les notes d'origine, l'habitat et la grandeur suivent le plan. Le commerce est provisoire :
+  les exportations des douze derniers mois, en deniers, référence 4 000. Reste : la calibration, `simtool notes`,
+  et le commerce en flux nets au prix de référence.
 - [ ] **M9.3** Dons en lauriers : salaire et épargne (coûts d'origine), un don compté par an, rangs selon les
   lauriers, salaire limité par le rang. Commandes réseau. *Critères* : ctest (lauriers par taille de don, second
   don de l'année sans lauriers, salaire au-dessus du rang refusé).
 - [ ] **M9.4** Fêtes en lauriers (une comptée tous les 6 mois). *Critère* : ctest.
-- [ ] **M9.5** Lauriers mensuels de la cité, **victoire au score** (la première cité à N lauriers, D-053), rangs par
+- [x] **M9.5** Lauriers mensuels de la cité, **victoire au score** (la première cité à N lauriers, D-053), rangs par
   dixième du score ; remplace le score provisoire de M4.6. *Critères* : ctest de fin de partie à 1 et 2 joueurs,
   deux cités au score le même mois départagées par les lauriers.
+  *Fait* (D-057) : fin `GAME_END_CAESAR`, score dans les règles (`caesar_score`, sauvegardé, protocole 12) ;
+  lauriers en dixièmes avec report des restes. Le salon propose 500, 1 000 (par défaut), 1 500, 2 000 ou sans fin.
+  Le score par années reste dans le code pour les tests, mais n'est plus proposé. Test `mp_caesar_laurels`
+  (Valentia : notes 80/66/44/73/66, environ 81 lauriers par an ; égalité départagée ; règles sauvegardées).
 - [ ] **M9.6** Interface : conseiller impérial multijoueur (notes, rang, lauriers par source, dons), bandeau (lauriers
   et jauge), lettres de César en plein écran, salon (mode « Jugement de César », score, options). *Critère* :
   captures sans fenêtre, en partie seule et à deux.
+  *En cours* (D-057), fait :
+  - conseiller impérial multijoueur (`window/mp_imperial`) : lauriers, rang, notes en barres, lauriers par note,
+    classement ;
+  - bandeau : les lauriers de chacun et le score ;
+  - lettres de César (`window/mp_caesar_letter`) : au début de la partie et à chaque nouveau rang ;
+  - salon : le score ;
+  - écran de fin : lauriers et héritier.
+  Captures : `test/automation/caesar-advisor.txt`, `mp-solo-letter.png`, `mp-lobby-host.png`.
+  Reste : les boutons dons, salaire et épargne, quand ils seront des commandes (M9.3), la jauge de colère (M10)
+  et les options du salon (demandes, classement public).
 - [ ] **M9.7** Campagnes de César : batailles lointaines partagées, troupes de tous les joueurs additionnées,
   récompenses selon la part, refus pénalisé. *Critères* : ctest (envoi, voyage, résolution, récompenses), partie
   reprise identique pendant une campagne.

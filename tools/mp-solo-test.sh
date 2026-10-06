@@ -7,7 +7,7 @@ set -uo pipefail
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 cd "$ROOT"
 mkdir -p build/automation
-tools/run-automation.sh test/automation/mp-solo.txt 120 > build/automation/mp-solo.log 2>&1
+tools/run-automation.sh test/automation/mp-solo.txt 240 > build/automation/mp-solo.log 2>&1
 STATUS=$?
 DATA_DIR=${C3_DATA_DIR:-$ROOT/../donnees-c3}
 rm -f "$DATA_DIR"/mp-session-* "$DATA_DIR"/mp-desync-*

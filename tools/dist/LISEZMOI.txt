@@ -69,8 +69,14 @@ Le pare-feu de chaque ordinateur doit laisser passer le jeu (ports 27400 en TCP 
 - Quand tout le monde est là, l'hôte clique sur « Lancer la partie ».
 
 En jeu : chacun a sa cité, ses finances et ses conseillers. Le bandeau en bas à gauche rappelle votre numéro de
-joueur et votre score. La touche P met la partie en pause pour tout le monde, et « Fichier, Enregistrer »
-sauvegarde la partie pour la reprendre plus tard depuis le salon.
+joueur et les lauriers de chacun. La touche P met la partie en pause pour tout le monde, et « Fichier,
+Enregistrer » sauvegarde la partie pour la reprendre plus tard depuis le salon.
+
+César juge les cités. Chaque mois, il donne à chacune des lauriers selon cinq notes : prospérité, commerce,
+habitat, culture et éducation, grandeur. La première cité qui atteint le score choisi dans le salon (1 000
+lauriers par défaut) devient son héritière et gagne la partie. Le conseiller impérial (touche 3) montre vos notes,
+vos lauriers, votre rang et le classement ; César vous écrit à chaque nouveau rang. Fêtes, dons et campagnes de
+César rapporteront aussi des lauriers dans une prochaine version.
 
 Les règles propres au multijoueur :
 - Vous commencez avec votre mission, déjà bâtie au bord de la route de César, et la zone de 20 cases qu'elle vous

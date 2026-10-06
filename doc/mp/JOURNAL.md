@@ -25,6 +25,31 @@ entre joueur des terres et côtiers (idées de départ : des lances faites de bo
 
 **Points ouverts** : les chiffres des javeliniers ne seront vérifiés qu'avec la guerre entre joueurs.
 
+## 2026-10-06 — César visible : notes, lauriers mensuels, rangs, victoire au score, interface (D-057)
+
+**Fait**
+- Demande d'Alexandre : « la partie visuelle de César, sans les mécaniques complexes ».
+- `mp/caesar` : cinq notes calculées chaque mois (le commerce en version provisoire), lauriers de la cité avec
+  report des restes, rangs par dixième du score, lettre au joueur local à chaque nouveau rang.
+- Fin `GAME_END_CAESAR` (première cité au score, égalité départagée par les lauriers de la cité). Score dans les
+  règles, sauvegardé ; protocole 12.
+- Interface : conseiller impérial multijoueur (rouvert, en lecture seule), bandeau (lauriers de chacun et score),
+  lettres de César, salon (score), écran de fin (lauriers, héritier).
+- Scripts d'automatisation : la lettre d'accueil se ferme (`key Return`) après le démarrage ; nouvelles captures
+  `caesar-advisor.txt`, `mp-solo-letter.png`.
+- Intégré au passage le travail d'une autre session sur les cartes (MC.6, D-055, plus d'étangs).
+
+**Appris**
+- Le conseiller impérial était fermé en multijoueur (D-026), et pour une bonne raison : dons, salaire et épargne
+  modifient la cité directement, sans commande réseau. Leurs boutons restent cachés jusqu'à M9.3.
+- Valentia (15 800 habitants) obtient environ 81 lauriers par an, l'ordre de grandeur visé par le plan (84).
+- Un clic droit ferme aussi la lettre de César : dans les scripts, la capturer avant de fermer les messages.
+
+**Prochaine étape** : Alexandre essaie la nouvelle version. Puis M9.3 et M9.4 (dons et fêtes en lauriers, avec
+leurs commandes), et la calibration des notes (M9.2).
+
+---
+
 ## 2026-10-06 — Plus d'étangs : l'aqueduc de César, seule eau du joueur des terres (MC.6, D-055)
 
 **Demande d'Alexandre** : « retire les points d'eau, il faut que le mécanisme d'assèchement via l'aqueduc

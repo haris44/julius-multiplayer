@@ -1,10 +1,13 @@
 #include "mp_status.h"
 
 #include "core/encoding.h"
+#include "core/string.h"
 #include "graphics/graphics.h"
 #include "graphics/screen.h"
 #include "graphics/text.h"
 #include "game/player_context.h"
+#include "game/rules.h"
+#include "mp/caesar.h"
 #include "mp/colors.h"
 #include "mp/fog.h"
 #include "mp/endgame.h"
@@ -58,21 +61,31 @@ void widget_mp_status_draw(void)
     uint8_t encoded[200];
     encoding_from_utf8(text, encoded, sizeof(encoded));
     int width = text_get_width(encoded, FONT_NORMAL_PLAIN) + 16;
-    // the scores of the players, each in its color, and the pause
+    // the laurels of the players, each in its color, public (D-053); the provisional score of a game ended by years
+    // is hidden by the fog of war (D-038); then the score of Caesar's heir, and the pause
     int num_players = player_context_num_players();
     int scores_width = 0;
     uint8_t scores[PLAYER_CONTEXT_MAX_PLAYERS][32];
-    if (state == MP_LOCKSTEP_RUNNING && num_players > 1) {
+    int by_years = game_rules_end_condition() == GAME_END_SCORE;
+    if (state == MP_LOCKSTEP_RUNNING && (num_players > 1 || mp_caesar_is_active())) {
         for (int p = 0; p < num_players; p++) {
-            if (mp_fog_is_active() && p != mp_session_local_player_id()) {
-                scores[p][0] = 0; // the fog of war hides the other cities (D-038)
+            if (by_years && mp_fog_is_active() && p != mp_session_local_player_id()) {
+                scores[p][0] = 0;
                 continue;
             }
             char score[32];
-            snprintf(score, sizeof(score), "J%d %d", p + 1, mp_endgame_live_score(p));
+            snprintf(score, sizeof(score), "J%d %d", p + 1, by_years ? mp_endgame_live_score(p) :
+                mp_caesar_laurels(p) / 10);
             encoding_from_utf8(score, scores[p], sizeof(scores[p]));
             scores_width += text_get_width(scores[p], FONT_NORMAL_PLAIN) + 12;
         }
+    }
+    uint8_t target[64] = { 0 };
+    if (state == MP_LOCKSTEP_RUNNING && game_rules_end_condition() == GAME_END_CAESAR) {
+        string_copy(translation_for(TR_MP_BANNER_TARGET), target, 40);
+        string_from_int(target + string_length(target), game_rules_caesar_score(), 0);
+        string_copy(translation_for(TR_MP_LAURELS), target + string_length(target), 60 - string_length(target));
+        scores_width += text_get_width(target, FONT_NORMAL_PLAIN) + 12;
     }
     uint8_t paused[32];
     int paused_width = 0;
@@ -91,6 +104,9 @@ void widget_mp_status_draw(void)
             if (scores[p][0]) {
                 x_score += text_draw(scores[p], x_score, banner_y + 6, FONT_NORMAL_PLAIN, mp_colors_player(p)) + 12;
             }
+        }
+        if (target[0]) {
+            x_score += text_draw(target, x_score, banner_y + 6, FONT_NORMAL_PLAIN, COLOR_FONT_LIGHT_GRAY) + 12;
         }
     }
     if (paused_width) {

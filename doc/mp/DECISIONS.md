@@ -672,6 +672,29 @@
   cher, et cet aqueduc-là se coupe aussi en guerre : je le laisse. Si Alexandre veut fermer cette porte : interdire
   le bord de mer aux réservoirs du joueur des terres.
 
+### D-057 — César visible d'abord, sans ses mécaniques complexes (M9.2 provisoire, M9.5, M9.6)
+- 2026-10-06 · **adoptée** (Alexandre : « lance l'implémentation de la partie visuelle de César, sans les
+  mécaniques complexes »)
+- Fait avant le reste de M9 :
+  - les notes et les lauriers mensuels ;
+  - les rangs et la victoire au score ;
+  - l'interface : bandeau, conseiller impérial, lettres de César, salon, écran de fin.
+  Restent pour plus tard : campagnes, colère, guerres, demandes, dons et fêtes en lauriers, et la note de
+  commerce en flux nets.
+- **Notes provisoires** : la prospérité et la culture d'origine ; l'habitat et la grandeur comme dans le plan. Le
+  commerce prend les exportations (vers l'empire et les joueurs) des douze derniers mois, en deniers, avec 50 à
+  4 000 Dn. Ce sont des prix négociés, donc manipulables entre complices : la version au prix de référence et en
+  flux nets viendra avec la calibration (M9.2).
+- **Conseiller impérial rouvert en multijoueur**, mais en lecture seule : dons, salaire et épargne changent la cité
+  hors des commandes réseau. Leurs boutons restent cachés en multijoueur jusqu'à M9.3.
+- **Lauriers publics dans le bandeau**, même avec le brouillard de guerre (D-053, classement public). Le score
+  provisoire par années reste caché par le brouillard, comme avant (D-038).
+- **Lettres de César** : la lettre d'accueil s'affiche quand une partie commence sans lauriers (pas à la reprise
+  d'une sauvegarde) ; une lettre à chaque nouveau rang. Elles sont un état d'affichage de l'ordinateur du joueur :
+  ni sauvegardées, ni lues par la simulation.
+- Rangs : ceux de l'original (textes du jeu), un par dixième du score ; sans score (partie sans fin), sur la base
+  de 1 000 lauriers.
+
 ### D-058 — Trois troupes, trois coûts : bois des côtiers pour les javeliniers (précise D-020, revoit D-052)
 - 2026-10-06 · **adoptée** (Alexandre : « cavaliers avec rien : unité rapide et 1,5x moins forte que le légionnaire,
   javeliniers 1.1x moins fort que le légionnaire (+ à distance), et légionnaire (le + fort nécessitant des armes),

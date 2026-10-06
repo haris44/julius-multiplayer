@@ -18,6 +18,7 @@
 #include "window/donate_to_city.h"
 #include "window/empire.h"
 #include "window/gift_to_emperor.h"
+#include "window/mp_imperial.h"
 #include "window/popup_dialog.h"
 #include "window/set_salary.h"
 #include "mp/actions.h"
@@ -93,6 +94,11 @@ static int draw_background(void)
 {
     if (!mp_session_is_networked()) {
         city_emperor_calculate_gift_costs();
+    }
+    if (window_mp_imperial_is_active()) {
+        // multiplayer: laurels, notes and ranking instead of the favor and the requests (doc/mp/CESAR.md §11)
+        window_mp_imperial_draw_background(ADVISOR_HEIGHT);
+        return ADVISOR_HEIGHT;
     }
 
     outer_panel_draw(0, 0, 40, ADVISOR_HEIGHT);
@@ -173,10 +179,15 @@ static void draw_foreground(void)
 {
     inner_panel_draw(64, 324, 32, 6);
 
-    lang_text_draw(32, city_emperor_rank(), 72, 338, FONT_LARGE_BROWN);
+    lang_text_draw(32, window_mp_imperial_is_active() ? window_mp_imperial_rank() : city_emperor_rank(),
+        72, 338, FONT_LARGE_BROWN);
 
     int width = lang_text_draw(52, 1, 72, 372, FONT_NORMAL_WHITE);
     text_draw_money(city_emperor_personal_savings(), 80 + width, 372, FONT_NORMAL_WHITE);
+    if (window_mp_imperial_is_active()) {
+        // gifts, salary and donations change the city directly: not in multiplayer until they are commands (M9.3)
+        return;
+    }
 
     button_border_draw(320, 367, 250, 20, focus_button_id == 1);
     lang_text_draw_centered(52, 2, 320, 372, 250, FONT_NORMAL_WHITE);
@@ -209,6 +220,10 @@ static void draw_foreground(void)
 
 static int handle_mouse(const mouse *m)
 {
+    if (window_mp_imperial_is_active()) {
+        focus_button_id = 0;
+        return 0;
+    }
     return generic_buttons_handle_mouse(m, 0, 0, imperial_buttons, 8, &focus_button_id);
 }
 

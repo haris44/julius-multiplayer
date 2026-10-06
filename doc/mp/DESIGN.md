@@ -219,6 +219,12 @@ réseau et à trouver par dichotomie le premier tick fautif dans les tests.
 > chacun. C'est une pièce commune du `.mpsav` (`mp_caesar`), comptée dans la somme de contrôle ; une partie
 > classique repart toujours d'un état vide. Tous les réglages chiffrés sont dans `mp/caesar_rules.h`, la seule
 > table à modifier (CESAR §10.1).
+>
+> Depuis D-057 : chaque mois, chaque cité calcule ses cinq notes (`mp_caesar_update_city_month`, après les fêtes
+> dans `advance_month`) et en reçoit les lauriers. Les restes en centièmes sont gardés pour ne rien perdre. La fin
+> `GAME_END_CAESAR` (`mp/endgame`) s'arrête quand une cité atteint `caesar_score` (règles du salon). Interface :
+> `window/mp_imperial` (conseiller impérial), `window/mp_caesar_letter` (lettres, état d'affichage non sauvegardé),
+> bandeau `widget/mp_status`.
 
 ### 5.1 Interventions de César neutralisées (liste complète : code-map/04 §3)
 

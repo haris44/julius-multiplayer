@@ -5,9 +5,10 @@
 
 /**
  * @file
- * End of a multiplayer game (doc/mp/ROADMAP.md M4.6). With GAME_END_SCORE, the game ends score_years after
- * the year of its first tick: every city gets a score, the simulation stops on every computer at the same
- * tick, and the interface shows the ranking. Conquest comes with war (M9).
+ * End of a multiplayer game (doc/mp/ROADMAP.md M4.6, M9.5). With GAME_END_CAESAR, the first city to reach the score
+ * of laurels wins (mp/caesar); with GAME_END_SCORE (provisional), the game ends score_years after the year of its
+ * first tick. Either way the simulation stops on every computer at the same tick and the interface shows the
+ * ranking.
  */
 
 /**
@@ -28,10 +29,13 @@ int mp_endgame_is_over(void);
 int mp_endgame_live_score(int player_id);
 
 /**
- * Player with the best score (the lowest id on a tie), once the game is over
+ * Player with the best score (the lowest id on a tie; with Caesar, see mp_caesar_ranking), once the game is over
  */
 int mp_endgame_winner(void);
 
+/**
+ * Score of a player at the end of the game: with Caesar, his whole laurels
+ */
 int mp_endgame_score(int player_id);
 
 /**

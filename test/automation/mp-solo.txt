@@ -16,6 +16,10 @@ wait 5
 click 240 466
 mpwait 0
 wait 5
+# Caesar's letter: how he judges the cities (doc/mp/CESAR.md §11)
+screenshot build/automation/mp-solo-letter.png
+key Return
+wait 3
 screenshot build/automation/mp-solo-start.png
 # the player starts with his mission and its zone (D-045)
 mpinfo
@@ -45,4 +49,13 @@ wait 2
 click 319 312
 wait 2
 run 4000
+mpinfo
+# Caesar after a few months: the banner, the imperial advisor (key 3) with the notes and the ranking
+run 3000
+screenshot build/automation/mp-solo-banner.png
+key 3
+wait 5
+screenshot build/automation/mp-solo-imperial.png
+key Escape
+wait 2
 mpinfo

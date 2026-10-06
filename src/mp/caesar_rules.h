@@ -27,6 +27,10 @@
 // Greatness note: 100 * population / (population + reference), 50 at the reference
 #define MP_CAESAR_GREATNESS_REFERENCE 8000
 
+// Trade note, provisional until M9.2: exports of the last twelve months (to the empire and to the players), 50 at
+// the reference, in denarii
+#define MP_CAESAR_TRADE_REFERENCE 4000
+
 // ---------- Victory (CESAR §4.3, D-053) ----------
 
 // The first city to reach the score wins; the lobby offers these, the second one by default

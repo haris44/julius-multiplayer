@@ -34,6 +34,7 @@
 #include "game/file.h"
 #include "game/rules.h"
 #include "map/owner.h"
+#include "mp/caesar.h"
 #include "mp/endgame.h"
 #include "game/settings.h"
 #include "game/time.h"
@@ -116,6 +117,7 @@ static void advance_month(void)
 
     city_population_record_monthly();
     city_festival_update();
+    mp_caesar_update_city_month(); // no-op in a classic game
     tutorial_on_month_tick();
     if (setting_monthly_autosave() && player_context_num_players() == 1) {
         game_file_write_saved_game("autosave.sav");

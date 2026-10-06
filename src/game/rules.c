@@ -3,6 +3,7 @@
 #include "core/config.h"
 #include "game/player_context.h"
 #include "game/settings.h"
+#include "mp/caesar_rules.h"
 
 static struct {
     game_mode mode;
@@ -31,6 +32,7 @@ void game_rules_default_multiplayer_settings(game_rules_settings *settings)
     settings->score_years = 10;
     settings->territories = 0; // on with the prepared maps; the tests on copied cities build anywhere
     settings->fog_of_war = 1;
+    settings->caesar_score = MP_CAESAR_DEFAULT_SCORE;
 }
 
 const game_rules_settings *game_rules_multiplayer_settings(void)
@@ -101,6 +103,11 @@ int game_rules_score_years(void)
     return data.multiplayer.score_years;
 }
 
+int game_rules_caesar_score(void)
+{
+    return data.multiplayer.caesar_score > 0 ? data.multiplayer.caesar_score : MP_CAESAR_DEFAULT_SCORE;
+}
+
 void game_rules_save_state(buffer *buf)
 {
     buffer_write_i32(buf, data.mode);
@@ -113,6 +120,7 @@ void game_rules_save_state(buffer *buf)
     buffer_write_i32(buf, data.multiplayer.score_years);
     buffer_write_i32(buf, data.multiplayer.territories);
     buffer_write_i32(buf, data.multiplayer.fog_of_war);
+    buffer_write_i32(buf, data.multiplayer.caesar_score);
 }
 
 void game_rules_load_state(buffer *buf)
@@ -127,4 +135,5 @@ void game_rules_load_state(buffer *buf)
     data.multiplayer.score_years = buffer_read_i32(buf);
     data.multiplayer.territories = buffer_read_i32(buf); // 0 in games saved before territories
     data.multiplayer.fog_of_war = buffer_read_i32(buf);
+    data.multiplayer.caesar_score = buffer_read_i32(buf); // 0 (the default score) in games saved before
 }

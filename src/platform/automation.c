@@ -9,6 +9,7 @@
 #include "graphics/screen.h"
 #include "graphics/screenshot.h"
 #include "input/mouse.h"
+#include "mp/caesar.h"
 #include "mp/checksum.h"
 #include "mp/lockstep.h"
 #include "window/city.h"
@@ -488,9 +489,14 @@ static int execute(char *line)
             }
         }
         const figure *m = missionary ? figure_get(missionary) : 0;
-        char value[160];
-        snprintf(value, sizeof(value), "missionary at (%d, %d) going to (%d, %d), buildings %d, zone %d tiles",
-            m ? m->x : -1, m ? m->y : -1, m ? m->destination_x : -1, m ? m->destination_y : -1, buildings, zone);
+        int p = player_context_current();
+        char value[240];
+        snprintf(value, sizeof(value), "missionary at (%d, %d) going to (%d, %d), buildings %d, zone %d tiles, "
+            "laurels %d (tenths), notes %d/%d/%d/%d/%d, rank %d",
+            m ? m->x : -1, m ? m->y : -1, m ? m->destination_x : -1, m ? m->destination_y : -1, buildings, zone,
+            mp_caesar_laurels(p), mp_caesar_note(p, MP_NOTE_PROSPERITY), mp_caesar_note(p, MP_NOTE_TRADE),
+            mp_caesar_note(p, MP_NOTE_HOUSING), mp_caesar_note(p, MP_NOTE_CULTURE), mp_caesar_note(p, MP_NOTE_GREATNESS),
+            mp_caesar_rank(p));
         log_message("mpinfo:", value);
         return 0;
     } else if (strcmp(command, "mpcheck") == 0) {
