@@ -160,6 +160,7 @@ static int usage(void)
     printf("  simtool traderesume SAVE               a game saved while caravans travel goes on the same\n");
     printf("  simtool caesarstate SAVE               laurels and wrath of Caesar: in the checksum, saved, resumed\n");
     printf("  simtool caesarlaurels SAVE             notes and monthly laurels of a city, ranks, the score wins\n");
+    printf("  simtool caesarhistory SAVE             monthly history of the laurels of each city: gain, trend, saved\n");
     printf("  simtool terrain MAP PLAYERS X Y W H [raw]  the terrain of a part of the prepared map (or of an .mpsav),\n");
     printf("                                         one letter a tile; raw: terrain bits, image and elevation too\n");
     printf("  simtool tradecities MAP                trade cities of the empire of a map, by land and by sea\n");
@@ -4182,10 +4183,11 @@ static int play_gifts(int verify)
     return failures;
 }
 
-// state of version 2 of the piece of Caesar, as written before the gifts had a waiting time
-static void write_old_caesar_state(buffer *buf)
+// state of an older version of the piece of Caesar: 2, before the gifts had a waiting time; 3, before the monthly
+// history of the laurels
+static void write_old_caesar_state(buffer *buf, int version)
 {
-    buffer_write_i32(buf, 2);
+    buffer_write_i32(buf, version);
     buffer_write_i32(buf, PLAYER_CONTEXT_MAX_PLAYERS);
     buffer_write_i32(buf, MP_LAURELS_MAX_SOURCE);
     for (int p = 0; p < PLAYER_CONTEXT_MAX_PLAYERS; p++) {
@@ -4199,6 +4201,11 @@ static void write_old_caesar_state(buffer *buf)
     }
     for (int i = 0; i < PLAYER_CONTEXT_MAX_PLAYERS * MP_NOTE_MAX * 2 + PLAYER_CONTEXT_MAX_PLAYERS; i++) {
         buffer_write_i32(buf, 0); // notes, remainders, ranks
+    }
+    if (version >= 3) {
+        for (int p = 0; p < PLAYER_CONTEXT_MAX_PLAYERS; p++) {
+            buffer_write_i32(buf, p + 1); // waiting time of the gifts
+        }
     }
 }
 
@@ -4254,7 +4261,7 @@ static int command_caesargifts(const char *file)
 
     // a game saved before: no waiting time, everything else kept
     buffer_init(&buf, bytes, sizeof(bytes));
-    write_old_caesar_state(&buf);
+    write_old_caesar_state(&buf, 2);
     buffer_set(&buf, 0);
     mp_caesar_load_state(&buf);
     CHECK(mp_caesar_laurels(0) == 100 && mp_caesar_laurels(1) == 200 && mp_caesar_wrath() == 250 &&
@@ -4275,6 +4282,162 @@ static int command_caesargifts(const char *file)
 #undef CHECK
     printf("%s\n", failures ? "DIFFERENT: the gifts, the salary and the donations are not as designed" :
         "Identical: the gifts, the salary and the donations are as designed");
+    return failures ? 1 : 0;
+}
+
+// the monthly records of a city, the last one first
+static int history_of(int player_id, int *records)
+{
+    int count = mp_caesar_history_months(player_id);
+    for (int i = 0; i < count; i++) {
+        records[i] = mp_caesar_history(player_id, i);
+    }
+    return count;
+}
+
+// The monthly history of the laurels of each city (T4.1, D-071), for the ratings advisor: what a city gained last
+// month and its trend; recorded by each city at the end of its month, deterministic, saved and loaded, older saved
+// games still load, nothing in a classic game
+static int command_caesarhistory(const char *file)
+{
+    if (!start_trade_game(file)) {
+        return 2;
+    }
+    int failures = 0;
+#define CHECK(condition, text) do { int ok_ = (condition); printf("%-62s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
+    CHECK(mp_caesar_history_months(0) == 0 && mp_caesar_history_months(1) == 0 && mp_caesar_laurels_gained(0, 1) == 0 &&
+        mp_caesar_laurels_trend(0) == MP_CAESAR_TREND_STEADY, "a new game: no history, no gain, no trend");
+
+    // a month of the game: each city records its laurels at the end of its month
+    run_to_next_month_fast();
+    CHECK(mp_caesar_history_months(0) == 1 && mp_caesar_history_months(1) == 1 &&
+        mp_caesar_history(0, 0) == mp_caesar_laurels(0) && mp_caesar_history(1, 0) == mp_caesar_laurels(1),
+        "a month later, each city has recorded its laurels");
+    CHECK(mp_caesar_laurels_gained(0, 1) == 0, "one record: nothing to compare yet");
+
+    // the gain of a month: the notes, and what Caesar gives between two records
+    mp_caesar_add_laurels(0, MP_LAURELS_GIFTS, 70);
+    caesar_months(0, 1);
+    int gain = mp_caesar_laurels_gained(0, 1);
+    printf("gained last month: %d tenths\n", gain);
+    CHECK(mp_caesar_history_months(0) == 2 && gain == mp_caesar_history(0, 0) - mp_caesar_history(0, 1) &&
+        gain >= 70 && mp_caesar_history(0, 0) == mp_caesar_laurels(0), "the gain of last month counts a gift of 7");
+    CHECK(mp_caesar_history_months(1) == 1, "the month of player 1 is not recorded for player 2");
+    mp_caesar_add_laurels(0, MP_LAURELS_PUNISHMENT, -500);
+    caesar_months(0, 1);
+    CHECK(mp_caesar_laurels_gained(0, 1) < 0 && mp_caesar_laurels_gained(0, 2) == mp_caesar_history(0, 0) -
+        mp_caesar_history(0, 2), "a month of losses: a negative gain");
+
+    // the trend: the last three months against the three before
+    caesar_months(0, 6);
+    CHECK(mp_caesar_laurels_trend(0) == MP_CAESAR_TREND_STEADY, "the same gain month after month: steady");
+    for (int i = 0; i < 3; i++) {
+        mp_caesar_add_laurels(0, MP_LAURELS_GIFTS, 100);
+        caesar_months(0, 1);
+    }
+    CHECK(mp_caesar_laurels_trend(0) == MP_CAESAR_TREND_UP, "10 laurels more each month: rising");
+    caesar_months(0, 3);
+    CHECK(mp_caesar_laurels_trend(0) == MP_CAESAR_TREND_DOWN, "then back to the notes alone: falling");
+    caesar_months(0, 3);
+    CHECK(mp_caesar_laurels_trend(0) == MP_CAESAR_TREND_STEADY, "and steady again three months later");
+
+    // a short history: the last twelve months
+    static int expected[64];
+    int n = 0;
+    for (int i = 0; i < 20; i++) {
+        mp_caesar_add_laurels(0, MP_LAURELS_GIFTS, 10 * i);
+        caesar_months(0, 1);
+        expected[n++] = mp_caesar_laurels(0);
+    }
+    int same = mp_caesar_history_months(0) == MP_CAESAR_HISTORY_MONTHS;
+    for (int i = 0; i < MP_CAESAR_HISTORY_MONTHS; i++) {
+        same &= mp_caesar_history(0, i) == expected[n - 1 - i];
+    }
+    CHECK(same, "twelve records are kept, the last one first");
+    CHECK(mp_caesar_laurels_gained(0, 30) == mp_caesar_history(0, 0) - mp_caesar_history(0, 11),
+        "a gain over more months than recorded: over the history");
+    CHECK(mp_caesar_history(0, MP_CAESAR_HISTORY_MONTHS) == 0 && mp_caesar_history(0, -1) == 0 &&
+        mp_caesar_history(2, 0) == 0, "nothing beyond the history, nothing for a player not in the game");
+
+    // saved and loaded, and the game goes on the same on two machines
+    run_to_next_month_fast();
+    static int records_0[MP_CAESAR_HISTORY_MONTHS], records_1[MP_CAESAR_HISTORY_MONTHS];
+    int count_0 = history_of(0, records_0), count_1 = history_of(1, records_1);
+    uint64_t saved = mp_checksum_state();
+    const char *mpsav = "caesarhistory.mpsav";
+    if (!mp_savegame_write(mpsav)) {
+        printf("Unable to save\n");
+        return 2;
+    }
+    caesar_months(0, 2);
+    caesar_months(1, 5);
+    if (!mp_savegame_read(mpsav)) {
+        printf("Unable to read the saved game\n");
+        return 2;
+    }
+    static int loaded_0[MP_CAESAR_HISTORY_MONTHS], loaded_1[MP_CAESAR_HISTORY_MONTHS];
+    same = history_of(0, loaded_0) == count_0 && history_of(1, loaded_1) == count_1 && count_1 >= 2;
+    for (int i = 0; same && i < count_0; i++) {
+        same &= loaded_0[i] == records_0[i];
+    }
+    for (int i = 0; same && i < count_1; i++) {
+        same &= loaded_1[i] == records_1[i];
+    }
+    CHECK(same, "the saved game brings the history back, for each city");
+    CHECK(mp_checksum_state() == saved, "and the same checksum");
+    run_to_next_month_fast();
+    uint64_t first = mp_checksum_state();
+    int first_gain = mp_caesar_laurels_gained(1, 1);
+    if (!mp_savegame_read(mpsav)) {
+        printf("Unable to read the saved game\n");
+        return 2;
+    }
+    remove(mpsav);
+    run_to_next_month_fast();
+    CHECK(mp_checksum_state() == first && mp_caesar_laurels_gained(1, 1) == first_gain,
+        "two machines from the same game: the same history, the same checksum");
+
+    // the esteem of Caesar, what the player sees instead of the favor: the laurels against the score
+    set_caesar_rules(GAME_END_CAESAR, 500);
+    mp_caesar_add_laurels(1, MP_LAURELS_GIFTS, 1250 - mp_caesar_laurels(1));
+    CHECK(mp_caesar_esteem_goal(1) == 500 && mp_caesar_esteem(1) == 25, "125 laurels of 500: an esteem of 25");
+    mp_caesar_add_laurels(1, MP_LAURELS_GIFTS, 10000);
+    CHECK(mp_caesar_esteem(1) == 100, "above the score: 100");
+    mp_caesar_add_laurels(1, MP_LAURELS_PUNISHMENT, -20000);
+    CHECK(mp_caesar_esteem(1) == 0, "below zero: 0");
+    // without a score, against the next rank (a rank for each 100 laurels of the default score)
+    set_caesar_rules(GAME_END_NONE, 0);
+    mp_caesar_add_laurels(1, MP_LAURELS_GIFTS, 2500 - mp_caesar_laurels(1));
+    CHECK(mp_caesar_rank(1) == 2 && mp_caesar_esteem_goal(1) == 300 && mp_caesar_esteem(1) == 83,
+        "an endless game: 250 laurels against the next rank at 300, 83");
+    mp_caesar_add_laurels(1, MP_LAURELS_GIFTS, 10000);
+    CHECK(mp_caesar_esteem_goal(1) == 1000 && mp_caesar_esteem(1) == 100, "the last rank: 100");
+
+    // a game saved before the history: it loads, without history, everything else kept
+    static uint8_t bytes[2048];
+    buffer buf;
+    buffer_init(&buf, bytes, sizeof(bytes));
+    write_old_caesar_state(&buf, 3);
+    buffer_set(&buf, 0);
+    mp_caesar_load_state(&buf);
+    CHECK(mp_caesar_laurels(0) == 100 && mp_caesar_laurels(1) == 200 && mp_caesar_wrath() == 250 &&
+        mp_caesar_gift_cooldown(1) == 2, "an older saved game still loads, with its laurels and its gifts");
+    CHECK(mp_caesar_history_months(0) == 0 && mp_caesar_history_months(1) == 0, "and an empty history");
+    caesar_months(0, 1);
+    CHECK(mp_caesar_history_months(0) == 1 && mp_caesar_history(0, 0) == mp_caesar_laurels(0),
+        "which starts at its next month");
+
+    // a classic game: no history
+    player_context_switch(0);
+    player_context_set_num_players(1);
+    if (!load(file)) {
+        return 2;
+    }
+    run_to_next_month_fast();
+    CHECK(!mp_caesar_is_active() && mp_caesar_history_months(0) == 0, "a classic game: no history");
+#undef CHECK
+    printf("%s\n", failures ? "DIFFERENT: the history of the laurels is not kept as designed" :
+        "Identical: the history of the laurels is kept as designed");
     return failures ? 1 : 0;
 }
 
@@ -4819,6 +4982,8 @@ int main(int argc, char **argv)
         result = command_caesarlaurels(file);
     } else if (strcmp(command, "caesargifts") == 0) {
         result = command_caesargifts(file);
+    } else if (strcmp(command, "caesarhistory") == 0) {
+        result = command_caesarhistory(file);
     } else if (strcmp(command, "inspect") == 0) {
         result = command_inspect(file);
     } else if (strcmp(command, "tradecities") == 0) {

@@ -88,6 +88,51 @@ int mp_caesar_note(int player_id, mp_note note);
 void mp_caesar_update_city_month(void);
 
 /**
+ * Monthly history of the laurels of each city (T4.1, D-071): at the end of each of its months, a city records its
+ * laurels; the last MP_CAESAR_HISTORY_MONTHS records are kept, in the saved game
+ */
+#define MP_CAESAR_HISTORY_MONTHS 12
+
+typedef enum {
+    MP_CAESAR_TREND_DOWN = -1,
+    MP_CAESAR_TREND_STEADY = 0,
+    MP_CAESAR_TREND_UP = 1
+} mp_caesar_trend;
+
+/**
+ * Number of monthly records of a city (0 to MP_CAESAR_HISTORY_MONTHS)
+ */
+int mp_caesar_history_months(int player_id);
+
+/**
+ * Laurels of a city, in tenths, at a monthly record: 0 is the last one, 1 the one before...
+ */
+int mp_caesar_history(int player_id, int months_ago);
+
+/**
+ * Tenths of laurels a city gained over its last months (negative when it lost some), between its monthly records;
+ * over fewer months when the history is shorter
+ */
+int mp_caesar_laurels_gained(int player_id, int months);
+
+/**
+ * Whether a city gains more laurels lately: its last three months against the three before (fewer while the history
+ * is short), steady within a tenth or a laurel a month
+ */
+mp_caesar_trend mp_caesar_laurels_trend(int player_id);
+
+/**
+ * The esteem of Caesar for a city, from 0 to 100, what the player sees instead of the favor of the original game
+ * (T4.1, D-071): its laurels against the score of the game, or against its next rank in a game without score
+ */
+int mp_caesar_esteem(int player_id);
+
+/**
+ * Laurels (whole ones) the esteem is measured against: the score, or the next rank in a game without score
+ */
+int mp_caesar_esteem_goal(int player_id);
+
+/**
  * Rank of a city (0 to MP_CAESAR_NUM_RANKS - 1): one for each tenth of the score, the last one at the score
  */
 int mp_caesar_rank(int player_id);
