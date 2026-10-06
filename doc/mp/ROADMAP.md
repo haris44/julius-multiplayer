@@ -369,8 +369,23 @@ le note « à valider ».
   - il était l'**hôte**, il a vu « Soulèvement local », en début de partie, invasions désactivées dans le salon ;
   - il pense que le démarrage en difficile y contribue : la difficulté du salon (difficile par défaut) s'applique
     quel que soit le réglage du menu principal (T4.10).
-  Piste principale : Mars en colère, avec dieux activés et difficulté difficile. Reproduire d'abord ce cas, hôte et
-  invasions coupées, sur les premières années, avant de corriger.
+  Alexandre : pas de colère de Mars, c'est bien un problème de synchronisation des options.
+  *Cause trouvée* : le salon lit les réglages au clic sur « Héberger » (`button_host` puis `mp_lockstep_set_rules`).
+  En attendant les joueurs, les boutons des règles restent actifs et changent l'affichage, mais la partie garde les
+  réglages du clic. Invasions coupées après « Héberger » : la partie démarre avec les invasions.
+  *Correctif* :
+  - les réglages sont relus au clic sur « Lancer la partie » (ou figés et grisés dès « Héberger ») ;
+  - les clients voient les réglages de l'hôte ;
+  - test : changer chaque réglage après « Héberger », vérifier les règles de la partie chez l'hôte et chez un client.
+  *En attendant* (essais du soir) : choisir les réglages **avant** de cliquer sur « Héberger ».
+- [ ] **T4.12** **Les prix entre joueurs sont mal calculés par rapport à l'empire** (essai du soir).
+  *Règle actuelle* (D-043, D-048) :
+  - le prix par défaut d'un joueur est le prix d'achat de base de l'empire ;
+  - acheter à l'empire coûte ce prix + 50 % ;
+  - vendre à l'empire rapporte son prix de vente, plus bas. Marbre : de base 200 ; l'empire le vend 300 et
+    l'achète 140 ; entre joueurs, 200 par défaut.
+  **?** Ce qui ne va pas, et ce qui est attendu : à préciser avec Alexandre (exemple de ressource, prix vus).
+  À traiter avec T4.3 (l'empire vend toujours, prix en hausse quand un joueur arrête le commerce).
 
 ## MC — Cartes multijoueur préparées et César (D-033, D-034)
 - [ ] **MC.1** Ouvrages de César dessinés en blanc (la teinte actuelle ne fait que foncer les images) ; son aqueduc
