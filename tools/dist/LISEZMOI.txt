@@ -4,7 +4,9 @@ CAESAR III MULTIJOUEUR
 Une version de Caesar III pour jouer à plusieurs (de 2 à 4 joueurs) sur le même réseau local : chacun construit
 sa cité sur une carte commune. Elle est basée sur Julius, une réimplémentation libre de Caesar III.
 
-Il faut un Mac avec une puce Apple (M1 ou plus récente).
+Il existe pour Mac (puce Apple, M1 ou plus récente), Linux (64 bits) et Windows (64 bits). Les versions Linux et
+Windows sont toutes neuves : elles n'ont pas encore été essayées sur une vraie machine, ni en partie avec un Mac.
+Signalez ce qui ne va pas.
 
 
 1. IL VOUS FAUT VOTRE PROPRE COPIE DE CAESAR III
@@ -12,8 +14,11 @@ Il faut un Mac avec une puce Apple (M1 ou plus récente).
 Ce programme ne contient pas les fichiers du jeu original (images, sons, cartes) : Caesar III est toujours vendu.
 Achetez-le sur GOG ou Steam (quelques euros), puis récupérez son dossier d'installation :
 
-- depuis GOG : téléchargez l'installateur Windows (setup_caesar3_....exe), puis dans le Terminal :
-      brew install innoextract
+- sous Windows : installez le jeu normalement, depuis GOG ou Steam ;
+- sur Mac ou Linux, depuis GOG : téléchargez l'installateur Windows (setup_caesar3_....exe), puis dans un
+  terminal :
+      brew install innoextract            (Mac)
+      sudo dnf install innoextract        (Linux Fedora ; sudo apt install innoextract sur Ubuntu)
       innoextract setup_caesar3_....exe
   Le dossier « app » créé contient les fichiers du jeu ;
 - ou copiez le dossier « Caesar 3 » d'un PC où le jeu est installé.
@@ -23,25 +28,42 @@ Le dossier doit contenir notamment c3.eng, c3.emp et c3_model.txt.
 
 2. INSTALLER
 ------------
-Glissez « Caesar III Multijoueur.app » dans votre dossier Applications.
+Mac : glissez « Caesar III Multijoueur.app » dans votre dossier Applications.
+  Le programme n'est pas signé par Apple : au premier lancement, macOS le bloque. Faites un clic droit sur
+  l'application, choisissez « Ouvrir », puis confirmez « Ouvrir ». Si ce n'est pas proposé : Réglages Système,
+  Confidentialité et sécurité, « Ouvrir quand même ».
 
-Le programme n'est pas signé par Apple : au premier lancement, macOS le bloque. Faites un clic droit sur
-l'application, choisissez « Ouvrir », puis confirmez « Ouvrir ». Si ce n'est pas proposé : Réglages Système,
-Confidentialité et sécurité, « Ouvrir quand même ».
+Linux : décompressez l'archive (tar -xzf CaesarIII-Multijoueur-....tar.gz), puis lancez
+  CaesarIII-Multijoueur.AppImage (double-clic, ou ./CaesarIII-Multijoueur.AppImage dans un terminal).
+  - S'il ne démarre pas : sudo dnf install fuse-libs (Fedora), ou lancez-le avec --appimage-extract-and-run.
+  - Si la fenêtre de choix du dossier n'apparaît pas, donnez le dossier de Caesar III après le nom du programme :
+        ./CaesarIII-Multijoueur.AppImage /chemin/du/dossier/caesar3
+  - Le jeu marche sous Wayland comme sous X11. En cas de souci d'affichage, essayez de le lancer avec
+    SDL_VIDEODRIVER=x11 (ou SDL_VIDEODRIVER=wayland) devant la commande.
+
+Windows : décompressez le dossier, puis lancez CaesarIII-Multijoueur.exe.
+  Le programme n'est pas signé : si Windows affiche « Windows a protégé votre ordinateur », cliquez sur
+  « Informations complémentaires », puis « Exécuter quand même ».
 
 Au premier lancement, le jeu demande le dossier de Caesar III : indiquez celui de l'étape 1.
 
 
 3. JOUER ENSEMBLE
 -----------------
-Les deux ordinateurs doivent être sur le même réseau (même box, même Wi-Fi) et avoir exactement la même version
-de ce programme.
+Les ordinateurs doivent être sur le même réseau (même box, même Wi-Fi) et avoir exactement la même version de ce
+programme : même date et même numéro dans le nom du fichier téléchargé, quel que soit le système.
+
+Le pare-feu de chaque ordinateur doit laisser passer le jeu (ports 27400 en TCP et 27401 en UDP) :
+- Mac : macOS demande d'autoriser les connexions entrantes : répondez « Autoriser » ;
+- Windows : le pare-feu demande l'accès au réseau : autorisez-le sur les réseaux privés ;
+- Linux Fedora, une fois pour toutes, dans un terminal :
+      sudo firewall-cmd --permanent --add-port=27400/tcp --add-port=27401/udp
+      sudo firewall-cmd --reload
 
 - Menu principal, « Multijoueur ».
 - Celui qui héberge choisit « Nouvelle partie (forêt) » (ou une partie sauvegardée à reprendre), le nombre de
   joueurs et les règles, puis clique sur « Héberger ». La carte dépend du nombre de joueurs : une carte pour 1 ou
   2 joueurs, une pour 3 ou 4. On peut aussi jouer seul (1 joueur) pour découvrir la carte et ses règles.
-  macOS peut demander d'autoriser les connexions entrantes : répondez « Autoriser ».
 - Les autres voient la partie apparaître dans « Parties trouvées sur le réseau » et cliquent dessus (ou tapent
   l'adresse affichée chez l'hôte, puis « Rejoindre »).
 - Quand tout le monde est là, l'hôte clique sur « Lancer la partie ».

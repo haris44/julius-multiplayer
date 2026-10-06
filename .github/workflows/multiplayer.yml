@@ -1,0 +1,98 @@
+# Builds of the multiplayer fork (doc/mp/ROADMAP.md M5.6): every test, then a package for Linux and for Windows.
+# The Caesar III data is never in the packages: every player needs his own copy of the game.
+# The workflows of Julius (main.yml, codeql.yml) are disabled on this fork, not removed, to keep merges simple.
+name: Caesar III multiplayer
+on:
+  push:
+    branches: [multiplayer]
+    tags: ['mp-*']
+    paths-ignore:
+      - '**.md'
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  linux:
+    name: Linux (AppImage)
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get -y install libgl1-mesa-dev libsdl2-dev libsdl2-mixer-dev
+      - name: Build and run every test
+        run: BUILD_DIR=build-tests tools/check.sh
+      - name: Build the AppImage
+        run: |
+          mkdir build && cd build
+          cmake -DCMAKE_BUILD_TYPE=Release -DSYSTEM_LIBS=OFF -DCMAKE_INSTALL_PREFIX=/usr ..
+          make -j4
+          make DESTDIR=AppDir install
+          cd ..
+          ./.ci_scripts/package_appimage.sh
+          test -f build/julius.AppImage
+      - name: Package
+        run: |
+          NAME="CaesarIII-Multijoueur-$(date +%Y-%m-%d)-$(git rev-parse --short HEAD)-linux"
+          mkdir -p "dist/$NAME"
+          cp build/julius.AppImage "dist/$NAME/CaesarIII-Multijoueur.AppImage"
+          chmod +x "dist/$NAME/CaesarIII-Multijoueur.AppImage"
+          cp tools/dist/LISEZMOI.txt "dist/$NAME/LISEZMOI.txt"
+          git archive --format=zip --prefix="julius-caesar-mp/" -o "dist/$NAME/code-source.zip" HEAD
+          # a tar keeps the AppImage executable, the zip of GitHub would not
+          tar -C dist -czf "dist/$NAME.tar.gz" "$NAME"
+          echo "NAME=$NAME" >> "$GITHUB_ENV"
+      - name: Upload
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.NAME }}
+          path: dist/${{ env.NAME }}.tar.gz
+
+  windows:
+    name: Windows (64 bits)
+    runs-on: windows-latest
+    env:
+      SDL_VERSION: 2.32.8
+      SDL_MIXER_VERSION: 2.8.1
+      COMPILER: mingw-64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Cache dependencies
+        uses: actions/cache@v6
+        with:
+          path: deps
+          key: windows-mingw-${{ env.SDL_VERSION }}-${{ env.SDL_MIXER_VERSION }}
+      - name: Install SDL
+        run: ./.ci_scripts/install_sdl.ps1
+      - name: Build and run every test
+        run: |
+          cmake -S . -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DSYSTEM_LIBS=OFF `
+            -D CMAKE_C_COMPILER=x86_64-w64-mingw32-gcc.exe -D CMAKE_MAKE_PROGRAM=mingw32-make.exe
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          cmake --build build -j 4
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          cd build
+          ctest -j 4 --output-on-failure
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Package
+        run: |
+          $name = "CaesarIII-Multijoueur-$(Get-Date -Format yyyy-MM-dd)-$(git rev-parse --short HEAD)-windows"
+          $stage = "dist\$name"
+          New-Item -ItemType Directory -Force -Path $stage | Out-Null
+          Copy-Item build\julius.exe "$stage\CaesarIII-Multijoueur.exe"
+          Copy-Item "ext\SDL2\SDL2-${env:SDL_VERSION}\x86_64-w64-mingw32\bin\SDL2.dll" $stage
+          Copy-Item "ext\SDL2\SDL2_mixer-${env:SDL_MIXER_VERSION}\x86_64-w64-mingw32\bin\SDL2_mixer.dll" $stage
+          Copy-Item tools\dist\LISEZMOI.txt "$stage\LISEZMOI.txt"
+          git archive --format=zip --prefix="julius-caesar-mp/" -o "$stage\code-source.zip" HEAD
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          "NAME=$name" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      - name: Upload
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.NAME }}
+          path: dist/${{ env.NAME }}
