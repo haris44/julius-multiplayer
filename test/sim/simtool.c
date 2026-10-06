@@ -81,6 +81,7 @@
 #include "mp/lobby.h"
 #include "mp/lockstep.h"
 #include "mp/session.h"
+#include "platform/net.h"
 
 #include <inttypes.h>
 #include <time.h>
@@ -174,6 +175,8 @@ static int usage(void)
     printf("                                         reach player 1\n");
     printf("  simtool lobbyrules SAVE                the lobby proposes an easy game; hosted alone, the game starts\n");
     printf("                                         with the rules changed after hosting\n");
+    printf("  simtool resumerules TEMPLATE PORT      a multiplayer game resumed from the lobby keeps its saved rules\n");
+    printf("  simtool badrules PORT                  a player refuses rules of the host out of their bounds\n");
     printf("  simtool attacksource SAVE SOURCE TICKS attacks of SOURCE (army, uprising, mars) come in a classic\n");
     printf("                                         game and with AI invasions on, none with them off\n");
     printf("  simtool caesarfree SAVE TICKS          Caesar (requests, anger, salary...) acts in a classic game\n");
@@ -1528,6 +1531,221 @@ static int command_lobbyrules(const char *file)
     char name[64];
     snprintf(name, sizeof(name), "mp-session-%d-p0.mpsav", port);
     remove(name);
+    return result;
+}
+
+// K-review-fixes: a host sends the lobby of a player some rules; NUMBERS are the ten integers of the message
+static int send_raw_rules(int socket, const int *numbers)
+{
+    uint8_t payload[4 + 1 + 10 * 4];
+    buffer buf;
+    buffer_init(&buf, payload, sizeof(payload));
+    buffer_write_i32(&buf, 1 + 10 * 4);
+    buffer_write_u8(&buf, 10); // MSG_RULES of mp/lockstep.c
+    for (int i = 0; i < 10; i++) {
+        buffer_write_i32(&buf, numbers[i]);
+    }
+    return net_send(socket, payload, buf.index);
+}
+
+static void poll_lockstep_for(int milliseconds)
+{
+    for (int waited = 0; waited < milliseconds; waited += 20) {
+        mp_lockstep_poll();
+        net_sleep(20);
+    }
+}
+
+// K-review-fixes (T4.11): a player who joined trusts no number of the rules of the host. A fake host sends rules
+// out of their bounds (difficulty 99, booleans 7, end condition 9...): the lobby of the player must never show
+// them; valid rules sent next are shown. A welcome message with rules out of bounds is refused.
+static int command_badrules(int port)
+{
+    int listener = net_listen(port);
+    if (listener == NET_INVALID_SOCKET) {
+        printf("FAILED: cannot listen on port %d\n", port);
+        return 2;
+    }
+    if (!mp_lockstep_join("127.0.0.1", port)) {
+        printf("FAILED: %s\n", mp_lockstep_status());
+        net_close(listener);
+        return 2;
+    }
+    int host = NET_INVALID_SOCKET;
+    for (int i = 0; i < 100 && host == NET_INVALID_SOCKET; i++) {
+        host = net_accept(listener);
+        net_sleep(20);
+    }
+    if (host == NET_INVALID_SOCKET) {
+        printf("FAILED: the player did not connect\n");
+        mp_lockstep_stop();
+        net_close(listener);
+        return 2;
+    }
+    int result = 0;
+    const int bad[][10] = {
+        { 99, 1, 0, 0, 1, 0, 10, 1, 1, 1000 },
+        { -1, 1, 0, 0, 1, 0, 10, 1, 1, 1000 },
+        { 1, 7, 0, 0, 1, 0, 10, 1, 1, 1000 },
+        { 1, 1, -3, 0, 1, 0, 10, 1, 1, 1000 },
+        { 1, 1, 0, 2, 1, 0, 10, 1, 1, 1000 },
+        { 1, 1, 0, 0, 5, 0, 10, 1, 1, 1000 },
+        { 1, 1, 0, 0, 1, 9, 10, 1, 1, 1000 },
+        { 1, 1, 0, 0, 1, 0, -10, 1, 1, 1000 },
+        { 1, 1, 0, 0, 1, 0, 10, 2, 1, 1000 },
+        { 1, 1, 0, 0, 1, 0, 10, 1, -1, 1000 },
+        { 1, 1, 0, 0, 1, 0, 10, 1, 1, -5 }
+    };
+    for (int i = 0; i < (int) (sizeof(bad) / sizeof(bad[0])); i++) {
+        send_raw_rules(host, bad[i]);
+        poll_lockstep_for(100);
+        const game_rules_settings *seen = mp_lockstep_lobby_rules();
+        const game_rules_settings *shown = mp_lobby_rules_shown();
+        if (seen && seen->difficulty == bad[i][0] && seen->gods_enabled == bad[i][1] &&
+            seen->end_condition == bad[i][5] && seen->caesar_score == bad[i][9] &&
+            seen->score_years == bad[i][6] && seen->fog_of_war == bad[i][8]) {
+            printf("WRONG: rules %d out of their bounds reach the lobby of the player\n", i);
+            result = 1;
+        }
+        if (shown->difficulty < DIFFICULTY_VERY_EASY || shown->difficulty > DIFFICULTY_VERY_HARD ||
+            (shown->gods_enabled != 0 && shown->gods_enabled != 1)) {
+            printf("WRONG: the lobby shows difficulty %d, gods %d\n", shown->difficulty, shown->gods_enabled);
+            result = 1;
+        }
+    }
+    const int good[10] = { DIFFICULTY_VERY_HARD, 0, 1, 1, 0, GAME_END_CAESAR, 5, 1, 0, 1500 };
+    send_raw_rules(host, good);
+    poll_lockstep_for(100);
+    const game_rules_settings *seen = mp_lockstep_lobby_rules();
+    if (!seen) {
+        printf("WRONG: valid rules do not reach the lobby of the player\n");
+        result = 1;
+    } else {
+        print_lobby_rules("valid rules seen", seen);
+        if (seen->difficulty != DIFFICULTY_VERY_HARD || seen->gods_enabled != 0 ||
+            seen->end_condition != GAME_END_CAESAR || seen->caesar_score != 1500 || seen->score_years != 5) {
+            printf("WRONG: valid rules are not shown as sent\n");
+            result = 1;
+        }
+    }
+    // a welcome message whose rules are out of their bounds: the player leaves before reading the game
+    uint8_t welcome[256];
+    buffer buf;
+    buffer_init(&buf, welcome, sizeof(welcome));
+    buffer_write_i32(&buf, 0); // size, written below
+    buffer_write_u8(&buf, 2); // MSG_WELCOME
+    buffer_write_i32(&buf, 1); // player
+    buffer_write_i32(&buf, 2); // players
+    buffer_write_i32(&buf, 0); // base tick
+    buffer_write_u8(&buf, 1); // separate cities
+    buffer_write_u32(&buf, 0);
+    buffer_write_u32(&buf, 0);
+    const int welcome_rules[11] = { GAME_MODE_MULTIPLAYER, 42, 1, 0, 0, 1, 0, 10, 1, 1, 1000 };
+    for (int i = 0; i < 11; i++) {
+        buffer_write_i32(&buf, welcome_rules[i]);
+    }
+    buffer_write_i32(&buf, 4); // save size
+    buffer_write_u32(&buf, 0);
+    int size = buf.index;
+    buffer_set(&buf, 0);
+    buffer_write_i32(&buf, size - 4);
+    net_send(host, welcome, size);
+    poll_lockstep_for(200);
+    printf("after the welcome: state %d, %s\n", mp_lockstep_get_state(), mp_lockstep_status());
+    if (mp_lockstep_get_state() != MP_LOCKSTEP_DISCONNECTED ||
+        strcmp(mp_lockstep_status(), "Message de l'hôte invalide") != 0) {
+        printf("WRONG: a welcome message with rules out of their bounds is not refused\n");
+        result = 1;
+    }
+    mp_lockstep_stop();
+    net_close(host);
+    net_close(listener);
+    char name[64];
+    snprintf(name, sizeof(name), "mp-session-%d-p1.mpsav", port);
+    remove(name);
+    printf("%s\n", result ? "FAILED" : "rules out of their bounds are refused");
+    return result;
+}
+
+static int same_rules(const game_rules_settings *a, const game_rules_settings *b)
+{
+    return same_lobby_rules(a, b) && a->territories == b->territories && a->score_years == b->score_years &&
+        a->fix_immigration_bug == b->fix_immigration_bug && a->fix_100_year_ghosts == b->fix_100_year_ghosts;
+}
+
+// K-review-fixes (T4.11, D-073): a multiplayer game resumed from the lobby (.mpsav) goes on with its saved rules
+// (territories, fog, score...): the lobby shows them and cannot change them, the rules changed before and after
+// "Host" are not those of the game
+static int command_resumerules(const char *file, int port)
+{
+    char save_file[64];
+    snprintf(save_file, sizeof(save_file), "resumerules-%d.mpsav", port);
+    if (!mp_mapgen_create_prepared(file, 1, 0)) {
+        printf("Unable to create the prepared map\n");
+        return 2;
+    }
+    game_rules_settings saved;
+    game_rules_default_multiplayer_settings(&saved);
+    saved.difficulty = DIFFICULTY_VERY_HARD;
+    saved.gods_enabled = 0;
+    saved.ai_invasions = 0;
+    saved.fog_of_war = 0;
+    saved.territories = 1;
+    saved.end_condition = GAME_END_CAESAR;
+    saved.caesar_score = 1500;
+    saved.score_years = 7;
+    game_rules_set_multiplayer(&saved);
+    if (!mp_savegame_write(save_file)) {
+        printf("Unable to write %s\n", save_file);
+        return 2;
+    }
+    // the lobby proposes other rules, as the window does before "Host"
+    mp_lobby_rules_init();
+    game_rules_settings lobby;
+    mp_lobby_rules_settings(&lobby);
+    mp_lockstep_set_rules(&lobby);
+    int result = 0;
+    if (!mp_lockstep_host(port, 1, save_file, 1)) {
+        printf("FAILED: %s\n", mp_lockstep_status());
+        remove(save_file);
+        return 1;
+    }
+    mp_lockstep_set_manual_start(1);
+    mp_lockstep_set_generated_map(0, 1); // a game goes on, as saved
+    print_lobby_rules("saved rules", &saved);
+    print_lobby_rules("lobby rules", &lobby);
+    print_lobby_rules("rules shown after hosting", mp_lobby_rules_shown());
+    if (mp_lobby_rules_editable()) {
+        printf("WRONG: the lobby lets the host change the rules of a saved game\n");
+        result = 1;
+    }
+    if (!mp_lockstep_lobby_rules() || !same_rules(mp_lockstep_lobby_rules(), &saved) ||
+        !same_rules(mp_lobby_rules_shown(), &saved)) {
+        printf("WRONG: the lobby does not show the rules of the saved game\n");
+        result = 1;
+    }
+    change_every_lobby_rule();
+    mp_lobby_start_game();
+    for (int frame = 0; frame < 100 && mp_lockstep_get_state() == MP_LOCKSTEP_WAITING_FOR_PLAYERS; frame++) {
+        mp_lockstep_poll();
+    }
+    const game_rules_settings *game = game_rules_multiplayer_settings();
+    print_lobby_rules("game rules", game);
+    printf("game territories %d, score years %d\n", game->territories, game->score_years);
+    if (mp_lockstep_get_state() != MP_LOCKSTEP_RUNNING) {
+        printf("FAILED: the game did not start: %s\n", mp_lockstep_status());
+        result = 1;
+    } else if (!same_rules(game, &saved) || !game_rules_territories() || game_rules_fog_of_war() ||
+        game_rules_difficulty() != DIFFICULTY_VERY_HARD) {
+        printf("WRONG: the resumed game does not keep its saved rules\n");
+        result = 1;
+    }
+    mp_lockstep_stop();
+    char name[64];
+    snprintf(name, sizeof(name), "mp-session-%d-p0.mpsav", port);
+    remove(name);
+    remove(save_file);
+    printf("%s\n", result ? "FAILED" : "the resumed game keeps its saved rules");
     return result;
 }
 
@@ -4770,6 +4988,10 @@ int main(int argc, char **argv)
         result = command_aiinvasions(file, ticks);
     } else if (strcmp(command, "lobbyrules") == 0) {
         result = command_lobbyrules(file);
+    } else if (strcmp(command, "resumerules") == 0 && argc > 3) {
+        result = command_resumerules(file, atoi(argv[3]));
+    } else if (strcmp(command, "badrules") == 0) {
+        result = command_badrules(atoi(file));
     } else if (strcmp(command, "attacksource") == 0 && argc > 4) {
         result = command_attacksource(file, argv[3], atoi(argv[4]));
     } else if (strcmp(command, "openland") == 0 && argc > 2) {

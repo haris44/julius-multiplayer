@@ -88,6 +88,8 @@ static struct {
     int accepted[MP_LOCKSTEP_MAX_PLAYERS]; // host: the client said hello with the same protocol and game data
     int manual_start;          // host: the game starts when the host asks (lobby), not as soon as all are there
     int generate_map;          // host: a generated map (mp/mapgen) using the chosen map as template
+    int file_territories;      // host: territories of the multiplayer map or game chosen (0 for other files)
+    int rules_from_save;       // host: a multiplayer game goes on with its saved rules, the lobby cannot change them
     unsigned int map_seed;
     int start_requested;
     int base_tick;
@@ -195,7 +197,9 @@ static void write_rules(buffer *buf, const game_rules_settings *rules)
     buffer_write_i32(buf, rules->caesar_score);
 }
 
-static void read_rules(buffer *buf, game_rules_settings *rules)
+// Client: the numbers come from the network, the lobby draws them (a translation per difficulty): rules out of
+// their bounds are refused
+static int read_rules(buffer *buf, game_rules_settings *rules)
 {
     rules->difficulty = buffer_read_i32(buf);
     rules->gods_enabled = buffer_read_i32(buf);
@@ -207,6 +211,7 @@ static void read_rules(buffer *buf, game_rules_settings *rules)
     rules->territories = buffer_read_i32(buf);
     rules->fog_of_war = buffer_read_i32(buf);
     rules->caesar_score = buffer_read_i32(buf);
+    return !buf->overflow && game_rules_settings_valid(rules);
 }
 
 // Host: the rules of the game to come, for the lobby of a player (they travel again with the welcome message)
@@ -368,6 +373,13 @@ static int is_multiplayer_save(const char *filename)
         (length > 6 && strcmp(filename + length - 6, ".mpmap") == 0);
 }
 
+// .mpsav: a multiplayer game going on, which keeps its saved rules (D-073)
+static int is_game_going_on(const char *filename)
+{
+    size_t length = strlen(filename);
+    return length > 6 && strcmp(filename + length - 6, ".mpsav") == 0;
+}
+
 static int host_generate_map(void)
 {
     // the prepared map for this number of players (D-033); the seed of the lobby draws the arrival points
@@ -419,6 +431,9 @@ static void host_start_game(void)
         data.state = MP_LOCKSTEP_DISCONNECTED;
         return;
     }
+    if (data.rules_from_save) {
+        data.rules = *game_rules_multiplayer_settings(); // as loaded with the game (D-073)
+    }
     uint8_t *save;
     int save_size = read_file(data.saved_game, &save);
     if (!save_size || (!data.separate_cities && !game_file_load_saved_game(data.saved_game))) {
@@ -463,14 +478,16 @@ static void client_welcome(buffer *buf)
     data.separate_cities = buffer_read_u8(buf);
     uint64_t checksum = buffer_read_u32(buf);
     checksum |= ((uint64_t) buffer_read_u32(buf)) << 32;
-    game_rules_load_state(buf); // the rules of the host
-    game_rules_settings rules = *game_rules_multiplayer_settings();
+    game_rules_settings rules; // the rules of the host
+    int mode = game_rules_read_state(buf, &rules);
     int save_size = buffer_read_i32(buf);
-    if (save_size <= 0 || save_size > buf->size - buf->index) {
+    if (buf->overflow || mode != GAME_MODE_MULTIPLAYER || !game_rules_settings_valid(&rules) ||
+        save_size <= 0 || save_size > buf->size - buf->index) {
         set_status("Message de l'hôte invalide");
         data.state = MP_LOCKSTEP_DISCONNECTED;
         return;
     }
+    game_rules_set_multiplayer(&rules);
     // the port keeps the files of several games on one computer apart (tests)
     snprintf(data.saved_game, sizeof(data.saved_game), "mp-session-%d-p%d.%s", data.port, player,
         data.separate_cities ? "mpsav" : "sav");
@@ -596,8 +613,13 @@ static void handle_message(int from, uint8_t *payload, int size)
             }
             data.last_known_turn = turn;
         } else if (type == MSG_RULES && data.state == MP_LOCKSTEP_WAITING_FOR_PLAYERS) {
-            read_rules(&buf, &data.lobby_rules);
-            data.has_lobby_rules = 1;
+            game_rules_settings rules;
+            if (read_rules(&buf, &rules)) {
+                data.lobby_rules = rules;
+                data.has_lobby_rules = 1;
+            } else {
+                log_error("Multiplayer: rules of the host out of their bounds, ignored", 0, 0);
+            }
         } else if (type == MSG_DESYNC) {
             desync(buffer_read_i32(&buf));
         } else if (type == MSG_PAUSED) {
@@ -690,8 +712,17 @@ void mp_lockstep_set_generated_map(int generate, unsigned int seed)
 {
     data.generate_map = generate;
     data.map_seed = seed;
-    // the prepared maps come with territories (D-036)
-    data.rules.territories = generate;
+    if (generate && data.rules_from_save) {
+        // a new map after all: the rules of the lobby
+        data.rules_from_save = 0;
+        if (has_host_rules) {
+            data.rules = host_rules;
+        } else {
+            game_rules_default_multiplayer_settings(&data.rules);
+        }
+    }
+    // the prepared maps come with territories (D-036), a multiplayer map or game keeps those it was saved with
+    data.rules.territories = generate ? 1 : data.file_territories;
 }
 
 void mp_lockstep_set_manual_start(int manual)
@@ -708,7 +739,7 @@ void mp_lockstep_set_rules(const game_rules_settings *rules)
 {
     host_rules = *rules;
     has_host_rules = 1;
-    if (data.is_host && data.state == MP_LOCKSTEP_WAITING_FOR_PLAYERS) {
+    if (data.is_host && data.state == MP_LOCKSTEP_WAITING_FOR_PLAYERS && !data.rules_from_save) {
         // changed after hosting (lobby): the game starts with these, and the players already there see them;
         // the map decides the territories (mp_lockstep_set_generated_map)
         int territories = data.rules.territories;
@@ -720,6 +751,11 @@ void mp_lockstep_set_rules(const game_rules_settings *rules)
             }
         }
     }
+}
+
+int mp_lockstep_rules_from_saved_game(void)
+{
+    return data.state != MP_LOCKSTEP_OFF && data.is_host && data.rules_from_save;
 }
 
 const game_rules_settings *mp_lockstep_lobby_rules(void)
@@ -751,6 +787,17 @@ int mp_lockstep_host(int port, int num_players, const char *saved_game, int sepa
         game_rules_default_multiplayer_settings(&data.rules);
     }
     snprintf(data.saved_game, sizeof(data.saved_game), "%s", saved_game);
+    game_rules_settings saved;
+    if (is_multiplayer_save(saved_game) && mp_savegame_read_rules(saved_game, &saved)) {
+        data.file_territories = saved.territories;
+        if (is_game_going_on(saved_game)) {
+            // a game goes on with its rules: the lobby shows them and cannot change them (D-073)
+            data.rules = saved;
+            data.rules_from_save = 1;
+        } else {
+            data.rules.territories = saved.territories; // a multiplayer map: its territories, the lobby the rest
+        }
+    }
     if (num_players > 1) {
         data.listener = net_listen(port);
         if (data.listener == NET_INVALID_SOCKET) {

@@ -343,6 +343,26 @@ int mp_savegame_num_players(const char *filename)
     return num_players;
 }
 
+int mp_savegame_read_rules(const char *filename, game_rules_settings *rules)
+{
+    int ok = 0;
+    if (read_whole_file(filename) && parse()) {
+        const piece *header = find_piece("mp_header", 0, reading.num_pieces);
+        if (header && header->size >= 6 * 4) {
+            buffer buf;
+            buffer_init(&buf, (uint8_t *) header->data, header->size);
+            buffer_skip(&buf, 6 * 4);
+            int mode = game_rules_read_state(&buf, rules);
+            ok = !buf.overflow && mode == GAME_MODE_MULTIPLAYER && game_rules_settings_valid(rules);
+        }
+    }
+    free(reading.file);
+    free(reading.pieces);
+    reading.file = 0;
+    reading.pieces = 0;
+    return ok;
+}
+
 int mp_savegame_read(const char *filename)
 {
     int ok = read_whole_file(filename);

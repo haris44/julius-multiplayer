@@ -102,8 +102,24 @@ int game_rules_caesar_score(void);
  */
 int game_rules_multiplayer_map(void);
 
+/**
+ * Whether every rule is within its bounds (difficulty, yes/no rules, end of the game, scores): rules that come from
+ * the network or from a file are checked before the lobby or the game uses them
+ * @param settings Rules to check
+ * @return 1 when they may be used, 0 otherwise
+ */
+int game_rules_settings_valid(const game_rules_settings *settings);
+
 void game_rules_save_state(buffer *buf);
 
 void game_rules_load_state(buffer *buf);
+
+/**
+ * Reads rules written by game_rules_save_state without setting them
+ * @param buf Buffer at the start of the rules
+ * @param settings Filled with the multiplayer rules read
+ * @return The mode read
+ */
+int game_rules_read_state(buffer *buf, game_rules_settings *settings);
 
 #endif // GAME_RULES_H

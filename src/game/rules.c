@@ -108,6 +108,25 @@ int game_rules_caesar_score(void)
     return data.multiplayer.caesar_score > 0 ? data.multiplayer.caesar_score : MP_CAESAR_DEFAULT_SCORE;
 }
 
+#define MAX_SCORE_YEARS 1000
+#define MAX_CAESAR_SCORE 100000
+
+static int is_yes_no(int value)
+{
+    return value == 0 || value == 1;
+}
+
+int game_rules_settings_valid(const game_rules_settings *settings)
+{
+    return settings->difficulty >= DIFFICULTY_VERY_EASY && settings->difficulty <= DIFFICULTY_VERY_HARD &&
+        is_yes_no(settings->gods_enabled) && is_yes_no(settings->fix_immigration_bug) &&
+        is_yes_no(settings->fix_100_year_ghosts) && is_yes_no(settings->ai_invasions) &&
+        settings->end_condition >= GAME_END_NONE && settings->end_condition <= GAME_END_CAESAR &&
+        settings->score_years >= 0 && settings->score_years <= MAX_SCORE_YEARS &&
+        is_yes_no(settings->territories) && is_yes_no(settings->fog_of_war) &&
+        settings->caesar_score >= 0 && settings->caesar_score <= MAX_CAESAR_SCORE;
+}
+
 void game_rules_save_state(buffer *buf)
 {
     buffer_write_i32(buf, data.mode);
@@ -123,17 +142,23 @@ void game_rules_save_state(buffer *buf)
     buffer_write_i32(buf, data.multiplayer.caesar_score);
 }
 
+int game_rules_read_state(buffer *buf, game_rules_settings *settings)
+{
+    int mode = buffer_read_i32(buf);
+    settings->difficulty = buffer_read_i32(buf);
+    settings->gods_enabled = buffer_read_i32(buf);
+    settings->fix_immigration_bug = buffer_read_i32(buf);
+    settings->fix_100_year_ghosts = buffer_read_i32(buf);
+    settings->ai_invasions = buffer_read_i32(buf);
+    settings->end_condition = buffer_read_i32(buf);
+    settings->score_years = buffer_read_i32(buf);
+    settings->territories = buffer_read_i32(buf); // 0 in games saved before territories
+    settings->fog_of_war = buffer_read_i32(buf);
+    settings->caesar_score = buffer_read_i32(buf); // 0 (the default score) in games saved before
+    return mode;
+}
+
 void game_rules_load_state(buffer *buf)
 {
-    data.mode = buffer_read_i32(buf);
-    data.multiplayer.difficulty = buffer_read_i32(buf);
-    data.multiplayer.gods_enabled = buffer_read_i32(buf);
-    data.multiplayer.fix_immigration_bug = buffer_read_i32(buf);
-    data.multiplayer.fix_100_year_ghosts = buffer_read_i32(buf);
-    data.multiplayer.ai_invasions = buffer_read_i32(buf);
-    data.multiplayer.end_condition = buffer_read_i32(buf);
-    data.multiplayer.score_years = buffer_read_i32(buf);
-    data.multiplayer.territories = buffer_read_i32(buf); // 0 in games saved before territories
-    data.multiplayer.fog_of_war = buffer_read_i32(buf);
-    data.multiplayer.caesar_score = buffer_read_i32(buf); // 0 (the default score) in games saved before
+    data.mode = game_rules_read_state(buf, &data.multiplayer);
 }

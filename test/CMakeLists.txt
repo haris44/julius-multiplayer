@@ -284,6 +284,11 @@ foreach(save inv0 kknight)
 endforeach()
 # T4.4, T4.11: the lobby proposes an easy game; a game hosted alone starts with the rules changed after "Host"
 add_test(NAME mp_lobby_rules COMMAND simtool lobbyrules tower.sav)
+# K-review-fixes (T4.11): a player refuses rules of the host out of their bounds (lobby and welcome message)
+add_test(NAME mp_lobby_bad_rules COMMAND simtool badrules 27490)
+set_tests_properties(mp_lobby_bad_rules PROPERTIES TIMEOUT 60)
+# K-review-fixes (T4.11, D-073): a multiplayer game resumed from the lobby keeps its saved rules
+add_test(NAME mp_lobby_resume_rules COMMAND simtool resumerules brugle-massilia-start.sav 27491)
 # T4.11: "AI invasions: no" stops every source of attack (armies and local uprisings of the scenario, the uprising
 # sent by an angry Mars), which all come in a classic game and with the option on
 add_test(NAME mp_attack_source_army COMMAND simtool attacksource inv0.sav army 20000)

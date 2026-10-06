@@ -37,7 +37,9 @@ void mp_lobby_rules_init(void)
 
 int mp_lobby_rules_editable(void)
 {
-    return mp_lockstep_get_state() == MP_LOCKSTEP_OFF || mp_lockstep_is_host();
+    // a game resumed from its saved game keeps its rules (D-073)
+    return mp_lockstep_get_state() == MP_LOCKSTEP_OFF ||
+        (mp_lockstep_is_host() && !mp_lockstep_rules_from_saved_game());
 }
 
 void mp_lobby_rules_settings(game_rules_settings *settings)

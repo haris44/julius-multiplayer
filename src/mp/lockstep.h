@@ -47,6 +47,12 @@ void mp_lockstep_set_rules(const game_rules_settings *rules);
 const game_rules_settings *mp_lockstep_lobby_rules(void);
 
 /**
+ * Host: whether the game hosted goes on from a multiplayer saved game (.mpsav), which keeps its saved rules: the
+ * lobby shows them and cannot change them (doc/mp/DECISIONS.md D-073)
+ */
+int mp_lockstep_rules_from_saved_game(void);
+
+/**
  * Host: with a manual start (lobby), the game starts on mp_lockstep_start_game once every player is there;
  * otherwise as soon as they are all there
  */
