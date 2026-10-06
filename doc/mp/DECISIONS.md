@@ -762,3 +762,23 @@
 - Julius reste la source des correctifs : remote `origin`, `origin/master` et tag `upstream-base`
   (`git fetch origin && git log upstream-base..origin/master`). L'ancienne branche locale `master`, simple copie
   de `origin/master` sans commit propre, est supprimée.
+
+### D-060 — Prix fixes de l'empire et portorium (revoit D-043 et D-048) — à préciser
+- 2026-10-06 · **adoptée sur le principe** (Alexandre : « plutôt que de faire un prix de vente et d'achat
+  différent, pars sur des prix fixes empire avec une taxe douanière à l'entrée et à la sortie : c'est ça qui fera
+  l'augmentation de prix » ; avant : « le but est de pouvoir toujours acheter à l'étranger, par contre l'étranger
+  augmente fortement ses prix si un joueur stoppe le commerce »)
+- Un seul **prix de l'empire** par ressource, au lieu du prix d'achat et du prix de vente de l'original.
+- Le **portorium**, la douane romaine des ports et des frontières de province (en Gaule, le « quarantième », 2,5 %),
+  s'applique à ce qui entre dans la province (achat à l'empire) et à ce qui en sort (vente à l'empire) :
+  - on paie le prix plus le portorium ;
+  - on reçoit le prix moins le portorium.
+- **L'empire vend toujours** (fin de la règle D-048 qui le faisait s'effacer devant un joueur moins cher).
+- **La hausse des prix quand un joueur arrête le commerce** passe par le portorium, qui augmente.
+- **À préciser** (je tranche provisoirement s'il le faut, en le notant) :
+  - le prix fixe : le prix d'achat de l'original, ou la moyenne de l'achat et de la vente ;
+  - le taux de départ du portorium (pour garder l'écart actuel, environ 25 à 30 %) ;
+  - qui le voit augmenter, de combien et combien de temps, et ce qu'est « arrêter le commerce » (T4.3) ;
+  - le commerce entre joueurs reste sans douane (il ne quitte pas la province) ; le prix par défaut d'un joueur
+    devient le prix fixe de l'empire.
+- Classique : inchangé.

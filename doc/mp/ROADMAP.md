@@ -384,8 +384,9 @@ le note « à valider ».
   - acheter à l'empire coûte ce prix + 50 % ;
   - vendre à l'empire rapporte son prix de vente, plus bas. Marbre : de base 200 ; l'empire le vend 300 et
     l'achète 140 ; entre joueurs, 200 par défaut.
-  **?** Ce qui ne va pas, et ce qui est attendu : à préciser avec Alexandre (exemple de ressource, prix vus).
-  À traiter avec T4.3 (l'empire vend toujours, prix en hausse quand un joueur arrête le commerce).
+  *Réponse d'Alexandre* (D-060) : plus de prix d'achat et de vente différents. Chaque ressource a un **prix fixe de
+  l'empire**, et une **taxe de douane, le portorium**, s'applique à l'entrée et à la sortie de la province. C'est
+  elle qui fera monter les prix (T4.3). À traiter avec T4.3.
 
 ## MC — Cartes multijoueur préparées et César (D-033, D-034)
 - [ ] **MC.1** Ouvrages de César dessinés en blanc (la teinte actuelle ne fait que foncer les images) ; son aqueduc
