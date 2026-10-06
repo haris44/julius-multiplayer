@@ -66,12 +66,11 @@ static void init(void)
     city_emperor_init_selected_gift();
 }
 
-// "+4 laurels" after the cost of a gift that counts (multiplayer)
+// "+4" (laurels) after the cost of a gift that counts (multiplayer)
 static void draw_laurels(int size, int x, int y, font_t font)
 {
     if (is_multiplayer() && !mp_caesar_gift_cooldown(mp_session_local_player_id())) {
-        int width = text_draw_number(mp_caesar_gift_laurels(size) / 10, '+', "", x, y, font);
-        text_draw(translation_for(TR_MP_GIFT_LAURELS), x + width, y, font, 0);
+        text_draw_number(mp_caesar_gift_laurels(size) / 10, '+', "", x, y, font);
     }
 }
 
