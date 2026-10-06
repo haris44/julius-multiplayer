@@ -2544,6 +2544,34 @@ static int command_drying(const char *file, int num_players)
 
 static int build_as(int player_id, int type, int x1, int y1, int x2, int y2);
 
+// A reservoir of the player near (cx, cy), in his zone and away from water, with an aqueduct of 4 tiles leaving its
+// west side from (*ax, *ay) westwards. Returns the id of the reservoir, 0 when no place was found.
+static int own_reservoir_with_aqueduct(int player_id, int cx, int cy, int *ax, int *ay)
+{
+    for (int dy = 4; dy <= 16; dy += 4) {
+        for (int dx = -12; dx <= 12; dx += 4) {
+            int x = cx + dx, y = cy + dy;
+            if (map_terrain_exists_tile_in_area_with_type(x - 2, y - 2, 7, TERRAIN_WATER | TERRAIN_AQUEDUCT) ||
+                !build_as(player_id, BUILDING_DRAGGABLE_RESERVOIR, x, y, x, y)) {
+                continue;
+            }
+            int id = map_building_at(map_grid_offset(x, y));
+            building *r = building_get(id);
+            *ax = r->x - 1;
+            *ay = r->y + 1;
+            build_as(player_id, BUILDING_AQUEDUCT, *ax, *ay, *ax - 3, *ay);
+            int joined = 1;
+            for (int i = 0; i < 4; i++) {
+                joined &= map_terrain_is(map_grid_offset(*ax - i, *ay), TERRAIN_AQUEDUCT);
+            }
+            if (joined && r->type == BUILDING_RESERVOIR) {
+                return id;
+            }
+        }
+    }
+    return 0;
+}
+
 // the aqueduct of Caesar waters the player inland, wherever his arrival point is drawn (T4.9): every city fills the
 // aqueducts in turn on the same grid, the water of a pass must not stop the next one. Returns the number of failures
 // and the checksum of the state at the end, which must not depend on anything hidden
@@ -2585,6 +2613,32 @@ static int inland_water_game(const char *file, int num_players, int seed, int p,
         }
         build_as(q, BUILDING_AQUEDUCT, dry_x[q], dry_y[q], dry_x[q], dry_y[q]); // not a building: terrain only
         built &= map_terrain_is(map_grid_offset(dry_x[q], dry_y[q]), TERRAIN_AQUEDUCT);
+    }
+    // K-review-fixes (T4.9): every other player has a reservoir of his own in his zone, joined to an aqueduct of his.
+    // Away from any water it stays dry, and so does his aqueduct: the water of the player inland, which the same
+    // aqueduct grid carries on the same day, never reaches it. The other player inland (4 players) also has a
+    // reservoir at the end of his aqueduct of Caesar: it has water, and so has the aqueduct joined to it.
+    int other_reservoir[MP_MAPGEN_MAX_PLAYERS] = { 0 }, other_x[MP_MAPGEN_MAX_PLAYERS], other_y[MP_MAPGEN_MAX_PLAYERS];
+    int fed_reservoir[MP_MAPGEN_MAX_PLAYERS] = { 0 }, fed_x[MP_MAPGEN_MAX_PLAYERS], fed_y[MP_MAPGEN_MAX_PLAYERS];
+    for (int q = 0; q < num_players && built; q++) {
+        if (q == p) {
+            continue;
+        }
+        int cx, cy;
+        mp_mapgen_city_center(q, &cx, &cy);
+        other_reservoir[q] = own_reservoir_with_aqueduct(q, cx, cy, &other_x[q], &other_y[q]);
+        built &= other_reservoir[q] != 0;
+        int qx, qy;
+        if (!mp_mapgen_slot_is_coastal(q) && mp_mapgen_caesar_aqueduct_end(q, &qx, &qy)) {
+            built &= build_as(q, BUILDING_DRAGGABLE_RESERVOIR, qx - 2, qy, qx - 2, qy);
+            fed_reservoir[q] = map_building_at(map_grid_offset(qx - 2, qy));
+            building *r = building_get(fed_reservoir[q]);
+            // his aqueduct leaves the reservoir on the side opposite to the aqueduct of Caesar
+            fed_x[q] = r->x - 1;
+            fed_y[q] = r->y + 1;
+            build_as(q, BUILDING_AQUEDUCT, fed_x[q], fed_y[q], fed_x[q] - 3, fed_y[q]);
+            built &= map_terrain_is(map_grid_offset(fed_x[q], fed_y[q]), TERRAIN_AQUEDUCT);
+        }
     }
     if (!built) {
         printf("Unable to build in the zones of the players (reservoir %d fountain %d house %d)\n",
@@ -2640,6 +2694,30 @@ static int inland_water_game(const char *file, int num_players, int seed, int p,
         int o = map_grid_offset(dry_x[q], dry_y[q]);
         CHECK(map_terrain_is(o, TERRAIN_AQUEDUCT) && !map_aqueduct_at(o), q == p ?
             "an aqueduct of his, joined to nothing, stays dry" : "an aqueduct of another player, joined to nothing, stays dry");
+    }
+    for (int q = 0; q < num_players; q++) {
+        if (q == p) {
+            continue;
+        }
+        player_context_switch(q);
+        building *own = building_get(other_reservoir[q]);
+        int dry = 1;
+        for (int i = 0; i < 4; i++) {
+            dry &= !map_aqueduct_at(map_grid_offset(other_x[q] - i, other_y[q]));
+        }
+        printf("  player %d: reservoir away from water %d, its aqueduct %s\n", q + 1, own->has_water_access,
+            dry ? "dry" : "with water");
+        CHECK(own->type == BUILDING_RESERVOIR && !own->has_water_access && dry,
+            "another player's reservoir and aqueduct, away from water, stay dry");
+        if (fed_reservoir[q]) {
+            building *fed = building_get(fed_reservoir[q]);
+            int wet = 1;
+            for (int i = 0; i < 4; i++) {
+                wet &= map_aqueduct_at(map_grid_offset(fed_x[q] - i, fed_y[q])) != 0;
+            }
+            CHECK(fed->type == BUILDING_RESERVOIR && fed->has_water_access && wet,
+                "the other player inland: his reservoir and his aqueduct have water");
+        }
     }
     player_context_switch(0);
     *checksum = mp_checksum_state();
