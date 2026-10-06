@@ -3,6 +3,10 @@
 > **Jalon en cours : M9, César juge** (D-050, D-053, plan complet : [CESAR.md](CESAR.md)). César revient comme
 > arbitre : lauriers de la cité et de César, campagnes, demandes ; la première cité au score gagne. Jouable en paix
 > et seul avant la guerre (M10). Ordre : M9.1 → M9.9.
+>
+> **Nuit du 2026-10-06** (à partir de 23 h 45) : d'abord les demandes **T4** d'Alexandre, avec ce qu'il ajoutera
+> pendant la session de test du soir. Elles passent avant la suite de M9, et T4.1 et T4.2 la redéfinissent en
+> partie.
 
 ## M0 — Infrastructure de développement et de test ✅
 - [x] **M0.1** Environnement macOS : build, données `../donnees-c3`, branche `multiplayer`, tag `upstream-base`.
@@ -296,6 +300,40 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
 - [x] **T3.6** Emplacements tirés au sort entre les joueurs (le joueur 1 n'est plus toujours dans les terres). Test
   `mp_prepared_map_placement` : sur 12 parties, chacun des joueurs a eu l'emplacement des terres ; à 3, le sud-est
   reste libre.
+
+## T4 — Demandes d'Alexandre pour la version suivante (2026-10-06 soir)
+Notées le 2026-10-06 en fin de journée. Travail de nuit à partir de 23 h 45, avec ce qu'Alexandre ajoutera pendant
+la session de test du soir. Les questions marquées **?** se tranchent ce soir ; sinon je tranche provisoirement et
+le note « à valider ».
+- [ ] **T4.1** César dans l'**évaluation de la cité** (conseiller des notes, les piliers de marbre) : y montrer
+  l'évolution, puis les lauriers ; **regrouper les lauriers et l'estime de César** déjà existante, pour un seul
+  système plus simple (Alexandre : « à voir ce qui est possible de faire pour que ce soit plus simple »).
+  **?** Comment fondre un compteur cumulé (les lauriers, sans plafond) et une jauge de 0 à 100 (l'estime) :
+  - l'estime devient le niveau de César envers la cité, et les lauriers s'accumulent chaque mois selon ce niveau ;
+  - ou le pilier « Estime » montre les lauriers rapportés au score.
+  Les autres piliers (culture, prospérité, paix) sont-ils gardés ?
+- [ ] **T4.2** **Cadeaux à César** : ils comptent dans son estime (avec T4.1). Ils doivent passer par des
+  commandes réseau (aujourd'hui, les boutons sont cachés en multijoueur, D-057).
+- [ ] **T4.3** **L'empire vend toujours** : on peut toujours acheter à l'étranger, ce qui revoit D-048. En
+  revanche, l'empire **augmente fortement ses prix quand un joueur arrête le commerce**.
+  **?** Arrêter quel commerce :
+  - un vendeur qui ne vend plus une ressource à un joueur (embargo), et l'empire qui fait alors payer plus cher
+    cette ressource à la victime ;
+  - ou un joueur qui ferme sa route avec un autre ?
+  Plus cher de combien, et pendant combien de temps ?
+- [ ] **T4.4** Le multijoueur proposé en **facile** par défaut (salon).
+- [ ] **T4.5** Page du commerce : un **stock minimum et maximum** dans les entrepôts, pour l'import et pour
+  l'export. Pour mémoire : l'original a un seuil d'export, et Julius des réglages par entrepôt.
+  **?** Les deux bornes valent-elles pour l'empire et pour les joueurs ?
+- [ ] **T4.6** **Statistiques et décisions** : trouver une manière propre de faire évoluer ces vues. On voudra des
+  statistiques et un commerce plus fin, sans surcharger l'écran.
+  - Proposer d'abord des maquettes (pages de design à regarder ensemble), avant tout code.
+  - **?** Quelles statistiques en premier : évolution des lauriers et des notes, échanges par partenaire, prix ?
+- [ ] **T4.7** **Une mission supplémentaire coûte 30 chargements de marbre** (4 aujourd'hui), pour éviter les
+  extensions trop sauvages. Pas de changement pour la première, gratuite tant qu'on n'a pas de terre.
+- [ ] **T4.8** Plan de la guerre : réfléchir à l'**impact du pont de César**, seul passage terrestre entre les deux
+  rives à 4 joueurs, donc un endroit très stratégique. Peut-on le bloquer, le tenir, le couper ? Que fait César
+  si un joueur le ferme ? Va dans CESAR.md §7 et DESIGN §7 avant M10.
 
 ## MC — Cartes multijoueur préparées et César (D-033, D-034)
 - [ ] **MC.1** Ouvrages de César dessinés en blanc (la teinte actuelle ne fait que foncer les images) ; son aqueduc
