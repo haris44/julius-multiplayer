@@ -3,6 +3,7 @@
 #include "building/building.h"
 #include "building/construction.h"
 #include "figure/figure.h"
+#include "figure/formation.h"
 #include "building/construction_clear.h"
 #include "building/type.h"
 #include "building/count.h"
@@ -14,6 +15,7 @@
 #include "city/finance.h"
 #include "city/message.h"
 #include "city/labor.h"
+#include "city/gods.h"
 #include "city/health.h"
 #include "city/population.h"
 #include "city/ratings.h"
@@ -73,6 +75,7 @@
 #include "scenario/map.h"
 #include "game/resource.h"
 #include "mp/colors.h"
+#include "mp/lobby.h"
 #include "mp/lockstep.h"
 #include "mp/session.h"
 
@@ -165,6 +168,10 @@ static int usage(void)
     printf("  simtool viewcorners SAVE PLAYERS       generated map: the camera reaches its four corners\n");
     printf("  simtool privatepopups SAVE TICKS       twin cities: the popups and sounds of player 2 do not\n");
     printf("                                         reach player 1\n");
+    printf("  simtool lobbyrules SAVE                the lobby proposes an easy game; hosted alone, the game starts\n");
+    printf("                                         with the rules changed after hosting\n");
+    printf("  simtool attacksource SAVE SOURCE TICKS attacks of SOURCE (army, uprising, mars) come in a classic\n");
+    printf("                                         game and with AI invasions on, none with them off\n");
     printf("  simtool caesarfree SAVE TICKS          Caesar (requests, anger, salary...) acts in a classic game\n");
     printf("                                         and not in a multiplayer game\n");
     printf("  simtool mpresume SAVE TICKS MORE       twin cities: saving after TICKS (.mpsav), then loading it and\n");
@@ -558,14 +565,45 @@ static void mpnode_play(int tick_in_game)
     }
 }
 
+// T4.11: the rules chosen in the lobby, as a player sees them
+static int same_lobby_rules(const game_rules_settings *a, const game_rules_settings *b)
+{
+    return a->difficulty == b->difficulty && a->gods_enabled == b->gods_enabled &&
+        a->ai_invasions == b->ai_invasions && a->fog_of_war == b->fog_of_war &&
+        a->end_condition == b->end_condition && a->caesar_score == b->caesar_score;
+}
+
+static void print_lobby_rules(const char *label, const game_rules_settings *r)
+{
+    printf("%s: difficulty %d gods %d invasions %d fog %d end %d score %d\n", label, r->difficulty, r->gods_enabled,
+        r->ai_invasions, r->fog_of_war, r->end_condition, r->caesar_score);
+}
+
+// The host changes every rule of the lobby after "Host", once the players are there, then starts the game
+static void change_every_lobby_rule(void)
+{
+    mp_lobby_change_rule(MP_LOBBY_RULE_DIFFICULTY);
+    mp_lobby_change_rule(MP_LOBBY_RULE_GODS);
+    mp_lobby_change_rule(MP_LOBBY_RULE_END);
+    mp_lobby_change_rule(MP_LOBBY_RULE_INVASIONS);
+    mp_lobby_change_rule(MP_LOBBY_RULE_FOG);
+}
+
+static int every_lobby_rule_differs(const game_rules_settings *a, const game_rules_settings *b)
+{
+    return a->difficulty != b->difficulty && a->gods_enabled != b->gods_enabled &&
+        a->ai_invasions != b->ai_invasions && a->fog_of_war != b->fog_of_war && a->caesar_score != b->caesar_score;
+}
+
 static int command_mpnode(int argc, char **argv)
 {
     // argv: mpnode host PORT PLAYERS SAVE TICKS [cities] | mpnode join ADDRESS PORT TICKS
     int is_host = argc >= 7 && strcmp(argv[2], "host") == 0;
-    int cities = 0, generate = 0;
+    int cities = 0, generate = 0, lobby_rules = 0;
     for (int i = 7; i < argc; i++) {
         cities |= strcmp(argv[i], "cities") == 0;
         generate |= strcmp(argv[i], "generate") == 0;
+        lobby_rules |= strcmp(argv[i], "rules") == 0;
     }
     int is_join = argc >= 6 && strcmp(argv[2], "join") == 0;
     if (!is_host && !is_join) {
@@ -585,12 +623,26 @@ static int command_mpnode(int argc, char **argv)
         mp_lockstep_test_alter_game_data();
     }
     int leaver = is_join && argc >= 7 && strcmp(argv[6], "leave") == 0;
+    // 'rules' (T4.11): the host starts with the rules of the lobby, changes them all once the players are there and
+    // starts the game by the button of the lobby; every player must play with the changed rules, and a client sees
+    // them in its lobby without being able to change them
+    lobby_rules |= is_join && argc >= 7 && strcmp(argv[6], "rules") == 0;
+    game_rules_settings rules_at_host = { 0 }, rules_changed = { 0 };
+    int rules_were_changed = 0;
+    if (lobby_rules && is_host) {
+        mp_lobby_rules_init();
+        mp_lobby_rules_settings(&rules_at_host);
+        mp_lockstep_set_rules(&rules_at_host);
+    }
     time_t pause_start = 0, pause_seen_at = 0;
     int paused_seen = 0, ticks_while_paused = 0, tick_at_pause = -1;
     int ok = is_host ? mp_lockstep_host(atoi(argv[3]), atoi(argv[4]), argv[5], cities || generate)
                      : mp_lockstep_join(argv[3], atoi(argv[4]));
     if (ok && generate) {
         mp_lockstep_set_generated_map(1, 5);
+    }
+    if (ok && lobby_rules && is_host) {
+        mp_lockstep_set_manual_start(1);
     }
     if (!ok) {
         printf("FAILED: %s\n", mp_lockstep_status());
@@ -610,6 +662,13 @@ static int command_mpnode(int argc, char **argv)
             printf("status: %s\n", mp_lockstep_status());
             mp_lockstep_stop();
             return 0;
+        }
+        if (lobby_rules && is_host && state == MP_LOCKSTEP_WAITING_FOR_PLAYERS && !rules_were_changed &&
+            mp_lockstep_connected_players() == atoi(argv[4])) {
+            change_every_lobby_rule();
+            mp_lobby_rules_settings(&rules_changed);
+            rules_were_changed = 1;
+            mp_lobby_start_game();
         }
         if (state == MP_LOCKSTEP_RUNNING && start_tick < 0) {
             start_tick = mp_lockstep_base_tick();
@@ -717,6 +776,33 @@ static int command_mpnode(int argc, char **argv)
     }
     if (is_host) {
         result = result && mp_lockstep_last_verified_turn() == (ticks / 4) - 1;
+    }
+    if (lobby_rules) {
+        const game_rules_settings *game = game_rules_multiplayer_settings();
+        print_lobby_rules("game rules", game);
+        if (is_host) {
+            print_lobby_rules("rules when hosting", &rules_at_host);
+            print_lobby_rules("rules at the start", &rules_changed);
+            if (!rules_were_changed || !every_lobby_rule_differs(&rules_at_host, &rules_changed) ||
+                !same_lobby_rules(game, &rules_changed)) {
+                printf("WRONG: the game does not play with the rules changed after hosting\n");
+                result = 0;
+            }
+        } else {
+            const game_rules_settings *shown = mp_lobby_rules_shown();
+            print_lobby_rules("lobby rules", shown);
+            game_rules_settings before = *shown;
+            mp_lobby_change_rule(MP_LOBBY_RULE_DIFFICULTY);
+            mp_lobby_change_rule(MP_LOBBY_RULE_INVASIONS);
+            if (mp_lobby_rules_editable() || !same_lobby_rules(&before, mp_lobby_rules_shown())) {
+                printf("WRONG: a player who joined changes the rules of the host\n");
+                result = 0;
+            }
+            if (!mp_lockstep_lobby_rules() || !same_lobby_rules(shown, game)) {
+                printf("WRONG: the lobby of this player did not show the rules of the game\n");
+                result = 0;
+            }
+        }
     }
     // a pause stops every computer within the turns already issued (2 turns of 4 ticks)
     if (ticks_while_paused > 8) {
@@ -1261,6 +1347,184 @@ static int command_aiinvasions(const char *file, int ticks)
         return 1;
     }
     return without ? 1 : 0;
+}
+
+// T4.11: every source of attack obeys the AI invasions rule of a multiplayer game. The armies of the scenario,
+// its local uprisings and the uprising sent by an angry Mars are told apart by the invasion of their formation.
+enum { ATTACK_ARMY = 0, ATTACK_UPRISING = 1, ATTACK_MARS = 2, ATTACK_OTHER = 3, ATTACK_SOURCES = 4 };
+static const char *ATTACK_NAMES[ATTACK_SOURCES] = { "army", "uprising", "mars", "other" };
+
+static int attack_source(const formation *m)
+{
+    if (m->invasion_id == 23) {
+        return ATTACK_MARS; // scenario_invasion_start_from_mars (the cheat uses it too, never in this test)
+    }
+    if (m->invasion_id < 0 || m->invasion_id >= MAX_INVASIONS) {
+        return ATTACK_OTHER;
+    }
+    switch (scenario.invasions[m->invasion_id].type) {
+        case INVASION_TYPE_ENEMY_ARMY:
+            return ATTACK_ARMY;
+        case INVASION_TYPE_LOCAL_UPRISING:
+            return ATTACK_UPRISING;
+        default:
+            return ATTACK_OTHER;
+    }
+}
+
+static int count_attacks(const char *file, int ticks, int ai_invasions, int multiplayer, int forced,
+    int counts[ATTACK_SOURCES])
+{
+    memset(counts, 0, ATTACK_SOURCES * sizeof(int));
+    if (!load(file)) {
+        return 0;
+    }
+    if (multiplayer) {
+        game_rules_settings rules;
+        game_rules_default_multiplayer_settings(&rules);
+        rules.ai_invasions = ai_invasions;
+        rules.gods_enabled = 1;
+        game_rules_set_multiplayer(&rules);
+    } else {
+        game_rules_set_classic();
+    }
+    if (forced == ATTACK_MARS) {
+        // Mars is angry enough for a small curse at the next month, in a mission whose uprising has 9 men; the
+        // other gods are content (a curse of another god is not an attack)
+        scenario_set_campaign_mission(14);
+        for (int g = 0; g < MAX_GODS; g++) {
+            god_status *god = &city_data.religion.gods[g];
+            god->happiness = god->target_happiness = g == GOD_MARS ? 0 : 60;
+            god->wrath_bolts = g == GOD_MARS ? 20 : 0;
+            god->small_curse_done = 0;
+            god->months_since_festival = g == GOD_MARS ? 10 : 0;
+        }
+    } else if (forced == ATTACK_UPRISING) {
+        // the scenario has a local uprising at the start of the next month, from a random invasion point
+        int slot = MAX_INVASIONS - 1;
+        for (int i = MAX_INVASIONS - 1; i >= 0; i--) {
+            if (!scenario.invasions[i].type) {
+                slot = i;
+                break;
+            }
+        }
+        int month = game_time_month() + 1;
+        scenario.invasions[slot].type = INVASION_TYPE_LOCAL_UPRISING;
+        scenario.invasions[slot].year = game_time_year() + month / 12 - scenario.start_year;
+        scenario.invasions[slot].month = month % 12;
+        scenario.invasions[slot].amount = 9;
+        scenario.invasions[slot].from = MAX_INVASION_POINTS;
+        scenario.invasions[slot].attack_type = FORMATION_ATTACK_FOOD_CHAIN;
+    }
+    static unsigned char seen[0x10000];
+    memset(seen, 0, sizeof(seen));
+    for (int i = 1; i < FORMATION_ARRAY_SIZE; i++) {
+        formation *m = formation_get(i);
+        if (m->in_use && !m->is_herd && !m->is_legion) {
+            seen[m->invasion_sequence & 0xffff] = 1;
+        }
+    }
+    setting_reset_speeds(500, setting_scroll_speed());
+    for (int tick = 0; tick < ticks; tick++) {
+        run_one_tick();
+        for (int i = 1; i < FORMATION_ARRAY_SIZE; i++) {
+            formation *m = formation_get(i);
+            if (m->in_use && !m->is_herd && !m->is_legion && !seen[m->invasion_sequence & 0xffff]) {
+                seen[m->invasion_sequence & 0xffff] = 1;
+                counts[attack_source(m)]++;
+            }
+        }
+    }
+    return 1;
+}
+
+static int command_attacksource(const char *file, const char *source, int ticks)
+{
+    int wanted = -1;
+    for (int s = 0; s < ATTACK_OTHER; s++) {
+        if (strcmp(source, ATTACK_NAMES[s]) == 0) {
+            wanted = s;
+        }
+    }
+    if (wanted < 0) {
+        return usage();
+    }
+    const char *runs[3] = { "classic", "multiplayer, AI invasions on", "multiplayer, AI invasions off" };
+    int counts[3][ATTACK_SOURCES];
+    for (int run = 0; run < 3; run++) {
+        if (!count_attacks(file, ticks, run != 2, run != 0, wanted, counts[run])) {
+            return 1;
+        }
+        printf("%s:", runs[run]);
+        for (int s = 0; s < ATTACK_SOURCES; s++) {
+            printf(" %s %d", ATTACK_NAMES[s], counts[run][s]);
+        }
+        printf("\n");
+    }
+    if (counts[0][wanted] <= 0 || counts[1][wanted] <= 0) {
+        printf("FAILED: no attack of this source in this game, the test proves nothing\n");
+        return 1;
+    }
+    int result = 0;
+    for (int s = 0; s < ATTACK_OTHER; s++) {
+        if (counts[2][s]) {
+            printf("FAILED: %d attack(s) of source %s with AI invasions off\n", counts[2][s], ATTACK_NAMES[s]);
+            result = 1;
+        }
+    }
+    return result;
+}
+
+// T4.4, T4.11: the lobby proposes an easy game (the default rules of the tests stay hard); a game hosted alone
+// starts with the rules changed after "Host"
+static int command_lobbyrules(const char *file)
+{
+    int result = 0;
+    mp_lobby_rules_init();
+    game_rules_settings lobby, defaults;
+    mp_lobby_rules_settings(&lobby);
+    game_rules_default_multiplayer_settings(&defaults);
+    print_lobby_rules("lobby rules", &lobby);
+    print_lobby_rules("default rules", &defaults);
+    if (lobby.difficulty != DIFFICULTY_EASY || defaults.difficulty != DIFFICULTY_HARD) {
+        printf("WRONG: the lobby must propose an easy game, the default rules stay hard\n");
+        result = 1;
+    }
+    if (!mp_lobby_rules_editable()) {
+        printf("WRONG: the rules cannot be chosen before hosting\n");
+        result = 1;
+    }
+    mp_lockstep_set_rules(&lobby);
+    const int port = 27442;
+    if (!mp_lockstep_host(port, 1, file, 1)) {
+        printf("FAILED: %s\n", mp_lockstep_status());
+        return 1;
+    }
+    mp_lockstep_set_manual_start(1);
+    change_every_lobby_rule();
+    game_rules_settings changed;
+    mp_lobby_rules_settings(&changed);
+    if (!mp_lockstep_lobby_rules() || !same_lobby_rules(mp_lockstep_lobby_rules(), &changed)) {
+        printf("WRONG: the host does not keep the rules changed after hosting\n");
+        result = 1;
+    }
+    mp_lobby_start_game();
+    for (int frame = 0; frame < 100 && mp_lockstep_get_state() == MP_LOCKSTEP_WAITING_FOR_PLAYERS; frame++) {
+        mp_lockstep_poll();
+    }
+    print_lobby_rules("rules after hosting", &changed);
+    print_lobby_rules("game rules", game_rules_multiplayer_settings());
+    if (mp_lockstep_get_state() != MP_LOCKSTEP_RUNNING || !every_lobby_rule_differs(&lobby, &changed) ||
+        !same_lobby_rules(game_rules_multiplayer_settings(), &changed) ||
+        game_rules_difficulty() != changed.difficulty) {
+        printf("WRONG: the game does not start with the rules changed after hosting\n");
+        result = 1;
+    }
+    mp_lockstep_stop();
+    char name[64];
+    snprintf(name, sizeof(name), "mp-session-%d-p0.mpsav", port);
+    remove(name);
+    return result;
 }
 
 // End of the game by score (M4.6): two cities, the second one with higher taxes; the game ends at the start
@@ -3995,6 +4259,10 @@ int main(int argc, char **argv)
         result = command_endscore(file, ticks);
     } else if (strcmp(command, "aiinvasions") == 0 && argc > 3) {
         result = command_aiinvasions(file, ticks);
+    } else if (strcmp(command, "lobbyrules") == 0) {
+        result = command_lobbyrules(file);
+    } else if (strcmp(command, "attacksource") == 0 && argc > 4) {
+        result = command_attacksource(file, argv[3], atoi(argv[4]));
     } else if (strcmp(command, "openland") == 0 && argc > 2) {
         result = command_openland(file);
     } else if (strcmp(command, "intruders") == 0 && argc > 3) {

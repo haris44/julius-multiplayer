@@ -11,6 +11,7 @@
 #include "figure/formation.h"
 #include "figure/formation_legion.h"
 #include "game/orientation.h"
+#include "game/rules.h"
 #include "game/settings.h"
 #include "game/state.h"
 #include "game/time.h"
@@ -99,7 +100,8 @@ static void draw_speedrun_info(void)
     if (config_get(CONFIG_UI_SHOW_SPEEDRUN_INFO)) {
         int s_height = screen_height();
         large_label_draw(0, s_height - 25, 10, 0);
-        lang_text_draw_centered(153, setting_difficulty() + 1, 4, s_height - 18, 150, FONT_NORMAL_WHITE);
+        // the difficulty of the game: in multiplayer, that of the lobby (T4.10)
+        lang_text_draw_centered(153, game_rules_difficulty() + 1, 4, s_height - 18, 150, FONT_NORMAL_WHITE);
     }
 }
 

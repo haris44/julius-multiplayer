@@ -23,12 +23,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define PROTOCOL_VERSION 12 // 3: the rules of the game travel with the welcome message; 4: territories; 5: fog;
+#define PROTOCOL_VERSION 13 // 3: the rules of the game travel with the welcome message; 4: territories; 5: fog;
                             // 6: one forest map, games alone (D-044); 7: missions at the start (D-045);
                             // 8: a caravan per resource, the empire the dearer source (D-048);
                             // 9: wide places in messages, the missionary goes to the nearest walkable tile;
                             // 10: laurels and wrath of Caesar in the state (M9.1); 11: no pond on the maps (D-055);
-                            // 12: the score of Caesar in the rules, monthly laurels of the notes (M9.5)
+                            // 12: the score of Caesar in the rules, monthly laurels of the notes (M9.5);
+                            // 13: the rules of the host shown in the lobby of the players who join (T4.11)
 #define TURN_TICKS 4
 #define TURN_DELAY 2
 #define HISTORY 256
@@ -45,7 +46,8 @@ enum {
     MSG_DESYNC = 6,
     MSG_PAUSE_REQUEST = 7, // client to host: pause or resume the game
     MSG_PAUSED = 8,        // host to clients: the game is paused (1) or running (0)
-    MSG_REJECT = 9         // host to a client: refused (reason), the connection closes
+    MSG_REJECT = 9,        // host to a client: refused (reason), the connection closes
+    MSG_RULES = 10         // host to clients, before the start: the rules chosen in the lobby, at every change
 };
 
 enum {
@@ -75,6 +77,8 @@ static struct {
     char saved_game[512];
     int separate_cities;   // one city per player (a .mpsav is sent) instead of one shared city
     game_rules_settings rules; // host: rules of the game, sent to the clients
+    game_rules_settings lobby_rules; // client: the rules of the host, shown in the lobby (MSG_RULES)
+    int has_lobby_rules;
     int paused;                // the host issues no turn while paused: every computer stops at the same tick
     int dropped[MP_LOCKSTEP_MAX_PLAYERS]; // host: players who left a running game, no longer waited for
     int tick_limit;            // tests: no tick runs from this absolute tick on (0: no limit)
@@ -170,6 +174,51 @@ static int read_file(const char *filename, uint8_t **bytes)
     }
     fclose(fp);
     return (int) size;
+}
+
+// ---------- rules shown in the lobby ----------
+
+static void write_rules(buffer *buf, const game_rules_settings *rules)
+{
+    buffer_write_i32(buf, rules->difficulty);
+    buffer_write_i32(buf, rules->gods_enabled);
+    buffer_write_i32(buf, rules->fix_immigration_bug);
+    buffer_write_i32(buf, rules->fix_100_year_ghosts);
+    buffer_write_i32(buf, rules->ai_invasions);
+    buffer_write_i32(buf, rules->end_condition);
+    buffer_write_i32(buf, rules->score_years);
+    buffer_write_i32(buf, rules->territories);
+    buffer_write_i32(buf, rules->fog_of_war);
+    buffer_write_i32(buf, rules->caesar_score);
+}
+
+static void read_rules(buffer *buf, game_rules_settings *rules)
+{
+    rules->difficulty = buffer_read_i32(buf);
+    rules->gods_enabled = buffer_read_i32(buf);
+    rules->fix_immigration_bug = buffer_read_i32(buf);
+    rules->fix_100_year_ghosts = buffer_read_i32(buf);
+    rules->ai_invasions = buffer_read_i32(buf);
+    rules->end_condition = buffer_read_i32(buf);
+    rules->score_years = buffer_read_i32(buf);
+    rules->territories = buffer_read_i32(buf);
+    rules->fog_of_war = buffer_read_i32(buf);
+    rules->caesar_score = buffer_read_i32(buf);
+}
+
+// Host: the rules of the game to come, for the lobby of a player (they travel again with the welcome message)
+static void send_rules(int player)
+{
+    uint8_t payload[1 + 10 * 4];
+    buffer buf;
+    buffer_init(&buf, payload, sizeof(payload));
+    buffer_write_u8(&buf, MSG_RULES);
+    write_rules(&buf, &data.rules);
+    if (data.sockets[player] != NET_INVALID_SOCKET && !send_message(data.sockets[player], payload, buf.index)) {
+        net_close(data.sockets[player]); // the place is free again (mp_lockstep_poll)
+        data.sockets[player] = NET_INVALID_SOCKET;
+        data.accepted[player] = 0;
+    }
 }
 
 // ---------- checksums ----------
@@ -507,6 +556,7 @@ static void handle_message(int from, uint8_t *payload, int size)
                 reject(from, REJECT_GAME_DATA);
             } else {
                 data.accepted[from] = 1;
+                send_rules(from);
             }
         } else if (type == MSG_COMMAND) {
             mp_command command;
@@ -542,6 +592,9 @@ static void handle_message(int from, uint8_t *payload, int size)
                 }
             }
             data.last_known_turn = turn;
+        } else if (type == MSG_RULES && data.state == MP_LOCKSTEP_WAITING_FOR_PLAYERS) {
+            read_rules(&buf, &data.lobby_rules);
+            data.has_lobby_rules = 1;
         } else if (type == MSG_DESYNC) {
             desync(buffer_read_i32(&buf));
         } else if (type == MSG_PAUSED) {
@@ -652,6 +705,29 @@ void mp_lockstep_set_rules(const game_rules_settings *rules)
 {
     host_rules = *rules;
     has_host_rules = 1;
+    if (data.is_host && data.state == MP_LOCKSTEP_WAITING_FOR_PLAYERS) {
+        // changed after hosting (lobby): the game starts with these, and the players already there see them;
+        // the map decides the territories (mp_lockstep_set_generated_map)
+        int territories = data.rules.territories;
+        data.rules = *rules;
+        data.rules.territories = territories;
+        for (int p = 1; p < data.num_players; p++) {
+            if (data.accepted[p]) {
+                send_rules(p);
+            }
+        }
+    }
+}
+
+const game_rules_settings *mp_lockstep_lobby_rules(void)
+{
+    if (data.state == MP_LOCKSTEP_OFF) {
+        return 0;
+    }
+    if (data.is_host) {
+        return &data.rules;
+    }
+    return data.has_lobby_rules ? &data.lobby_rules : 0;
 }
 
 int mp_lockstep_host(int port, int num_players, const char *saved_game, int separate_cities)

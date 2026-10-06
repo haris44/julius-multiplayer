@@ -825,6 +825,25 @@
   À 2 joueurs : terres = fer, marbre, olives, porcs ; côte = bois, argile, vignes, pêche, fruits.
 - Classique : inchangé.
 
+### D-063 — Les réglages du salon sont ceux de l'hôte, jusqu'au lancement ; « facile » par défaut (T4.4, T4.10, T4.11)
+- 2026-10-06 · **adoptée provisoirement** (essai du soir d'Alexandre)
+- **L'hôte règle la partie jusqu'au clic sur « Lancer la partie »** : après « Héberger », les réglages restent
+  modifiables (plutôt que figés et grisés). Chaque changement part aussitôt dans la partie et chez les joueurs déjà
+  là ; le lancement relit les réglages du moment.
+- **Les joueurs qui rejoignent voient les réglages de l'hôte**, tenus à jour, sans pouvoir les changer. Un message
+  du salon de l'hôte vers les clients (protocole 13).
+- **Le salon propose « facile »** (T4.4). Les règles par défaut du multijoueur, celles des tests et de la ligne de
+  commande (`--mp-host`), restent en difficile, pour ne pas changer les tests.
+- **En partie, la difficulté est celle du salon pour tous** : le menu Options n'a plus l'entrée Difficulté en
+  multijoueur, et la ville affiche la difficulté de la partie.
+- **« Invasions IA : non » coupe toutes les attaques de l'IA** : armées et soulèvements locaux du scénario, et le
+  soulèvement envoyé par Mars en colère. Mars en colère, sans soulèvement, donne le même message que dans les
+  premières missions (`MESSAGE_WRATH_OF_MARS_NO_MILITARY`). Les **révoltes de gladiateurs restent** (Alexandre).
+- *À valider* :
+  - réglages modifiables jusqu'au lancement plutôt que figés après « Héberger » ;
+  - la ligne de commande (`tools/play-mp.sh`) reste en difficile : la passer aussi en facile ?
+- Classique : inchangé.
+
 ### D-064 — Eau de César pour tous, menu du joueur local, garde des recherches de chemin (T4.9, T4.13, T4.17)
 - 2026-10-06 · **adoptée** (corrections de bugs du premier essai, sans changement de règle de jeu)
 - **L'eau d'une cité ne dépend plus de l'eau déjà posée par les cités précédentes.** Les cités calculent l'eau l'une
@@ -840,4 +859,3 @@
   d'une fois et demie la taille de la grille, au moins 50 000 : le classique (26 244 cases) garde 50 000. La limite de
   500 pas d'un chemin de figure (`MAX_PATH`) est conservée : le plus long chemin de la carte à 4 fait 253 pas, et
   l'élargir changerait le format des sauvegardes (*à revoir* si une nouvelle carte de T4.14 dépasse 400 pas).
-
