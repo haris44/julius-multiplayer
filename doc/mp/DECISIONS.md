@@ -959,3 +959,35 @@
 - **Lien avec T4.14** : un aqueduc ne traverse pas la mer. Si les deux joueurs des terres (D-062) sont sur deux
   rives, il faut un réservoir de César sur chacune. *À valider* avec le plan de la carte.
 - Classique : inchangé (rien de tout cela n'existe hors des cartes multijoueur).
+
+### D-070 — Stock minimum et maximum du commerce, pour l'empire et pour les joueurs (T4.5, précise D-043, D-051, D-060)
+- 2026-10-07 · **à valider** (lecture provisoire de T4.5 et de la question 5 de MAQUETTES.md, travail sans Alexandre)
+- **Deux bornes par ressource et par cité**, valables pour l'empire **et** pour les autres joueurs. Le stock est
+  celui des entrepôts, compté comme dans l'original (`city_resource_count`).
+  - **« Vendre au-dessus de N »** : la cité garde N chargements ; elle ne vend rien, ni à l'empire ni à un joueur,
+    tant que son stock est à N ou moins. C'est le **seuil d'export de l'original**, repris tel quel (déjà appliqué
+    aux joueurs par D-043) : de 0 à 100, même commande qu'avant (`MP_ACTION_CHANGE_EXPORT_OVER`).
+  - **« Acheter jusqu'à M »** : la cité n'achète plus rien, ni à l'empire ni à un joueur, dès que son stock atteint
+    M. 0 (« sans ») : pas de borne. Nouvelle commande `MP_ACTION_CHANGE_BUY_LIMIT` (ressource, écart), de 0 à 400.
+- **Entre joueurs** : la caravane part avec au plus ce que la borne laisse de place, chargements déjà en route
+  compris (ceux de tous les vendeurs). À l'arrivée, l'acheteur ne prend que la place restante sous M (son stock a pu
+  monter pendant le trajet) ; le reste repart chez le vendeur, comme quand l'entrepôt est plein.
+- **Avec l'empire** : quand M est réglé, **M remplace la limite automatique de l'original** (10 chargements pour le
+  marbre, selon la population pour la nourriture, selon les ateliers pour les matières premières). Avec « sans »,
+  la règle de l'original reste. *À valider* : l'autre lecture, où M ne ferait que s'ajouter à la limite d'origine
+  (le plus petit des deux), empêcherait d'acheter 40 marbres à l'empire.
+- **L'état** : M est une nouvelle pièce de la sauvegarde multijoueur, `mp_trade_bounds` (toutes les cités, version
+  1), comptée dans la somme de contrôle. Une partie d'avant n'a pas cette pièce : elle se charge sans borne. Le format
+  `.mpsav` ne change pas de version (pièce facultative). `PROTOCOL_VERSION` 16.
+- **La page du commerce** : un onglet **« Stocks »** à droite des onglets des joueurs. Il remplace la partie du
+  joueur choisi par les deux bornes, avec − et + (4 chargements par clic, une place d'entrepôt), sur les 16 lignes ;
+  « sans » quand M vaut 0. Deux lignes d'explication en bas. Tout tient en 640 × 480. À 4 joueurs, les quatre
+  onglets sont plus étroits, en petite police, pour ne pas couvrir le titre. Captures :
+  `tools/mp-trade-test.sh` (`trade-stocks.png`), `tools/mp-solo-test.sh` (`mp-solo-trade.png`). *À valider* : le
+  pas de 4.
+- **Partie seule** (un joueur sur la carte) : la page du commerce multijoueur s'affiche aussi, avec le seul onglet
+  « Stocks », pour qu'Alexandre puisse régler les bornes seul. Cela revoit D-051 (« partie seule : page
+  d'origine »). *À valider*.
+- **Pas de paire de bornes par partenaire** (autre lecture de la question 5) : une seule paire par ressource,
+  plus simple à lire. La fiche de ressource de MAQUETTES §7 pourra les reprendre plus tard.
+- Classique : inchangé (la borne M vaut toujours 0, la commande ne fait rien, la page d'origine reste).
