@@ -5,6 +5,29 @@
 
 ---
 
+## 2026-10-06 — Défilement par les bords sous Linux (D-056)
+
+**Demande d'Alexandre** : « sur la version Linux (et Linux uniquement), le déplacement sur les bords d'écran est au
+pixel près ».
+
+**Fait**
+- La correction de macOS (D-046) vaut aussi pour Linux, en plein écran et sous X11 (XWayland compris) : position du
+  curseur demandée au système à chaque image, ramenée au bord de l'image. Partout, une position sur une bande noire
+  autour de l'image compte comme le bord.
+- `julius-log.txt` écrit aussi sous Linux, avec la géométrie de l'écran et, près des bords, les positions vues par
+  le jeu et par le système.
+- Vérifié : compilation macOS, et le code propre à Linux compilé sur le Mac en se faisant passer pour Linux (aucun
+  avertissement dans le nouveau code) ; 176 tests verts. **Pas essayé sur un vrai Linux** : c'est à Alexandre.
+
+**Appris**
+- SDL 2 (2.30, celle de l'AppImage) préfère X11 à Wayland : l'AppImage tourne par XWayland, sauf
+  `SDL_VIDEODRIVER=wayland`. SDL 2.30 n'a pas de position globale du curseur sous Wayland.
+- Pour compiler le code Linux sur le Mac : `-U__APPLE__ -D__linux__` et un `endian.h` de remplacement.
+
+**Prochaine étape** : qu'Alexandre essaie l'AppImage ; si le défaut reste, lire son `julius-log.txt`.
+
+---
+
 ## 2026-10-06 — Troupes et matières de guerre (D-058, jalon MG)
 
 **Demande d'Alexandre** : les légions sont trop fortes face aux autres troupes ; répartir les atouts militaires
@@ -24,6 +47,8 @@ entre joueur des terres et côtiers (idées de départ : des lances faites de bo
 **Prochaine étape** : M9 continue ; MG.1 à MG.4 possibles à tout moment, MG.5 après M10.2.
 
 **Points ouverts** : les chiffres des javeliniers ne seront vérifiés qu'avec la guerre entre joueurs.
+
+---
 
 ## 2026-10-06 — César visible : notes, lauriers mensuels, rangs, victoire au score, interface (D-057)
 

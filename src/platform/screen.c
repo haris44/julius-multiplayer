@@ -210,6 +210,14 @@ int platform_screen_get_system_mouse_position(int *x, int *y, int *inside)
         if (!(SDL_GetWindowFlags(SDL.window) & SDL_WINDOW_INPUT_FOCUS)) {
             return 0;
         }
+#if defined(__linux__) && !defined(__ANDROID__)
+        // only the X server knows the cursor outside the window; under native Wayland, SDL would give its last
+        // position over the window, minus a window position Wayland does not tell (D-056)
+        const char *driver = SDL_GetCurrentVideoDriver();
+        if (!driver || strcmp(driver, "x11") != 0) {
+            return 0;
+        }
+#endif
         int global_x, global_y, window_x, window_y;
         SDL_GetGlobalMouseState(&global_x, &global_y);
         SDL_GetWindowPosition(SDL.window, &window_x, &window_y);
@@ -221,8 +229,9 @@ int platform_screen_get_system_mouse_position(int *x, int *y, int *inside)
     in_window_y = in_window_y < 0 ? 0 : in_window_y >= height ? height - 1 : in_window_y;
     float logical_x, logical_y;
     SDL_RenderWindowToLogical(SDL.renderer, in_window_x, in_window_y, &logical_x, &logical_y);
-    *x = (int) logical_x;
-    *y = (int) logical_y;
+    // on black bars around the picture (a screen of another shape than the game), at its edge
+    *x = calc_bound((int) logical_x, 0, screen_width() - 1);
+    *y = calc_bound((int) logical_y, 0, screen_height() - 1);
     return 1;
 #else
     return 0;
@@ -389,7 +398,11 @@ int platform_screen_resize(int pixel_width, int pixel_height)
         logical_width, logical_height);
 
     if (SDL.texture) {
-        SDL_Log("Texture created: %d x %d", logical_width, logical_height);
+        int window_width, window_height, output_width = 0, output_height = 0;
+        SDL_GetWindowSize(SDL.window, &window_width, &window_height);
+        SDL_GetRendererOutputSize(SDL.renderer, &output_width, &output_height);
+        SDL_Log("Texture created: %d x %d (window %d x %d, %d x %d pixels, scale %d%%)", logical_width, logical_height,
+            window_width, window_height, output_width, output_height, scale.percentage);
         screen_set_resolution(logical_width, logical_height);
         return 1;
     } else {

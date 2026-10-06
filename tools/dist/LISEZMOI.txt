@@ -39,7 +39,9 @@ Linux : décompressez l'archive (tar -xzf CaesarIII-Multijoueur-....tar.gz), pui
   - Si la fenêtre de choix du dossier n'apparaît pas, donnez le dossier de Caesar III après le nom du programme :
         ./CaesarIII-Multijoueur.AppImage /chemin/du/dossier/caesar3
   - Le jeu marche sous Wayland comme sous X11. En cas de souci d'affichage, essayez de le lancer avec
-    SDL_VIDEODRIVER=x11 (ou SDL_VIDEODRIVER=wayland) devant la commande.
+    SDL_VIDEODRIVER=x11 (ou SDL_VIDEODRIVER=wayland) devant la commande. Le défilement de la carte par les
+    bords de l'écran, en plein écran, demande X11 (le choix par défaut) : sans SDL_VIDEODRIVER=wayland.
+  - Le jeu écrit son journal, julius-log.txt, dans le dossier de Caesar III : joignez-le à toute remarque.
 
 Windows : décompressez le dossier, puis lancez CaesarIII-Multijoueur.exe.
   Le programme n'est pas signé : si Windows affiche « Windows a protégé votre ordinateur », cliquez sur

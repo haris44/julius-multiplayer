@@ -132,8 +132,9 @@ static void teardown_logging(void)
     }
 }
 
-#elif defined(__APPLE__)
-/* The application started from the Finder has no console: a log next to the data of the game as well */
+#elif defined(__APPLE__) || defined(__linux__)
+/* The application started from the Finder or a file manager has no console: a log next to the data of the game
+   as well (macOS, and Linux since D-056) */
 static FILE *log_file = 0;
 
 static void write_log(void *userdata, int category, SDL_LogPriority priority, const char *message)
@@ -444,17 +445,54 @@ static void teardown(void)
 // and no event tells where it is; and macOS 26 and later deliver stale positions near the top of the screen (SDL
 // issue #15967). The system always knows where the cursor is: in fullscreen it is brought back to the edge of the
 // window, where the map scrolls; in a window, it corrects the position while the cursor is over the window.
+// Linux (D-056): in fullscreen the map scrolled only with the cursor on the very pixel of the edge; the same cure,
+// in fullscreen only, where the X server tells the position (also XWayland, the default of SDL 2 under Wayland)
+#if defined(__APPLE__)
+#define SYNC_MOUSE_IN_WINDOW 1
+#elif defined(__linux__) && !defined(__ANDROID__)
+#define SYNC_MOUSE_IN_WINDOW 0
+#define LOG_MOUSE_NEAR_EDGES
+#endif
+
+#ifdef LOG_MOUSE_NEAR_EDGES
+// to check the cure on the computer of the player: near an edge of the screen, the position the game uses and the
+// one of the system, at most once a second, in julius-log.txt
+static void log_mouse_near_edges(const mouse *m, int has_system, int x, int y, int inside)
+{
+    static Uint32 last_log;
+    int width = screen_width(), height = screen_height();
+    int near_edge = m->x < 8 || m->y < 8 || m->x >= width - 8 || m->y >= height - 8 ||
+        (has_system && (x < 8 || y < 8 || x >= width - 8 || y >= height - 8));
+    Uint32 now = SDL_GetTicks();
+    if (!near_edge || now - last_log < 1000) {
+        return;
+    }
+    last_log = now;
+    if (has_system) {
+        SDL_Log("Mouse near the edge: game %d, %d; system %d, %d (%s the window); screen %d x %d, %s",
+            m->x, m->y, x, y, inside ? "in" : "out of", width, height, setting_fullscreen() ? "fullscreen" : "window");
+    } else {
+        SDL_Log("Mouse near the edge: game %d, %d; system position unknown; screen %d x %d, %s",
+            m->x, m->y, width, height, setting_fullscreen() ? "fullscreen" : "window");
+    }
+}
+#endif
+
 static void sync_mouse_with_system(void)
 {
-#if defined(__APPLE__)
+#ifdef SYNC_MOUSE_IN_WINDOW
     if (platform_automation_is_active() || SDL_GetRelativeMouseMode() || mouse_get()->is_touch) {
         return;
     }
-    int x, y, inside;
-    if (!platform_screen_get_system_mouse_position(&x, &y, &inside)) {
+    int x = 0, y = 0, inside = 0;
+    int has_system = platform_screen_get_system_mouse_position(&x, &y, &inside);
+#ifdef LOG_MOUSE_NEAR_EDGES
+    log_mouse_near_edges(mouse_get(), has_system, x, y, inside);
+#endif
+    if (!has_system) {
         return;
     }
-    if (!setting_fullscreen() && !inside) {
+    if (!setting_fullscreen() && (!inside || !SYNC_MOUSE_IN_WINDOW)) {
         return;
     }
     const mouse *m = mouse_get();
@@ -687,7 +725,7 @@ static void setup(const julius_args *args)
         SDL_Log("Exiting: game pre-init failed");
         exit_with_status(1);
     }
-#if defined(__APPLE__)
+#if defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__))
     open_log_in_data_directory();
     SDL_Log("Julius version %s, log in the directory of the data", system_version());
 #endif

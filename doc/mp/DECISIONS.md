@@ -672,6 +672,24 @@
   cher, et cet aqueduc-là se coupe aussi en guerre : je le laisse. Si Alexandre veut fermer cette porte : interdire
   le bord de mer aux réservoirs du joueur des terres.
 
+### D-056 — Défilement par les bords sous Linux : la position du curseur demandée au serveur X (précise D-046)
+- 2026-10-06 · **adoptée**, **à vérifier** chez Alexandre (« sur la version Linux (et Linux uniquement), le
+  déplacement sur les bords d'écran est au pixel près »)
+- Cause non reproduite : pas d'écran Linux ici, et la compilation automatique n'en a pas. SDL 2 choisit X11 avant
+  Wayland, donc sous Fedora l'AppImage passe par XWayland. Pistes : le curseur sort de la fenêtre avant d'atteindre
+  la bande de 5 pixels où la carte défile (plus aucun événement ne dit alors où il est), ou il s'arrête sur des
+  bandes noires autour de l'image (écran d'une autre forme que le jeu), hors de l'image.
+- Même remède que sur macOS (D-046), **en plein écran seulement** : à chaque image, la position du curseur est
+  demandée au serveur X et ramenée au bord de l'image ; un curseur hors de la fenêtre ou sur une bande noire fait
+  défiler comme s'il touchait le bord. Jamais en fenêtre, pendant l'automatisation, ni en mode relatif (glisser au
+  clic droit). En Wayland natif (`SDL_VIDEODRIVER=wayland`), le système ne donne pas cette position : rien ne change.
+- Partout, une position au-dessus d'une bande noire est ramenée au bord de l'image.
+- Diagnostic : sous Linux aussi, le jeu écrit `julius-log.txt` dans le dossier de Caesar III (taille de la fenêtre,
+  en pixels, échelle ; près d'un bord, au plus une fois par seconde, la position vue par le jeu et par le système).
+  Si le défaut persiste, ce fichier dira pourquoi.
+- Contrepartie, comme sur macOS : si le curseur peut quitter l'écran du jeu (plusieurs écrans), la carte défile tant
+  qu'il est sur l'autre écran.
+
 ### D-057 — César visible d'abord, sans ses mécaniques complexes (M9.2 provisoire, M9.5, M9.6)
 - 2026-10-06 · **adoptée** (Alexandre : « lance l'implémentation de la partie visuelle de César, sans les
   mécaniques complexes »)
