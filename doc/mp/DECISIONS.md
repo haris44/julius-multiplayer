@@ -560,9 +560,9 @@
 ### D-050 — César revient comme arbitre de la partie (remplace E8, revoit D-026)
 - 2026-10-06 · **adoptée** sur le principe (Alexandre : « César va ré-apparaître, c'est lui qui donnera la victoire à
   la cité la plus prospère […] César pourra être en colère contre des joueurs qui sont trop belliqueux entre eux, et
-  envoyer son armée pour attaquer tous les joueurs de la carte »). Détails **à valider** : CESAR.md §13.
-- La victoire par défaut devient le **jugement de César** : le plus de lauriers à la fin l'emporte. Ce mode remplace
-  le score provisoire de M4.6. Les lauriers **s'additionnent** :
+  envoyer son armée pour attaquer tous les joueurs de la carte »). Détails validés par D-053.
+- La victoire par défaut devient le **jugement de César** : la première cité à un score de lauriers l'emporte
+  (D-053). Ce mode remplace le score provisoire de M4.6. Les lauriers **s'additionnent** :
   - les lauriers de la cité, chaque mois, d'après cinq notes : prospérité, commerce, habitat, culture-éducation,
     grandeur ;
   - les lauriers de César, d'après les actions envers lui : dons depuis l'épargne (salaire limité par le rang),
@@ -612,3 +612,24 @@
   partie. La carte part ensuite chez les clients, comme avant. À 3 joueurs, le sud-est reste libre ; seul, on reste
   dans les terres, pour que quelqu'un ait le marbre des missions. Les tests gardent l'ordre du plan (graine 0).
 
+### D-053 — Réponses d'Alexandre au plan de César (précise D-050)
+- 2026-10-06 · **adoptée** (réponses d'Alexandre aux sept points de CESAR.md §13)
+- Confirmés tels quels : lauriers **cumulés** mois après mois ; valeurs des lauriers du plan (réglages de départ,
+  ajustés en M11) ; **classement public** des lauriers.
+- **Victoire au score** (« je préfèrerais une victoire au score, celui à tant de lauriers ») : la première cité qui
+  atteint le score du salon (500, 1 000, 1 500 ou 2 000 lauriers ; 1 000 par défaut) gagne, et la partie s'arrête.
+  Plus de durée fixe ni de consulat anticipé. Les rangs de l'original vont par dixième du score ; le dernier,
+  César, est la victoire.
+- **Deux formes de guerre** (« soit tu fais une guerre brutale et c'est immédiat, par contre tu ne fais pas plaisir
+  à César, soit tu fais une guerre propre, et tu as un préavis de 3 mois ») :
+  - **guerre honorable** : les combats commencent 3 mois après la déclaration ;
+  - **guerre brutale** : tout de suite, mais −15 lauriers de plus et une colère comptée ×1,5.
+  La forme s'ajoute au motif (riposte, mandat, sans motif), que le jeu détermine toujours.
+- **Demandes de César pour toute la province** (« chacun participe, et la faveur est accordée en fonction de ce que
+  chacun donne. À ce moment-là, tout est permis, et les frappes commerciales sur ces produits ne sont pas
+  pénalisées par César ») :
+  - une cagnotte de 10 lauriers par joueur, partagée selon les chargements envoyés ;
+  - pendant la demande, intercepter les caravanes de la ressource demandée n'ajoute rien à la colère.
+    L'interception demande toujours une guerre déclarée : c'est une interprétation, **à confirmer** par Alexandre.
+- **Seconde expédition punitive fatale** : option du salon, désactivée par défaut. Sans elle, la seconde expédition
+  frappe comme la première.

@@ -7,8 +7,8 @@
 
 ## 0. En bref
 
-- César revient. Il ne gouverne pas les cités : il **observe** la province et, à la fin, **désigne le vainqueur** :
-  la cité qui a le plus de **lauriers** (points de victoire).
+- César revient. Il ne gouverne pas les cités : il **observe** la province et **désigne le vainqueur** : la première
+  cité qui atteint le **score** de **lauriers** (points de victoire) fixé dans le salon.
 - Les lauriers viennent de deux sources, qui **s'additionnent** :
   - les **lauriers de la cité**, gagnés chaque mois d'après cinq notes : prospérité, commerce, habitat, culture et
     éducation, grandeur ;
@@ -76,7 +76,8 @@ D'où vient chaque critère dans le plan :
    commandes. Les réglages sont réunis dans une seule table (`mp/caesar_rules.h`), recopiée dans DESIGN.
 
 Repères de temps : un mois de jeu dure environ 20 à 30 secondes, une année 4 à 6 minutes selon la vitesse. Une
-partie de 20 ans dure donc 1 h 30 à 2 h. Une caravane met environ 45 jours à traverser la carte pour 2.
+partie au score par défaut (1 000 lauriers, atteint vers la 12e année, §4.3) dure donc 50 minutes à 1 h 15. Une
+caravane met environ 45 jours à traverser la carte pour 2.
 
 ## 3. Vue d'ensemble : trois compteurs
 
@@ -127,7 +128,8 @@ Chaque note rapporte des lauriers en proportion de sa valeur. Une note tenue à 
 - Ordres de grandeur visés :
   - cité moyenne en milieu de partie (notes autour de 40) : environ 48 lauriers par an ;
   - belle cité de fin de partie (notes autour de 70) : environ 84 par an ;
-  - sur une partie de 20 ans : environ 1 000 lauriers de la cité pour le vainqueur.
+  - en 20 ans : environ 1 000 lauriers de la cité pour une belle cité. Avec ceux de César, le score par défaut de
+    1 000 lauriers est atteint vers la 12e année (§4.3).
 
 ### 4.2 Lauriers de César (actions)
 
@@ -141,15 +143,20 @@ concerne le service de César. La part achetée par l'argent (dons et fêtes) re
 
 ### 4.3 Fin de partie et verdict
 
-- **Durée** choisie dans le salon (10, 15, 20 ou 30 ans ; 20 par défaut). À la fin, César désigne la cité qui a le
-  plus de lauriers. À égalité, celle qui a le plus de lauriers de la cité.
-- **Consulat anticipé** (option du salon, active par défaut) : à partir de la 10e année, une cité qui a au moins
-  1,5 fois les lauriers de la deuxième pendant deux bilans annuels de suite est nommée consul, et la partie
-  s'arrête. Cela évite de jouer dix ans une partie jouée d'avance.
-- **Partie seule** : pas de rival. César donne un **titre** selon les lauriers, avec les rangs de l'original
-  (Citoyen… Consul, César). Alexandre peut ainsi mesurer ses parties seul.
-- Les **rangs** servent aussi en cours de partie : ils montent avec les lauriers et fixent le salaire maximal
-  (§6.1), comme les promotions de la campagne.
+- **Victoire au score** (Alexandre, D-053) : le salon fixe un score de lauriers (500, 1 000, 1 500 ou 2 000 ; 1 000
+  par défaut). La première cité qui l'atteint, au bilan d'un mois, gagne : César en fait son **héritier**, et la
+  partie s'arrête.
+  - Si plusieurs cités l'atteignent le même mois, gagne celle qui a le plus de lauriers ; à égalité exacte, celle
+    qui a le plus de lauriers de la cité.
+  - Ordres de grandeur visés pour une cité bien menée (mesurés en M11) : 500 lauriers vers la 8e année, 1 000 vers
+    la 12e, 1 500 vers la 15e, 2 000 vers la 19e.
+  - Le classement est **public** (§11) : chacun voit qui approche du score, et peut le freiner.
+- Pas de durée fixe ni de consulat anticipé : le score les remplace. Une partie jouée d'avance s'arrête d'elle-même,
+  quand le premier atteint le score.
+- **Rangs** : ceux de l'original (Citoyen… Proconsul, César), un par dixième du score. Le dernier, César, c'est la
+  victoire. En cours de partie, le rang fixe le salaire maximal (§6.1), comme les promotions de la campagne.
+- **Partie seule** : pas de rival. Atteindre le score est la victoire, et le rang mesure le chemin parcouru.
+  Alexandre peut ainsi mesurer ses parties seul : en combien d'années il atteint le score.
 - Le mode « score à durée limitée » actuel (culture + prospérité + paix + population / 100, provisoire) disparaît
   au profit de ce verdict. « Sans fin » reste pour les parties libres.
 
@@ -217,10 +224,11 @@ Chaque action rapporte un nombre fixe de lauriers, affiché à côté du bouton 
 | Campagne de César gagnée (§6.3) | jusqu'à +60, selon sa part de la force | — |
 | Campagne perdue, troupes envoyées | jusqu'à +15, selon sa part | — |
 | Campagne : rien envoyé alors qu'on a des légions | −10 | — |
-| Demande honorée / refusée ou en retard (§6.4, option) | +10 / −5 | — |
+| Demande de César (§6.4, option) | une part de la cagnotte (10 par joueur), selon ses envois | échéance manquée : moitié de la cagnotte, −5 à qui n'a rien envoyé |
 | Triomphe : légion ennemie détruite dans une guerre juste (§7.1) | +20 | — |
 | Expédition de César vaincue sur ses terres (§7.4) | +20 | — |
 | Guerre déclarée sans motif (§7.1) | −15 | −40 si la cible a des troupes en campagne pour César |
+| Guerre brutale, sans préavis (§7.1) | −15 de plus | et la colère de cette guerre compte une fois et demie |
 | Armée trop puissante (§7.5) | −2 par mois et par légion de trop | — |
 | Responsable de l'expédition punitive (§7.4) | −25 % de ses lauriers | les autres responsables au prorata de leur part |
 
@@ -269,11 +277,27 @@ Chaque action rapporte un nombre fixe de lauriers, affiché à côté du bouton 
 - **Tension voulue** : des légions parties pendant des mois laissent la cité exposée. Mais attaquer une cité dont les
   troupes servent César est la pire faute (§7.1).
 
-### 6.4 Demandes de César (option du salon, à valider)
-- Les demandes d'origine (« envoyez 20 chargements de vin ») reviennent, calculées selon la taille de la cité. La
-  même ressource est demandée à tous en même temps.
-- **Intérêt** : elles créent des pics de demande sur le marché entre joueurs. Accaparer le vin quand César en
-  demande, c'est une frappe commerciale.
+### 6.4 Demandes de César (option du salon, active par défaut)
+- Tous les 2 à 3 ans (dates et ressources tirées de la graine de la partie), César demande à **la province** des
+  chargements d'une ressource qu'elle produit ou que l'empire vend : vin, huile, meubles, poterie, armes, marbre…
+  - Le total suit la population de toute la province (réglage de départ : 2 chargements par 1 000 habitants, au
+    moins 10).
+  - Délai : 12 mois.
+- **Chacun participe** (Alexandre, D-053) : chaque joueur envoie ce qu'il veut depuis ses entrepôts, en une ou
+  plusieurs fois. L'original exigeait tout le chargement d'un coup. La demande se ferme dès que la province a tout
+  envoyé, ou à l'échéance.
+- **Lauriers selon ce que chacun donne** : une cagnotte de 10 lauriers par joueur, partagée au prorata des
+  chargements envoyés.
+  - Demande remplie : la cagnotte entière. Échéance manquée : la moitié, et −5 à qui n'a rien envoyé.
+  - Exemple à 2 joueurs, 20 chargements de vin : A en envoie 15 et B 5 ; A gagne 15 lauriers, B 5.
+  - Seul, on gagne les 10 lauriers en remplissant la demande, comme avant.
+- **Tout est permis**, puisque c'est pour César. Pendant la demande, les frappes sur la ressource demandée ne le
+  fâchent pas :
+  - accaparer, surenchérir, ne plus vendre aux autres (le commerce ne compte jamais dans la colère) ;
+  - intercepter les caravanes qui la transportent n'ajoute rien à la jauge de colère. L'interception reste un acte
+    de guerre : elle demande une guerre déclarée (M10).
+- **Intérêt** : un pic de demande sur le marché entre joueurs, et une course. Celui qui tient la ressource prend
+  la cagnotte.
 
 ## 7. La guerre sous l'œil de César
 
@@ -282,8 +306,15 @@ est celle prévue en DESIGN §7. Ce plan ajoute le **cadre** : déclaration, mot
 
 ### 7.1 Déclaration et motif
 - On ne peut attaquer un joueur (soldats, bâtiments, caravanes) qu'en **guerre déclarée**. Déclarer passe par une
-  commande et s'annonce à tous. La guerre commence **un mois** après la déclaration : le préavis laisse au défenseur
-  le temps de rappeler ses troupes. C'est un garde-fou contre la ruée.
+  commande et s'annonce à tous. On choisit la forme de la guerre (Alexandre, D-053) :
+
+| Forme | Début des combats | Ce qu'en pense César |
+|-------|-------------------|----------------------|
+| **Guerre honorable** | **3 mois** après la déclaration : le défenseur a le temps de rappeler ses troupes et de fermer ses portes | règles du motif (ci-dessous) |
+| **Guerre brutale** | **tout de suite** | il n'aime pas ça : −15 lauriers de plus à la déclaration, et la colère de cette guerre compte une fois et demie |
+
+- Pendant le préavis, personne n'attaque, ni l'un ni l'autre. Le défenseur peut frapper le premier en déclarant à
+  son tour une guerre brutale : c'est une riposte, mais il paie le prix de la brutalité.
 - Le **motif** est déterminé par le jeu, pas choisi par le joueur :
 
 | Motif | Condition | Effet |
@@ -291,6 +322,8 @@ est celle prévue en DESIGN §7. Ce plan ajoute le **cadre** : déclaration, mot
 | **Riposte** | la cible a déclaré la guerre au joueur, l'a attaqué ou a intercepté ses caravanes dans les 12 derniers mois | juste : colère comptée à moitié, triomphes possibles |
 | **Mandat de César** | César a déclaré la cible « ennemie de Rome » : elle a déclaré une guerre sans motif dans les 12 derniers mois, ou elle est la principale fautive d'un ultimatum | juste : colère comptée au quart, triomphes possibles |
 | **Sans motif** | les autres cas | injuste : −15 lauriers à la déclaration (−40 si la cible a des troupes en campagne pour César), colère pleine, pas de triomphe |
+
+- La forme et le motif se cumulent : une guerre brutale sans motif coûte 30 lauriers, et sa colère compte ×1,5.
 
 - Paix :
   - elle se signe quand les deux camps la proposent, ou quand César l'impose (§7.3) ;
@@ -304,16 +337,18 @@ Chaque mois, chaque guerre en cours ajoute à la jauge :
 |-------|-----------------|----------------|
 | **Durée** | le n-ième mois de guerre ajoute n (1, 2, 3…) | les guerres longues : 3 mois coûtent 6, 6 mois 21, 12 mois 78 |
 | **Puissance** | 2 × L², L = légions de l'agresseur dans le territoire adverse | les coups massifs : 1 légion 2, 2 légions 8, 3 légions 18, 4 légions 32 |
-| **Dégâts** | +1 par bâtiment détruit, +2 par caravane interceptée, +1 par 10 habitants tués | les ravages |
+| **Dégâts** | +1 par bâtiment détruit, +2 par caravane interceptée (rien si elle porte la ressource d'une demande de César en cours, §6.4), +1 par 10 habitants tués | les ravages |
 
-- Le motif pondère ces termes : sans motif ×1, riposte ×½, mandat ×¼.
+- Le motif pondère ces termes : sans motif ×1, riposte ×½, mandat ×¼. Une guerre brutale les multiplie encore par
+  1,5.
 - En paix générale, la jauge baisse de 3 par mois ; s'il y a une guerre quelque part, de 1 par mois.
 - La **belligérance** d'un joueur, c'est sa part de la jauge : ce que ses guerres ont ajouté, au prorata de ses
   actes.
 - **Ce que ça donne** (réglages de départ) :
   - **Frappe ciblée sans motif** : 1 légion, 3 mois de guerre dont 2 chez l'adversaire, 8 bâtiments et 3 caravanes.
     Durée 6, puissance 4, dégâts 14 : 24 de colère, effacés en 8 mois de paix, plus 15 lauriers perdus. Ça passe,
-    mais pas deux fois dans l'année.
+    mais pas deux fois dans l'année. La même frappe en guerre brutale : 36 de colère et 30 lauriers perdus, juste
+    sous l'avertissement.
   - **Guerre totale** : 3 légions, 8 mois, dont 6 chez l'adversaire. Durée 36, puissance 108 : César intervient
     avant la fin, même avec un motif de riposte.
   - **Guerre sous mandat** : 2 légions, 6 mois, contre un ennemi de Rome. (21 + 40 + dégâts) / 4, soit environ 20 :
@@ -339,8 +374,8 @@ Chaque mois, chaque guerre en cours ajoute à la jauge :
 - Le responsable principal perd **25 %** de ses lauriers. Les autres responsables en perdent au prorata de leur
   part. Les innocents ne perdent que la disgrâce et les dégâts.
 - La jauge redescend ensuite à 30.
-- **Seconde expédition dans la même partie** (option du salon, à valider) : « Rome reprend la province ». La partie
-  s'arrête, et César ne désigne aucun vainqueur.
+- **Seconde expédition dans la même partie** : elle frappe comme la première. Option du salon, désactivée par
+  défaut (D-053) : « Rome reprend la province », la partie s'arrête et César ne désigne aucun vainqueur.
 
 ### 7.5 Une armée trop puissante attire l'œil de César
 - Même en paix, César tolère environ **une légion par tranche de 5 000 habitants (au moins 2)**. Au-delà, chaque
@@ -358,7 +393,8 @@ Chaque mois, chaque guerre en cours ajoute à la jauge :
 
 **Le prédateur ciblé.** Développement moyen, mais il frappe là où ça fait mal, au bon moment :
 - couper le marbre du rival quand celui-ci construit ses temples ;
-- intercepter ses caravanes de vin juste quand César en demande (§6.4) ;
+- accaparer le vin quand César en demande, et intercepter les caravanes de vin du rival : César ne s'en fâche pas
+  (§6.4) ;
 - brûler un entrepôt clé en trois mois de guerre.
 - Résultat : il paie 15 lauriers par guerre sans motif, et de la colère. Le rival perd des mois de commerce et de
   culture, donc des lauriers mensuels cumulés. Une riposte ou un mandat ne coûtent même pas les 15 lauriers.
@@ -388,6 +424,9 @@ Chaque mois, chaque guerre en cours ajoute à la jauge :
 | Construire écoles et théâtres loin des maisons pour la note de culture | règle d'origine (des places, pas la desserte) : on la garde, car ces bâtiments coûtent des ouvriers et de l'entretien ; à surveiller en télémétrie |
 | Se liguer à deux contre un (3 ou 4 joueurs) | permis (c'est de la diplomatie), mais chaque agresseur porte sa part de la colère |
 | Attaquer un joueur dont les légions sont chez César | −40 lauriers, colère pleine : la pire faute du jeu |
+| Frapper avant que le défenseur ait rappelé ses troupes | guerre brutale : −15 lauriers de plus, colère ×1,5 |
+| Envoyer un seul chargement à une demande pour toucher sa part | part au prorata : un chargement sur vingt rapporte un vingtième |
+| Une cité file seule vers le score | classement public : les autres la voient venir, peuvent la frapper ou se liguer |
 
 ## 10. Méthode d'équilibrage
 
@@ -434,7 +473,8 @@ colère, seuils. Chaque changement de réglage est noté dans DECISIONS avec la 
 ### 10.5 Critères chiffrés d'une partie équilibrée
 - Aucune note ne fait plus de 30 % des lauriers du vainqueur.
 - Les lauriers de César font de 20 à 40 % du total du vainqueur, dont moins de la moitié en dons et fêtes.
-- Le joueur en tête à mi-partie gagne dans 60 à 75 % des cas : l'avance compte, mais le retour reste possible.
+- Le joueur en tête quand le premier atteint la moitié du score gagne dans 60 à 75 % des cas : l'avance compte,
+  mais le retour reste possible.
 - Une partie à 2 joueurs déclenche une expédition punitive dans moins d'une partie sur trois, quand les deux
   jouent « normalement ».
 
@@ -444,7 +484,7 @@ colère, seuils. Chaque changement de réglage est noté dans DECISIONS avec la 
   - lauriers (de la cité, de César, total) et rang ;
   - les cinq notes, avec barres et conseils à la manière du conseiller des notes ;
   - salaire et épargne, dons, et la date où la prochaine fête et le prochain don compteront ;
-  - campagne et demande en cours.
+  - campagne en cours ; demande en cours, avec ce que chacun a envoyé.
 - **Bandeau multijoueur** (en bas à gauche) : les lauriers remplacent le score, et une **jauge de colère** colorée
   est toujours visible.
 - **Lettres de César** : messages en plein écran, comme l'alerte de prix, pour l'avertissement, l'ultimatum,
@@ -454,8 +494,8 @@ colère, seuils. Chaque changement de réglage est noté dans DECISIONS avec la 
   - guerres en cours et leur motif ;
   - part de chacun dans la colère.
 - **Salon** :
-  - mode « Jugement de César » et sa durée ;
-  - options : consulat anticipé, demandes de César, seconde expédition fatale, classement public.
+  - mode « Jugement de César » et son score ;
+  - options : demandes de César (active), classement public (actif), seconde expédition fatale (inactive).
 
 ## 12. Découpage et pièges techniques
 
@@ -477,15 +517,17 @@ Pièges relevés dans le code d'origine (code-map/07), à traiter dans ces jalon
 - **Paix** : la pénalité « bâtiment détruit par un ennemi » va à la cité dont c'est le tour de simulation. En
   guerre entre joueurs, il faudra l'imputer à la victime (M10).
 
-## 13. Points à valider par Alexandre
+## 13. Points validés par Alexandre
 
-Réglé le 2026-10-06 : pas de multiplicateur de faveur, seulement des lauriers qui s'additionnent (Alexandre : « je
-trouve le multiplicateur de faveur trop compliqué, je préfèrerais juste les points »).
+Tout est réglé (2026-10-06, D-053). D'abord : pas de multiplicateur de faveur, seulement des lauriers qui
+s'additionnent (« je trouve le multiplicateur de faveur trop compliqué, je préfèrerais juste les points »). Puis :
 
-1. Lauriers **cumulés** mois après mois, plutôt qu'un classement sur l'état final ?
-2. Valeurs des lauriers de la cité (§4.1 : 30 / 30 / 24 / 18 / 18 par an au maximum) et de César (§6) ?
-3. **Préavis d'un mois** avant une guerre ?
-4. Seconde expédition punitive : fin de partie sans vainqueur ?
-5. **Demandes de biens** de César : oui ou non ?
-6. Classement public des lauriers ?
-7. Durée par défaut de 20 ans, et consulat anticipé ?
+| # | Question | Réponse |
+|---|----------|---------|
+| 1 | Lauriers cumulés mois après mois ? | oui |
+| 2 | Valeurs des lauriers (§4.1 et §6) ? | celles du plan, ajustées en M11 |
+| 3 | Préavis d'un mois avant une guerre ? | deux formes : guerre **honorable** (préavis de 3 mois) ou **brutale** (immédiate, César mécontent), §7.1 |
+| 4 | Seconde expédition : fin sans vainqueur ? | option du salon, désactivée par défaut |
+| 5 | Demandes de biens de César ? | oui, pour **toute la province** : chacun participe, lauriers selon ce qu'il donne, frappes sur la ressource permises (§6.4) |
+| 6 | Classement public des lauriers ? | oui |
+| 7 | Durée de 20 ans et consulat anticipé ? | non : **victoire au score**, la première cité à tant de lauriers (§4.3) |

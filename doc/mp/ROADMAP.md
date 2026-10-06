@@ -1,7 +1,8 @@
 # Feuille de route
 
-> **Jalon en cours : M9, César juge** (D-050, plan complet : [CESAR.md](CESAR.md)). César revient comme arbitre :
-> lauriers de la cité et de César, campagnes ; jouable en paix et seul avant la guerre (M10). Ordre : M9.1 → M9.9.
+> **Jalon en cours : M9, César juge** (D-050, D-053, plan complet : [CESAR.md](CESAR.md)). César revient comme
+> arbitre : lauriers de la cité et de César, campagnes, demandes ; la première cité au score gagne. Jouable en paix
+> et seul avant la guerre (M10). Ordre : M9.1 → M9.9.
 
 ## M0 — Infrastructure de développement et de test ✅
 - [x] **M0.1** Environnement macOS : build, données `../donnees-c3`, branche `multiplayer`, tag `upstream-base`.
@@ -212,8 +213,8 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
   défiler. *Fait* : la carte générée était dans le coin de la grille de 512, alors que les limites de la caméra et la
   minicarte supposent une carte centrée, comme les cartes classiques ; elle est maintenant centrée. Test
   `mp_generated_map_view_*` : la caméra atteint les quatre coins (trois hors d'atteinte avant).
-- [ ] **T1.3** Défilement au bord haut de l'écran bloqué par la barre de menu (plein écran).
-  *Fait, à vérifier par Alexandre* (impossible sans vraie fenêtre) : la barre de menu du jeu laisse passer la
+- [x] **T1.3** Défilement au bord haut de l'écran bloqué par la barre de menu (plein écran).
+  *Fait, vérifié par Alexandre le 2026-10-06* : la barre de menu du jeu laisse passer la
   souris ; c'est celle de macOS qui descendait sur le jeu en plein écran « Space ». Le plein écran du jeu n'utilise
   plus de Space sur macOS (`SDL_HINT_VIDEO_MAC_FULLSCREEN_SPACES`) : barre de menu et Dock restent cachés.
   *Revu par T2.7* : ce plein écran sans Space marchait mal ; retour au Space, barre et Dock masqués autrement.
@@ -260,8 +261,8 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
   28 points du haut, juste la hauteur de la barre de menu du jeu ; la position est lue sur la fenêtre Cocoa
   (`mouseLocationOutsideOfEventStream`). Journal `julius-log.txt` dans le dossier des données (macOS) avec les
   positions vues près du haut, pour vérifier chez Alexandre.
-- [ ] **T2.5** Résolutions : la liste propose des tailles fixes plus grandes que l'écran du MacBook (1470 × 956,
-  1710 × 1112) et le défilement par les bords ne marche plus. *Fait, à vérifier par Alexandre* : les tailles fixes
+- [x] **T2.5** Résolutions : la liste propose des tailles fixes plus grandes que l'écran du MacBook (1470 × 956,
+  1710 × 1112) et le défilement par les bords ne marche plus. *Fait, vérifié par Alexandre le 2026-10-06* : les tailles fixes
   de T1.4 sont retirées ; après les trois tailles d'origine, la ligne « L par H (écran) » donne la plus grande
   fenêtre qui tient sur l'écran (zone utile moins la barre de titre) ; aucune fenêtre n'est plus grande que l'écran
   (au lancement aussi : une taille enregistrée trop grande est réduite). Script
@@ -418,30 +419,33 @@ César revient comme arbitre de la partie. Jouable en paix et **seul** : livré 
   lauriers, salaire limité par le rang. Commandes réseau. *Critères* : ctest (lauriers par taille de don, second
   don de l'année sans lauriers, salaire au-dessus du rang refusé).
 - [ ] **M9.4** Fêtes en lauriers (une comptée tous les 6 mois). *Critère* : ctest.
-- [ ] **M9.5** Lauriers mensuels de la cité, verdict de fin de partie, consulat anticipé, titre en partie seule ;
-  remplace le score provisoire de M4.6. *Critères* : ctest de fin de partie à 1 et 2 joueurs, égalités départagées
-  par les lauriers de la cité.
+- [ ] **M9.5** Lauriers mensuels de la cité, **victoire au score** (la première cité à N lauriers, D-053), rangs par
+  dixième du score ; remplace le score provisoire de M4.6. *Critères* : ctest de fin de partie à 1 et 2 joueurs,
+  deux cités au score le même mois départagées par les lauriers.
 - [ ] **M9.6** Interface : conseiller impérial multijoueur (notes, rang, lauriers par source, dons), bandeau (lauriers
-  et jauge), lettres de César en plein écran, salon (mode « Jugement de César », durée, options). *Critère* :
+  et jauge), lettres de César en plein écran, salon (mode « Jugement de César », score, options). *Critère* :
   captures sans fenêtre, en partie seule et à deux.
 - [ ] **M9.7** Campagnes de César : batailles lointaines partagées, troupes de tous les joueurs additionnées,
   récompenses selon la part, refus pénalisé. *Critères* : ctest (envoi, voyage, résolution, récompenses), partie
   reprise identique pendant une campagne.
-- [ ] **M9.8** Demandes de biens de César (si Alexandre les valide, CESAR §6.4).
+- [ ] **M9.8** Demandes de César pour toute la province (CESAR §6.4, D-053) : envois de chacun en plusieurs fois,
+  cagnotte partagée selon les envois, échéance. *Critères* : ctest (partage, échéance manquée, partie seule).
 - [ ] **M9.9** Télémétrie mensuelle dans la sauvegarde et `simtool laurels PARTIE.mpsav` ; LISEZMOI ; DMG pour
   Alexandre.
 
 ## M10 — La guerre sous l'œil de César ([CESAR.md](CESAR.md) §7, DESIGN §7)
-- [ ] **M10.1** Hostilité par propriétaire et état de guerre par paire de joueurs : déclaration (commande, annonce,
-  préavis d'un mois), paix proposée des deux côtés. En classique, la matrice actuelle exactement.
+- [ ] **M10.1** Hostilité par propriétaire et état de guerre par paire de joueurs : déclaration (commande, annonce ;
+  guerre honorable avec 3 mois de préavis, ou brutale et immédiate, D-053), paix proposée des deux côtés. En classique, la matrice actuelle exactement.
 - [ ] **M10.2** Légions chez l'adversaire, ordre « attaquer », portes et murs qui ne laissent passer que leur
   propriétaire.
 - [ ] **M10.3** Interception des caravanes (ancien M8.7) : cargaison prise, route coupée.
-- [ ] **M10.4** Motifs de guerre (riposte, mandat de César, sans motif), triomphes, lauriers gagnés ou perdus.
-- [ ] **M10.5** Jauge de colère : durée, puissance, dégâts, décrue, belligérance de chacun ; avertissement et
-  ultimatum (paix imposée, « ennemi de Rome »).
+- [ ] **M10.4** Motifs de guerre (riposte, mandat de César, sans motif) et prix de la guerre brutale, triomphes,
+  lauriers gagnés ou perdus.
+- [ ] **M10.5** Jauge de colère : durée, puissance, dégâts (sans les caravanes d'une ressource demandée par César),
+  ×1,5 en guerre brutale, décrue, belligérance de chacun ; avertissement et ultimatum (paix imposée, « ennemi de
+  Rome »).
 - [ ] **M10.6** Expédition punitive : invasion de César dans chaque cité, disgrâce de 12 mois, pertes du fautif ;
-  seconde expédition fatale (option).
+  seconde expédition fatale (option, désactivée par défaut).
 - [ ] **M10.7** Armée trop puissante : légions au-delà de la tolérance de César.
 - [ ] **M10.8** Moral et totaux par camp, arcs de triomphe ; combats rejoués et duels scriptés (CESAR §10.3),
   captures.

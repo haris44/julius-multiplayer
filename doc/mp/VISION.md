@@ -47,7 +47,7 @@ Claude a tranché ces points pour pouvoir avancer. Chacun peut être remis en ca
 | H2 | ~~César entièrement neutralisé~~ (revu le 2026-10-06, D-050) : dons, salaire et épargne, rangs, fêtes appréciées, campagnes (batailles lointaines) et invasion de César **reviennent** sous une forme multijoueur (CESAR.md). Restent supprimés : changement d'empereur, renvoi de la campagne. Le tribut annuel et le prêt de secours n'ont jamais été supprimés (D-026). | Réactiver la mécanique concernée. |
 | H3 | Les notes **culture et prospérité** nourrissent les lauriers (D-050). La **faveur** d'origine reste figée : les actions envers César rapportent directement des lauriers. | — |
 | H4 | « Jeu libre » : pas d'objectifs imposés ; on choisit une carte et des réglages de partie dans un salon (lobby) avant de lancer. | — |
-| H5 | ~~Modes sans fin, conquête, score~~ (revu le 2026-10-06, D-050) : la victoire par défaut est le **jugement de César** (lauriers cumulés, CESAR.md §4) ; « sans fin » reste. | Changer les modes proposés. |
+| H5 | ~~Modes sans fin, conquête, score~~ (revu le 2026-10-06, D-050) : la victoire par défaut est le **jugement de César** : la première cité à un score de lauriers cumulés gagne (D-053, CESAR.md §4.3) ; « sans fin » reste. | Changer les modes proposés. |
 | H6 | Les menaces non-joueurs (invasions barbares, indigènes, loups) ne sont pas mentionnées : elles restent possibles, **désactivables dans le salon**. | — |
 | H7 | Les dieux et les événements internes (séismes, révolte de gladiateurs, épidémies…) font partie du gameplay intérieur : ils sont **conservés**, et chaque cité les vit séparément. | — |
 | H8 | Les villes de l'empire (non-joueurs) restent des partenaires commerciaux ; s'y ajoute le **commerce entre joueurs**. | — |
