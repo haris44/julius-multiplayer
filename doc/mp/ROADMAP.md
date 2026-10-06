@@ -319,6 +319,8 @@ le note « à valider ».
   lauriers, un seul compte tous les 12 mois (état sauvegardé, `mp_caesar` version 3) ; le salaire est limité par le
   rang et de nouveau versé. Test `mp_caesar_gifts` : épargne et lauriers de l'expéditeur seul, deux machines au même
   résultat (somme de contrôle), ancienne sauvegarde chargée, classique sans lauriers.
+  *Fait (revue, D-073)* : en multijoueur, le cadeau ne touche plus à la faveur d'origine, ni aux mois depuis le
+  dernier cadeau, ni à la pénalité des cadeaux répétés ; épargne et lauriers inchangés. Test `mp_caesar_gifts`.
 - [ ] **T4.3** **L'empire vend toujours** : on peut toujours acheter à l'étranger, ce qui revoit D-048. En
   revanche, l'empire **augmente fortement ses prix quand un joueur arrête le commerce**.
   **?** Arrêter quel commerce :
@@ -361,6 +363,9 @@ le note « à valider ».
   aujourd'hui une porte semble pouvoir se poser sur une route de César dans sa zone (lu dans le code, à vérifier),
   et un aqueduc ne traverse pas la mer (carte à 4 refaite : un réservoir par rive ayant un joueur des terres).
   Tests à écrire avec M10, listés en DESIGN §7.1.
+  *Fait (revue, D-073)* : CESAR §7.6 recalcule les distances au pont pour chaque emplacement de la carte à 4 refaite
+  (côte 82 et 85 cases par la route, terres 136 et 139) ; seules les légions de l'**agresseur** sur la terre de César
+  comptent dans la colère, comme au §7.2.
   chaque cité se calcule l'une après l'autre (`map_water_supply_update_reservoir_fountain_of_city`, tick 27), mais
   l'état « aqueduc en eau » de la grille n'est remis à zéro qu'au tour de la première cité. Au tour des suivantes,
   `fill_aqueducts_from_offset` saute les cases déjà en eau (`!map_aqueduct_at`) : la propagation depuis le réservoir
@@ -374,6 +379,9 @@ le note « à valider ».
   à l'intérieur des terres ; son réservoir au bout de l'aqueduc de César a de l'eau, une fontaine à portée aussi, la
   maison voisine est desservie ; tout l'aqueduc de César porte l'eau ; un aqueduc isolé de chaque joueur reste à
   sec ; deux parties identiques donnent la même somme de contrôle. Le test échouait avant le correctif.
+  *Fait (revue, D-073)* : le test ajoute, à 2, 3 et 4 joueurs, un réservoir et un aqueduc de chaque autre joueur dans
+  sa zone, loin de l'eau : ils restent à sec, l'eau du joueur des terres ne les atteint pas ; à 4, l'autre joueur des
+  terres a l'eau dans son réservoir et dans l'aqueduc qui en part.
 - [x] **T4.10** **La difficulté est celle du salon, pour toute la partie** (essai du soir). Celle réglée dans le menu
   principal ne règle pas la partie, et on ne doit plus pouvoir la régler par joueur.
   *État* : la simulation lit bien la difficulté du salon (`game_rules_difficulty`). Mais le menu Options,
@@ -388,6 +396,8 @@ le note « à valider ».
   voient la difficulté de l'hôte dans le salon (T4.11). Classique inchangé. Pas de test automatique pour
   l'interface ; la règle elle-même est testée par `mp_lan_lobby_rules` (la partie se joue avec la difficulté du
   salon, chez l'hôte et chez les clients).
+  *Fait (revue, D-073)* : le conseiller religieux suit les dieux de la partie (`game_rules_gods_enabled`) ;
+  `tools/check-determinism.sh` refuse toute autre lecture des réglages locaux (difficulté, dieux, correctifs).
 - [x] **T4.11** **Les réglages du salon ne sont pas synchronisés ; les insurrections ne se désactivent pas** (essai du
   soir : « même les insurrections IA ne sont pas désactivées même si on les désactive »).
   *Diagnostic* :
@@ -437,6 +447,9 @@ le note « à valider ».
   classique et avec l'option, aucune sans) ; `mp_lobby_rules` (partie seule : les règles changées après
   « Héberger ») ; `mp_lan_lobby_rules` (3 joueurs : l'hôte change tous les réglages après « Héberger », tous jouent
   avec, les clients les ont vus dans leur salon et ne peuvent pas les changer).
+  *Fait (revue, D-073)* : les règles reçues de l'hôte sont vérifiées, hors bornes elles sont ignorées (salon) ou
+  refusées (accueil) : test `mp_lobby_bad_rules`. Une partie reprise d'un `.mpsav` garde ses règles enregistrées,
+  territoires compris ; le salon les montre grisées (*à valider*) : test `mp_lobby_resume_rules`.
 - [x] **T4.12** **Les prix entre joueurs sont mal calculés par rapport à l'empire** (essai du soir).
   *Règle actuelle* (D-043, D-048) :
   - le prix par défaut d'un joueur est le prix d'achat de base de l'empire ;
@@ -466,6 +479,8 @@ le note « à valider ».
     prix, classique inchangé), `mp_trade_prices` (prix de Rome par défaut entre joueurs), `mp_trade_empire_isolation`
     (le joueur 1 ouvre une route de l'empire, importe, achète et vend pendant 60 jours : le commerce du joueur 2
     avec l'empire ne bouge pas d'un octet), `mp_trade_empire_always_sells` (T4.3). Capture : `tools/mp-trade-test.sh`.
+  *Fait (revue, D-073)* : `mp_trade_prices` vérifie une vraie livraison entre joueurs, payée au prix du vendeur par
+  l'un et à l'autre, sans portorium ; l'aide de `simtool` est à jour (`empiresells`, `tradeisolation`).
   ressources ne sont plus les bonnes entre le joueur terrestre et le joueur côtier »).
   *Diagnostic* : les permissions de chaque cité sont justes, dans la carte et dans la sauvegarde. Le menu de
   construction est un état de l'interface, unique, recalculé par `building_menu_update` dans la cité courante.
@@ -555,6 +570,10 @@ le note « à valider ».
   8 chargements de marbre entre les deux joueurs les plus éloignés (arrivée en 90 jours), bateau qui parcourt tout le
   bras de mer, puis une mer grande comme la grille dont l'autre coin est atteint (échouait avant le correctif).
   *À refaire* pour chaque nouvelle carte de T4.14 : `simtool longroutes` (chemin le plus long sous 500 pas).
+  *Fait (revue, D-073)* : les ennemis avaient, eux, des limites de cases (5 000 et 25 000 dans `figure/route.c`, 400
+  pour l'approche d'une armée) : au-delà, ils passaient « à travers tout ». En multijoueur, elles suivent la taille
+  de la carte (`map_routing_noncitizen_max_tiles`, classique inchangé). Test `mp_far_invasion` : une armée qui
+  débarque au bord le plus éloigné d'une cité de la carte à 4 trouve son chemin par la terre et l'atteint.
 
 ## MC — Cartes multijoueur préparées et César (D-033, D-034)
 - [ ] **MC.1** Ouvrages de César dessinés en blanc (la teinte actuelle ne fait que foncer les images) ; son aqueduc

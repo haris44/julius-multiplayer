@@ -860,9 +860,15 @@
 - **Le menu de construction est celui du joueur local seulement.** `building_menu_update` ne fait rien quand la
   cité courante est celle d'un autre joueur. Une commande d'un autre joueur (route de commerce, arc de triomphe...)
   ne change donc plus ce que voit le joueur local (D-061). Classique : jamais « cité d'un autre joueur ».
-- **Recherches de chemin sur les grandes cartes (T4.17).** `GUARD` (`map/routing.c`) ne limite que les recherches des
-  bateaux et de la dérive ; les marcheurs et les caravanes n'ont aucune limite de cases. En multijoueur, la garde est
-  d'une fois et demie la taille de la grille, au moins 50 000 : le classique (26 244 cases) garde 50 000. La limite de
+- **Recherches de chemin sur les grandes cartes (T4.17).** `GUARD` (`map/routing.c`) limite les recherches des
+  bateaux et de la dérive. En multijoueur, la garde est d'une fois et demie la taille de la grille, au moins 50 000 :
+  le classique (26 244 cases) garde 50 000. Les citoyens, les caravanes et les animaux cherchent sans limite de
+  cases. *Corrigé* (revue, D-073) : les ennemis en ont une, choisie pour les cartes de 162 cases. Leur recherche par
+  la terre s'arrête après 5 000 puis 25 000 cases (`figure/route.c`), l'approche d'une armée après 400
+  (`figure/formation_enemy.c`) ; au-delà, ils passaient « à travers tout », forts compris. En multijoueur, ces
+  limites suivent le nombre de cases de la carte (× 2,6 sur la carte à 4, jamais moins que l'original,
+  `map_routing_noncitizen_max_tiles`). La recherche de 600 cases autour d'un point d'arrivée d'une armée reste telle
+  quelle : elle ne dépend pas de la taille de la carte. Classique : inchangé. La limite de
   500 pas d'un chemin de figure (`MAX_PATH`) est conservée : le plus long chemin de la carte à 4 fait 253 pas, et
   l'élargir changerait le format des sauvegardes (*à revoir* si une nouvelle carte de T4.14 dépasse 400 pas).
 
@@ -952,10 +958,35 @@
     mission, ni porte, ni mur, ni tour, ni fort) ; seules les routes y sont permises ;
   - le pont reste **indestructible** et **ouvert à tous en paix** ;
   - **en guerre**, on le tient avec des soldats, qui n'attaquent que l'ennemi : les joueurs neutres passent ;
-  - des légions sur la terre de César comptent dans la colère comme dans le territoire adverse ; à la paix, elles
-    rentrent d'office à leur fort.
+  - les légions de l'agresseur sur la terre de César comptent dans la colère comme dans le territoire adverse (CESAR
+    §7.2), pas celles du défenseur ; à la paix, toutes rentrent d'office à leur fort.
 - **Écartés pour l'instant** : le blocus permis puis puni (option 2 : plus de règles, frappe les neutres) ; le pont
   destructible et rebâti par César (option 3 : coupe toute la province, reconstruction à écrire).
 - **Lien avec T4.14** : un aqueduc ne traverse pas la mer. Si les deux joueurs des terres (D-062) sont sur deux
-  rives, il faut un réservoir de César sur chacune. *À valider* avec le plan de la carte.
+  rives, il faut un réservoir de César sur chacune. *Fait* : la carte refaite (T4.15) met un joueur des terres sur
+  chaque rive, chacun avec son réservoir ; distances au pont dans CESAR §7.6.
 - Classique : inchangé (rien de tout cela n'existe hors des cartes multijoueur).
+
+### D-073 — Une partie reprise garde ses règles ; corrections de la revue (T4.2, T4.9, T4.10, T4.11, T4.12, T4.17)
+- 2026-10-07 · **adoptée provisoirement** (corrections de la revue, sans Alexandre)
+- **Une partie reprise d'une sauvegarde multijoueur (`.mpsav`) garde les règles enregistrées** : difficulté, dieux,
+  invasions, brouillard, territoires, fin de partie et score. Avant, le salon les remplaçait par les siennes, et les
+  territoires tombaient à 0 : les joueurs bâtissaient partout. Après « Héberger », le salon affiche les règles de la
+  sauvegarde, grisées, et les changements n'ont plus d'effet ; les joueurs qui rejoignent les voient aussi. *À
+  valider* : le salon ne peut plus rien changer d'une partie reprise. Avant « Héberger », il montre encore ses propres
+  réglages. Test `mp_lobby_resume_rules`.
+- **Une carte multijoueur (`.mpmap`) garde ses territoires** ; les autres règles viennent du salon. *À valider*.
+- **Les règles reçues du réseau sont vérifiées** (salon et message d'accueil) : difficulté de 0 à 4, oui/non, fin de
+  partie, années et score dans leurs bornes. Un message hors bornes est ignoré dans le salon ; un accueil hors bornes
+  est refusé (« Message de l'hôte invalide »). Test `mp_lobby_bad_rules` (faux hôte, port 27490).
+- **Le conseiller religieux** suit les dieux de la partie, et non le réglage local. `tools/check-determinism.sh`
+  refuse désormais toute autre lecture des réglages locaux que remplacent les règles (difficulté, dieux, correctifs).
+- **Cadeau à César en multijoueur** : il est payé sur l'épargne et rapporte ses lauriers (D-067), mais ne touche
+  plus à la faveur d'origine, ni au compteur des mois depuis le dernier cadeau, ni à la pénalité des cadeaux
+  répétés (D-026). Test `mp_caesar_gifts`.
+- **Ennemis sur les grandes cartes** : limites des recherches de chemin à l'échelle de la carte (D-064 corrigée).
+  Test `mp_far_invasion` : une armée qui débarque au bord le plus éloigné d'une cité (carte à 4) trouve son chemin
+  par la terre, sans passer « à travers tout », et atteint la cité.
+- **Pont de César** (CESAR §7.6, précise D-068) : distances au pont recalculées pour chaque emplacement de la carte à
+  4 refaite ; comme au §7.2, seules les légions de l'agresseur sur la terre de César comptent dans la colère.
+- Classique : inchangé.
