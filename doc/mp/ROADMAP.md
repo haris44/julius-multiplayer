@@ -429,7 +429,7 @@ le note « à valider ».
     emplacements tirés au sort ;
   - la carte est choisie dans le salon, ou tirée au sort.
   *Tests* : ceux des cartes préparées (`mp_prepared_map*`), appliqués à chaque carte.
-- [ ] **T4.15** **Nourritures inexploitées sur la carte** (Alexandre : « quelles sont les ressources qui restent
+- [x] **T4.15** **Nourritures inexploitées sur la carte** (Alexandre : « quelles sont les ressources qui restent
   et que nous n'exploitons pas sur cette carte ? porc ? »). *Mesuré* (`simtool preparedmap`, modèle Lindum, qui
   affiche désormais ce que chaque cité peut produire) : chacun n'a que le **blé et les légumes** ; les côtiers ont
   en plus la pêche. Ni **fruits**, ni **porcs** pour personne : la nourriture vient de l'empire du modèle, pas du
@@ -439,6 +439,20 @@ le note « à valider ».
   aux joueurs des terres, qui n'ont pas la pêche ; les **fruits** aux côtiers (D-062).
   *Et plus de bois dans les terres* (Alexandre, D-062) : retirer le bois des emplacements des terres, inverser le
   test `inland_timber` de `mp_prepared_map_placement`.
+  *Fait* (D-062, D-065) :
+  - le plan de chaque carte fixe nourriture et matières ; ce sont les autorisations de production de chaque cité,
+    sauvegardées avec elle. Terres : blé, légumes, porcs, fer, marbre (olives à l'un, vignes à l'autre à 4 ; olives
+    à 2). Côte : blé, légumes, fruits, pêche, bois, argile (vignes à 2). Plus de bois ni de bois plantés dans les
+    terres ;
+  - carte à 4 refaite (premier point de T4.14) : deux joueurs des terres à l'ouest, un sur chaque rive, chacun avec
+    son réservoir de César sur sa côte ; deux côtiers à l'est. À 3, le sud-est (côte) reste libre ;
+  - les porcs et les quais donnent la même viande : l'autorisation « viande » ne commande que les porcs, les quais
+    n'en dépendent pas (comme dans l'original). Les commandes de construction refusent, comme le menu, une ferme ou
+    une matière interdite à la cité (multijoueur seulement) ;
+  - tests : `mp_prepared_map_placement` (12 tirages à 2, 3 et 4 : nourriture et matières de chaque emplacement, deux
+    joueurs des terres à 3 et 4, pas de bois dans les terres, autorisations) ; `mp_prepared_map_*_players`
+    (autorisations identiques après écriture et lecture de la carte, menu et commande : porcs refusés sur la côte et
+    permis dans les terres, fruits l'inverse ; les deux joueurs des terres ont l'eau de César dans leur réservoir).
 - [ ] **T4.16** **Le jeu paraît plus restrictif qu'en classique** (Alexandre : distance d'effet des bâtiments,
   emplacement des habitations, manque de main-d'œuvre ; « peut-être lié à la difficulté en difficile par
   défaut »).

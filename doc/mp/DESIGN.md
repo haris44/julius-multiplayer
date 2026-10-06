@@ -327,16 +327,19 @@ Les conditions de fin se choisissent dans le salon :
 - Le jeu se joue sur **deux cartes préparées** (D-033, D-044, D-047), recalculées à chaque partie par `mp/mapgen`
   (`mp_mapgen_create_prepared`) : jamais de fichier de carte dans le dépôt (I4). Une pour 1 ou 2 joueurs (200
   cases), une pour 3 ou 4 (260 cases). Chacune suit un **plan fixe** (`map_layout`) : villes, points d'arrivée sur
-  les bords ouest et est, routes de César, tracé du bras de mer qui traverse la carte, réservoir de César. Le reste
+  les bords ouest et est, routes de César, tracé du bras de mer qui traverse la carte, réservoirs de César. Le reste
   (forêts, clairières, prés, côtes irrégulières) vient d'un bruit déterministe à graine fixe : la même carte
   sur tous les ordinateurs, l'hôte l'envoie de toute façon. Les bois couvrent 14 à 18 % de la carte et restent
   infranchissables ; aucune clairière n'est enfermée par eux (D-052). Aucun étang : la mer est la seule eau
   (D-055).
 - Les joueurs **tirent au sort** leur emplacement (D-052) : l'hôte mélange les emplacements des joueurs présents
   avec le nombre tiré par le salon ; la graine 0 garde l'ordre du plan (tests).
-- Chaque emplacement n'offre que les matériaux que son joueur peut exploiter ; le joueur de la pierre (et du bois,
-  D-052) n'a pas d'eau, seulement l'aqueduc de César : le couper assèche sa ville (D-055) ; les autres ont leur
-  côte dans leur zone de départ.
+- Chaque emplacement n'offre que la nourriture et les matériaux que son joueur peut produire (D-062, D-065) : ce sont
+  les autorisations de production de sa cité, sauvegardées avec elle. Les joueurs des terres (fer, marbre, porcs ;
+  un seul à 2, deux à 3 et 4) n'ont pas d'eau, seulement l'aqueduc de César, un réservoir de César par joueur sur la
+  côte la plus proche : le couper assèche sa ville (D-055). Les autres (bois, argile, fruits, pêche) ont leur côte
+  dans leur zone de départ. Les commandes de construction refusent, comme le menu, une ferme ou une matière que la
+  cité ne peut pas produire.
 - Le modèle (`mp_mapgen_prepared_template`, Lindum d'abord) ne donne que l'empire, l'année et les fonds ; le climat
   est toujours celui du nord.
 - La carte passe par un `.mpsav` (`mp/savegame`), le même format qu'une partie en cours : les clients la reçoivent
