@@ -422,7 +422,9 @@ le note « à valider ».
 - [ ] **T4.14** **Deux cartes préparées de plus** (Alexandre : « avant de terminer, tu me généreras 2 cartes de
   plus »), à faire en fin de nuit.
   *Choix provisoire, à valider* :
-  - une nouvelle carte pour 2 joueurs et une pour 3 ou 4, avec un relief et une disposition différents ;
+  - d'abord **refaire la carte à 4** selon D-062 : deux joueurs des terres (l'aqueduc de César les atteint tous
+    les deux) et deux de la côte ; à 3, l'un des deux emplacements de la côte reste libre ;
+  - puis une nouvelle carte pour 2 joueurs et une pour 3 ou 4, avec un relief et une disposition différents ;
   - les mêmes règles que les cartes actuelles : bras de mer, pont et aqueduc de César, un joueur des terres,
     emplacements tirés au sort ;
   - la carte est choisie dans le salon, ou tirée au sort.
@@ -434,8 +436,9 @@ le note « à valider ».
   plan de la carte (le modèle de test, Brugle, donne les fruits à la place des légumes). Les matières premières
   sont bien celles du plan.
   *Proposition, à valider* : le plan de la carte fixe aussi la nourriture. Blé et légumes pour tous ; les **porcs**
-  au joueur des terres, qui n'a pas la pêche ; les **fruits** aux côtiers. Ou tout à tout le monde, si l'on
-  préfère ne forcer le commerce que sur les matières.
+  aux joueurs des terres, qui n'ont pas la pêche ; les **fruits** aux côtiers (D-062).
+  *Et plus de bois dans les terres* (Alexandre, D-062) : retirer le bois des emplacements des terres, inverser le
+  test `inland_timber` de `mp_prepared_map_placement`.
 
 ## MC — Cartes multijoueur préparées et César (D-033, D-034)
 - [ ] **MC.1** Ouvrages de César dessinés en blanc (la teinte actuelle ne fait que foncer les images) ; son aqueduc

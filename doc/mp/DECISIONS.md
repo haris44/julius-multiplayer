@@ -804,8 +804,23 @@
   pour les joueurs de la côte, marbre et fer pour le joueur des terres. Il ne doit jamais montrer celles d'un autre
   joueur, quoi que fasse celui-ci avec l'étranger. Le menu est recalculé dans la seule cité du joueur local.
 - *À valider* :
-  - les cartes actuelles donnent aussi au joueur des terres le bois (T3.5, « je parle des chantiers de bois ») et les
-    olives, et aux côtiers les vignes ; je les garde, sauf avis contraire ;
+  - ~~les cartes actuelles donnent aussi au joueur des terres le bois~~ tranché : plus de bois dans les terres
+    (D-062) ;
   - l'original permet l'atelier d'une matière qu'une route de l'empire fournit (D-020) ; cette règle reste, dans la
     cité de chaque joueur. Un achat à un autre joueur n'ouvre pas d'atelier tant que ce n'est pas tranché.
+- Classique : inchangé.
+
+### D-062 — Deux joueurs des terres et deux de la côte à 4 ; plus de bois dans les terres (revoit D-047, T3.5)
+- 2026-10-06 · **adoptée** (Alexandre : « ne mets plus le bois au joueur des terres. Par ailleurs, il y a deux
+  joueurs dans les terres, et deux joueurs sur la côte quand tu es 4 »)
+- **Le joueur des terres n'a plus le bois** : ses matières sont le fer et le marbre (D-061). Fin de T3.5 (« je
+  parle des chantiers de bois »), qui lui donnait les chantiers.
+- **Carte à 4 : deux joueurs des terres et deux de la côte**, au lieu d'un seul dans les terres (D-047). Les deux
+  joueurs des terres vivent de l'aqueduc de César, qui doit atteindre les deux ; à 3 joueurs, l'emplacement laissé
+  libre est l'un des deux de la côte, pour qu'il y ait toujours un joueur des terres et un de la côte.
+- *Répartition provisoire, à valider* (le plan de la carte fixe aussi la nourriture, T4.15) :
+  - terres : fer et marbre pour les deux ; les olives à l'un, les vignes à l'autre ; les porcs ;
+  - côte : bois et argile pour les deux ; la pêche ; les fruits ;
+  - blé et légumes pour tous.
+  À 2 joueurs : terres = fer, marbre, olives, porcs ; côte = bois, argile, vignes, pêche, fruits.
 - Classique : inchangé.
