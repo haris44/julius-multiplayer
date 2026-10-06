@@ -404,6 +404,9 @@ void scenario_invasion_process(void)
 
 int scenario_invasion_start_from_mars(void)
 {
+    if (!game_rules_ai_invasions()) {
+        return 0; // multiplayer without AI invasions: Mars sends no uprising either (T4.11); always on in classic
+    }
     int mission = scenario_campaign_mission();
     if (mission < 0 || mission > 19) {
         return 0;

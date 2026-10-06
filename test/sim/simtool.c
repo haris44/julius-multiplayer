@@ -3,6 +3,7 @@
 #include "building/building.h"
 #include "building/construction.h"
 #include "figure/figure.h"
+#include "figure/formation.h"
 #include "building/construction_clear.h"
 #include "building/type.h"
 #include "building/count.h"
@@ -14,6 +15,7 @@
 #include "city/finance.h"
 #include "city/message.h"
 #include "city/labor.h"
+#include "city/gods.h"
 #include "city/health.h"
 #include "city/population.h"
 #include "city/ratings.h"
@@ -156,6 +158,8 @@ static int usage(void)
     printf("  simtool viewcorners SAVE PLAYERS       generated map: the camera reaches its four corners\n");
     printf("  simtool privatepopups SAVE TICKS       twin cities: the popups and sounds of player 2 do not\n");
     printf("                                         reach player 1\n");
+    printf("  simtool attacksource SAVE SOURCE TICKS attacks of SOURCE (army, uprising, mars) come in a classic\n");
+    printf("                                         game and with AI invasions on, none with them off\n");
     printf("  simtool caesarfree SAVE TICKS          Caesar (requests, anger, salary...) acts in a classic game\n");
     printf("                                         and not in a multiplayer game\n");
     printf("  simtool mpresume SAVE TICKS MORE       twin cities: saving after TICKS (.mpsav), then loading it and\n");
@@ -1252,6 +1256,132 @@ static int command_aiinvasions(const char *file, int ticks)
         return 1;
     }
     return without ? 1 : 0;
+}
+
+// T4.11: every source of attack obeys the AI invasions rule of a multiplayer game. The armies of the scenario,
+// its local uprisings and the uprising sent by an angry Mars are told apart by the invasion of their formation.
+enum { ATTACK_ARMY = 0, ATTACK_UPRISING = 1, ATTACK_MARS = 2, ATTACK_OTHER = 3, ATTACK_SOURCES = 4 };
+static const char *ATTACK_NAMES[ATTACK_SOURCES] = { "army", "uprising", "mars", "other" };
+
+static int attack_source(const formation *m)
+{
+    if (m->invasion_id == 23) {
+        return ATTACK_MARS; // scenario_invasion_start_from_mars (the cheat uses it too, never in this test)
+    }
+    if (m->invasion_id < 0 || m->invasion_id >= MAX_INVASIONS) {
+        return ATTACK_OTHER;
+    }
+    switch (scenario.invasions[m->invasion_id].type) {
+        case INVASION_TYPE_ENEMY_ARMY:
+            return ATTACK_ARMY;
+        case INVASION_TYPE_LOCAL_UPRISING:
+            return ATTACK_UPRISING;
+        default:
+            return ATTACK_OTHER;
+    }
+}
+
+static int count_attacks(const char *file, int ticks, int ai_invasions, int multiplayer, int forced,
+    int counts[ATTACK_SOURCES])
+{
+    memset(counts, 0, ATTACK_SOURCES * sizeof(int));
+    if (!load(file)) {
+        return 0;
+    }
+    if (multiplayer) {
+        game_rules_settings rules;
+        game_rules_default_multiplayer_settings(&rules);
+        rules.ai_invasions = ai_invasions;
+        rules.gods_enabled = 1;
+        game_rules_set_multiplayer(&rules);
+    } else {
+        game_rules_set_classic();
+    }
+    if (forced == ATTACK_MARS) {
+        // Mars is angry enough for a small curse at the next month, in a mission whose uprising has 9 men; the
+        // other gods are content (a curse of another god is not an attack)
+        scenario_set_campaign_mission(14);
+        for (int g = 0; g < MAX_GODS; g++) {
+            god_status *god = &city_data.religion.gods[g];
+            god->happiness = god->target_happiness = g == GOD_MARS ? 0 : 60;
+            god->wrath_bolts = g == GOD_MARS ? 20 : 0;
+            god->small_curse_done = 0;
+            god->months_since_festival = g == GOD_MARS ? 10 : 0;
+        }
+    } else if (forced == ATTACK_UPRISING) {
+        // the scenario has a local uprising at the start of the next month, from a random invasion point
+        int slot = MAX_INVASIONS - 1;
+        for (int i = MAX_INVASIONS - 1; i >= 0; i--) {
+            if (!scenario.invasions[i].type) {
+                slot = i;
+                break;
+            }
+        }
+        int month = game_time_month() + 1;
+        scenario.invasions[slot].type = INVASION_TYPE_LOCAL_UPRISING;
+        scenario.invasions[slot].year = game_time_year() + month / 12 - scenario.start_year;
+        scenario.invasions[slot].month = month % 12;
+        scenario.invasions[slot].amount = 9;
+        scenario.invasions[slot].from = MAX_INVASION_POINTS;
+        scenario.invasions[slot].attack_type = FORMATION_ATTACK_FOOD_CHAIN;
+    }
+    static unsigned char seen[0x10000];
+    memset(seen, 0, sizeof(seen));
+    for (int i = 1; i < FORMATION_ARRAY_SIZE; i++) {
+        formation *m = formation_get(i);
+        if (m->in_use && !m->is_herd && !m->is_legion) {
+            seen[m->invasion_sequence & 0xffff] = 1;
+        }
+    }
+    setting_reset_speeds(500, setting_scroll_speed());
+    for (int tick = 0; tick < ticks; tick++) {
+        run_one_tick();
+        for (int i = 1; i < FORMATION_ARRAY_SIZE; i++) {
+            formation *m = formation_get(i);
+            if (m->in_use && !m->is_herd && !m->is_legion && !seen[m->invasion_sequence & 0xffff]) {
+                seen[m->invasion_sequence & 0xffff] = 1;
+                counts[attack_source(m)]++;
+            }
+        }
+    }
+    return 1;
+}
+
+static int command_attacksource(const char *file, const char *source, int ticks)
+{
+    int wanted = -1;
+    for (int s = 0; s < ATTACK_OTHER; s++) {
+        if (strcmp(source, ATTACK_NAMES[s]) == 0) {
+            wanted = s;
+        }
+    }
+    if (wanted < 0) {
+        return usage();
+    }
+    const char *runs[3] = { "classic", "multiplayer, AI invasions on", "multiplayer, AI invasions off" };
+    int counts[3][ATTACK_SOURCES];
+    for (int run = 0; run < 3; run++) {
+        if (!count_attacks(file, ticks, run != 2, run != 0, wanted, counts[run])) {
+            return 1;
+        }
+        printf("%s:", runs[run]);
+        for (int s = 0; s < ATTACK_SOURCES; s++) {
+            printf(" %s %d", ATTACK_NAMES[s], counts[run][s]);
+        }
+        printf("\n");
+    }
+    if (counts[0][wanted] <= 0 || counts[1][wanted] <= 0) {
+        printf("FAILED: no attack of this source in this game, the test proves nothing\n");
+        return 1;
+    }
+    int result = 0;
+    for (int s = 0; s < ATTACK_OTHER; s++) {
+        if (counts[2][s]) {
+            printf("FAILED: %d attack(s) of source %s with AI invasions off\n", counts[2][s], ATTACK_NAMES[s]);
+            result = 1;
+        }
+    }
+    return result;
 }
 
 // End of the game by score (M4.6): two cities, the second one with higher taxes; the game ends at the start
@@ -3636,6 +3766,8 @@ int main(int argc, char **argv)
         result = command_endscore(file, ticks);
     } else if (strcmp(command, "aiinvasions") == 0 && argc > 3) {
         result = command_aiinvasions(file, ticks);
+    } else if (strcmp(command, "attacksource") == 0 && argc > 4) {
+        result = command_attacksource(file, argv[3], atoi(argv[4]));
     } else if (strcmp(command, "openland") == 0 && argc > 2) {
         result = command_openland(file);
     } else if (strcmp(command, "intruders") == 0 && argc > 3) {

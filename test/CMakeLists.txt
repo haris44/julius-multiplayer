@@ -280,6 +280,11 @@ endforeach()
 foreach(save inv0 kknight)
     add_test(NAME mp_ai_invasions_${save} COMMAND simtool aiinvasions ${save}.sav 20000)
 endforeach()
+# T4.11: "AI invasions: no" stops every source of attack (armies and local uprisings of the scenario, the uprising
+# sent by an angry Mars), which all come in a classic game and with the option on
+add_test(NAME mp_attack_source_army COMMAND simtool attacksource inv0.sav army 20000)
+add_test(NAME mp_attack_source_uprising COMMAND simtool attacksource tower.sav uprising 2000)
+add_test(NAME mp_attack_source_mars COMMAND simtool attacksource kknight.sav mars 3200)
 # End of the game by score (M4.6): the game ends at the start of the year chosen, with a score for every city
 foreach(save brugle-lugdunum tower)
     add_test(NAME mp_end_by_score_${save} COMMAND simtool endscore ${save}.sav 1)
