@@ -21,7 +21,7 @@
 #include <string.h>
 
 #define MAGIC 0x504d3343 // "C3MP"
-#define VERSION 2 // 2: rules for AI invasions and the end of the game
+#define VERSION 3 // 2: rules for AI invasions and the end of the game; 3: wide places in messages
 #define MAX_NAME 64
 
 static void visit_buffer(mp_savegame_visitor visitor, void *userdata, const char *name,

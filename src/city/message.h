@@ -165,7 +165,7 @@ void city_message_apply_sound_interval(message_category category);
 
 void city_message_post(int use_popup, int message_type, int param1, int param2);
 
-void city_message_post_with_popup_delay(message_category category, int message_type, int param1, short param2);
+void city_message_post_with_popup_delay(message_category category, int message_type, int param1, int param2);
 
 void city_message_post_with_message_delay(message_category category, int use_popup, int message_type, int delay);
 

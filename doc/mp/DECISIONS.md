@@ -548,7 +548,7 @@
   s'affiche de changement de prix pour le joueur client »)
 - Le petit avertissement en haut de la ville est remplacé par une fenêtre de la taille de l'écran d'origine
   (640 × 480), ville grisée derrière : vendeur, ressource, ancien et nouveau prix (rouge en hausse, vert en baisse),
-  boutons « Voir le commerce » (fenêtre « Joueurs » sur l'onglet du vendeur) et « OK ».
+  boutons « Voir le commerce » (conseiller au commerce sur l'onglet du vendeur, D-051) et « OK ».
 - Seul l'acheteur est alerté, et seulement pour une ressource qu'il achète à ce vendeur (comme avant D-049).
 - Une ligne par vendeur et ressource : plusieurs clics sur « + » ne donnent qu'une ligne, de l'ancien prix connu au
   dernier ; un prix revenu à l'ancien efface la ligne. La fenêtre ouverte se met à jour en direct.
@@ -578,3 +578,19 @@
   tribut annuel, prêt de secours, salaires de Rome.
 - Jalons : M9 (César juge, en paix), M10 (la guerre sous l'œil de César), M11 (équilibrage). Les réglages chiffrés
   sont des valeurs de départ, mesurées et corrigées selon CESAR.md §10.
+
+### D-051 — Une seule page de commerce : l'empire et les joueurs (précise D-043)
+- 2026-10-06 · **adoptée** (Alexandre : « la vue commerciale n'est pas assez claire : un onglet joueur pas assez
+  visible, les menus d'importation ne permettent pas de comprendre assez vite à qui on importe, et à quel prix » ;
+  puis : « tu ne peux pas grouper sur la même page le commerce international et le commerce local, plutôt qu'ouvrir
+  un onglet séparé »)
+- Dès qu'il y a plusieurs joueurs, le conseiller au commerce affiche une seule page (`window/mp_trade`). Une ligne
+  par ressource montre :
+  - le stock ;
+  - l'**empire** : son commerce (importe, exporte ou aucun, en un clic) et le prix qui s'applique (payé à
+    l'import, reçu à l'export) ;
+  - le **joueur choisi** par un onglet : mon prix (− et +), son prix, « J'achète », les chargements en route.
+- Le fournisseur réel, l'empire ou ce joueur, est en vert. Un clic sur le nom de la ressource ouvre ses réglages
+  d'origine (seuil d'export, mise en sommeil, stockage). La carte et les prix de l'empire restent en bas.
+- Partie seule ou classique : page d'origine, inchangée. La fenêtre « Joueurs » séparée (M8.6) est supprimée.
+

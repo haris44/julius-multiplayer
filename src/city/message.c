@@ -6,6 +6,7 @@
 #include "core/string.h"
 #include "core/time.h"
 #include "figure/formation.h"
+#include "game/save_format.h"
 #include "game/time.h"
 #include "graphics/window.h"
 #include "mp/session.h"
@@ -202,7 +203,7 @@ void city_message_post(int use_popup, int message_type, int param1, int param2)
     should_play_sound = 1;
 }
 
-void city_message_post_with_popup_delay(message_category category, int message_type, int param1, short param2)
+void city_message_post_with_popup_delay(message_category category, int message_type, int param1, int param2)
 {
     int use_popup = 0;
     if (data.message_delay[category] <= 0) {
@@ -518,7 +519,7 @@ void city_message_save_state(buffer *messages, buffer *extra, buffer *counts, bu
         city_message *msg = &data.messages[i];
         buffer_write_i32(messages, msg->param1);
         buffer_write_i16(messages, msg->year);
-        buffer_write_i16(messages, msg->param2);
+        save_write_offset(messages, msg->param2);
         buffer_write_i16(messages, msg->message_type);
         buffer_write_i16(messages, msg->sequence);
         buffer_write_u8(messages, msg->is_read);
@@ -553,7 +554,7 @@ void city_message_load_state(buffer *messages, buffer *extra, buffer *counts, bu
         city_message *msg = &data.messages[i];
         msg->param1 = buffer_read_i32(messages);
         msg->year = buffer_read_i16(messages);
-        msg->param2 = buffer_read_i16(messages);
+        msg->param2 = save_read_offset(messages);
         msg->message_type = buffer_read_i16(messages);
         msg->sequence = buffer_read_i16(messages);
         msg->is_read = buffer_read_u8(messages);

@@ -1,5 +1,5 @@
-# Real game, network game from the lobby (host): the trade advisor, then the window of trade between players; the
-# host then raises twice the price of marble to player 2, who buys it (see mp-trade-client.txt)
+# Real game, network game from the lobby (host): the trade advisor, where the empire and the players share one page;
+# the host then raises twice the price of marble to player 2, who buys it (see mp-trade-client.txt)
 wait 10
 click 400 500
 wait 10
@@ -20,15 +20,12 @@ speed 300
 mpwait 400
 key 5
 wait 5
-screenshot build/automation/trade-advisor.png
-click 610 80
-wait 5
 screenshot build/automation/trade-window.png
 # the marble row: + (the client marked it bought around tick 400)
 mpwait 800
-click 356 400
+click 460 357
 wait 2
-click 356 400
+click 460 357
 wait 5
 screenshot build/automation/trade-window-raised.png
 mpwait 1000

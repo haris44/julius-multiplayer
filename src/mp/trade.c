@@ -427,6 +427,40 @@ int mp_trade_empire_may_sell(int resource)
     return mp_trade_cheaper_player(resource) < 0;
 }
 
+int mp_trade_cheapest_seller(int resource)
+{
+    int buyer = player_context_current_player;
+    if (!is_resource(resource)) {
+        return -1;
+    }
+    int cheapest = -1;
+    for (int seller = 0; seller < player_context_num_players(); seller++) {
+        if (seller == buyer || !buys[buyer][seller][resource] || !mp_trade_route_is_open(buyer, seller)) {
+            continue;
+        }
+        if (cheapest < 0 || mp_trade_price(seller, buyer, resource) < mp_trade_price(cheapest, buyer, resource)) {
+            cheapest = seller;
+        }
+    }
+    return cheapest;
+}
+
+int mp_trade_loads_on_the_way(int seller, int buyer, int resource)
+{
+    if (!is_player(seller) || !is_player(buyer)) {
+        return 0;
+    }
+    int loads = 0;
+    for (int i = seller * MAX_FIGURES + 1; i < (seller + 1) * MAX_FIGURES; i++) {
+        figure *f = figure_get(i);
+        if (f->state == FIGURE_STATE_ALIVE && mp_trade_is_caravan(f) && f->action_state == ACTION_GOING &&
+            BUILDING_OWNER(f->destination_building_id) == buyer && f->resource_id == resource) {
+            loads += f->loads_sold_or_carrying;
+        }
+    }
+    return loads;
+}
+
 void mp_trade_caravan_action(figure *f)
 {
     f->is_ghost = 0;

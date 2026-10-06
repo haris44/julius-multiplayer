@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Two instances of the real game (no window) start a network game from the lobby; the host then opens the trade
-# advisor and the window of trade between players, and takes screenshots of both (build/automation/trade-*.png).
+# advisor, where the empire and the players share one page, and takes a screenshot (build/automation/trade-*.png).
 # The client buys marble from the host, who then raises its price: the client sees the full-screen alert
 # (build/automation/price-alert*.png).
 # Usage: tools/mp-trade-test.sh

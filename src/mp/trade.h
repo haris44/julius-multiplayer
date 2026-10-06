@@ -90,6 +90,18 @@ int mp_trade_cheaper_player(int resource);
 int mp_trade_empire_may_sell(int resource);
 
 /**
+ * The player the current city buys the resource from at the lowest price over an open route, whether or not the
+ * empire is cheaper (interface)
+ * @return His id, or -1
+ */
+int mp_trade_cheapest_seller(int resource);
+
+/**
+ * Loads of the resource that caravans of the seller are carrying to the buyer (interface)
+ */
+int mp_trade_loads_on_the_way(int seller, int buyer, int resource);
+
+/**
  * Whether the figure is a caravan between players
  */
 int mp_trade_is_caravan(const figure *f);

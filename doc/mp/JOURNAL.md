@@ -5,6 +5,30 @@
 
 ---
 
+## 2026-10-06 — Troisième essai d'Alexandre : pont, catastrophes, page du commerce (T3)
+
+**Fait**
+- T3.1 : un clic sur le pont de César tombait sur l'eau voisine (le pont pour navires est dessiné en hauteur) et le
+  missionnaire s'arrêtait sans rien dire. Son ordre vise maintenant la case praticable la plus proche ; sans chemin,
+  un avertissement. `mpinfo` donne aussi la destination.
+- T3.2 : « aller au problème » partait au coin de la carte. La place d'un message était tronquée en `short` (messages
+  à délai : incendies, effondrements) et sauvegardée sur 16 bits ; la fenêtre du message la bornait à 162 × 162.
+  Sauvegardes multijoueur version 3, protocole 9.
+- T3.3 et D-051 : une seule page de commerce, l'empire et les joueurs (demande d'Alexandre en cours de travail) ;
+  `window/mp_trade` devient cette page du conseiller, `mp_trade_cheapest_seller` et `mp_trade_loads_on_the_way`
+  pour l'affichage.
+- Question d'Alexandre sur les raccourcis : ceux de Julius (configurables dans les options), voir le résumé.
+
+**Appris**
+- Les tests de l'outil sans tête n'ont pas les textes du jeu : tout ce qui lit le type d'un message
+  (`lang_get_message`) y est muet. Tester la donnée elle-même.
+- Une reproduction dans le vrai jeu (`goto`, clic au centre, `mpinfo`) a trouvé la cause du pont en deux essais,
+  quand le test de simulation passait.
+
+**Prochaine étape** : les réponses d'Alexandre sur CESAR.md §13, puis M9.1.
+
+---
+
 ## 2026-10-06 — Plan « César juge » (D-050, demande d'Alexandre)
 
 **Demande** : César revient et donne la victoire à la cité la plus méritante (prospérité, commerce, habitat,

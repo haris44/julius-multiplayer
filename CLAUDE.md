@@ -35,7 +35,7 @@ La commande `/suite` enchaîne tout cela, puis les tâches du jalon.
 | Comparer deux sauvegardes | `build/test/compare attendu.sav obtenu.sav` |
 | Lancer le vrai jeu sans fenêtre, piloté par un script | `tools/run-automation.sh test/automation/smoke.txt` (captures dans `build/automation/`, à regarder avec `Read`) |
 | Partie en réseau du vrai jeu, sans fenêtre (hôte + client scriptés) | `tools/mp-real-test.sh` |
-| Depuis le salon : partie seule, partie à deux, fenêtre du commerce et alerte de prix (sans fenêtre) | `tools/mp-solo-test.sh`, `tools/mp-lobby-test.sh`, `tools/mp-trade-test.sh` |
+| Depuis le salon : partie seule, partie à deux, page du commerce et alerte de prix (sans fenêtre) | `tools/mp-solo-test.sh`, `tools/mp-lobby-test.sh`, `tools/mp-trade-test.sh` |
 | Lire une sauvegarde multijoueur ou une zone de la carte préparée | `build/test/simtool inspect PARTIE.mpsav`, `build/test/simtool terrain SAVE 2 X Y W H` |
 | Partie en réseau dans de vraies fenêtres, **pour Alexandre uniquement** | `tools/play-mp.sh [JOUEURS] [SAUVEGARDE]` |
 | Vrai jeu contre simulation de test (mêmes sommes de contrôle ?) | `tools/cross-check.sh SAVE TICKS PAS` |
@@ -103,6 +103,9 @@ Syntaxe des scripts d'automatisation et pièges : `doc/mp/TESTING.md` §3.
   deviner ce qui s'est passé chez Alexandre (I6).
 - Alexandre essaie chaque version **seul** (1 joueur dans le salon) : les règles de la carte doivent marcher à une
   cité (`game_rules_multiplayer_map()`), pas seulement à plusieurs.
+- Les grandes cartes dépassent 16 bits : une place (`grid_offset`) ne tient jamais dans un `short`, et se sauvegarde
+  par `save_write_offset` (large en multijoueur, D-024). Les bornes « 162 × 162 » ou 26244 de l'original sont à
+  remplacer par `map_grid_is_valid_offset`.
 
 ## Communication
 Avec Alexandre : en français, des résumés courts et concrets (fait, testé comment, suite). Les documents de

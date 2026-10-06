@@ -3,6 +3,7 @@
 #include "building/building.h"
 #include "building/warehouse.h"
 #include "city/finance.h"
+#include "city/warning.h"
 #include "city/resource.h"
 #include "core/image.h"
 #include "figure/action.h"
@@ -14,9 +15,13 @@
 #include "map/grid.h"
 #include "map/terrain.h"
 #include "mp/territory.h"
+#include "translation/translation.h"
 
 #define ACTION_WAITING FIGURE_ACTION_220_MP_MISSIONARY_WAITING
 #define ACTION_WALKING FIGURE_ACTION_221_MP_MISSIONARY_WALKING
+
+// how far from a click on water or rocks he looks for a tile to walk to
+#define SNAP_RANGE 3
 
 int mp_missionary_is_scout(const figure *f)
 {
@@ -72,6 +77,9 @@ void mp_missionary_action(figure *f)
     if (f->action_state == ACTION_WALKING) {
         figure_movement_move_ticks(f, 1);
         if (f->direction == DIR_FIGURE_AT_DESTINATION || f->direction == DIR_FIGURE_LOST) {
+            if (f->direction == DIR_FIGURE_LOST) {
+                city_warning_show_to_local_player(translation_for(TR_MP_MISSIONARY_NO_PATH));
+            }
             f->action_state = ACTION_WAITING;
             figure_route_remove(f);
         } else if (f->direction == DIR_FIGURE_REROUTE) {
@@ -84,6 +92,37 @@ void mp_missionary_action(figure *f)
     figure_image_update(f, image_group(GROUP_FIGURE_MISSIONARY));
 }
 
+// tiles he walks on, as citizens do (map/routing_terrain.c): roads and bridges, clear or passable land
+static int is_walkable(int grid_offset)
+{
+    return map_terrain_is(grid_offset, TERRAIN_ROAD | TERRAIN_RUBBLE | TERRAIN_ACCESS_RAMP | TERRAIN_GARDEN) ||
+        !map_terrain_is(grid_offset, TERRAIN_NOT_CLEAR);
+}
+
+// a click on water or rocks goes to the nearest tile he can walk on: bridges are drawn high above their tiles, so a
+// click on one often hits the water beside it
+static void snap_to_walkable(int *x, int *y)
+{
+    if (is_walkable(map_grid_offset(*x, *y))) {
+        return;
+    }
+    int best_x = *x, best_y = *y, best_distance = -1;
+    for (int dy = -SNAP_RANGE; dy <= SNAP_RANGE; dy++) {
+        for (int dx = -SNAP_RANGE; dx <= SNAP_RANGE; dx++) {
+            int distance = dx * dx + dy * dy;
+            if (!map_grid_is_inside(*x + dx, *y + dy, 1) || (best_distance >= 0 && distance >= best_distance) ||
+                !is_walkable(map_grid_offset(*x + dx, *y + dy))) {
+                continue;
+            }
+            best_x = *x + dx;
+            best_y = *y + dy;
+            best_distance = distance;
+        }
+    }
+    *x = best_x;
+    *y = best_y;
+}
+
 void mp_missionary_move(int figure_id, int x, int y)
 {
     if (figure_id < FIGURE_FIRST || figure_id >= FIGURE_END || !map_grid_is_inside(x, y, 1)) {
@@ -94,6 +133,7 @@ void mp_missionary_move(int figure_id, int x, int y)
         return;
     }
     figure_route_remove(f);
+    snap_to_walkable(&x, &y);
     f->destination_x = x;
     f->destination_y = y;
     f->destination_grid_offset = map_grid_offset(x, y);

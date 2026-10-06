@@ -114,7 +114,7 @@ répertoire courant (lancer depuis la racine du dépôt).
 | `gotocity P` | place la vue sur la cité du joueur P (cités recopiées) |
 | `goto X Y` | place la vue sur la case (X, Y) de la carte |
 | `build TYPE X1 Y1 X2 Y2` | le joueur local construit (numéro de `building_type`), par une commande comme à la souris |
-| `mpinfo` | écrit dans le journal la position du missionnaire, le nombre de bâtiments et la taille de la zone du joueur local |
+| `mpinfo` | écrit dans le journal la position et la destination du missionnaire, le nombre de bâtiments et la taille de la zone du joueur local |
 | `mpplayers N` | partie en réseau, hôte : attend que N joueurs (hôte compris) soient connectés |
 | `mpwait N` | partie en réseau : attend qu'elle ait démarré et tourné N ticks ; échoue en cas de désynchronisation ou de déconnexion |
 | `mpcheck` | partie en réseau : écrit l'état et le nombre de tours vérifiés ; échoue si la partie ne tourne plus |
@@ -141,11 +141,12 @@ Bon à savoir :
 ### Scripts prêts
 
 - `tools/mp-solo-test.sh` : partie seule depuis le salon sur la carte préparée (mission et zone de départ, maison
-  hors zone refusée, missionnaire déplacé à la souris).
+  hors zone refusée, missionnaire déplacé à la souris, clic sur le pont de César).
 - `tools/mp-lobby-test.sh` : hôte et client depuis le salon, 400 ticks sans désynchronisation.
-- `tools/mp-trade-test.sh` : idem, puis l'hôte ouvre le conseiller au commerce et la fenêtre « Joueurs »
-  (captures `build/automation/trade-*.png`) ; le client achète le marbre, l'hôte en monte le prix et le client voit
-  l'alerte plein écran (`price-alert.png`, puis `price-alert-trade.png` après « Voir le commerce »).
+- `tools/mp-trade-test.sh` : idem, puis l'hôte ouvre le conseiller au commerce, page commune à l'empire et aux
+  joueurs (`build/automation/trade-window.png`) ; le client achète le marbre (`trade-client-buys.png`), l'hôte en
+  monte le prix et le client voit l'alerte plein écran (`price-alert.png`, puis `price-alert-trade.png` après « Voir
+  le commerce »).
 - `test/automation/display.txt` : les options d'affichage (plus grande fenêtre qui tient sur l'écran).
 
 Sur macOS, le vrai jeu écrit aussi `julius-log.txt` dans le dossier des données (pas pendant l'automatisation) :

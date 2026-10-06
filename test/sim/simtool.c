@@ -12,6 +12,7 @@
 #include "city/buildings.h"
 #include "city/festival.h"
 #include "city/finance.h"
+#include "city/message.h"
 #include "city/labor.h"
 #include "city/health.h"
 #include "city/population.h"
@@ -1977,6 +1978,42 @@ static int walk_missionary(figure *m, int x, int y)
     return m->x == x && m->y == y;
 }
 
+// the missionary crosses the bridge of Caesar to the other shore (reported by Alexandre, 2026-10-06)
+static int command_missionarybridge(const char *file)
+{
+    if (!mp_mapgen_create_prepared(file, 2)) {
+        printf("Unable to create the prepared map\n");
+        return 2;
+    }
+    int failures = 0;
+#define CHECK(condition, text) do { int ok_ = (condition); printf("%-62s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
+    int bx, by_north, by_south;
+    mp_mapgen_caesar_bridge(&bx, &by_north, &by_south);
+    run_trace(50, 50, 0, 0);
+    figure *m = first_missionary(0);
+    CHECK(m != 0, "player 1 has a missionary");
+    if (m) {
+        CHECK(walk_missionary(m, bx, by_south + 2), "he walks to the south end of the bridge");
+        CHECK(walk_missionary(m, bx, (by_north + by_south) / 2), "he walks onto the bridge");
+        CHECK(walk_missionary(m, bx, by_north - 2), "he crosses it to the north shore");
+        // the bridge is drawn high above its tiles: a click on it often hits the water next to it
+        mp_command beside = { .type = MP_COMMAND_CITY_ACTION, .player_id = 0,
+            .args = { MP_ACTION_MISSIONARY_MOVE, m->id, bx - 1, (by_north + by_south) / 2 } };
+        mp_command_execute(&beside);
+        for (int day = 0; day < 60 && m->action_state == FIGURE_ACTION_221_MP_MISSIONARY_WALKING; day++) {
+            run_trace(50, 50, 0, 0);
+        }
+        CHECK(m->x == bx && m->y == (by_north + by_south) / 2, "sent to the water beside it, he goes onto the bridge");
+        printf("missionary at (%d, %d), bridge at column %d from %d to %d\n", m->x, m->y, bx, by_north, by_south);
+    }
+    player_context_switch(0);
+    player_context_set_num_players(1);
+#undef CHECK
+    printf("%s\n", failures ? "DIFFERENT: the missionary cannot cross the bridge" :
+        "Identical: the missionary crosses the bridge");
+    return failures ? 1 : 0;
+}
+
 // fog of war (MB.1, D-038): what player 1 discovers and sees
 static int command_fog(const char *file)
 {
@@ -2215,6 +2252,47 @@ static void city_action(int player_id, int action, int a1, int a2, int a3)
     mp_command_execute(&command);
 }
 
+static int fire_message_place(void)
+{
+    for (int i = 0; i < city_message_count(); i++) {
+        const city_message *msg = city_message_get(i);
+        if (msg->message_type == MESSAGE_FIRE && msg->param1 == BUILDING_PREFECTURE) {
+            return msg->param2;
+        }
+    }
+    return -1;
+}
+
+// a disaster far on a large map keeps its place: the button of the message goes to it (Alexandre, 2026-10-06)
+static int command_messagelocation(const char *file)
+{
+    if (!mp_mapgen_create_prepared(file, 4)) {
+        printf("Unable to create the prepared map\n");
+        return 2;
+    }
+    int failures = 0;
+#define CHECK(condition, text) do { int ok_ = (condition); printf("%-62s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
+    int far = map_grid_offset(map_grid_width() - 20, map_grid_height() - 20);
+    CHECK(far > 32767, "a place of the map for 4 beyond 16 bits");
+    city_message_post_with_popup_delay(MESSAGE_CAT_FIRE, MESSAGE_FIRE, BUILDING_PREFECTURE, far);
+    // the sidebar and the message window go to the place kept in the message (the test tool has no game texts to
+    // tell which messages are disasters)
+    CHECK(fire_message_place() == far, "the message of a fire there keeps its place");
+    if (!mp_savegame_write("messagelocation.mpsav") || !mp_savegame_read("messagelocation.mpsav")) {
+        printf("Unable to write and read the game\n");
+        return 2;
+    }
+    remove("messagelocation.mpsav");
+    CHECK(fire_message_place() == far, "still after the game is saved and loaded");
+
+    player_context_switch(0);
+    player_context_set_num_players(1);
+#undef CHECK
+    printf("%s\n", failures ? "DIFFERENT: messages lose the place of a disaster" :
+        "Identical: messages keep the place of a disaster");
+    return failures ? 1 : 0;
+}
+
 // prices between players (M8.3, D-043): a price per resource and buyer, a notice to the buyer when it changes
 static int command_tradeprices(const char *file)
 {
@@ -2386,7 +2464,7 @@ static int command_caravans(const char *file)
     CHECK(mp_trade_route_is_open(0, 1), "proposed by both, it is open");
     int buyer_money = treasury_of(0), seller_money = treasury_of(1);
     int notices = mp_trade_notifications();
-    int days = 0, most_caravans = 0;
+    int days = 0, most_caravans = 0, shown_on_the_way = 0;
     for (; days < 200 && (marble_of(0) < 8 || stock_of(0, RESOURCE_IRON) < 8); days++) {
         run_trace(50, 50, 0, 0);
         int caravans = count_caravans(1);
@@ -2394,10 +2472,16 @@ static int command_caravans(const char *file)
             printf("day %d: %d caravans of player 2 on their way\n", days, caravans);
             most_caravans = caravans;
         }
+        // the trade advisor shows what is on the way (D-051)
+        if (mp_trade_loads_on_the_way(1, 0, RESOURCE_MARBLE) == 8 &&
+            mp_trade_loads_on_the_way(1, 0, RESOURCE_IRON) == 8 && mp_trade_loads_on_the_way(0, 1, RESOURCE_MARBLE) == 0) {
+            shown_on_the_way = 1;
+        }
     }
     printf("after %d days: player 1 has %d marble and %d iron, player 2 has %d and %d\n", days, marble_of(0),
         stock_of(0, RESOURCE_IRON), marble_of(1), stock_of(1, RESOURCE_IRON));
     CHECK(most_caravans == 2, "a caravan for each resource, on the road together");
+    CHECK(shown_on_the_way, "the advisor shows the 8 loads of each on the way to player 1");
     CHECK(marble_of(0) == 8 && stock_of(0, RESOURCE_IRON) == 8, "they delivered the 8 loads of each");
     CHECK(days <= 70, "both within 70 days (105 tiles of road)");
     printf("player 1 paid %d, player 2 earned %d\n", buyer_money - treasury_of(0), treasury_of(1) - seller_money);
@@ -3132,6 +3216,10 @@ int main(int argc, char **argv)
         result = command_tradecities(file);
     } else if (strcmp(command, "fog") == 0) {
         result = command_fog(file);
+    } else if (strcmp(command, "messagelocation") == 0) {
+        result = command_messagelocation(file);
+    } else if (strcmp(command, "missionarybridge") == 0) {
+        result = command_missionarybridge(file);
     } else if (strcmp(command, "outside") == 0) {
         result = command_outside(file);
     } else if (strcmp(command, "missions") == 0) {

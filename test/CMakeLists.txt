@@ -301,6 +301,10 @@ add_test(NAME mp_missions COMMAND simtool missions brugle-massilia-start.sav)
 add_test(NAME mp_outside_territory COMMAND simtool outside brugle-massilia-start.sav)
 # Fog of war (MB.1, D-038): discovered land stays discovered, what moves shows only where the player sees
 add_test(NAME mp_fog_of_war COMMAND simtool fog brugle-massilia-start.sav)
+# The missionary crosses the bridge of Caesar (Alexandre, 2026-10-06)
+add_test(NAME mp_missionary_bridge COMMAND simtool missionarybridge brugle-massilia-start.sav)
+# The message of a disaster far on a large map goes to it (Alexandre, 2026-10-06)
+add_test(NAME mp_message_location COMMAND simtool messagelocation brugle-massilia-start.sav)
 
 # The prepared maps need an empire trading by land and by sea (D-041)
 add_test(NAME mp_prepared_map_needs_trade_routes COMMAND simtool notrade brugle-lugdunum.sav)

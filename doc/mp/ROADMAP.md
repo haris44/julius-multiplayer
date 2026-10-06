@@ -268,6 +268,21 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
   `test/automation/display.txt` (écran factice de 1024 × 768 : ligne « 1024 par 736 (écran) », 1024 × 768
   ramené à 1024 × 736). Le plein écran est revu par T2.7.
 
+## T3 — Retours du troisième essai d'Alexandre (2026-10-06)
+- [x] **T3.1** Le missionnaire ne traverse pas le pont : un clic dessus ne fait rien. *Fait* : le pont pour navires
+  est dessiné en hauteur, au-dessus de ses cases, et le clic tombait sur l'eau voisine ; un ordre vers l'eau ou les
+  rochers vise maintenant la case praticable la plus proche (3 cases au plus), et un missionnaire sans chemin le dit.
+  Test `mp_missionary_bridge` (rouge avant) ; `tools/mp-solo-test.sh` clique sur le pont dans le vrai jeu.
+- [x] **T3.2** « Aller au problème » d'une catastrophe envoie la vue à l'autre bout de la carte. *Fait* : la place
+  d'un message (incendie, effondrement…) était tronquée sur 16 bits, au-delà de la 163e ligne des grandes cartes ;
+  elle est entière en mémoire et large dans les sauvegardes multijoueur (D-024), et la fenêtre du message ne la
+  borne plus à 162 × 162. Test `mp_message_location` (rouge avant). Sauvegardes multijoueur en version 3, protocole
+  9.
+- [x] **T3.3** Commerce plus lisible, empire et joueurs sur la même page (D-051). *Fait* : le conseiller au commerce
+  montre, pour chaque ressource, le stock, l'empire (commerce et prix) et le joueur choisi (mon prix, son prix,
+  « J'achète », chargements en route) ; le fournisseur en vert. La fenêtre « Joueurs » séparée disparaît. Test
+  `mp_trade_caravans` (chargements en route), captures de `tools/mp-trade-test.sh`.
+
 ## MC — Cartes multijoueur préparées et César (D-033, D-034)
 - [ ] **MC.1** Ouvrages de César dessinés en blanc (la teinte actuelle ne fait que foncer les images) ; son aqueduc
   porte l'eau de son réservoir à toutes les cités. Le propriétaire existe déjà (T1.5).

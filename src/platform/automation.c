@@ -487,9 +487,10 @@ static int execute(char *line)
                 zone += mp_territory_owner(map_grid_offset(x, y)) == player_context_current();
             }
         }
+        const figure *m = missionary ? figure_get(missionary) : 0;
         char value[160];
-        snprintf(value, sizeof(value), "missionary at (%d, %d), buildings %d, zone %d tiles",
-            missionary ? figure_get(missionary)->x : -1, missionary ? figure_get(missionary)->y : -1, buildings, zone);
+        snprintf(value, sizeof(value), "missionary at (%d, %d) going to (%d, %d), buildings %d, zone %d tiles",
+            m ? m->x : -1, m ? m->y : -1, m ? m->destination_x : -1, m ? m->destination_y : -1, buildings, zone);
         log_message("mpinfo:", value);
         return 0;
     } else if (strcmp(command, "mpcheck") == 0) {

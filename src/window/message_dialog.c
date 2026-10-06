@@ -16,6 +16,7 @@
 #include "graphics/text.h"
 #include "graphics/video.h"
 #include "graphics/window.h"
+#include "map/grid.h"
 #include "input/input.h"
 #include "input/scroll.h"
 #include "scenario/property.h"
@@ -616,7 +617,7 @@ static void button_go_to_problem(int param1, int param2)
             grid_offset = invasion_grid_offset;
         }
     }
-    if (grid_offset > 0 && grid_offset < 26244) {
+    if (grid_offset > 0 && map_grid_is_valid_offset(grid_offset)) {
         city_view_go_to_grid_offset(grid_offset);
     }
     window_city_show();

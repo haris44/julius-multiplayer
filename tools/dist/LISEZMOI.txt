@@ -53,21 +53,23 @@ sauvegarde la partie pour la reprendre plus tard depuis le salon.
 Les règles propres au multijoueur :
 - Vous commencez avec votre mission, déjà bâtie au bord de la route de César, et la zone de 20 cases qu'elle vous
   donne. On ne construit que dans sa zone.
-- Vous avez aussi un missionnaire : cliquez dessus, puis cliquez où il doit aller. Il sert à fonder d'autres
+- Vous avez aussi un missionnaire : cliquez dessus, puis cliquez où il doit aller (le pont de César compris). Il sert à fonder d'autres
   missions (menu Éducation), à moins de 20 cases de lui ; chacune coûte 4 chargements de marbre et donne une zone
   de plus. Une mission peut former un nouveau missionnaire (300 Dn).
 - Votre zone grandit toute seule : 20 cases autour de vos maisons habitées et de vos bâtiments qui ont des
   employés. Elle est tracée à votre couleur. Routes, aqueducs et murs se construisent partout.
 - Un bâtiment qui se retrouve hors de votre zone s'effondre au bout de 3 mois.
-- Chaque joueur n'exploite que certaines ressources : commercez pour le reste. Conseiller au commerce, bouton
-  « Joueurs » : proposez une route commerciale à un joueur (elle s'ouvre quand il la propose aussi), fixez le prix
-  auquel vous lui vendez chaque ressource et dites ce que vous lui achetez. Chaque mois, le vendeur envoie une
+- Chaque joueur n'exploite que certaines ressources : commercez pour le reste. Le conseiller au commerce (touche 5)
+  réunit sur une page l'empire et les joueurs : pour chaque ressource, votre stock, ce que vous faites avec l'empire
+  et à quel prix, puis, pour le joueur de l'onglet choisi, le prix auquel vous lui vendez (− et +), son prix, si
+  vous lui achetez, et les chargements en route vers vous. Proposez-lui une route commerciale (elle s'ouvre quand il
+  la propose aussi). Chaque mois, le vendeur envoie une
   caravane par ressource achetée, 8 chargements au plus, dans la limite de ce que l'acheteur peut payer ; il paie à
   l'arrivée ce qui trouve place dans ses entrepôts, le reste repart. Chaque livraison est annoncée. Quand un
   joueur change le prix d'une ressource que vous lui achetez, une alerte en plein écran vous donne l'ancien et le
-  nouveau prix ; « Voir le commerce » ouvre directement sa fenêtre.
+  nouveau prix ; « Voir le commerce » ouvre le conseiller sur son onglet.
 - Acheter à l'empire coûte 50 % de plus. L'empire ne vous vend pas ce que vous achetez à un joueur moins cher
-  (prix en vert dans la fenêtre « Joueurs ») : même si ce joueur n'en a plus. Assécher le stock d'un rival fait
+  (le fournisseur est en vert) : même si ce joueur n'en a plus. Assécher le stock d'un rival fait
   partie du jeu ; pour revenir à l'empire, cessez d'acheter à ce joueur.
 - Un grand bras de mer traverse la carte d'ouest en est. À deux joueurs, les deux vivent sur la rive sud ; à
   quatre, deux sur chaque rive, reliés par la route et le pont de César. Les joueurs de la côte y bâtissent leurs

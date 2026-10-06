@@ -11,21 +11,17 @@ wait 5
 mpwait 0
 speed 300
 mpwait 400
-# trade advisor, Players, the marble row: I buy; then back to the city
+# trade advisor, the marble row: I buy; then back to the city
 key 5
 wait 5
-click 610 80
-wait 5
-click 625 400
+click 554 357
 wait 5
 screenshot build/automation/trade-client-buys.png
 rclick 400 300
 wait 5
-rclick 400 300
-wait 5
 mpwait 1000
 screenshot build/automation/price-alert.png
-# See trade: the window of trade with player 1
+# See trade: the trade advisor, on the tab of player 1
 click 288 512
 wait 5
 screenshot build/automation/price-alert-trade.png
