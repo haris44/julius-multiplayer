@@ -458,8 +458,8 @@
   une rivière de 7 cases (les ponts la franchissent) : docks, navires de son empire, pêche (un point de pêche par lac
   et au lac central). Le joueur des rochers a donc aussi de l'eau (remplace « sans eau » de D-041/D-042) ; il garde
   l'aqueduc de César, comme J3 sur la carte à 4.
-- Environ 8 % d'eau et 35 à 40 % de forêt. Une terre que l'eau et les rochers isoleraient de la route devient un
-  étang.
+- Environ 8 % d'eau et 35 à 40 % de forêt (14 à 18 % depuis D-052). Une terre que l'eau et les rochers isoleraient
+  de la route devient un étang.
 - **Partie seule** (1 joueur dans le salon) : elle se joue sur la carte pour 2 avec les règles de la carte (zones,
   missionnaire, eau de César, réservoirs à niveau, brouillard). `game_rules_multiplayer_map()` : plusieurs cités, ou
   une carte préparée jouée seul.
@@ -593,4 +593,22 @@
 - Le fournisseur réel, l'empire ou ce joueur, est en vert. Un clic sur le nom de la ressource ouvre ses réglages
   d'origine (seuil d'export, mise en sommeil, stockage). La carte et les prix de l'empire restent en bas.
 - Partie seule ou classique : page d'origine, inchangée. La fenêtre « Joueurs » séparée (M8.6) est supprimée.
+
+### D-052 — On va partout ; le joueur des terres a le bois ; emplacements tirés au sort (précise D-044, D-047)
+- 2026-10-06 · **adoptée** (Alexandre : « sur les maps, fais en sorte que nous puissions aller partout » ; « il ne
+  faut pas que les forêts soient traversables, juste qu'il y ait moins de forêt » ; « donne aussi la compétence […]
+  à celui qui commence dans les terres » ; « je parle des chantiers de bois » ; « fais un random entre les joueurs
+  pour leur placement, le J1 ne pop pas forcément dans les terres »)
+- **Moins de forêt** : 14 % de la carte pour 2, 17,5 % de celle pour 4, au lieu de 34 et 37 % (seuil du bruit des
+  bois, `WOODS_THRESHOLD`). Les bois restent **infranchissables**, comme dans l'original. Un premier essai qui
+  laissait le missionnaire traverser les bois a été abandonné à la demande d'Alexandre.
+- **Aucune clairière enfermée** (`open_shut_in_clearings`) :
+  - une clairière que les bois coupent de la route et qui fait moins de 16 cases devient du bois ;
+  - les autres reçoivent un passage, ouvert par les arbres les moins nombreux.
+  Toutes les terres où l'on marche sont atteignables depuis la route (test `mp_prepared_map_reachable_*` : 100 %).
+- Le **joueur des terres** (celui de la pierre et de l'aqueduc de César) exploite aussi le **bois**, avec des bois
+  près de sa cité.
+- **Emplacements tirés au sort** entre les joueurs présents, par l'hôte, avec le nombre que le salon tire à chaque
+  partie. La carte part ensuite chez les clients, comme avant. À 3 joueurs, le sud-est reste libre ; seul, on reste
+  dans les terres, pour que quelqu'un ait le marbre des missions. Les tests gardent l'ordre du plan (graine 0).
 

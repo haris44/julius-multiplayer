@@ -5,6 +5,26 @@
 
 ---
 
+## 2026-10-06 — On va partout, le bois pour le joueur des terres, emplacements tirés au sort (T3.4 à T3.6, D-052)
+
+**Fait**
+- Moins de forêt (14 et 17,5 % au lieu de 34 et 37 %), toujours infranchissable ; `open_shut_in_clearings` comble
+  les petites clairières enfermées et ouvre un passage vers les autres (marche 0-1 : terre libre 0, arbre 1).
+- Bois ajouté à l'emplacement des terres (`MAX_SLOT_RESOURCES` 4).
+- `mp_mapgen_create_prepared(fichier, joueurs, graine)` : l'hôte tire les emplacements avec le nombre du salon ;
+  `slot_of(joueur)` passe par `slot_of_player`. Les fonctions qui recevaient un « slot » reçoivent un joueur.
+
+**Appris**
+- Alexandre veut garder les règles de terrain de l'original : une demande « aller partout » se règle dans la carte,
+  pas dans le calcul des chemins. Premier essai (missionnaire à travers bois) annulé.
+- Les cases d'eau marquées « pont » sur la carte des tests viennent de la sauvegarde modèle (`brugle-massilia`),
+  pas de la génération : avec Lindum, seul le pont de César apparaît.
+- Recréer une carte préparée dans un même processus demande `player_context_set_num_players(1)` avant.
+
+**Prochaine étape** : les réponses d'Alexandre sur CESAR.md §13, puis M9.1.
+
+---
+
 ## 2026-10-06 — Troisième essai d'Alexandre : pont, catastrophes, page du commerce (T3)
 
 **Fait**

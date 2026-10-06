@@ -56,6 +56,7 @@ static struct {
     int num_players; // arrival points on the map (a prepared map for 4 may have 3 players)
     int prepared;
     const map_layout *layout; // prepared maps: their plan
+    int slot_of_player[MP_MAPGEN_MAX_PLAYERS]; // prepared maps: arrival point of each player, drawn by lot
     int sea_top[GRID_MAX_SIZE]; // prepared maps: the arm of the sea at each column, both coasts included
     int sea_bottom[GRID_MAX_SIZE];
     int aqueduct_end_x[MP_MAPGEN_MAX_PLAYERS]; // end of the aqueduct of Caesar near a city, -1 without it
@@ -342,9 +343,11 @@ int mp_mapgen_create(const char *template_file, int num_players, int size, unsig
 // ships of their empire come along the sea. Each arrival point offers meadows and only the materials its player may
 // exploit.
 #define PREPARED_SEED 2026
-#define MAX_SLOT_RESOURCES 3
+#define MAX_SLOT_RESOURCES 4
 #define WILD_DISTANCE 30
 #define ROCK_DRY_DISTANCE 60 // no pond this close to the city of the player of the rocks
+#define SMALL_CLEARING 16 // a clearing shut in by woods and smaller than this becomes woods
+#define WOODS_THRESHOLD 167 // noise above which the wild land is wooded, lower further from the cities
 #define SEA_HALF_WIDTH 12
 #define ROAD_MARGIN 2
 #define MAX_ROADS 8
@@ -380,12 +383,12 @@ static const int SHARED_RAW_MATERIALS[] = {
 };
 #define NUM_SHARED_RAW_MATERIALS (int) (sizeof(SHARED_RAW_MATERIALS) / sizeof(SHARED_RAW_MATERIALS[0]))
 
-// two players on the south shore: in the west the player of the rocks (iron, marble, olives), in the east on the
-// coast the player of timber, clay and vines; the main road of Caesar crosses the sea to the wild north shore
+// two players on the south shore: in the west the player of the rocks (iron, marble, olives, timber), in the east on
+// the coast the player of timber, clay and vines; the main road of Caesar crosses the sea to the wild north shore
 static const map_layout LAYOUT_2 = {
     200,
     {
-        { { RESOURCE_IRON, RESOURCE_MARBLE, RESOURCE_OLIVES }, 1, 45, 140, 0, 140, { 0, 2, 1, 3 } },
+        { { RESOURCE_IRON, RESOURCE_MARBLE, RESOURCE_OLIVES, RESOURCE_TIMBER }, 1, 45, 140, 0, 140, { 0, 2, 1, 3 } },
         { { RESOURCE_TIMBER, RESOURCE_CLAY, RESOURCE_VINES }, 0, 150, 90, 199, 90, { 2, 3, 0, 1 } },
     },
     4,
@@ -397,16 +400,16 @@ static const map_layout LAYOUT_2 = {
     75, 1
 };
 
-// two players on each shore: north the player of the rocks (west) and the one of timber and clay (east, on the
-// coast); south the one of olives and timber (west) and the one of vines and clay (east), both on the coast. Three
+// two players on each shore: north the player of the rocks and timber (west) and the one of timber and clay (east, on
+// the coast); south the one of olives and timber (west) and the one of vines and clay (east), both on the coast. Three
 // players leave the south-east free.
 static const map_layout LAYOUT_4 = {
     260,
     {
-        { { RESOURCE_IRON, RESOURCE_MARBLE, RESOURCE_NONE }, 1, 55, 55, 0, 55, { 0, 2, 1, 3 } },
-        { { RESOURCE_TIMBER, RESOURCE_CLAY, RESOURCE_NONE }, 0, 200, 104, 259, 104, { 0, 1, 2, 3 } },
-        { { RESOURCE_OLIVES, RESOURCE_TIMBER, RESOURCE_NONE }, 0, 60, 165, 0, 165, { 2, 3, 0, 1 } },
-        { { RESOURCE_VINES, RESOURCE_CLAY, RESOURCE_NONE }, 0, 200, 156, 259, 156, { 2, 3, 0, 1 } },
+        { { RESOURCE_IRON, RESOURCE_MARBLE, RESOURCE_TIMBER }, 1, 55, 55, 0, 55, { 0, 2, 1, 3 } },
+        { { RESOURCE_TIMBER, RESOURCE_CLAY }, 0, 200, 104, 259, 104, { 0, 1, 2, 3 } },
+        { { RESOURCE_OLIVES, RESOURCE_TIMBER }, 0, 60, 165, 0, 165, { 2, 3, 0, 1 } },
+        { { RESOURCE_VINES, RESOURCE_CLAY }, 0, 200, 156, 259, 156, { 2, 3, 0, 1 } },
     },
     7,
     {
@@ -420,15 +423,33 @@ static const map_layout LAYOUT_4 = {
     95, -1
 };
 
-static const map_slot *slot_of(int slot)
+// the arrival point of a player: the plan numbers them, a draw at the start of the game gives them out
+static const map_slot *slot_of(int player_id)
 {
-    return &data.layout->slots[slot];
+    return &data.layout->slots[data.slot_of_player[player_id]];
 }
 
-static int slot_has(int slot, int resource)
+// players draw their arrival points by lot, among those of the players there are: on the map for 4, three players
+// always leave the south-east free, so that someone lives on the rocks. Seed 0 keeps the order of the plan (tests).
+static void draw_arrival_points(int num_players, unsigned int seed)
+{
+    for (int p = 0; p < MP_MAPGEN_MAX_PLAYERS; p++) {
+        data.slot_of_player[p] = p;
+    }
+    unsigned int state = seed;
+    for (int i = seed ? num_players - 1 : 0; i > 0; i--) {
+        state = state * 1103515245u + 12345u;
+        int j = (int) ((state >> 16) % (unsigned int) (i + 1));
+        int swap = data.slot_of_player[i];
+        data.slot_of_player[i] = data.slot_of_player[j];
+        data.slot_of_player[j] = swap;
+    }
+}
+
+static int slot_has(int player_id, int resource)
 {
     for (int i = 0; i < MAX_SLOT_RESOURCES; i++) {
-        if (slot_of(slot)->resources[i] == resource) {
+        if (slot_of(player_id)->resources[i] == resource) {
             return 1;
         }
     }
@@ -516,7 +537,7 @@ static int prepared_terrain(int x, int y)
     if (wild > 6 && soft_noise(x, y, 9) < 58 && !near_dry_city(x, y)) {
         return TERRAIN_WATER;
     }
-    if (wild > 0 && soft_noise(x, y, 1) > 150 - (wild < 20 ? wild : 20) * 2) {
+    if (wild > 0 && soft_noise(x, y, 1) > WOODS_THRESHOLD - (wild < 20 ? wild : 20)) {
         return TERRAIN_TREE;
     }
     return soft_noise(x, y, 3) > 150 ? TERRAIN_MEADOW : 0;
@@ -540,26 +561,26 @@ static void set_blob(int x, int y, int radius, int terrain)
 }
 
 // the four corners of a city, away from its main road
-static void slot_corner(int slot, int corner, int *x, int *y)
+static void slot_corner(int player_id, int corner, int *x, int *y)
 {
     int r = CITY_RADIUS / 2 + 5;
-    *x = data.center_x[slot] + (corner & 1 ? r : -r);
-    *y = data.center_y[slot] + (corner & 2 ? r : -r);
+    *x = data.center_x[player_id] + (corner & 1 ? r : -r);
+    *y = data.center_y[player_id] + (corner & 2 ? r : -r);
 }
 
-static void place_slot(int slot)
+static void place_slot(int player_id)
 {
     int x, y, corner = 0;
-    if (slot_has(slot, RESOURCE_IRON) || slot_has(slot, RESOURCE_MARBLE)) {
-        slot_corner(slot, slot_of(slot)->corners[corner++], &x, &y);
+    if (slot_has(player_id, RESOURCE_IRON) || slot_has(player_id, RESOURCE_MARBLE)) {
+        slot_corner(player_id, slot_of(player_id)->corners[corner++], &x, &y);
         set_blob(x, y, 4, TERRAIN_ROCK);
     }
-    if (slot_has(slot, RESOURCE_TIMBER)) {
-        slot_corner(slot, slot_of(slot)->corners[corner++], &x, &y);
+    if (slot_has(player_id, RESOURCE_TIMBER)) {
+        slot_corner(player_id, slot_of(player_id)->corners[corner++], &x, &y);
         set_blob(x, y, 6, TERRAIN_TREE);
     }
     // farms: wheat, vegetables, fruit, pigs, and olives or vines when allowed
-    slot_corner(slot, slot_of(slot)->corners[corner], &x, &y);
+    slot_corner(player_id, slot_of(player_id)->corners[corner], &x, &y);
     set_blob(x, y, 6, TERRAIN_MEADOW);
 }
 
@@ -691,16 +712,16 @@ static int place_caesar_water(void)
     }
     map_building_tiles_add(reservoir->id, rx, ry, 3, image_group(GROUP_BUILDING_RESERVOIR), TERRAIN_BUILDING);
     map_aqueduct_set(map_grid_offset(rx, ry), 0);
-    for (int slot = 0; slot < data.num_players; slot++) {
-        data.aqueduct_end_x[slot] = data.aqueduct_end_y[slot] = -1;
-        if (!slot_of(slot)->caesar_aqueduct) {
+    for (int p = 0; p < data.num_players; p++) {
+        data.aqueduct_end_x[p] = data.aqueduct_end_y[p] = -1;
+        if (!slot_of(p)->caesar_aqueduct) {
             continue;
         }
         // from the middle of the side of the reservoir away from the sea
         int x = rx + 1;
         int y = side > 0 ? ry + 3 : ry - 1;
-        int end_x = data.center_x[slot] + CITY_RADIUS / 2 + 1;
-        int end_y = data.center_y[slot] - 4;
+        int end_x = data.center_x[p] + CITY_RADIUS / 2 + 1;
+        int end_y = data.center_y[p] - 4;
         if (end_x >= x || (side > 0 ? end_y < y : end_y > y)) {
             return 0; // the plan puts the player of the rocks west of the reservoir, away from the sea
         }
@@ -710,8 +731,8 @@ static int place_caesar_water(void)
         for (; x >= end_x; x--) {
             set_caesar_aqueduct(x, y);
         }
-        data.aqueduct_end_x[slot] = end_x;
-        data.aqueduct_end_y[slot] = end_y;
+        data.aqueduct_end_x[p] = end_x;
+        data.aqueduct_end_y[p] = end_y;
     }
     return 1;
 }
@@ -772,6 +793,111 @@ static void fill_cut_off_land(void)
             int grid_offset = map_grid_offset(x, y);
             if (!reached[y * data.size + x] && !map_terrain_is(grid_offset, TERRAIN_WATER | TERRAIN_ROCK)) {
                 map_terrain_set(grid_offset, TERRAIN_WATER);
+            }
+        }
+    }
+}
+
+// where one walks: clear land, meadows and roads (woods, water, rocks and buildings stop walkers, D-052)
+static int is_open_land(int grid_offset)
+{
+    return !map_terrain_is(grid_offset, TERRAIN_NOT_CLEAR) || map_terrain_is(grid_offset, TERRAIN_ROAD);
+}
+
+static int is_wood(int grid_offset)
+{
+    return map_terrain_is(grid_offset, TERRAIN_TREE | TERRAIN_SHRUB) &&
+        !map_terrain_is(grid_offset, TERRAIN_NOT_CLEAR & ~(TERRAIN_TREE | TERRAIN_SHRUB));
+}
+
+// clearings shut in by the woods: the small ones become woods, a path opens to the others through as few trees as
+// possible, so that we go everywhere on the map while the woods stay impassable (D-052)
+static void open_shut_in_clearings(void)
+{
+    static int cost[GRID_MAX_SIZE * GRID_MAX_SIZE]; // trees crossed from the main road, -1 not yet reached
+    static int from[GRID_MAX_SIZE * GRID_MAX_SIZE];
+    static int deque[2 * GRID_MAX_SIZE * GRID_MAX_SIZE];
+    static const int DX[] = { 1, -1, 0, 0 };
+    static const int DY[] = { 0, 0, 1, -1 };
+    int tiles = data.size * data.size;
+
+    // the small clearings first: a clearing of the main area has no cost after the walk below
+    for (int pass = 0; pass < 2; pass++) {
+        for (int i = 0; i < tiles; i++) {
+            cost[i] = -1;
+        }
+        // 0-1 walk from the entry of the first player: open land costs nothing, a tree costs one
+        int head = tiles, tail = tiles;
+        int start = data.entry_y[0] * data.size + data.entry_x[0];
+        cost[start] = 0;
+        from[start] = -1;
+        deque[tail++] = start;
+        while (head < tail) {
+            int i = deque[head++];
+            int x = i % data.size, y = i / data.size;
+            for (int d = 0; d < 4; d++) {
+                int nx = x + DX[d], ny = y + DY[d];
+                if (nx < 0 || ny < 0 || nx >= data.size || ny >= data.size) {
+                    continue;
+                }
+                int n = ny * data.size + nx;
+                int grid_offset = map_grid_offset(nx, ny);
+                int step = is_open_land(grid_offset) ? 0 : is_wood(grid_offset) ? 1 : -1;
+                if (step < 0 || (cost[n] >= 0 && cost[n] <= cost[i] + step)) {
+                    continue;
+                }
+                cost[n] = cost[i] + step;
+                from[n] = i;
+                if (step == 0) {
+                    deque[--head] = n;
+                } else {
+                    deque[tail++] = n;
+                }
+            }
+        }
+        if (pass == 0) {
+            // clearings out of reach of the main area without trees: too small to matter, they join the woods
+            static uint8_t seen[GRID_MAX_SIZE * GRID_MAX_SIZE];
+            static int component[GRID_MAX_SIZE * GRID_MAX_SIZE];
+            memset(seen, 0, sizeof(seen));
+            for (int i = 0; i < tiles; i++) {
+                if (seen[i] || cost[i] <= 0 || !is_open_land(map_grid_offset(i % data.size, i / data.size))) {
+                    continue;
+                }
+                int size = 0;
+                component[size++] = i;
+                seen[i] = 1;
+                for (int k = 0; k < size; k++) {
+                    int x = component[k] % data.size, y = component[k] / data.size;
+                    for (int d = 0; d < 4; d++) {
+                        int nx = x + DX[d], ny = y + DY[d];
+                        int n = ny * data.size + nx;
+                        if (nx < 0 || ny < 0 || nx >= data.size || ny >= data.size || seen[n] ||
+                            !is_open_land(map_grid_offset(nx, ny))) {
+                            continue;
+                        }
+                        seen[n] = 1;
+                        component[size++] = n;
+                    }
+                }
+                if (size < SMALL_CLEARING) {
+                    for (int k = 0; k < size; k++) {
+                        map_terrain_set(map_grid_offset(component[k] % data.size, component[k] / data.size),
+                            TERRAIN_TREE);
+                    }
+                }
+            }
+        }
+    }
+    // a path to each clearing left: the trees on its cheapest way from the main area are cut
+    for (int i = 0; i < tiles; i++) {
+        if (cost[i] <= 0 || !is_open_land(map_grid_offset(i % data.size, i / data.size))) {
+            continue;
+        }
+        for (int t = from[i]; t >= 0 && cost[t] > 0; t = from[t]) {
+            int grid_offset = map_grid_offset(t % data.size, t / data.size);
+            if (is_wood(grid_offset)) {
+                map_terrain_set(grid_offset, 0);
             }
         }
     }
@@ -872,7 +998,7 @@ const char *mp_mapgen_prepared_template(void)
     return 0;
 }
 
-int mp_mapgen_create_prepared(const char *template_file, int num_players)
+int mp_mapgen_create_prepared(const char *template_file, int num_players, unsigned int placement_seed)
 {
     lacks_trade_routes = 0;
     if (num_players < 1 || num_players > MP_MAPGEN_MAX_PLAYERS) {
@@ -884,6 +1010,7 @@ int mp_mapgen_create_prepared(const char *template_file, int num_players)
     // three players play on the map for four, one arrival point stays free
     data.num_players = num_players <= 2 ? 2 : 4;
     data.prepared = 1;
+    draw_arrival_points(num_players, placement_seed);
     if (!prepare_template(template_file, data.size)) {
         return 0;
     }
@@ -895,8 +1022,8 @@ int mp_mapgen_create_prepared(const char *template_file, int num_players)
     scenario.climate = CLIMATE_NORTHERN;
     place_prepared_arrivals();
     set_terrain(prepared_terrain);
-    for (int slot = 0; slot < data.num_players; slot++) {
-        place_slot(slot);
+    for (int p = 0; p < data.num_players; p++) {
+        place_slot(p);
     }
     place_sea();
     map_owner_clear_all();
@@ -907,6 +1034,7 @@ int mp_mapgen_create_prepared(const char *template_file, int num_players)
         return 0;
     }
     fill_cut_off_land();
+    open_shut_in_clearings();
     update_tile_images();
     map_tiles_update_all_aqueducts(0);
     int west_x, west_y;
@@ -915,10 +1043,10 @@ int mp_mapgen_create_prepared(const char *template_file, int num_players)
     scenario_editor_set_river_exit_point(west_x, west_y);
     // fish in the sea off the coast of every player who lives on it, for his wharves
     int fish = 0;
-    for (int slot = 0; slot < data.num_players; slot++) {
-        int fx = data.center_x[slot];
+    for (int p = 0; p < data.num_players; p++) {
+        int fx = data.center_x[p];
         int fy = (data.sea_top[fx] + data.sea_bottom[fx]) / 2;
-        if (mp_mapgen_slot_is_coastal(slot) && map_terrain_is(map_grid_offset(fx, fy), TERRAIN_WATER)) {
+        if (mp_mapgen_slot_is_coastal(p) && map_terrain_is(map_grid_offset(fx, fy), TERRAIN_WATER)) {
             scenario_editor_set_fishing_point(fish++, fx, fy);
         }
     }

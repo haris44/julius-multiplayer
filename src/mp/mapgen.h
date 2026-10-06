@@ -44,9 +44,10 @@ const char *mp_mapgen_prepared_template(void);
  * only the materials its player may exploit; the player of the rocks lives far from water and gets the aqueduct of
  * Caesar, the others live on the coast. Three players play on the map for four.
  * @param template_file Map of the free game giving climate, empire and funds
+ * @param placement_seed Draw of the arrival points among the players; 0 keeps the order of the plan
  * @return 1 on success
  */
-int mp_mapgen_create_prepared(const char *template_file, int num_players);
+int mp_mapgen_create_prepared(const char *template_file, int num_players, unsigned int placement_seed);
 
 /**
  * On the last prepared map: whether the arrival point of the player offers this material

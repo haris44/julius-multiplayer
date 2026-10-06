@@ -314,9 +314,12 @@ Les conditions de fin se choisissent dans le salon :
   cases), une pour 3 ou 4 (260 cases). Chacune suit un **plan fixe** (`map_layout`) : villes, points d'arrivée sur
   les bords ouest et est, routes de César, tracé du bras de mer qui traverse la carte, réservoir de César. Le reste
   (forêts, clairières, étangs, prés, côtes irrégulières) vient d'un bruit déterministe à graine fixe : la même carte
-  sur tous les ordinateurs, l'hôte l'envoie de toute façon.
-- Chaque emplacement n'offre que les matériaux que son joueur peut exploiter ; le joueur de la pierre n'a pas d'eau,
-  seulement l'aqueduc de César ; les autres ont leur côte dans leur zone de départ.
+  sur tous les ordinateurs, l'hôte l'envoie de toute façon. Les bois couvrent 14 à 18 % de la carte et restent
+  infranchissables ; aucune clairière n'est enfermée par eux (D-052).
+- Les joueurs **tirent au sort** leur emplacement (D-052) : l'hôte mélange les emplacements des joueurs présents
+  avec le nombre tiré par le salon ; la graine 0 garde l'ordre du plan (tests).
+- Chaque emplacement n'offre que les matériaux que son joueur peut exploiter ; le joueur de la pierre (et du bois,
+  D-052) n'a pas d'eau, seulement l'aqueduc de César ; les autres ont leur côte dans leur zone de départ.
 - Le modèle (`mp_mapgen_prepared_template`, Lindum d'abord) ne donne que l'empire, l'année et les fonds ; le climat
   est toujours celui du nord.
 - La carte passe par un `.mpsav` (`mp/savegame`), le même format qu'une partie en cours : les clients la reçoivent

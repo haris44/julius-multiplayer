@@ -316,8 +316,8 @@ static int is_multiplayer_save(const char *filename)
 
 static int host_generate_map(void)
 {
-    // the prepared map for this number of players (D-033); the seed only serves the random maps of the tests
-    if (!mp_mapgen_create_prepared(data.saved_game, data.num_players)) {
+    // the prepared map for this number of players (D-033); the seed of the lobby draws the arrival points
+    if (!mp_mapgen_create_prepared(data.saved_game, data.num_players, data.map_seed)) {
         return 0;
     }
     snprintf(data.saved_game, sizeof(data.saved_game), "mp-session-%d-p0.mpsav", data.port);

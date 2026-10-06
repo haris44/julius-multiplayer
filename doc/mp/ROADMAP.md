@@ -282,6 +282,13 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
   montre, pour chaque ressource, le stock, l'empire (commerce et prix) et le joueur choisi (mon prix, son prix,
   « J'achète », chargements en route) ; le fournisseur en vert. La fenêtre « Joueurs » séparée disparaît. Test
   `mp_trade_caravans` (chargements en route), captures de `tools/mp-trade-test.sh`.
+- [x] **T3.4** « Aller partout » sur les cartes (D-052). *Fait* : bois infranchissables comme dans l'original, mais
+  deux fois moins nombreux (14 et 17,5 %) ; les clairières enfermées deviennent du bois (moins de 16 cases) ou
+  reçoivent un passage. Test `mp_prepared_map_reachable_2_players` et `_4_players` : 100 % des terres atteignables.
+- [x] **T3.5** Le joueur des terres exploite aussi le bois (chantiers de bois), avec des bois près de sa cité.
+- [x] **T3.6** Emplacements tirés au sort entre les joueurs (le joueur 1 n'est plus toujours dans les terres). Test
+  `mp_prepared_map_placement` : sur 12 parties, chacun des joueurs a eu l'emplacement des terres ; à 3, le sud-est
+  reste libre.
 
 ## MC — Cartes multijoueur préparées et César (D-033, D-034)
 - [ ] **MC.1** Ouvrages de César dessinés en blanc (la teinte actuelle ne fait que foncer les images) ; son aqueduc

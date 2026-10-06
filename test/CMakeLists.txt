@@ -303,6 +303,12 @@ add_test(NAME mp_outside_territory COMMAND simtool outside brugle-massilia-start
 add_test(NAME mp_fog_of_war COMMAND simtool fog brugle-massilia-start.sav)
 # The missionary crosses the bridge of Caesar (Alexandre, 2026-10-06)
 add_test(NAME mp_missionary_bridge COMMAND simtool missionarybridge brugle-massilia-start.sav)
+# The players draw their arrival points by lot; the player inland has timber too (D-052)
+add_test(NAME mp_prepared_map_placement COMMAND simtool placement brugle-massilia-start.sav)
+# We go everywhere (D-052): fewer woods, which stay impassable, and no clearing shut in by them
+foreach(players 2 4)
+    add_test(NAME mp_prepared_map_reachable_${players}_players COMMAND simtool reachable brugle-massilia-start.sav ${players})
+endforeach()
 # The message of a disaster far on a large map goes to it (Alexandre, 2026-10-06)
 add_test(NAME mp_message_location COMMAND simtool messagelocation brugle-massilia-start.sav)
 

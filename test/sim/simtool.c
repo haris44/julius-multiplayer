@@ -1516,7 +1516,7 @@ static int count_terrain_near(int cx, int cy, int radius, int terrain)
 // aqueduct of Caesar, the others on the coast, permissions that match, the same map every time, cities that grow
 static int command_preparedmap(const char *file, int num_players, int ticks)
 {
-    if (!mp_mapgen_create_prepared(file, num_players)) {
+    if (!mp_mapgen_create_prepared(file, num_players, 0)) {
         printf("Unable to create the prepared map\n");
         return 2;
     }
@@ -1533,7 +1533,8 @@ static int command_preparedmap(const char *file, int num_players, int ticks)
     int trees = count_terrain_near(size / 2, size / 2, size / 2 - 1, TERRAIN_TREE);
     printf("water: %d%% of the map, forest: %d%%, climate %d\n", 100 * water / (size * size),
         100 * trees / (size * size), scenario_property_climate());
-    if (100 * water / (size * size) < 8 || 100 * trees / (size * size) < 20 ||
+    // fewer woods since D-052 (mp_prepared_map_reachable: 12 to 18 %)
+    if (100 * water / (size * size) < 8 || 100 * trees / (size * size) < 12 ||
         scenario_property_climate() != CLIMATE_NORTHERN) {
         printf("  not a map of forests and lakes\n");
         failures++;
@@ -1652,7 +1653,7 @@ static int command_preparedmap(const char *file, int num_players, int ticks)
     uint64_t first = mp_checksum_state();
     player_context_switch(0);
     player_context_set_num_players(1);
-    if (!mp_mapgen_create_prepared(file, num_players) || mp_checksum_state() != first) {
+    if (!mp_mapgen_create_prepared(file, num_players, 0) || mp_checksum_state() != first) {
         printf("DIFFERENT: the prepared map changed between two creations\n");
         return 1;
     }
@@ -1730,7 +1731,7 @@ static int reservoir_at(int x, int y, int *level)
 // 270 days; joined again, it fills in about 54 days
 static int command_reservoirlevel(const char *file)
 {
-    if (!mp_mapgen_create_prepared(file, 2)) {
+    if (!mp_mapgen_create_prepared(file, 2, 0)) {
         printf("Unable to create the prepared map\n");
         return 2;
     }
@@ -1797,7 +1798,7 @@ static int build_as(int player_id, int type, int x1, int y1, int x2, int y2)
 // houses push it further; the other player builds nothing there but roads
 static int command_territory(const char *file)
 {
-    if (!mp_mapgen_create_prepared(file, 2)) {
+    if (!mp_mapgen_create_prepared(file, 2, 0)) {
         printf("Unable to create the prepared map\n");
         return 2;
     }
@@ -1853,7 +1854,7 @@ static figure *first_missionary(int player_id)
 // missions and missionaries (MT.2, MT.3, D-037)
 static int command_missions(const char *file)
 {
-    if (!mp_mapgen_create_prepared(file, 2)) {
+    if (!mp_mapgen_create_prepared(file, 2, 0)) {
         printf("Unable to create the prepared map\n");
         return 2;
     }
@@ -1922,7 +1923,7 @@ static int command_missions(const char *file)
 // buildings left outside the zone collapse after three months, unless a mission covers them again (MT.4, D-036)
 static int command_outside(const char *file)
 {
-    if (!mp_mapgen_create_prepared(file, 2)) {
+    if (!mp_mapgen_create_prepared(file, 2, 0)) {
         printf("Unable to create the prepared map\n");
         return 2;
     }
@@ -1981,7 +1982,7 @@ static int walk_missionary(figure *m, int x, int y)
 // the missionary crosses the bridge of Caesar to the other shore (reported by Alexandre, 2026-10-06)
 static int command_missionarybridge(const char *file)
 {
-    if (!mp_mapgen_create_prepared(file, 2)) {
+    if (!mp_mapgen_create_prepared(file, 2, 0)) {
         printf("Unable to create the prepared map\n");
         return 2;
     }
@@ -2014,10 +2015,104 @@ static int command_missionarybridge(const char *file)
     return failures ? 1 : 0;
 }
 
+// the players draw their arrival points by lot (Alexandre, 2026-10-06, D-052): player 1 does not always live inland
+static int command_placement(const char *file)
+{
+    int failures = 0;
+#define CHECK(condition, text) do { int ok_ = (condition); printf("%-62s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
+    for (int num_players = 2; num_players <= 4; num_players++) {
+        int inland_seen[4] = { 0 }, distinct = 1, south_east_free = 1, inland_timber = 1;
+        for (unsigned int seed = 1; seed <= 12; seed++) {
+            player_context_switch(0);
+            player_context_set_num_players(1);
+            if (!mp_mapgen_create_prepared(file, num_players, seed)) {
+                printf("Unable to create the prepared map\n");
+                return 2;
+            }
+            for (int p = 0; p < num_players; p++) {
+                int x, y;
+                mp_mapgen_city_center(p, &x, &y);
+                for (int q = 0; q < p; q++) {
+                    int qx, qy;
+                    mp_mapgen_city_center(q, &qx, &qy);
+                    distinct &= qx != x || qy != y;
+                }
+                south_east_free &= num_players != 3 || x < 130 || y < 130;
+                if (!mp_mapgen_slot_is_coastal(p)) {
+                    inland_seen[p] = 1;
+                    // the player inland also has the timber yards (Alexandre: « je parle des chantiers de bois »)
+                    inland_timber &= mp_mapgen_slot_allows(p, RESOURCE_TIMBER);
+                }
+            }
+        }
+        int inland_players = inland_seen[0] + inland_seen[1] + inland_seen[2] + inland_seen[3];
+        printf("%d players: the arrival point inland went to %d different players in 12 games\n", num_players,
+            inland_players);
+        CHECK(distinct, "every player has his own arrival point");
+        CHECK(inland_players >= 2, "player 1 does not always live inland");
+        CHECK(south_east_free, "three players leave the south-east free");
+        CHECK(inland_timber, "the player inland may exploit timber");
+    }
+    player_context_switch(0);
+    player_context_set_num_players(1);
+    CHECK(mp_mapgen_create_prepared(file, 2, 0) && !mp_mapgen_slot_is_coastal(0), "seed 0 keeps the plan (tests)");
+    player_context_switch(0);
+    player_context_set_num_players(1);
+#undef CHECK
+    printf("%s\n", failures ? "DIFFERENT: the arrival points are not drawn by lot" :
+        "Identical: the arrival points are drawn by lot");
+    return failures ? 1 : 0;
+}
+
+// we go everywhere on the prepared maps (Alexandre, 2026-10-06, D-052): woods stay impassable, as in the original
+// game, but they are fewer, and no clearing is shut in by them
+static int command_reachable(const char *file, int num_players)
+{
+    if (!mp_mapgen_create_prepared(file, num_players, 0)) {
+        printf("Unable to create the prepared map\n");
+        return 2;
+    }
+    int failures = 0;
+#define CHECK(condition, text) do { int ok_ = (condition); printf("%-62s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
+    run_trace(50, 50, 0, 0);
+    figure *m = first_missionary(0);
+    CHECK(m != 0, "player 1 has a missionary");
+    if (m) {
+        // distances from the missionary to every tile within reach: the route asks for the sea, out of reach
+        int sea_x, sea_y;
+        mp_mapgen_sea_end(0, &sea_x, &sea_y);
+        map_routing_citizen_can_travel_over_land(m->x, m->y, sea_x, sea_y);
+        int tiles = 0, trees = 0, land = 0, reached = 0;
+        for (int y = 0; y < map_grid_height(); y++) {
+            for (int x = 0; x < map_grid_width(); x++) {
+                int o = map_grid_offset(x, y);
+                tiles++;
+                trees += map_terrain_is(o, TERRAIN_TREE);
+                // clear land, meadows and roads: where one walks
+                if (map_terrain_is(o, TERRAIN_NOT_CLEAR) && !map_terrain_is(o, TERRAIN_ROAD)) {
+                    continue;
+                }
+                land++;
+                reached += map_routing_distance(o) > 0 || o == m->grid_offset;
+            }
+        }
+        printf("woods: %d.%d %% of the map; within reach: %d of %d tiles of land (%d.%d %%)\n",
+            trees * 100 / tiles, trees * 1000 / tiles % 10, reached, land, reached * 100 / land,
+            reached * 1000 / land % 10);
+        CHECK(trees * 100 >= tiles * 12 && trees * 100 <= tiles * 18, "woods cover 12 to 18 % of the map");
+        CHECK(reached * 1000 >= land * 995, "at least 99.5 % of the land is within reach");
+    }
+    player_context_switch(0);
+    player_context_set_num_players(1);
+#undef CHECK
+    printf("%s\n", failures ? "DIFFERENT: parts of the map are out of reach" : "Identical: we go everywhere");
+    return failures ? 1 : 0;
+}
+
 // fog of war (MB.1, D-038): what player 1 discovers and sees
 static int command_fog(const char *file)
 {
-    if (!mp_mapgen_create_prepared(file, 2)) {
+    if (!mp_mapgen_create_prepared(file, 2, 0)) {
         printf("Unable to create the prepared map\n");
         return 2;
     }
@@ -2127,7 +2222,7 @@ static int command_terrain(const char *file, int num_players, int x0, int y0, in
 {
     size_t length = strlen(file);
     int is_save = length > 6 && strcmp(file + length - 6, ".mpsav") == 0;
-    if (is_save ? !mp_savegame_read(file) : !mp_mapgen_create_prepared(file, num_players)) {
+    if (is_save ? !mp_savegame_read(file) : !mp_mapgen_create_prepared(file, num_players, 0)) {
         printf("Unable to create the prepared map\n");
         return 2;
     }
@@ -2175,7 +2270,7 @@ static int command_terrain(const char *file, int num_players, int x0, int y0, in
 // a template whose empire does not trade by land and by sea is refused for the prepared maps
 static int command_notrade(const char *file)
 {
-    int refused = !mp_mapgen_create_prepared(file, 2) && mp_mapgen_lacks_trade_routes();
+    int refused = !mp_mapgen_create_prepared(file, 2, 0) && mp_mapgen_lacks_trade_routes();
     player_context_switch(0);
     player_context_set_num_players(1);
     printf("%s\n", refused ? "Identical: the map without trade by land and by sea is refused" :
@@ -2215,7 +2310,7 @@ static int command_tradecities(const char *file)
 // buying from the empire costs 50% more in multiplayer (M8.2, D-043)
 static int command_importprice(const char *file)
 {
-    if (!mp_mapgen_create_prepared(file, 2)) {
+    if (!mp_mapgen_create_prepared(file, 2, 0)) {
         printf("Unable to create the prepared map\n");
         return 2;
     }
@@ -2266,7 +2361,7 @@ static int fire_message_place(void)
 // a disaster far on a large map keeps its place: the button of the message goes to it (Alexandre, 2026-10-06)
 static int command_messagelocation(const char *file)
 {
-    if (!mp_mapgen_create_prepared(file, 4)) {
+    if (!mp_mapgen_create_prepared(file, 4, 0)) {
         printf("Unable to create the prepared map\n");
         return 2;
     }
@@ -2296,7 +2391,7 @@ static int command_messagelocation(const char *file)
 // prices between players (M8.3, D-043): a price per resource and buyer, a notice to the buyer when it changes
 static int command_tradeprices(const char *file)
 {
-    if (!mp_mapgen_create_prepared(file, 3)) {
+    if (!mp_mapgen_create_prepared(file, 3, 0)) {
         printf("Unable to create the prepared map\n");
         return 2;
     }
@@ -2426,7 +2521,7 @@ static void setup_trade(int marble, int iron, int open_route)
 
 static int start_trade_game(const char *file)
 {
-    if (!mp_mapgen_create_prepared(file, 2)) {
+    if (!mp_mapgen_create_prepared(file, 2, 0)) {
         printf("Unable to create the prepared map\n");
         return 0;
     }
@@ -3220,6 +3315,10 @@ int main(int argc, char **argv)
         result = command_messagelocation(file);
     } else if (strcmp(command, "missionarybridge") == 0) {
         result = command_missionarybridge(file);
+    } else if (strcmp(command, "placement") == 0) {
+        result = command_placement(file);
+    } else if (strcmp(command, "reachable") == 0 && argc > 3) {
+        result = command_reachable(file, atoi(argv[3]));
     } else if (strcmp(command, "outside") == 0) {
         result = command_outside(file);
     } else if (strcmp(command, "missions") == 0) {

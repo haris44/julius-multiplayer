@@ -72,9 +72,11 @@ Les règles propres au multijoueur :
   (le fournisseur est en vert) : même si ce joueur n'en a plus. Assécher le stock d'un rival fait
   partie du jeu ; pour revenir à l'empire, cessez d'acheter à ce joueur.
 - Un grand bras de mer traverse la carte d'ouest en est. À deux joueurs, les deux vivent sur la rive sud ; à
-  quatre, deux sur chaque rive, reliés par la route et le pont de César. Les joueurs de la côte y bâtissent leurs
+  quatre, deux sur chaque rive, reliés par la route et le pont de César. Les emplacements sont tirés au sort à
+  chaque partie. Les bois ne se traversent pas, mais aucun coin de terre n'est enfermé : on va partout. Les joueurs de la côte y bâtissent leurs
   docks (les navires de l'empire arrivent par le bord de la carte le plus proche) et leurs quais de pêche. Le joueur
-  de la pierre vit loin de l'eau : seul l'aqueduc de César, qui part d'un réservoir sur la côte, l'alimente.
+  de la pierre (fer, marbre et bois) vit loin de l'eau : seul l'aqueduc de César, qui part d'un réservoir sur la
+  côte, l'alimente.
   En multijoueur, un réservoir coupé de sa source garde son eau environ 5 minutes.
 - Brouillard de guerre (option du salon) : on ne voit que ce qu'on a découvert.
 
