@@ -427,6 +427,15 @@ le note « à valider ».
     emplacements tirés au sort ;
   - la carte est choisie dans le salon, ou tirée au sort.
   *Tests* : ceux des cartes préparées (`mp_prepared_map*`), appliqués à chaque carte.
+- [ ] **T4.15** **Nourritures inexploitées sur la carte** (Alexandre : « quelles sont les ressources qui restent
+  et que nous n'exploitons pas sur cette carte ? porc ? »). *Mesuré* (`simtool preparedmap`, modèle Lindum, qui
+  affiche désormais ce que chaque cité peut produire) : chacun n'a que le **blé et les légumes** ; les côtiers ont
+  en plus la pêche. Ni **fruits**, ni **porcs** pour personne : la nourriture vient de l'empire du modèle, pas du
+  plan de la carte (le modèle de test, Brugle, donne les fruits à la place des légumes). Les matières premières
+  sont bien celles du plan.
+  *Proposition, à valider* : le plan de la carte fixe aussi la nourriture. Blé et légumes pour tous ; les **porcs**
+  au joueur des terres, qui n'a pas la pêche ; les **fruits** aux côtiers. Ou tout à tout le monde, si l'on
+  préfère ne forcer le commerce que sur les matières.
 
 ## MC — Cartes multijoueur préparées et César (D-033, D-034)
 - [ ] **MC.1** Ouvrages de César dessinés en blanc (la teinte actuelle ne fait que foncer les images) ; son aqueduc

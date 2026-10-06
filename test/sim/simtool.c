@@ -1643,6 +1643,16 @@ static int command_preparedmap(const char *file, int num_players, int ticks)
             failures++;
         }
         player_context_switch(p);
+        // what this city may produce: its empire allows the food, the map its raw materials
+        static const char *NAMES[] = { "", "wheat", "vegetables", "fruit", "olives", "vines", "meat", "wine", "oil",
+            "iron", "timber", "clay", "marble", "weapons", "furniture", "pottery" };
+        printf("player %d may produce:", p + 1);
+        for (int r = RESOURCE_MIN; r <= RESOURCE_POTTERY; r++) {
+            if (empire_city_our_production_allowed(r)) {
+                printf(" %s", NAMES[r]);
+            }
+        }
+        printf("\n");
         static const int MATERIALS[] = { RESOURCE_IRON, RESOURCE_CLAY, RESOURCE_TIMBER, RESOURCE_OLIVES,
             RESOURCE_VINES, RESOURCE_MARBLE };
         for (int i = 0; i < 6; i++) {
@@ -2347,6 +2357,16 @@ static int command_inspect(const char *file)
             "trade cities %d by land (%d open), %d by sea (%d open)\n", p + 1, city_population(),
             city_finance_treasury(), zone[p], scenario_map_river_entry().x, scenario_map_river_entry().y, land,
             open_land, sea, open_sea);
+        // what this city may produce: its empire allows the food, the map its raw materials
+        static const char *NAMES[] = { "", "wheat", "vegetables", "fruit", "olives", "vines", "meat", "wine", "oil",
+            "iron", "timber", "clay", "marble", "weapons", "furniture", "pottery" };
+        printf("  may produce:");
+        for (int r = RESOURCE_MIN; r <= RESOURCE_POTTERY; r++) {
+            if (empire_city_our_production_allowed(r)) {
+                printf(" %s", NAMES[r]);
+            }
+        }
+        printf("\n");
         for (int i = p * MAX_FIGURES + 1; i < (p + 1) * MAX_FIGURES; i++) {
             figure *f = figure_get(i);
             if (f->state == FIGURE_STATE_ALIVE && mp_missionary_is_scout(f)) {
