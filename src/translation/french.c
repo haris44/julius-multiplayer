@@ -149,7 +149,7 @@ static translation_string all_strings[] = {
     {TR_MP_RESERVOIR_OF_CAESAR, "Réservoir de César : jamais à sec"},
     {TR_MP_OUTSIDE_TERRITORY, "Hors de votre territoire"},
     {TR_MP_MISSION_NEEDS_MISSIONARY, "Une mission demande un missionnaire à 20 cases au plus"},
-    {TR_MP_MISSION_NEEDS_MARBLE, "Cette mission demande 4 chargements de marbre"},
+    {TR_MP_MISSION_NEEDS_MARBLE, "Cette mission demande 30 chargements de marbre"},
     {TR_MP_TRAIN_MISSIONARY, "Former un missionnaire : "},
     {TR_MP_MISSIONARY_OUT, "Un missionnaire est en route"},
     {TR_MP_MISSIONARY_SELECTED, "Cliquez où envoyer le missionnaire"},

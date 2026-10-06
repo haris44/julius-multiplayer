@@ -40,7 +40,7 @@ essayées.
 
 - Chaque joueur a un missionnaire, qu'on déplace comme une légion : un clic sur lui, puis un clic là où il doit
   aller.
-- Il fonde de nouvelles missions (menu Éducation), à 20 cases de lui au plus. Chacune coûte 4 chargements de marbre
+- Il fonde de nouvelles missions (menu Éducation), à 20 cases de lui au plus. Chacune coûte 30 chargements de marbre
   et ouvre une nouvelle zone : c'est ainsi qu'on s'étend vers une forêt, une côte ou un gisement lointain.
 - Il peut mourir. Une mission en forme un nouveau pour 300 deniers.
 

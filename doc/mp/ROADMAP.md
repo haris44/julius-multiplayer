@@ -329,8 +329,11 @@ le note « à valider ».
   statistiques et un commerce plus fin, sans surcharger l'écran.
   - Proposer d'abord des maquettes (pages de design à regarder ensemble), avant tout code.
   - **?** Quelles statistiques en premier : évolution des lauriers et des notes, échanges par partenaire, prix ?
-- [ ] **T4.7** **Une mission supplémentaire coûte 30 chargements de marbre** (4 aujourd'hui), pour éviter les
+- [x] **T4.7** **Une mission supplémentaire coûte 30 chargements de marbre** (4 aujourd'hui), pour éviter les
   extensions trop sauvages. Pas de changement pour la première, gratuite tant qu'on n'a pas de terre.
+  *Fait* : `MP_MISSION_MARBLE_LOADS` passe à 30 (D-067). La première mission reste gratuite. Textes du salon
+  (message de construction), README et LISEZMOI mis à jour. Test `mp_missions` : 29 chargements ne suffisent pas,
+  30 sont prélevés.
 - [ ] **T4.8** Plan de la guerre : réfléchir à l'**impact du pont de César**, seul passage terrestre entre les deux
   rives à 4 joueurs, donc un endroit très stratégique. Peut-on le bloquer, le tenir, le couper ? Que fait César
   si un joueur le ferme ? Va dans CESAR.md §7 et DESIGN §7 avant M10.

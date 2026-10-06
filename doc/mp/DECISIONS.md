@@ -824,3 +824,8 @@
   - blé et légumes pour tous.
   À 2 joueurs : terres = fer, marbre, olives, porcs ; côte = bois, argile, vignes, pêche, fruits.
 - Classique : inchangé.
+
+### D-067 — Une mission coûte 30 chargements de marbre ; les cadeaux à César passent par des commandes (T4.7, T4.2)
+- 2026-10-07 · **adoptée** (Alexandre, essai du soir : T4.7 et T4.2) · précise D-037 et D-057
+- **Mission supplémentaire : 30 chargements de marbre** (4 auparavant), pour éviter les extensions trop sauvages. La
+  première mission reste gratuite tant que le joueur n'a pas de terre.

@@ -149,7 +149,7 @@ static translation_string all_strings[] = {
     {TR_MP_RESERVOIR_OF_CAESAR, "Reservoir of Caesar: never runs dry"},
     {TR_MP_OUTSIDE_TERRITORY, "Outside your territory"},
     {TR_MP_MISSION_NEEDS_MISSIONARY, "A mission needs a missionary within 20 tiles"},
-    {TR_MP_MISSION_NEEDS_MARBLE, "This mission needs 4 loads of marble"},
+    {TR_MP_MISSION_NEEDS_MARBLE, "This mission needs 30 loads of marble"},
     {TR_MP_TRAIN_MISSIONARY, "Train a missionary: "},
     {TR_MP_MISSIONARY_OUT, "A missionary is out"},
     {TR_MP_MISSIONARY_SELECTED, "Click where the missionary goes"},

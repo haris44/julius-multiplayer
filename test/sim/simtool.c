@@ -2034,7 +2034,15 @@ static int command_missions(const char *file)
     build_as(0, BUILDING_WAREHOUSE, mx - 10, my - 2, mx - 10, my - 2);
     building *warehouse = building_get(map_building_at(map_grid_offset(mx - 10, my - 2)));
     CHECK(!build_as(0, BUILDING_MISSION_POST, mx + 4, my, mx + 4, my), "the next mission needs marble");
-    for (int i = 0; i < 6; i++) {
+    // T4.7 (D-067): a further mission costs 30 loads, one load short is not enough
+    CHECK(MP_MISSION_MARBLE_LOADS == 30, "a further mission costs 30 loads of marble");
+    for (int i = 0; i < MP_MISSION_MARBLE_LOADS - 1; i++) {
+        building_warehouse_add_resource(warehouse, RESOURCE_MARBLE);
+    }
+    run_trace(50, 50, 0, 0);
+    CHECK(city_resource_count(RESOURCE_MARBLE) == MP_MISSION_MARBLE_LOADS - 1 &&
+        !build_as(0, BUILDING_MISSION_POST, mx + 4, my, mx + 4, my), "29 loads of marble are not enough");
+    for (int i = 0; i < 3; i++) {
         building_warehouse_add_resource(warehouse, RESOURCE_MARBLE);
     }
     run_trace(50, 50, 0, 0);
