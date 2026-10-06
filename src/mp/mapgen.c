@@ -714,7 +714,9 @@ static int place_caesar_reservoir(int column, int side, int *rx, int *ry)
 
 // for each player of the rocks, a reservoir of Caesar on the nearest coast and his aqueduct to the city: along a
 // column away from the sea, then westwards along a row to the east side of the city (D-034, D-047, D-062). He never
-// lets it dry up. The arrival points left free on the map for 4 have theirs too: the map is the same for 3 and 4.
+// lets it dry up. Only the arrival points of the rocks have one (reservoir_side): two on the map for 4, one on the map
+// for 2, taken by a player or not, so that the map is the same for 3 and 4. The arrival point left free by 3 players
+// is on the coast (draw_arrival_points): it has no reservoir, and no free arrival point gets one.
 static int place_caesar_water(void)
 {
     for (int p = 0; p < data.num_players; p++) {
