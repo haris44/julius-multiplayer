@@ -337,9 +337,16 @@ le note « à valider ».
   télémétrie de M9.9. Sept questions pour Alexandre (§10). Pas de code, donc pas de test.
 - [ ] **T4.7** **Une mission supplémentaire coûte 30 chargements de marbre** (4 aujourd'hui), pour éviter les
   extensions trop sauvages. Pas de changement pour la première, gratuite tant qu'on n'a pas de terre.
-- [ ] **T4.8** Plan de la guerre : réfléchir à l'**impact du pont de César**, seul passage terrestre entre les deux
+- [~] **T4.8** Plan de la guerre : réfléchir à l'**impact du pont de César**, seul passage terrestre entre les deux
   rives à 4 joueurs, donc un endroit très stratégique. Peut-on le bloquer, le tenir, le couper ? Que fait César
   si un joueur le ferme ? Va dans CESAR.md §7 et DESIGN §7 avant M10.
+  *Fait* (plan écrit, **à valider**, D-068) : [CESAR.md](CESAR.md) §7.6 et DESIGN §7.1. Ce qui passe par le pont
+  (caravanes entre rives, missionnaire, armées ; ni l'eau, ni l'étranger, ni les campagnes). Trois options ; proposé :
+  la **terre de César**, 15 cases autour du pont où rien ne se bâtit, pont ouvert à tous en paix, tenu par les
+  soldats en guerre sans gêner les neutres, légions sur sa terre comptées dans la colère. Relevé au passage :
+  aujourd'hui une porte semble pouvoir se poser sur une route de César dans sa zone (lu dans le code, à vérifier),
+  et un aqueduc ne traverse pas la mer (carte à 4 refaite : un réservoir par rive ayant un joueur des terres).
+  Tests à écrire avec M10, listés en DESIGN §7.1.
 - [ ] **T4.9** **Bug : l'aqueduc de César ne donne pas d'eau à J2, J3, J4** (essai du soir). *Diagnostic* : l'eau de
   chaque cité se calcule l'une après l'autre (`map_water_supply_update_reservoir_fountain_of_city`, tick 27), mais
   l'état « aqueduc en eau » de la grille n'est remis à zéro qu'au tour de la première cité. Au tour des suivantes,
