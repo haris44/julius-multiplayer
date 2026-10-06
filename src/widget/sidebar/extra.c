@@ -13,8 +13,11 @@
 #include "graphics/menu.h"
 #include "graphics/panel.h"
 #include "graphics/text.h"
+#include "mp/caesar.h"
+#include "mp/session.h"
 #include "scenario/criteria.h"
 #include "scenario/property.h"
+#include "translation/translation.h"
 
 #define EXTRA_INFO_LINE_SPACE 16
 #define EXTRA_INFO_HEIGHT_GAME_SPEED 64
@@ -108,6 +111,10 @@ static void set_extra_info_objectives(void)
     data.favor.target = 0;
     data.population.target = 0;
 
+    if (mp_caesar_is_active()) {
+        // multiplayer: the laurels to reach instead of a favor (D-071)
+        data.favor.target = mp_caesar_esteem_goal(mp_session_local_player_id());
+    }
     if (scenario_is_open_play()) {
         return;
     }
@@ -158,7 +165,9 @@ static int update_extra_info(int is_background)
         changed |= update_extra_info_value(city_rating_culture(), &data.culture.value);
         changed |= update_extra_info_value(city_rating_prosperity(), &data.prosperity.value);
         changed |= update_extra_info_value(city_rating_peace(), &data.peace.value);
-        changed |= update_extra_info_value(city_rating_favor(), &data.favor.value);
+        // multiplayer: the laurels, the esteem of Caesar, instead of the favor (D-071)
+        int favor = mp_caesar_is_active() ? mp_caesar_laurels(mp_session_local_player_id()) / 10 : city_rating_favor();
+        changed |= update_extra_info_value(favor, &data.favor.value);
         changed |= update_extra_info_value(city_population(), &data.population.value);
     }
     return changed;
@@ -182,6 +191,16 @@ static int draw_extra_info_objective(
     } else {
         lang_text_draw(text_group, text_id, x_offset + 11, y_offset, FONT_NORMAL_WHITE);
     }
+    font_t font = obj->value >= obj->target ? FONT_NORMAL_GREEN : FONT_NORMAL_RED;
+    int width = text_draw_number(obj->value, '@', "", x_offset + 11, y_offset + EXTRA_INFO_LINE_SPACE, font);
+    text_draw_number(obj->target, '(', ")", x_offset + 11 + width, y_offset + EXTRA_INFO_LINE_SPACE, font);
+    return EXTRA_INFO_LINE_SPACE * 2;
+}
+
+// multiplayer: the laurels and the laurels to reach, in place of the favor (D-071)
+static int draw_extra_info_laurels(int x_offset, int y_offset, objective *obj)
+{
+    text_draw(translation_for(TR_MP_NOTES_LAURELS), x_offset + 11, y_offset, FONT_NORMAL_WHITE, 0);
     font_t font = obj->value >= obj->target ? FONT_NORMAL_GREEN : FONT_NORMAL_RED;
     int width = text_draw_number(obj->value, '@', "", x_offset + 11, y_offset + EXTRA_INFO_LINE_SPACE, font);
     text_draw_number(obj->target, '(', ")", x_offset + 11 + width, y_offset + EXTRA_INFO_LINE_SPACE, font);
@@ -229,7 +248,11 @@ static void draw_extra_info_panel(void)
         y_current_line += draw_extra_info_objective(data.x_offset, y_current_line, 53, 1, &data.culture, 0);
         y_current_line += draw_extra_info_objective(data.x_offset, y_current_line, 53, 2, &data.prosperity, 0);
         y_current_line += draw_extra_info_objective(data.x_offset, y_current_line, 53, 3, &data.peace, 0);
-        y_current_line += draw_extra_info_objective(data.x_offset, y_current_line, 53, 4, &data.favor, 0);
+        if (mp_caesar_is_active()) {
+            y_current_line += draw_extra_info_laurels(data.x_offset, y_current_line, &data.favor);
+        } else {
+            y_current_line += draw_extra_info_objective(data.x_offset, y_current_line, 53, 4, &data.favor, 0);
+        }
         y_current_line += draw_extra_info_objective(data.x_offset, y_current_line, 4, 6, &data.population, 1);
     }
 }

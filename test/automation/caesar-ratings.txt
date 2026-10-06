@@ -1,0 +1,25 @@
+# Caesar in the ratings advisor (T4.1, D-071): in multiplayer, the fourth pillar shows the laurels, the esteem of
+# Caesar, instead of the favor; selected, it says the laurels gained last month, the trend, the place of the city in
+# the province and what brings laurels. Run from the repository root, alone among the worktrees:
+#   tools/serial.sh tools/run-automation.sh test/automation/caesar-ratings.txt 180
+wait 10
+load test/data/valentia57.sav
+rules mp
+wait 5
+# about fifteen months: a history of the laurels of the city
+ticks 12500
+wait 3
+rclick 400 300
+wait 3
+key Return
+wait 3
+key 4
+wait 5
+screenshot build/automation/ratings-advisor.png
+# the fourth pillar, the laurels
+click 575 380
+wait 5
+screenshot build/automation/ratings-laurels.png
+key Escape
+wait 5
+quit

@@ -82,10 +82,12 @@ MAPGEN_PICTURE=carte.ppm ./simtool preparedmap SAVE 2 10   # ... et son image (s
                                             # toujours ; tradeisolation : commerce avec l'empire propre à chacun
 ./simtool caesarstate SAVE                  # lauriers et colère de César : somme de contrôle, sauvegarde, reprise
 ./simtool caesarlaurels SAVE                # notes et lauriers mensuels, rangs, lettre, victoire au score
+./simtool caesarhistory SAVE                # historique mensuel des lauriers : gain, tendance, estime, sauvegarde
 ```
 
 Pour voir César dans une vraie cité (lettre d'un nouveau rang, conseiller impérial) :
-`tools/run-automation.sh test/automation/caesar-advisor.txt 180`.
+`tools/run-automation.sh test/automation/caesar-advisor.txt 180`. Le pilier des lauriers de l'évaluation de la cité :
+`tools/serial.sh tools/run-automation.sh test/automation/caesar-ratings.txt 180`.
 
 ## 3. Pilotage du vrai jeu : `--automation` (captures d'écran)
 

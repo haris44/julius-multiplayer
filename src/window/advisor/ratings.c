@@ -9,6 +9,7 @@
 #include "graphics/window.h"
 #include "scenario/criteria.h"
 #include "scenario/property.h"
+#include "window/mp_ratings.h"
 
 #define ADVISOR_HEIGHT 27
 
@@ -88,17 +89,22 @@ static int draw_background(void)
     has_reached = !has_peace_goal || peace >= scenario_criteria_peace();
     draw_rating_column(350, 274, peace, has_reached);
 
-    // favor
+    // favor; multiplayer: the laurels, the esteem of Caesar (T4.1, D-071), the favor stays frozen and hidden
     int favor = city_rating_favor();
-    int has_favor_goal = !open_play && scenario_criteria_favor_enabled();
     button_border_draw(440, 286, 110, 66, focus_button_id == SELECTED_RATING_FAVOR);
-    lang_text_draw_centered(53, 4, 440, 294, 110, FONT_NORMAL_BLACK);
-    text_draw_number_centered(favor, 440, 309, 100, FONT_LARGE_BLACK);
-    width = text_draw_number(has_favor_goal ? scenario_criteria_favor() : 0,
-            '@', " ", 445, 334, FONT_NORMAL_BLACK);
-    lang_text_draw(53, 5, 445 + width, 334, FONT_NORMAL_BLACK);
-    has_reached = !has_favor_goal || favor >= scenario_criteria_favor();
-    draw_rating_column(470, 274, favor, has_reached);
+    if (window_mp_ratings_is_active()) {
+        window_mp_ratings_draw_pillar_text(440, 110);
+        draw_rating_column(470, 274, window_mp_ratings_pillar_height(), 1);
+    } else {
+        int has_favor_goal = !open_play && scenario_criteria_favor_enabled();
+        lang_text_draw_centered(53, 4, 440, 294, 110, FONT_NORMAL_BLACK);
+        text_draw_number_centered(favor, 440, 309, 100, FONT_LARGE_BLACK);
+        width = text_draw_number(has_favor_goal ? scenario_criteria_favor() : 0,
+                '@', " ", 445, 334, FONT_NORMAL_BLACK);
+        lang_text_draw(53, 5, 445 + width, 334, FONT_NORMAL_BLACK);
+        has_reached = !has_favor_goal || favor >= scenario_criteria_favor();
+        draw_rating_column(470, 274, favor, has_reached);
+    }
 
     // bottom info box
     inner_panel_draw(64, 356, 32, 4);
@@ -131,6 +137,10 @@ static int draw_background(void)
             }
             break;
         case SELECTED_RATING_FAVOR:
+            if (window_mp_ratings_is_active()) {
+                window_mp_ratings_draw_explanation(72, 359, 496);
+                break;
+            }
             lang_text_draw(53, 4, 72, 359, FONT_NORMAL_WHITE);
             if (favor <= 90) {
                 lang_text_draw_multiline(53, 27 + city_rating_selected_explanation(),
@@ -172,7 +182,7 @@ static int get_tooltip_text(void)
         case SELECTED_RATING_CULTURE: return 102;
         case SELECTED_RATING_PROSPERITY: return 103;
         case SELECTED_RATING_PEACE: return 104;
-        case SELECTED_RATING_FAVOR: return 105;
+        case SELECTED_RATING_FAVOR: return window_mp_ratings_is_active() ? 0 : 105; // the tooltip speaks of favor
         default: return 0;
     }
 }

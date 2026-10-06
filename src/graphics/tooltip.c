@@ -11,8 +11,11 @@
 #include "graphics/screen.h"
 #include "graphics/text.h"
 #include "graphics/window.h"
+#include "mp/caesar.h"
+#include "mp/session.h"
 #include "scenario/criteria.h"
 #include "scenario/property.h"
+#include "translation/translation.h"
 #include "window/advisors.h"
 
 #include <stdlib.h>
@@ -285,6 +288,16 @@ static void draw_senate_tooltip(tooltip_context *c)
             x + 140 + width, y + 47, FONT_SMALL_PLAIN, COLOR_TOOLTIP);
     }
 
+    if (mp_caesar_is_active()) {
+        // multiplayer: the laurels and the laurels to reach, the esteem of Caesar, instead of the favor (D-071)
+        int player_id = mp_session_local_player_id();
+        text_draw(translation_for(TR_MP_NOTES_LAURELS), x + 5, y + 61, FONT_SMALL_PLAIN, COLOR_TOOLTIP);
+        int laurels_width = text_draw_number_colored(mp_caesar_laurels(player_id) / 10, '@', " ",
+            x + 140, y + 61, FONT_SMALL_PLAIN, COLOR_TOOLTIP);
+        text_draw_number_colored(mp_caesar_esteem_goal(player_id), '(', ")",
+            x + 140 + laurels_width, y + 61, FONT_SMALL_PLAIN, COLOR_TOOLTIP);
+        return;
+    }
     lang_text_draw_colored(68, 152, x + 5, y + 61, FONT_SMALL_PLAIN, COLOR_TOOLTIP);
     text_draw_number_colored(city_rating_favor(), '@', " ",
         x + 140, y + 61, FONT_SMALL_PLAIN, COLOR_TOOLTIP);
