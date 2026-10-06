@@ -599,7 +599,8 @@
 - 2026-10-06 · **adoptée** (Alexandre : « sur les maps, fais en sorte que nous puissions aller partout » ; « il ne
   faut pas que les forêts soient traversables, juste qu'il y ait moins de forêt » ; « donne aussi la compétence […]
   à celui qui commence dans les terres » ; « je parle des chantiers de bois » ; « fais un random entre les joueurs
-  pour leur placement, le J1 ne pop pas forcément dans les terres »)
+  pour leur placement, le J1 ne pop pas forcément dans les terres ») ; le bois du joueur des terres **remplacé
+  par D-058**
 - **Moins de forêt** : 14 % de la carte pour 2, 17,5 % de celle pour 4, au lieu de 34 et 37 % (seuil du bruit des
   bois, `WOODS_THRESHOLD`). Les bois restent **infranchissables**, comme dans l'original. Un premier essai qui
   laissait le missionnaire traverser les bois a été abandonné à la demande d'Alexandre.
@@ -608,7 +609,7 @@
   - les autres reçoivent un passage, ouvert par les arbres les moins nombreux.
   Toutes les terres où l'on marche sont atteignables depuis la route (test `mp_prepared_map_reachable_*` : 100 %).
 - Le **joueur des terres** (celui de la pierre et de l'aqueduc de César) exploite aussi le **bois**, avec des bois
-  près de sa cité.
+  près de sa cité. **Remplacé par D-058** : le bois va aux seuls côtiers.
 - **Emplacements tirés au sort** entre les joueurs présents, par l'hôte, avec le nombre que le salon tire à chaque
   partie. La carte part ensuite chez les clients, comme avant. À 3 joueurs, le sud-est reste libre ; seul, on reste
   dans les terres, pour que quelqu'un ait le marbre des missions. Les tests gardent l'ordre du plan (graine 0).
@@ -670,3 +671,40 @@
   côte (4 marbres), en y bâtissant un réservoir et en tirant son propre aqueduc (environ 80 cases). C'est loin et
   cher, et cet aqueduc-là se coupe aussi en guerre : je le laisse. Si Alexandre veut fermer cette porte : interdire
   le bord de mer aux réservoirs du joueur des terres.
+
+### D-058 — Trois troupes, trois coûts : bois des côtiers pour les javeliniers (précise D-020, revoit D-052)
+- 2026-10-06 · **adoptée** (Alexandre : « cavaliers avec rien : unité rapide et 1,5x moins forte que le légionnaire,
+  javeliniers 1.1x moins fort que le légionnaire (+ à distance), et légionnaire (le + fort nécessitant des armes),
+  avec l'extraction de bois uniquement pour les côtiers » ; puis « oui écris le ») ; chiffres **à régler** (MG.5,
+  M11)
+- **Constat** : dans l'original, seuls les légionnaires coûtent une ressource, un chargement d'armes par recrue
+  (`building/barracks.c`). Javeliniers et cavaliers sont gratuits mais faibles. Les légions dominent surtout par
+  leurs bonus de formation, qui n'existent que pour elles.
+- **Mesure de la force** : points de vie × attaque, qui décide d'un duel au corps à corps (les défenses de base des
+  soldats sont à 0 ; un coup retire l'attaque moins la défense, `figure/combat.c`).
+- **Cavaliers** : gratuits, les plus rapides (vitesse 3, contre 2 aux javeliniers et 1 aux légionnaires).
+  **Inchangés** : 120 × 8 contre 150 × 10, soit 1,56 fois moins forts que le légionnaire, ce que demande Alexandre.
+- **Javeliniers** : un chargement de **bois** par recrue, livré à la caserne comme les armes, dans un stock séparé
+  (5 au plus), seulement si la cité a une légion de javeliniers. En multijoueur seulement, **136 points de vie et
+  10 d'attaque** au lieu de 80 et 4, soit 1,1 fois moins forts ; tir (portée 10, 4 dégâts) et vitesse inchangés.
+- **Légionnaires** : inchangés, un chargement d'armes par recrue. Leurs **bonus de formation restent** : +4 en
+  attaque arrêtés en formation ; en défense +7 en tortue, +4 en double ligne, −4 pris de flanc ; un javelot ne fait
+  que 1 dégât à une tortue arrêtée. Rôles voulus : la légion tient le terrain mais marche lentement ; les
+  javeliniers gagnent contre une légion en marche ou prise de flanc ; les cavaliers font les raids et chassent les
+  caravanes (M10.3).
+- **Bois aux seuls côtiers** (cartes préparées, `mp/mapgen.c`) :
+  - à 2 joueurs, le joueur des terres garde fer, marbre et olives ; il perd le bois et les bois plantés près de sa
+    cité pour lui (D-052). Il achète du bois ou des meubles pour ses maisons ;
+  - à 4 joueurs, les trois côtiers ont le bois, y compris celui du sud-est (vignes, argile) : une cité à légions
+    face à trois cités à javeliniers. Le fer reste au seul joueur des terres.
+- En classique, rien ne change : javeliniers gratuits, table des figures d'origine (parité).
+- **Risque** à mesurer après M10.2 : des javeliniers presque aussi forts, deux fois plus rapides et qui tirent
+  pourraient devenir la meilleure troupe en terrain découvert (batailles simulées : légion arrêtée, en marche, prise
+  de flanc).
+- **Pistes écartées** :
+  - le blé comme fourrage des cavaliers : les fermes demandent le même pré que l'élevage de porcs, sans asymétrie
+    entre joueurs ;
+  - les porcs changés en chevaux : la viande est une nourriture des maisons et partage sa place avec le poisson des
+    quais ; aucune image de chevaux pour l'élevage, l'icône, la charrette ou l'entrepôt ;
+  - de nouvelles marchandises (lances, chevaux) : Julius ne charge aucune image nouvelle (il faudrait le chargeur
+    d'Augustus) et le moteur est limité à 16 ressources (`RESOURCE_MAX`, format des sauvegardes).

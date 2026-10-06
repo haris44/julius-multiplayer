@@ -5,6 +5,26 @@
 
 ---
 
+## 2026-10-06 — Troupes et matières de guerre (D-058, jalon MG)
+
+**Demande d'Alexandre** : les légions sont trop fortes face aux autres troupes ; répartir les atouts militaires
+entre joueur des terres et côtiers (idées de départ : des lances faites de bois, des chevaux pour les cavaliers).
+
+**Fait** (documentation seulement, aucun code)
+- Étude : seuls les légionnaires coûtent une ressource (les armes) ; leur force vient surtout de leurs bonus de
+  formation. Nouvelles marchandises écartées (Julius ne charge aucune image nouvelle, 16 ressources au plus), comme
+  les porcs changés en chevaux (la viande est une nourriture et partage sa place avec le poisson des quais).
+- D-058, choix d'Alexandre : cavaliers gratuits et inchangés, javeliniers renforcés (136 points de vie, attaque 10)
+  et payés en bois, légionnaires payés en armes avec leurs bonus de formation, bois aux seuls côtiers. D-052 revu
+  sur ce point ; DESIGN §6.2.
+- Jalon MG (MG.1 à MG.5), placé avant M11.
+- Écrit dans `julius/` pendant qu'une autre session y travaillait (D-057, code de M9 non commité) : seuls mes
+  ajouts sont commités, indexés à part. D-058 plutôt que D-056, que je crois réservé.
+
+**Prochaine étape** : M9 continue ; MG.1 à MG.4 possibles à tout moment, MG.5 après M10.2.
+
+**Points ouverts** : les chiffres des javeliniers ne seront vérifiés qu'avec la guerre entre joueurs.
+
 ## 2026-10-06 — Plus d'étangs : l'aqueduc de César, seule eau du joueur des terres (MC.6, D-055)
 
 **Demande d'Alexandre** : « retire les points d'eau, il faut que le mécanisme d'assèchement via l'aqueduc

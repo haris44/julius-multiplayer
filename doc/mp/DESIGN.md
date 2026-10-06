@@ -297,8 +297,11 @@ Les conditions de fin se choisissent dans le salon :
   cité. Un atelier est donc aussi constructible si une route commerciale ouverte, avec l'empire ou un joueur,
   fournit sa matière première.
 - Autorisations **complémentaires** entre joueurs, avec des gisements présents sur le terrain de chacun.
-- **Armes** : stratégiques, car les casernes en consomment pour chaque soldat. Seule une partie des joueurs peut
+- **Armes** : stratégiques, car les casernes en consomment une par légionnaire. Seule une partie des joueurs peut
   extraire le fer et forger, les autres doivent acheter ou conquérir. L'empire en vend peu.
+- **Bois** (D-058) : les javeliniers, renforcés en multijoueur, coûtent un chargement de bois, que seuls les
+  joueurs côtiers extraient. Les cavaliers restent gratuits. Trois troupes, trois coûts : armes (joueur des
+  terres), bois (côtiers), rien (cavaliers, rapides et plus faibles).
 - Équilibrage (M10) : on mesure par des parties simulées sans tête le temps nécessaire à chaque joueur pour
   aligner une légion, et on règle prix, quotas, gisements et fonds de départ.
 

@@ -463,6 +463,25 @@ César revient comme arbitre de la partie. Jouable en paix et **seul** : livré 
 - [ ] **M10.8** Moral et totaux par camp, arcs de triomphe ; combats rejoués et duels scriptés (CESAR §10.3),
   captures.
 
+## MG — Troupes et matières de guerre (D-058)
+> MG.1 à MG.4 se font seuls, à tout moment (partie seule, essais contre les envahisseurs de l'IA) ; MG.5 attend la
+> guerre entre joueurs (M10.2).
+- [ ] **MG.1** Javeliniers renforcés en multijoueur : 136 points de vie et 10 d'attaque ; cavaliers et légionnaires
+  inchangés. *Critères* : ctest (valeurs selon le mode) ; parité verte, table d'origine en classique.
+- [ ] **MG.2** La caserne reçoit du bois et en consomme un chargement par javelinier : stock séparé des armes (5 au
+  plus), sauvegardé dans le `.mpsav` ; bois livré seulement si la cité a une légion de javeliniers. *Critères* :
+  ctest (sans bois aucun javelinier, un javelinier par chargement, armes réservées aux légionnaires, cavaliers
+  gratuits) ; en classique, javeliniers gratuits (parité) ; partie seule (`tools/mp-solo-test.sh`) où un fort de
+  javeliniers se remplit grâce au bois.
+- [ ] **MG.3** Bois aux seuls côtiers sur les cartes préparées : retiré au joueur des terres avec ses bois proches,
+  donné au joueur du sud-est à 4. *Critères* : `mp_prepared_map_*` (autorisations et matériaux de chaque
+  emplacement, terre accessible).
+- [ ] **MG.4** Fenêtres : la caserne montre ses stocks d'armes et de bois, le fort ce qu'il lui faut pour recruter ;
+  textes en français et en anglais. *Critères* : captures du vrai jeu sans fenêtre.
+- [ ] **MG.5** Équilibre des troupes, après M10.2 : batailles simulées légion contre javeliniers (arrêtée en tortue,
+  en marche, prise de flanc), cavaliers contre javeliniers et contre caravanes ; chiffres ajustés et notés dans
+  DECISIONS (avec M11.3). *Critères* : bornes en ctest.
+
 ## M11 — Équilibrage et finitions
 - [ ] **M11.1** Bornes d'équilibre en ctest (CESAR §10.3 et §10.5) : frappe ciblée, guerre totale, dons seuls,
   rapport des pertes entre victime et agresseur.
