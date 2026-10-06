@@ -334,6 +334,23 @@ le note « à valider ».
 - [ ] **T4.8** Plan de la guerre : réfléchir à l'**impact du pont de César**, seul passage terrestre entre les deux
   rives à 4 joueurs, donc un endroit très stratégique. Peut-on le bloquer, le tenir, le couper ? Que fait César
   si un joueur le ferme ? Va dans CESAR.md §7 et DESIGN §7 avant M10.
+- [ ] **T4.9** **Bug : l'aqueduc de César ne donne pas d'eau à J2, J3, J4** (essai du soir). *Diagnostic* : l'eau de
+  chaque cité se calcule l'une après l'autre (`map_water_supply_update_reservoir_fountain_of_city`, tick 27), mais
+  l'état « aqueduc en eau » de la grille n'est remis à zéro qu'au tour de la première cité. Au tour des suivantes,
+  `fill_aqueducts_from_offset` saute les cases déjà en eau (`!map_aqueduct_at`) : la propagation depuis le réservoir
+  de César s'arrête net et n'atteint jamais leur réservoir. Seul J1 reçoit l'eau.
+  *Correctif prévu* : une marque « visitée » propre à chaque passage, en multijoueur seulement (le classique reste
+  identique). *Test* : `simtool` avec le joueur des terres en J2, J3 et J4 (graines de placement), réservoir
+  alimenté et maisons desservies.
+- [ ] **T4.10** **La difficulté est celle du salon, pour toute la partie** (essai du soir). Celle réglée dans le menu
+  principal ne règle pas la partie, et on ne doit plus pouvoir la régler par joueur.
+  *État* : la simulation lit bien la difficulté du salon (`game_rules_difficulty`). Mais le menu Options,
+  Difficulté, reste ouvert en partie, change seulement le réglage local, sans effet. La ville affiche aussi ce
+  réglage local (`window/city.c`), d'où la confusion.
+  *À faire* :
+  - en multijoueur, le menu Difficulté est désactivé, et l'affichage montre la difficulté du salon ;
+  - vérifier ce que voient les clients dans le salon (la difficulté de l'hôte) ;
+  - « facile » par défaut (T4.4).
 
 ## MC — Cartes multijoueur préparées et César (D-033, D-034)
 - [ ] **MC.1** Ouvrages de César dessinés en blanc (la teinte actuelle ne fait que foncer les images) ; son aqueduc
