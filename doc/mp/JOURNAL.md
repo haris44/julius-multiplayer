@@ -5,6 +5,36 @@
 
 ---
 
+## 2026-10-06 — Dépôt GitHub, versions Linux et Windows (M5.6, D-054)
+
+**Fait**
+- Code poussé sur `github.com/haris44/julius-multiplayer` (fork public de Julius, branche `multiplayer`, remote
+  `github`). Avant l'envoi : aucune donnée du jeu ni secret, et l'adresse des 88 commits d'Alexandre remplacée par
+  son adresse privée GitHub (son choix).
+- `.github/workflows/multiplayer.yml` : tous les tests puis une AppImage sous Linux, tous les tests puis un dossier
+  `.exe` + DLL sous Windows. Les compilations de Julius sont désactivées sur le fork.
+- Premier essai Windows rouge : `ws2_32` manquait à l'édition de liens (jeu, autopilot, simtool). Corrigé ; les deux
+  sont verts.
+- LISEZMOI pour Mac, Linux et Windows (programme non signé, pare-feu, FUSE, Wayland).
+
+**Appris**
+- Les journaux d'une tâche se lisent par l'API avec le jeton de `gh` ; `gh run view --log-failed` attend la fin de
+  toute la compilation.
+- L'AppImage (Ubuntu 24.04, SDL 2.30) embarque libdecor et les bibliothèques Wayland : elle peut s'afficher en
+  Wayland comme en X11. Elle utilise le runtime statique (pas besoin de libfuse2).
+- GCC sous Windows signale environ 40 avertissements de format que clang ne voit pas : à nettoyer un jour.
+- `mp_lan_pause` échouait parfois sous charge : le client levait la pause « une seconde » après l'avoir demandée,
+  mesurée avec `time()` (secondes entières), donc parfois presque aussitôt, avant que les autres la voient.
+  Il la lève maintenant deux secondes après l'avoir vue lui-même ; ce que le test vérifie ne change pas.
+  Vérifié : 3 passages de 18 tests réseau en parallèle (-j16).
+
+**Prochaine étape** : qu'Alexandre essaie l'AppImage sur Fedora 44 ; puis M9.2.
+
+**Points ouverts**
+- M5.6 : comparer les traces d'une même partie sur Mac, Linux et Windows.
+
+---
+
 ## 2026-10-06 — Réponses d'Alexandre sur César (D-053), module `mp/caesar` (M9.1)
 
 **Fait**

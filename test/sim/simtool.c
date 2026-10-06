@@ -561,7 +561,9 @@ static int command_mpnode(int argc, char **argv)
     }
     int ticks = atoi(is_host ? argv[6] : argv[5]);
     int cheat = is_join && argc >= 7 && strcmp(argv[6], "desync") == 0;
-    // 'pause': this client pauses the game at half time and resumes it a second later;
+    // 'pause': this client pauses the game at half time and resumes it one to two seconds after it saw the pause
+    // (time() counts whole seconds: a pause of 'one second' from the request could end at once on a busy computer,
+    // before the other players saw it);
     // 'leave': this client leaves the game at half time
     int pauser = is_join && argc >= 7 && strcmp(argv[6], "pause") == 0;
     // 'baddata': this client has other game data; the host must refuse it
@@ -571,7 +573,7 @@ static int command_mpnode(int argc, char **argv)
         mp_lockstep_test_alter_game_data();
     }
     int leaver = is_join && argc >= 7 && strcmp(argv[6], "leave") == 0;
-    time_t pause_start = 0;
+    time_t pause_start = 0, pause_seen_at = 0;
     int paused_seen = 0, ticks_while_paused = 0, tick_at_pause = -1;
     int ok = is_host ? mp_lockstep_host(atoi(argv[3]), atoi(argv[4]), argv[5], cities || generate)
                      : mp_lockstep_join(argv[3], atoi(argv[4]));
@@ -617,7 +619,10 @@ static int command_mpnode(int argc, char **argv)
                 if (tick_in_game - tick_at_pause > ticks_while_paused) {
                     ticks_while_paused = tick_in_game - tick_at_pause;
                 }
-                if (pauser && time(0) - pause_start >= 1) {
+                if (pauser && !pause_seen_at) {
+                    pause_seen_at = time(0);
+                }
+                if (pauser && time(0) - pause_seen_at >= 2) {
                     mp_lockstep_request_pause(0);
                 }
             } else {

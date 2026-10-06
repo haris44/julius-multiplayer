@@ -166,8 +166,11 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
   `mp_lan_player_leaves`, `mp_lan_resume_mpsav`.
 - [ ] **M5.6** Intégration continue multiplateforme (macOS arm64, Windows x64, Linux) qui compare les traces de
   rejeu. *En cours* (D-054) : dépôt `haris44/julius-multiplayer` ; `.github/workflows/multiplayer.yml` lance tous
-  les tests sous Linux et Windows (MinGW 64 bits) et fabrique l'AppImage et le dossier Windows. Reste : une tâche
-  qui compare les traces d'une même partie multijoueur calculées sur Mac, Linux et Windows.
+  les tests sous Linux et Windows (MinGW 64 bits) et fabrique l'AppImage et le dossier Windows. Premier passage
+  vert le 2026-10-06 : 173 tests sous Linux, 162 sous Windows (les parties en réseau sur un même ordinateur n'y
+  tournent pas : leurs scripts sont en `sh`). Le `.exe` ne demande que SDL2 et SDL2_mixer, fournies, et des
+  bibliothèques de Windows 10. Reste : une tâche qui compare les traces d'une même partie multijoueur calculées sur
+  Mac, Linux et Windows.
 - [ ] **M5.7** Première vraie partie en LAN avec Alexandre (Mac et PC) et retour d'expérience.
 - [x] **M5.8** Salon complet : choix des règles (difficulté, dieux), joueurs « prêts » avant le lancement par l'hôte,
   vérification que tous ont les mêmes données du jeu.
