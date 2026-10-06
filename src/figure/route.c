@@ -78,11 +78,13 @@ void figure_route_add(figure *f)
         int can_travel;
         switch (f->terrain_usage) {
             case TERRAIN_USAGE_ENEMY:
+                // the limits of tiles grow with the large multiplayer maps (D-064), unchanged in a classic game
                 can_travel = map_routing_noncitizen_can_travel_over_land(f->x, f->y,
-                    f->destination_x, f->destination_y, f->destination_building_id, 5000);
+                    f->destination_x, f->destination_y, f->destination_building_id,
+                    map_routing_noncitizen_max_tiles(5000));
                 if (!can_travel) {
                     can_travel = map_routing_noncitizen_can_travel_over_land(f->x, f->y,
-                        f->destination_x, f->destination_y, 0, 25000);
+                        f->destination_x, f->destination_y, 0, map_routing_noncitizen_max_tiles(25000));
                     if (!can_travel) {
                         can_travel = map_routing_noncitizen_can_travel_through_everything(
                             f->x, f->y, f->destination_x, f->destination_y);
@@ -94,6 +96,7 @@ void figure_route_add(figure *f)
                     f->destination_x, f->destination_y);
                 break;
             case TERRAIN_USAGE_ANIMAL:
+                // through the building -1 (none): a search without limit of tiles, also on the large maps
                 can_travel = map_routing_noncitizen_can_travel_over_land(f->x, f->y,
                     f->destination_x, f->destination_y, -1, 5000);
                 break;

@@ -330,6 +330,8 @@ add_test(NAME mp_build_menu_owner COMMAND simtool menuowner brugle-massilia-star
 # Long routes on the large map (T4.17): paths within the limit of a figure, a caravan between the farthest players,
 # ships on a sea as large as the grid
 add_test(NAME mp_long_routes COMMAND simtool longroutes brugle-massilia-start.sav)
+# K-review-fixes (T4.17): an enemy army from the edge farthest from a city finds its way over the land and reaches it
+add_test(NAME mp_far_invasion COMMAND simtool farinvasion brugle-massilia-start.sav)
 
 # Territories (MT.1, D-036): build only in one's zone, which follows the settled buildings and the missions
 add_test(NAME mp_territory COMMAND simtool territory brugle-massilia-start.sav)

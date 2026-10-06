@@ -28,6 +28,13 @@ int map_routing_noncitizen_can_travel_over_land(
     int src_x, int src_y, int dst_x, int dst_y, int only_through_building_id, int max_tiles);
 int map_routing_noncitizen_can_travel_through_everything(int src_x, int src_y, int dst_x, int dst_y);
 
+/**
+ * Limit of tiles of a search of the enemies over the land: the number of the original in a classic game; in a
+ * multiplayer game, scaled with the tiles of the map, never below the original (doc/mp/DECISIONS.md D-064)
+ * @param classic_max_tiles Limit of the original, chosen for maps of at most 162 x 162 tiles
+ */
+int map_routing_noncitizen_max_tiles(int classic_max_tiles);
+
 void map_routing_block(int x, int y, int size);
 
 void map_routing_save_state(buffer *buf);

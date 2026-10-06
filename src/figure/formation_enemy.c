@@ -266,7 +266,8 @@ static void set_native_target_building(formation *m)
 static void approach_target(formation *m)
 {
     if (map_routing_noncitizen_can_travel_over_land(m->x_home, m->y_home,
-            m->destination_x, m->destination_y, m->destination_building_id, 400) ||
+            m->destination_x, m->destination_y, m->destination_building_id,
+            map_routing_noncitizen_max_tiles(400)) || // larger on the large multiplayer maps (D-064)
         map_routing_noncitizen_can_travel_through_everything(m->x_home, m->y_home,
             m->destination_x, m->destination_y)) {
         int x_tile, y_tile;
@@ -303,6 +304,7 @@ int formation_enemy_move_formation_to(const formation *m, int x, int y, int *x_t
             formation_layout_position_x(m->layout, i),
             formation_layout_position_y(m->layout, i)) - base_offset;
     }
+    // a search around (x, y) for a place within 10 tiles: the same on every size of map (D-064)
     map_routing_noncitizen_can_travel_over_land(x, y, -1, -1, 0, 600);
     for (int r = 0; r <= 10; r++) {
         int x_min, y_min, x_max, y_max;
@@ -545,6 +547,7 @@ static void update_enemy_formation(formation *m, int *roman_distance)
         army->home_y = m->y_home;
         army->layout = m->layout;
         *roman_distance = 0;
+        // through the building 100000 (none): a search without limit of tiles, also on the large maps (D-064)
         map_routing_noncitizen_can_travel_over_land(m->x_home, m->y_home, -1, -1, 100000, 300);
         int x_tile, y_tile;
         if (map_soldier_strength_get_max(m->x_home, m->y_home, 16, &x_tile, &y_tile)) {

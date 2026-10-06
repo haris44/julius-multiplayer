@@ -76,6 +76,7 @@
 #include "mp/missionary.h"
 #include "mp/territory.h"
 #include "scenario/map.h"
+#include "scenario/invasion.h"
 #include "game/resource.h"
 #include "mp/colors.h"
 #include "mp/lobby.h"
@@ -149,6 +150,8 @@ static int usage(void)
     printf("  simtool longroutes SAVE                prepared map for 4: paths between the cities within the limit of\n");
     printf("                                         a figure, a caravan between the farthest players arrives,\n");
     printf("                                         a ship sails a sea as large as the grid\n");
+    printf("  simtool farinvasion SAVE              prepared map for 4: an enemy army from the edge farthest from a\n");
+    printf("                                         city finds its way over the land and reaches it\n");
     printf("  simtool menuowner SAVE                prepared map: the build menu of the local player keeps his\n");
     printf("                                         materials when another player opens a route with the empire\n");
     printf("  simtool caravans SAVE                 a caravan of player 2 brings marble to player 1, who pays\n");
@@ -3407,6 +3410,159 @@ static int command_longroutes(const char *file)
     return failures ? 1 : 0;
 }
 
+// the nearest tile of the edge of the map to (x, y), along that edge, where an army can land and walk to (tx, ty)
+static int clear_edge_tile(int *x, int *y, int tx, int ty)
+{
+    int width = map_grid_width(), height = map_grid_height();
+    int along_x = *y <= 1 || *y >= height - 2;
+    for (int d = 0; d < 60; d++) {
+        for (int sign = -1; sign <= 1; sign += 2) {
+            int xx = along_x ? *x + sign * d : *x;
+            int yy = along_x ? *y : *y + sign * d;
+            if (xx < 1 || yy < 1 || xx > width - 2 || yy > height - 2) {
+                continue;
+            }
+            int o = map_grid_offset(xx, yy);
+            if (map_terrain_is(o, TERRAIN_ELEVATION | TERRAIN_ROCK | TERRAIN_TREE | TERRAIN_WATER |
+                    TERRAIN_BUILDING | TERRAIN_AQUEDUCT | TERRAIN_WALL | TERRAIN_GATEHOUSE)) {
+                continue;
+            }
+            // without any limit of tiles (through the building -1: none)
+            if (map_routing_noncitizen_can_travel_over_land(xx, yy, tx, ty, -1, 0)) {
+                *x = xx;
+                *y = yy;
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
+
+// the counters of the searches of the routing, as saved: searches of the enemies over the land, all searches
+static void routing_counters(int *enemy, int *total)
+{
+    uint8_t data[16];
+    buffer buf;
+    buffer_init(&buf, data, sizeof(data));
+    map_routing_save_state(&buf);
+    buffer_set(&buf, 4);
+    *enemy = buffer_read_i32(&buf);
+    *total = buffer_read_i32(&buf);
+}
+
+static int nearest_enemy_distance(int player_id, int x, int y)
+{
+    int nearest = 100000;
+    for (int i = player_id * MAX_FIGURES + 1; i < (player_id + 1) * MAX_FIGURES; i++) {
+        figure *f = figure_get(i);
+        if (f->state == FIGURE_STATE_ALIVE && figure_is_enemy(f)) {
+            int d = abs(f->x - x) > abs(f->y - y) ? abs(f->x - x) : abs(f->y - y);
+            nearest = d < nearest ? d : nearest;
+        }
+    }
+    return nearest;
+}
+
+// K-review-fixes (T4.17, D-064): an enemy army landing at the edge of the map for 4 farthest from a city reaches it.
+// The searches of the enemies over the land stop after a number of tiles chosen for the maps of 162 tiles; on the large
+// map they follow the size of the grid (classic: the original numbers).
+static int command_farinvasion(const char *file)
+{
+    if (!mp_mapgen_create_prepared(file, 4, 0)) {
+        printf("Unable to create the prepared map\n");
+        return 2;
+    }
+    game_rules_settings rules;
+    game_rules_default_multiplayer_settings(&rules);
+    rules.territories = 1;
+    rules.ai_invasions = 1;
+    game_rules_set_multiplayer(&rules);
+    int failures = 0;
+#define CHECK(condition, text) do { int ok_ = (condition); printf("%-74s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
+    int size = map_grid_width();
+    const int points[4][2] = { { size / 2, 1 }, { size / 2, size - 2 }, { 1, size / 3 }, { size - 2, 2 * size / 3 } };
+    int p = 0, point = 0, far = -1, cx = 0, cy = 0;
+    for (int q = 0; q < 4; q++) {
+        int qx, qy;
+        mp_mapgen_city_center(q, &qx, &qy);
+        for (int i = 0; i < 4; i++) {
+            int d = abs(points[i][0] - qx) + abs(points[i][1] - qy);
+            if (d > far) {
+                far = d;
+                p = q;
+                point = i;
+                cx = qx;
+                cy = qy;
+            }
+        }
+    }
+    int ex = points[point][0], ey = points[point][1];
+    if (!clear_edge_tile(&ex, &ey, cx, cy)) {
+        printf("No clear tile on the edge near (%d, %d)\n", points[point][0], points[point][1]);
+        return 2;
+    }
+    printf("player %d, city at (%d, %d); the army lands at (%d, %d), %d tiles away\n", p + 1, cx, cy, ex, ey,
+        abs(ex - cx) + abs(ey - cy));
+    // the searches of route.c for an enemy going to a tile, with the limits of the original and the scaled ones
+    int original = map_routing_noncitizen_can_travel_over_land(ex, ey, cx, cy, 0, 25000);
+    int scaled_limit = map_routing_noncitizen_max_tiles(25000);
+    int scaled = map_routing_noncitizen_can_travel_over_land(ex, ey, cx, cy, 0, scaled_limit);
+    printf("search over the land within 25000 tiles: %s; within %d tiles: %s\n", original ? "found" : "not found",
+        scaled_limit, scaled ? "found" : "not found");
+    CHECK(scaled, "an enemy finds his way over the land from the farthest edge");
+    CHECK(map_routing_noncitizen_max_tiles(5000) >= 5000 && map_routing_noncitizen_max_tiles(400) >= 400,
+        "the scaled limits are never below those of the original");
+
+    // route.c itself: an enemy going to a tile of the city from that edge finds his way over the land, without falling
+    // back on the search "through everything", which walks through forts (the counters of the routing tell)
+    player_context_switch(p);
+    figure *walker = figure_create(FIGURE_ENEMY43_SPEAR, ex, ey, DIR_0_TOP);
+    walker->terrain_usage = TERRAIN_USAGE_ENEMY;
+    walker->destination_x = cx;
+    walker->destination_y = cy;
+    walker->destination_building_id = 0;
+    int before_enemy, before_total, after_enemy, after_total;
+    routing_counters(&before_enemy, &before_total);
+    figure_route_add(walker);
+    routing_counters(&after_enemy, &after_total);
+    int path_length = walker->routing_path_length;
+    figure_route_remove(walker);
+    figure_delete(walker);
+    player_context_switch(0);
+    printf("route of an enemy to the city: %d steps, %d search(es) over the land, %d through everything\n",
+        path_length, after_enemy - before_enemy, (after_total - before_total) - (after_enemy - before_enemy));
+    CHECK(path_length > 0 && after_total - before_total == after_enemy - before_enemy,
+        "route.c finds the way of an enemy over the land, not through everything");
+
+    // a real army: the city has houses, the only invasion point is the farthest one
+    build_as(p, BUILDING_HOUSE_VACANT_LOT, cx - 4, cy + 2, cx + 4, cy + 2);
+    build_as(p, BUILDING_PREFECTURE, cx - 4, cy + 4, cx - 4, cy + 4);
+    player_context_switch(p);
+    scenario_editor_clear_invasion_points();
+    scenario_editor_set_invasion_point(0, ex, ey);
+    scenario_invasion_start_from_cheat();
+    int start_distance = nearest_enemy_distance(p, cx, cy);
+    player_context_switch(0);
+    printf("army landed: nearest enemy %d tiles from the city\n", start_distance);
+    CHECK(start_distance < 100000, "the army lands");
+    setting_reset_speeds(500, setting_scroll_speed());
+    int ticks = 0, nearest = start_distance;
+    for (; ticks < 30000 && nearest > 12; ticks += 100) {
+        run_trace(100, 100, 0, 0);
+        player_context_switch(p);
+        nearest = nearest_enemy_distance(p, cx, cy);
+        player_context_switch(0);
+    }
+    printf("after %d ticks: nearest enemy %d tiles from the city\n", ticks, nearest);
+    CHECK(nearest <= 12, "the army reaches the city");
+    player_context_switch(0);
+    player_context_set_num_players(1);
+#undef CHECK
+    printf("%s\n", failures ? "DIFFERENT: an army from the far edge does not reach the city" :
+        "Identical: an army from the far edge reaches the city");
+    return failures ? 1 : 0;
+}
+
 static void ignore_command(mp_command *command)
 {
 }
@@ -5090,6 +5246,8 @@ int main(int argc, char **argv)
         result = command_drying(file, atoi(argv[3]));
     } else if (strcmp(command, "inlandwater") == 0 && argc > 3) {
         result = command_inlandwater(file, atoi(argv[3]));
+    } else if (strcmp(command, "farinvasion") == 0) {
+        result = command_farinvasion(file);
     } else if (strcmp(command, "longroutes") == 0) {
         result = command_longroutes(file);
     } else if (strcmp(command, "menuowner") == 0) {

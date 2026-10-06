@@ -2,6 +2,7 @@
 
 #include "building/building.h"
 #include "game/player_context.h"
+#include "game/rules.h"
 #include "map/building.h"
 #include "map/figure.h"
 #include "map/grid.h"
@@ -478,6 +479,18 @@ int map_routing_noncitizen_can_travel_over_land(
         route_queue_max(src_offset, dst_offset, max_tiles, callback_travel_noncitizen_land);
     }
     return routing_distance.items[dst_offset] != 0;
+}
+
+// tiles of the largest map of the original
+#define CLASSIC_MAP_TILES (162 * 162)
+
+int map_routing_noncitizen_max_tiles(int classic_max_tiles)
+{
+    if (!game_rules_is_multiplayer()) {
+        return classic_max_tiles;
+    }
+    long long scaled = (long long) classic_max_tiles * map_grid_width() * map_grid_height() / CLASSIC_MAP_TILES;
+    return scaled > classic_max_tiles ? (int) scaled : classic_max_tiles;
 }
 
 static void callback_travel_noncitizen_through_everything(int next_offset, int dist)
