@@ -321,7 +321,9 @@ le note « à valider ».
     cette ressource à la victime ;
   - ou un joueur qui ferme sa route avec un autre ?
   Plus cher de combien, et pendant combien de temps ?
-- [ ] **T4.4** Le multijoueur proposé en **facile** par défaut (salon).
+- [x] **T4.4** Le multijoueur proposé en **facile** par défaut (salon).
+  *Fait* : le salon propose « facile » (`mp_lobby_rules_init`, nouveau module `mp/lobby.c`, D-063). Les règles par
+  défaut des tests restent en difficile, aucun test n'a changé. Test `mp_lobby_rules`.
 - [ ] **T4.5** Page du commerce : un **stock minimum et maximum** dans les entrepôts, pour l'import et pour
   l'export. Pour mémoire : l'original a un seuil d'export, et Julius des réglages par entrepôt.
   **?** Les deux bornes valent-elles pour l'empire et pour les joueurs ?
@@ -342,7 +344,7 @@ le note « à valider ».
   *Correctif prévu* : une marque « visitée » propre à chaque passage, en multijoueur seulement (le classique reste
   identique). *Test* : `simtool` avec le joueur des terres en J2, J3 et J4 (graines de placement), réservoir
   alimenté et maisons desservies.
-- [ ] **T4.10** **La difficulté est celle du salon, pour toute la partie** (essai du soir). Celle réglée dans le menu
+- [x] **T4.10** **La difficulté est celle du salon, pour toute la partie** (essai du soir). Celle réglée dans le menu
   principal ne règle pas la partie, et on ne doit plus pouvoir la régler par joueur.
   *État* : la simulation lit bien la difficulté du salon (`game_rules_difficulty`). Mais le menu Options,
   Difficulté, reste ouvert en partie, change seulement le réglage local, sans effet. La ville affiche aussi ce
@@ -351,7 +353,12 @@ le note « à valider ».
   - en multijoueur, le menu Difficulté est désactivé, et l'affichage montre la difficulté du salon ;
   - vérifier ce que voient les clients dans le salon (la difficulté de l'hôte) ;
   - « facile » par défaut (T4.4).
-- [ ] **T4.11** **Les réglages du salon ne sont pas synchronisés ; les insurrections ne se désactivent pas** (essai du
+  *Fait* : en multijoueur, Options n'a plus l'entrée Difficulté (`widget/top_menu.c`, cachée, et sans effet si on
+  l'atteint) ; l'affichage de la difficulté en ville (`window/city.c`) lit `game_rules_difficulty()`. Les clients
+  voient la difficulté de l'hôte dans le salon (T4.11). Classique inchangé. Pas de test automatique pour
+  l'interface ; la règle elle-même est testée par `mp_lan_lobby_rules` (la partie se joue avec la difficulté du
+  salon, chez l'hôte et chez les clients).
+- [x] **T4.11** **Les réglages du salon ne sont pas synchronisés ; les insurrections ne se désactivent pas** (essai du
   soir : « même les insurrections IA ne sont pas désactivées même si on les désactive »).
   *Diagnostic* :
   - le salon d'un joueur qui rejoint affiche et laisse cliquer ses propres réglages, sans effet : seuls ceux de
@@ -388,6 +395,18 @@ le note « à valider ».
   cité, chaque cité traite donc le calendrier du modèle pour elle-même ; un soulèvement du modèle frappe chaque
   cité, dans sa propre cité. Le correctif doit aussi mettre à jour `data.rules` de l'hôte, pas seulement
   `host_rules` (`mp_lockstep_set_rules` ne touche que la copie lue par `mp_lockstep_host`).
+  *Fait* (D-063) :
+  - les réglages restent modifiables après « Héberger » ; chaque changement part aussitôt dans la partie
+    (`mp_lockstep_set_rules` met aussi à jour `data.rules`) et chez les joueurs déjà là ; « Lancer la partie »
+    relit les réglages du moment (`mp_lobby_start_game`) ;
+  - les joueurs qui rejoignent voient les réglages de l'hôte, en lecture seule, tenus à jour (message `MSG_RULES`,
+    protocole 13) ;
+  - « Invasions IA : non » coupe aussi le soulèvement de Mars (`scenario_invasion_start_from_mars`) ; les révoltes
+    de gladiateurs restent ; classique inchangé.
+  *Tests* : `mp_attack_source_army`, `mp_attack_source_uprising`, `mp_attack_source_mars` (chaque source attaque en
+  classique et avec l'option, aucune sans) ; `mp_lobby_rules` (partie seule : les règles changées après
+  « Héberger ») ; `mp_lan_lobby_rules` (3 joueurs : l'hôte change tous les réglages après « Héberger », tous jouent
+  avec, les clients les ont vus dans leur salon et ne peuvent pas les changer).
 - [ ] **T4.12** **Les prix entre joueurs sont mal calculés par rapport à l'empire** (essai du soir).
   *Règle actuelle* (D-043, D-048) :
   - le prix par défaut d'un joueur est le prix d'achat de base de l'empire ;

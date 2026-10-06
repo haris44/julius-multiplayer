@@ -4,6 +4,7 @@
 #include "city/finance.h"
 #include "city/population.h"
 #include "game/file.h"
+#include "game/rules.h"
 #include "game/settings.h"
 #include "game/state.h"
 #include "game/system.h"
@@ -104,6 +105,7 @@ static menu_bar_item menu[] = {
 
 static const int INDEX_OPTIONS = 1;
 static const int INDEX_HELP = 2;
+static const int INDEX_OPTIONS_DIFFICULTY = 3;
 
 static struct {
     int offset_funds;
@@ -160,6 +162,8 @@ static void set_text_for_warnings(void)
 static void init(void)
 {
     menu[INDEX_OPTIONS].items[0].hidden = system_is_fullscreen_only();
+    // a multiplayer game keeps the difficulty and gods of its lobby, the same for every player (T4.10)
+    menu[INDEX_OPTIONS].items[INDEX_OPTIONS_DIFFICULTY].hidden = game_rules_is_multiplayer();
     set_text_for_autosave();
     set_text_for_tooltips();
     set_text_for_warnings();
@@ -460,6 +464,10 @@ static void menu_options_speed(int param)
 static void menu_options_difficulty(int param)
 {
     clear_state();
+    if (game_rules_is_multiplayer()) {
+        window_city_return(); // the rules of the lobby (T4.10)
+        return;
+    }
     window_difficulty_options_show(window_city_return);
 }
 
