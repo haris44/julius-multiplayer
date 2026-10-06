@@ -638,7 +638,8 @@
 
 ### D-054 — Dépôt GitHub public et versions Linux et Windows (M5.6)
 - 2026-10-06 · **adoptée** (Alexandre : « est-ce que ça serait compliqué de faire une version Linux Wayland
-  Fedora 44 ? », puis « j'ai fait un fork de Julius pour être plus lisible »)
+  Fedora 44 ? », puis « j'ai fait un fork de Julius pour être plus lisible ») ; la branche `multiplayer` est
+  devenue `master` (D-059)
 - Dépôt : `github.com/haris44/julius-multiplayer`, un fork **public** de Julius. Le code part dans la branche
   `multiplayer` (remote `github`) ; `origin` reste le Julius d'origine, pour en récupérer les correctifs.
 - Aucune donnée du jeu dans le dépôt, ni dans son historique (vérifié avant le premier envoi). Les sauvegardes de
@@ -750,3 +751,14 @@
     quais ; aucune image de chevaux pour l'élevage, l'icône, la charrette ou l'entrepôt ;
   - de nouvelles marchandises (lances, chevaux) : Julius ne charge aucune image nouvelle (il faudrait le chargeur
     d'Augustus) et le moteur est limité à 16 ressources (`RESOURCE_MAX`, format des sauvegardes).
+
+### D-059 — `master` est le projet multijoueur (précise D-054)
+- 2026-10-06 · **adoptée** (Alexandre : « On va mettre sur master, on s'en fou du projet de base le but est le
+  développement du multi uniquement »)
+- La branche `multiplayer` devient `master`, dans le dépôt local comme sur GitHub, où `master` est la branche
+  affichée par défaut : la page du dépôt présente le projet (README). `github/multiplayer` est supprimée.
+- La compilation automatique (`multiplayer.yml` : Linux, Windows, macOS) se déclenche sur `master` et sur les
+  étiquettes `mp-*`. On envoie par `git push github master` ; les worktrees partent de `master`.
+- Julius reste la source des correctifs : remote `origin`, `origin/master` et tag `upstream-base`
+  (`git fetch origin && git log upstream-base..origin/master`). L'ancienne branche locale `master`, simple copie
+  de `origin/master` sans commit propre, est supprimée.

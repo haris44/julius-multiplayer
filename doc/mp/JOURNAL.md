@@ -28,7 +28,7 @@ pixel près ».
 
 ---
 
-## 2026-10-06 — Troupes et matières de guerre (D-058, jalon MG)
+## 2026-10-06 — Troupes et matières de guerre (D-058, jalon MG) ; README ; `master` (D-059)
 
 **Demande d'Alexandre** : les légions sont trop fortes face aux autres troupes ; répartir les atouts militaires
 entre joueur des terres et côtiers (idées de départ : des lances faites de bois, des chevaux pour les cavaliers).
@@ -41,6 +41,10 @@ entre joueur des terres et côtiers (idées de départ : des lances faites de bo
   et payés en bois, légionnaires payés en armes avec leurs bonus de formation, bois aux seuls côtiers. D-052 revu
   sur ce point ; DESIGN §6.2.
 - Jalon MG (MG.1 à MG.5), placé avant M11.
+- README réécrit en français : le projet, la carte, missions et zones, missionnaire, aqueduc de César, commerce,
+  César juge, ce qui vient, comment jouer.
+- D-059 : `multiplayer` renommée `master` (local et GitHub, où `master` est la branche par défaut), CI sur
+  `master`, `github/multiplayer` supprimée ; Julius reste suivi par `origin` et `upstream-base`.
 - Écrit dans `julius/` pendant qu'une autre session y travaillait (D-057, code de M9 non commité) : seuls mes
   ajouts sont commités, indexés à part. D-058 plutôt que D-056, que je crois réservé.
 

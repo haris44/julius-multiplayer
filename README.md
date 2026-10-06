@@ -1,6 +1,6 @@
 # Caesar III Multijoueur
 
-[![Compilation](https://github.com/haris44/julius-multiplayer/actions/workflows/multiplayer.yml/badge.svg?branch=multiplayer)](https://github.com/haris44/julius-multiplayer/actions/workflows/multiplayer.yml)
+[![Compilation](https://github.com/haris44/julius-multiplayer/actions/workflows/multiplayer.yml/badge.svg?branch=master)](https://github.com/haris44/julius-multiplayer/actions/workflows/multiplayer.yml)
 
 Caesar III à plusieurs, sur un réseau local. De 2 à 4 joueurs bâtissent chacun leur cité sur une même carte,
 commercent entre eux et, bientôt, se font la guerre. À l'intérieur de sa cité, chacun joue exactement au Caesar III
@@ -109,7 +109,8 @@ scénarios, reste disponible et identique à celui de Julius.
 
 ## Pour les développeurs
 
-- Branche `multiplayer`. La branche `master` suit Julius.
+- Tout se passe sur la branche `master`. Julius reste la source des correctifs : remote `origin`, tag
+  `upstream-base`.
 - Principes :
   - la simulation est déterministe et avance au même pas sur chaque ordinateur, à partir des mêmes commandes des
     joueurs ;

@@ -4,7 +4,7 @@
 name: Caesar III multiplayer
 on:
   push:
-    branches: [multiplayer]
+    branches: [master]
     tags: ['mp-*']
     paths-ignore:
       - '**.md'
