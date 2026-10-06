@@ -435,7 +435,7 @@ le note « à valider ».
   en plus la pêche. Ni **fruits**, ni **porcs** pour personne : la nourriture vient de l'empire du modèle, pas du
   plan de la carte (le modèle de test, Brugle, donne les fruits à la place des légumes). Les matières premières
   sont bien celles du plan.
-  *Proposition, à valider* : le plan de la carte fixe aussi la nourriture. Blé et légumes pour tous ; les **porcs**
+  *Validé par Alexandre* : le plan de la carte fixe aussi la nourriture. Blé et légumes pour tous ; les **porcs**
   aux joueurs des terres, qui n'ont pas la pêche ; les **fruits** aux côtiers (D-062).
   *Et plus de bois dans les terres* (Alexandre, D-062) : retirer le bois des emplacements des terres, inverser le
   test `inland_timber` de `mp_prepared_map_placement`.

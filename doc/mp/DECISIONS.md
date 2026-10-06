@@ -818,7 +818,7 @@
 - **Carte à 4 : deux joueurs des terres et deux de la côte**, au lieu d'un seul dans les terres (D-047). Les deux
   joueurs des terres vivent de l'aqueduc de César, qui doit atteindre les deux ; à 3 joueurs, l'emplacement laissé
   libre est l'un des deux de la côte, pour qu'il y ait toujours un joueur des terres et un de la côte.
-- *Répartition provisoire, à valider* (le plan de la carte fixe aussi la nourriture, T4.15) :
+- *Répartition* (la nourriture validée par Alexandre, T4.15 ; le reste à valider) :
   - terres : fer et marbre pour les deux ; les olives à l'un, les vignes à l'autre ; les porcs ;
   - côte : bois et argile pour les deux ; la pêche ; les fruits ;
   - blé et légumes pour tous.
