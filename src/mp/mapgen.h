@@ -41,8 +41,9 @@ const char *mp_mapgen_prepared_template(void);
  * Builds the prepared multiplayer map for this number of players (doc/mp/DECISIONS.md D-033, D-047): always the same
  * map, crossed from west to east by an arm of the sea; both players on the south shore of the map for 2, two on each
  * shore of the map for 4, joined by the main road of Caesar over his bridge. Each arrival point offers meadows and
- * only the materials its player may exploit; the player of the rocks lives far from water and gets the aqueduct of
- * Caesar, the others live on the coast. Three players play on the map for four.
+ * only the food and materials its player may produce (D-062); the players of the rocks (one on the map for 2, two on
+ * the map for 4) live far from water and get the aqueduct of Caesar, the others live on the coast. Three players play
+ * on the map for four and leave a place on the coast free.
  * @param template_file Map of the free game giving climate, empire and funds
  * @param placement_seed Draw of the arrival points among the players; 0 keeps the order of the plan
  * @return 1 on success
@@ -50,17 +51,17 @@ const char *mp_mapgen_prepared_template(void);
 int mp_mapgen_create_prepared(const char *template_file, int num_players, unsigned int placement_seed);
 
 /**
- * On the last prepared map: whether the arrival point of the player offers this material
+ * On the last prepared map: whether the arrival point of the player offers this food or material
  */
 int mp_mapgen_slot_allows(int player_id, int resource);
 
 /**
- * On the last prepared map: whether the player lives on the coast of the sea (all but the player of the rocks)
+ * On the last prepared map: whether the player lives on the coast of the sea (all but the players of the rocks)
  */
 int mp_mapgen_slot_is_coastal(int player_id);
 
 /**
- * On the last prepared map: where the aqueduct of Caesar ends, coming westwards along a row, near the city of the
+ * On the last prepared map: where the aqueduct of Caesar ends, coming westwards along a row, near the city of a
  * player of the rocks
  * @return 0 when the player has no aqueduct of Caesar
  */

@@ -2,9 +2,11 @@
 
 #include "building/construction.h"
 #include "game/player_context.h"
+#include "game/rules.h"
 #include "game/time.h"
 #include "map/owner.h"
 #include "mp/actions.h"
+#include "mp/permissions.h"
 
 #include <stddef.h>
 #include <stdint.h>
@@ -69,6 +71,10 @@ void mp_command_submit(mp_command *command)
 
 static void execute_build(const mp_command *command)
 {
+    // a farm or a raw material the city may not produce: refused, as the build menu does (T4.15, D-065)
+    if (game_rules_multiplayer_map() && !mp_permissions_may_build(command->args[0])) {
+        return;
+    }
     building_construction_placement placement = {
         .type = command->args[0],
         .sub_type = command->args[1],

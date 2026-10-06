@@ -336,15 +336,16 @@ int mp_mapgen_create(const char *template_file, int num_players, int size, unsig
     return 1;
 }
 
-// prepared multiplayer maps (D-033, D-047): one fixed plan for 2 players and one for 4. A great arm of the sea
+// prepared multiplayer maps (D-033, D-047, D-062): one fixed plan for 2 players and one for 4. A great arm of the sea
 // crosses the map from the west edge to the east edge; on the map for 2 both players live on its south shore, on the
-// map for 4 two players live on each shore, joined by the main road of Caesar over his bridge. The player of the
-// rocks lives far from the sea and gets no water but the aqueduct of Caesar; the others live on the coast, where the
-// ships of their empire come along the sea. No pond anywhere: the sea is the only water of the map, so that cutting
-// the aqueduct of Caesar dries the city of the rocks up (D-055). Each arrival point offers meadows and only the
-// materials its player may exploit.
+// map for 4 two players live on each shore, joined by the main road of Caesar over his bridge. The players of the
+// rocks live far from the sea and get no water but the aqueduct of Caesar, one reservoir of his on the nearest coast
+// for each of them; the others live on the coast, where the ships of their empire come along the sea. No pond
+// anywhere: the sea is the only water of the map, so that cutting the aqueduct of Caesar dries the cities of the rocks
+// up (D-055). Each arrival point offers meadows and only the food and materials of its plan (T4.15): wheat and
+// vegetables for everybody; pigs, iron and marble inland; fruit, fish, timber and clay on the coast.
 #define PREPARED_SEED 2026
-#define MAX_SLOT_RESOURCES 4
+#define MAX_SLOT_RESOURCES 8
 #define WILD_DISTANCE 30
 #define SMALL_CLEARING 16 // a clearing shut in by woods and smaller than this becomes woods
 #define WOODS_THRESHOLD 168 // noise above which the wild land is wooded, lower further from the cities
@@ -358,8 +359,11 @@ typedef struct {
 } segment;
 
 typedef struct {
-    int resources[MAX_SLOT_RESOURCES]; // materials the player may exploit, RESOURCE_NONE ends the list
-    int caesar_aqueduct; // the player of the rocks: Caesar brings him the only water he has
+    int resources[MAX_SLOT_RESOURCES]; // food and materials the player may produce, RESOURCE_NONE ends the list
+    // the players of the rocks: the reservoir of Caesar that brings them the only water they have stands on the coast
+    // at this column, south of the sea (1) or north of it (-1); 0 for the players of the coast
+    int reservoir_column;
+    int reservoir_side;
     int center_x, center_y;
     int entry_x, entry_y; // on the west or the east edge: the main road runs along the row of the city
     int corners[4]; // corners of the city for its rocks, woods and meadows: those away from the sea first
@@ -374,53 +378,60 @@ struct map_layout {
     int num_sea_points;
     int sea_x[MAX_SEA_POINTS]; // middle line of the arm of the sea, from the west edge to the east edge
     int sea_y[MAX_SEA_POINTS];
-    int reservoir_column; // the reservoir of Caesar stands on the coast at this column...
-    int reservoir_side; // ...south of the sea (1) or north of it (-1)
 };
 
-static const int SHARED_RAW_MATERIALS[] = {
+// what the plan gives or refuses to each arrival point: the permissions of its city. Pig farms and wharves both give
+// meat; the wharves do not depend on this permission (as in the original game), so meat here means pigs (D-065)
+static const int PLAN_RESOURCES[] = {
+    RESOURCE_WHEAT, RESOURCE_VEGETABLES, RESOURCE_FRUIT, RESOURCE_MEAT,
     RESOURCE_IRON, RESOURCE_CLAY, RESOURCE_TIMBER, RESOURCE_OLIVES, RESOURCE_VINES, RESOURCE_MARBLE
 };
-#define NUM_SHARED_RAW_MATERIALS (int) (sizeof(SHARED_RAW_MATERIALS) / sizeof(SHARED_RAW_MATERIALS[0]))
+#define NUM_PLAN_RESOURCES (int) (sizeof(PLAN_RESOURCES) / sizeof(PLAN_RESOURCES[0]))
 
-// two players on the south shore: in the west the player of the rocks (iron, marble, olives, timber), in the east on
-// the coast the player of timber, clay and vines; the main road of Caesar crosses the sea to the wild north shore
+// two players on the south shore: in the west the player of the rocks (iron, marble, olives, pigs), in the east on the
+// coast the player of timber, clay, vines, fruit and fish; the main road of Caesar crosses the sea to the wild north
+// shore
 static const map_layout LAYOUT_2 = {
     200,
     {
-        { { RESOURCE_IRON, RESOURCE_MARBLE, RESOURCE_OLIVES, RESOURCE_TIMBER }, 1, 45, 140, 0, 140, { 0, 2, 1, 3 } },
-        { { RESOURCE_TIMBER, RESOURCE_CLAY, RESOURCE_VINES }, 0, 150, 90, 199, 90, { 2, 3, 0, 1 } },
+        { { RESOURCE_WHEAT, RESOURCE_VEGETABLES, RESOURCE_MEAT, RESOURCE_IRON, RESOURCE_MARBLE, RESOURCE_OLIVES },
+            75, 1, 45, 140, 0, 140, { 0, 2, 1, 3 } },
+        { { RESOURCE_WHEAT, RESOURCE_VEGETABLES, RESOURCE_FRUIT, RESOURCE_TIMBER, RESOURCE_CLAY, RESOURCE_VINES },
+            0, 0, 150, 90, 199, 90, { 2, 3, 0, 1 } },
     },
     4,
     { { 0, 140, 100, 140 }, { 100, 90, 199, 90 }, { 100, 90, 100, 140 }, { 100, 12, 100, 90 } },
     3,
     4,
     { 0, 60, 120, 199 },
-    { 40, 44, 58, 70 },
-    75, 1
+    { 40, 44, 58, 70 }
 };
 
-// two players on each shore: north the player of the rocks and timber (west) and the one of timber and clay (east, on
-// the coast); south the one of olives and timber (west) and the one of vines and clay (east), both on the coast. Three
-// players leave the south-east free.
+// two players on each shore (D-062): in the west a player of the rocks on each shore (iron, marble, pigs; olives in
+// the north, vines in the south), each with his own reservoir of Caesar on the coast; in the east a player on each
+// coast (timber, clay, fruit, fish). Three players leave the south-east free: there is always a player inland and
+// one on the coast.
 static const map_layout LAYOUT_4 = {
     260,
     {
-        { { RESOURCE_IRON, RESOURCE_MARBLE, RESOURCE_TIMBER }, 1, 55, 55, 0, 55, { 0, 2, 1, 3 } },
-        { { RESOURCE_TIMBER, RESOURCE_CLAY }, 0, 200, 104, 259, 104, { 0, 1, 2, 3 } },
-        { { RESOURCE_OLIVES, RESOURCE_TIMBER }, 0, 60, 165, 0, 165, { 2, 3, 0, 1 } },
-        { { RESOURCE_VINES, RESOURCE_CLAY }, 0, 200, 156, 259, 156, { 2, 3, 0, 1 } },
+        { { RESOURCE_WHEAT, RESOURCE_VEGETABLES, RESOURCE_MEAT, RESOURCE_IRON, RESOURCE_MARBLE, RESOURCE_OLIVES },
+            95, -1, 55, 55, 0, 55, { 0, 2, 1, 3 } },
+        { { RESOURCE_WHEAT, RESOURCE_VEGETABLES, RESOURCE_FRUIT, RESOURCE_TIMBER, RESOURCE_CLAY },
+            0, 0, 200, 104, 259, 104, { 0, 1, 2, 3 } },
+        { { RESOURCE_WHEAT, RESOURCE_VEGETABLES, RESOURCE_MEAT, RESOURCE_IRON, RESOURCE_MARBLE, RESOURCE_VINES },
+            95, 1, 60, 210, 0, 210, { 2, 0, 3, 1 } },
+        { { RESOURCE_WHEAT, RESOURCE_VEGETABLES, RESOURCE_FRUIT, RESOURCE_TIMBER, RESOURCE_CLAY },
+            0, 0, 200, 156, 259, 156, { 2, 3, 0, 1 } },
     },
     7,
     {
         { 0, 55, 130, 55 }, { 130, 104, 259, 104 }, { 130, 55, 130, 104 }, { 130, 104, 130, 156 },
-        { 0, 165, 130, 165 }, { 130, 156, 259, 156 }, { 130, 156, 130, 165 }
+        { 0, 210, 130, 210 }, { 130, 156, 259, 156 }, { 130, 156, 130, 210 }
     },
     3,
     5,
     { 0, 60, 130, 200, 259 },
-    { 140, 138, 132, 130, 128 },
-    95, -1
+    { 140, 138, 132, 130, 128 }
 };
 
 // the arrival point of a player: the plan numbers them, a draw at the start of the game gives them out
@@ -430,7 +441,8 @@ static const map_slot *slot_of(int player_id)
 }
 
 // players draw their arrival points by lot, among those of the players there are: on the map for 4, three players
-// always leave the south-east free, so that someone lives on the rocks. Seed 0 keeps the order of the plan (tests).
+// always leave the south-east free, a place on the coast, so that someone lives on the rocks and someone on the coast
+// (D-062). Seed 0 keeps the order of the plan (tests).
 static void draw_arrival_points(int num_players, unsigned int seed)
 {
     for (int p = 0; p < MP_MAPGEN_MAX_PLAYERS; p++) {
@@ -558,6 +570,7 @@ static void slot_corner(int player_id, int corner, int *x, int *y)
 static void place_slot(int player_id)
 {
     int x, y, corner = 0;
+    // rocks inland only, woods on the coast only (D-062)
     if (slot_has(player_id, RESOURCE_IRON) || slot_has(player_id, RESOURCE_MARBLE)) {
         slot_corner(player_id, slot_of(player_id)->corners[corner++], &x, &y);
         set_blob(x, y, 4, TERRAIN_ROCK);
@@ -566,7 +579,7 @@ static void place_slot(int player_id)
         slot_corner(player_id, slot_of(player_id)->corners[corner++], &x, &y);
         set_blob(x, y, 6, TERRAIN_TREE);
     }
-    // farms: wheat, vegetables, fruit, pigs, and olives or vines when allowed
+    // farms: wheat and vegetables, pigs inland or fruit on the coast, and olives or vines when allowed
     slot_corner(player_id, slot_of(player_id)->corners[corner], &x, &y);
     set_blob(x, y, 6, TERRAIN_MEADOW);
 }
@@ -670,39 +683,49 @@ static int is_land_for_reservoir(int x, int y)
     return map_terrain_exists_tile_in_area_with_type(x - 1, y - 1, 5, TERRAIN_WATER);
 }
 
-// the reservoir of Caesar on the coast, and his aqueduct to the player of the rocks: along a column away from the
-// sea, then westwards along a row to the east side of his city (D-034, D-047). He never lets it dry up.
-static int place_caesar_water(void)
+// a reservoir of Caesar on the coast at this column, south of the sea (side 1) or north of it (-1)
+static int place_caesar_reservoir(int column, int side, int *rx, int *ry)
 {
-    const map_layout *l = data.layout;
-    int column = l->reservoir_column;
-    int side = l->reservoir_side;
-    int rx = column - 1, ry = -1;
+    *rx = column - 1;
+    *ry = -1;
     for (int y = side > 0 ? data.sea_bottom[column] - 1 : data.sea_top[column] - 1; y > 2 && y < data.size - 3; y += side) {
         int top = side > 0 ? y : y - 2;
-        if (is_land_for_reservoir(rx, top)) {
-            ry = top;
+        if (is_land_for_reservoir(*rx, top)) {
+            *ry = top;
             break;
         }
     }
-    if (ry < 0) {
+    if (*ry < 0) {
         return 0;
     }
-    for (int yy = ry; yy < ry + 3; yy++) {
-        for (int xx = rx; xx < rx + 3; xx++) {
+    for (int yy = *ry; yy < *ry + 3; yy++) {
+        for (int xx = *rx; xx < *rx + 3; xx++) {
             map_terrain_set(map_grid_offset(xx, yy), 0);
         }
     }
-    building *reservoir = building_create_for_caesar(BUILDING_RESERVOIR, rx, ry);
+    building *reservoir = building_create_for_caesar(BUILDING_RESERVOIR, *rx, *ry);
     if (!BUILDING_IS_CAESAR(reservoir->id)) {
         return 0;
     }
-    map_building_tiles_add(reservoir->id, rx, ry, 3, image_group(GROUP_BUILDING_RESERVOIR), TERRAIN_BUILDING);
-    map_aqueduct_set(map_grid_offset(rx, ry), 0);
+    map_building_tiles_add(reservoir->id, *rx, *ry, 3, image_group(GROUP_BUILDING_RESERVOIR), TERRAIN_BUILDING);
+    map_aqueduct_set(map_grid_offset(*rx, *ry), 0);
+    return 1;
+}
+
+// for each player of the rocks, a reservoir of Caesar on the nearest coast and his aqueduct to the city: along a
+// column away from the sea, then westwards along a row to the east side of the city (D-034, D-047, D-062). He never
+// lets it dry up. The arrival points left free on the map for 4 have theirs too: the map is the same for 3 and 4.
+static int place_caesar_water(void)
+{
     for (int p = 0; p < data.num_players; p++) {
         data.aqueduct_end_x[p] = data.aqueduct_end_y[p] = -1;
-        if (!slot_of(p)->caesar_aqueduct) {
+        int side = slot_of(p)->reservoir_side;
+        int rx, ry;
+        if (!side) {
             continue;
+        }
+        if (!place_caesar_reservoir(slot_of(p)->reservoir_column, side, &rx, &ry)) {
+            return 0;
         }
         // from the middle of the side of the reservoir away from the sea
         int x = rx + 1;
@@ -894,8 +917,8 @@ static void set_slot_permissions(int num_players)
 {
     for (int p = 0; p < num_players; p++) {
         player_context_switch(p);
-        for (int i = 0; i < NUM_SHARED_RAW_MATERIALS; i++) {
-            empire_city_set_our_production_allowed(SHARED_RAW_MATERIALS[i], slot_has(p, SHARED_RAW_MATERIALS[i]));
+        for (int i = 0; i < NUM_PLAN_RESOURCES; i++) {
+            empire_city_set_our_production_allowed(PLAN_RESOURCES[i], slot_has(p, PLAN_RESOURCES[i]));
         }
     }
     player_context_switch(0);
@@ -908,7 +931,7 @@ int mp_mapgen_slot_allows(int player_id, int resource)
 
 int mp_mapgen_slot_is_coastal(int player_id)
 {
-    return data.prepared && !slot_of(player_id)->caesar_aqueduct;
+    return data.prepared && !slot_of(player_id)->reservoir_side;
 }
 
 void mp_mapgen_entry_point(int player_id, int *x, int *y)
@@ -1037,8 +1060,10 @@ int mp_mapgen_create_prepared(const char *template_file, int num_players, unsign
             scenario_editor_set_fishing_point(fish++, fx, fy);
         }
     }
-    // every player settles with missions (D-037)
+    // every player settles with missions (D-037), farms the food of his plan, and fishes on the coast (T4.15)
     scenario.allowed_buildings[ALLOWED_BUILDING_MISSION_POST] = 1;
+    scenario.allowed_buildings[ALLOWED_BUILDING_FARMS] = 1;
+    scenario.allowed_buildings[ALLOWED_BUILDING_WHARF] = 1;
     if (!add_cities(num_players)) {
         return 0;
     }
