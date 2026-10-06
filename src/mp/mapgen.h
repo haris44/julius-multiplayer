@@ -10,6 +10,7 @@
  */
 
 #define MP_MAPGEN_MAX_PLAYERS 4
+#define MP_MAPGEN_NUM_PREPARED_MAPS 2 // map 1 and map 2, each for 2 players and for 3 or 4 (T4.14)
 
 /**
  * Side of the map for this number of players
@@ -26,9 +27,24 @@ int mp_mapgen_default_size(int num_players);
 int mp_mapgen_create(const char *template_file, int num_players, int size, unsigned int seed);
 
 /**
- * Side of the prepared map for this number of players: the map for 2, or the map for 4 (3 players included)
+ * Side of the prepared map 1 for this number of players: the map for 2, or the map for 4 (3 players included)
  */
 int mp_mapgen_prepared_size(int num_players);
+
+/**
+ * Side of a prepared map for this number of players
+ * @param map 0 for map 1, 1 for map 2
+ * @return 0 when there is no such map
+ */
+int mp_mapgen_prepared_map_size(int map, int num_players);
+
+/**
+ * The prepared map of a new game (doc/mp/DECISIONS.md D-069)
+ * @param choice game_map_choice of the lobby: map 1, map 2, or drawn by lot
+ * @param seed Seed of the lobby: the same seed draws the same map; 0 keeps map 1 (tests)
+ * @return 0 for map 1, 1 for map 2
+ */
+int mp_mapgen_choose_prepared_map(int choice, unsigned int seed);
 
 /**
  * Map of the free game giving the empire, start year and funds of the prepared maps: the first one found in the
@@ -38,7 +54,7 @@ int mp_mapgen_prepared_size(int num_players);
 const char *mp_mapgen_prepared_template(void);
 
 /**
- * Builds the prepared multiplayer map for this number of players (doc/mp/DECISIONS.md D-033, D-047): always the same
+ * Builds the prepared multiplayer map 1 for this number of players (doc/mp/DECISIONS.md D-033, D-047): always the same
  * map, crossed from west to east by an arm of the sea; both players on the south shore of the map for 2, two on each
  * shore of the map for 4, joined by the main road of Caesar over his bridge. Each arrival point offers meadows and
  * only the food and materials its player may produce (D-062); the players of the rocks (one on the map for 2, two on
@@ -49,6 +65,13 @@ const char *mp_mapgen_prepared_template(void);
  * @return 1 on success
  */
 int mp_mapgen_create_prepared(const char *template_file, int num_players, unsigned int placement_seed);
+
+/**
+ * Builds a prepared multiplayer map, as mp_mapgen_create_prepared does for map 1: the second maps (T4.14) follow the
+ * same rules with another sea and other places for the cities
+ * @param map 0 for map 1, 1 for map 2
+ */
+int mp_mapgen_create_prepared_map(const char *template_file, int num_players, int map, unsigned int placement_seed);
 
 /**
  * On the last prepared map: whether the arrival point of the player offers this food or material

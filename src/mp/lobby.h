@@ -17,11 +17,13 @@ typedef enum {
     MP_LOBBY_RULE_GODS,
     MP_LOBBY_RULE_END,
     MP_LOBBY_RULE_INVASIONS,
-    MP_LOBBY_RULE_FOG
+    MP_LOBBY_RULE_FOG,
+    MP_LOBBY_RULE_MAP  /**< Prepared map of a new game: map 1, map 2, drawn by lot (T4.14) */
 } mp_lobby_rule;
 
 /**
- * The first time: the rules proposed by the lobby (easy difficulty, T4.4); later, keeps the choices made
+ * The first time: the rules proposed by the lobby (easy difficulty, T4.4; a map drawn by lot, T4.14); later, keeps
+ * the choices made
  */
 void mp_lobby_rules_init(void);
 

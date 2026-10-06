@@ -10,20 +10,24 @@
 # With 'baddata': 2 players, the client pretends to have other game data; the host must refuse it.
 # With 'rules': the host changes every rule of the lobby once the players are there, then starts the game; every
 # player must play with the changed rules, which the clients saw in their lobby (T4.11).
+# With 'map2' (and 'generate'): the host chooses the prepared map 2; every player must play on it (T4.14).
 SIMTOOL=$1; PORT=$2; PLAYERS=$3; SAVE=$4; TICKS=$5; MODE=$6
 CITIES=""
+MAP2=""
 for arg in "$@"; do
     [ "$arg" = "cities" ] && CITIES="cities"
     [ "$arg" = "generate" ] && CITIES="generate"
+    [ "$arg" = "map2" ] && MAP2="map2"
 done
 [ "$MODE" = "cities" ] && MODE=""
 [ "$MODE" = "generate" ] && MODE=""
+[ "$MODE" = "map2" ] && MODE=""
 DIR=$(mktemp -d)
 HOST_ARGS=""
 [ "$MODE" = "desync" ] && HOST_ARGS="expect-desync"
 [ "$MODE" = "baddata" ] && HOST_ARGS="expect-reject"
 [ "$MODE" = "rules" ] && HOST_ARGS="rules"
-"$SIMTOOL" mpnode host "$PORT" "$PLAYERS" "$SAVE" "$TICKS" $CITIES $HOST_ARGS > "$DIR/host.log" 2>&1 &
+"$SIMTOOL" mpnode host "$PORT" "$PLAYERS" "$SAVE" "$TICKS" $CITIES $MAP2 $HOST_ARGS > "$DIR/host.log" 2>&1 &
 HOST=$!
 sleep 0.3
 PIDS=""
@@ -57,6 +61,11 @@ if [ "$MODE" = "rules" ]; then
     SEEN=$(grep -h "^game rules:" "$DIR"/*.log | wc -l | tr -d ' ')
     DIFFERENT=$(grep -h "^game rules:" "$DIR"/*.log | sort -u | wc -l | tr -d ' ')
     [ "$SEEN" = "$PLAYERS" ] && [ "$DIFFERENT" = "1" ] || { echo "The players do not play with the same rules"; FAILED=1; }
+fi
+if [ -n "$MAP2" ]; then
+    SEEN=$(grep -h "^map 2, " "$DIR"/*.log | wc -l | tr -d ' ')
+    DIFFERENT=$(grep -h "^map " "$DIR"/*.log | sort -u | wc -l | tr -d ' ')
+    [ "$SEEN" = "$PLAYERS" ] && [ "$DIFFERENT" = "1" ] || { echo "The players do not all play on map 2"; FAILED=1; }
 fi
 if [ "$MODE" != "desync" ] && [ "$MODE" != "baddata" ]; then
     COUNT=$(grep -h "checksum" "$DIR"/*.log | awk '{print $4}' | sort -u | wc -l | tr -d ' ')

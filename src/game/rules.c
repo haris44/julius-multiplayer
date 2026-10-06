@@ -33,6 +33,7 @@ void game_rules_default_multiplayer_settings(game_rules_settings *settings)
     settings->territories = 0; // on with the prepared maps; the tests on copied cities build anywhere
     settings->fog_of_war = 1;
     settings->caesar_score = MP_CAESAR_DEFAULT_SCORE;
+    settings->prepared_map = GAME_MAP_1; // the lobby proposes a map drawn by lot; the tests keep map 1
 }
 
 const game_rules_settings *game_rules_multiplayer_settings(void)
@@ -121,6 +122,7 @@ void game_rules_save_state(buffer *buf)
     buffer_write_i32(buf, data.multiplayer.territories);
     buffer_write_i32(buf, data.multiplayer.fog_of_war);
     buffer_write_i32(buf, data.multiplayer.caesar_score);
+    buffer_write_i32(buf, data.multiplayer.prepared_map);
 }
 
 void game_rules_load_state(buffer *buf)
@@ -136,4 +138,5 @@ void game_rules_load_state(buffer *buf)
     data.multiplayer.territories = buffer_read_i32(buf); // 0 in games saved before territories
     data.multiplayer.fog_of_war = buffer_read_i32(buf);
     data.multiplayer.caesar_score = buffer_read_i32(buf); // 0 (the default score) in games saved before
+    data.multiplayer.prepared_map = buffer_read_i32(buf); // 0 (map 1, the only one then) in games saved before
 }
