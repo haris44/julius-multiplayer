@@ -1,0 +1,49 @@
+# Real game, network game of four players from the lobby (host): the trade advisor with four tabs and four-digit prices,
+# for the tabs of the empire, of a player and of the stocks (T5.6, see tools/mp-trade4-test.sh). The line "# REPEAT N
+# command" is expanded by the tool into N times the command.
+wait 10
+click 400 500
+wait 10
+# main menu: Multiplayer
+click 400 172
+wait 10
+# first map of the list, four players (twice +), then Host
+click 180 170
+wait 2
+click 300 350
+wait 2
+click 300 350
+wait 2
+click 338 418
+wait 2
+click 240 466
+# three clients find the game and join; then the host starts it with the same button
+mpplayers 4
+wait 5
+click 240 466
+mpwait 0
+# Caesar's letter
+wait 3
+key Return
+wait 2
+speed 300
+mpwait 300
+key 5
+wait 5
+screenshot build/automation/trade4-player.png
+# the marble row of player 3 (third tab): + 90 times, from 200 to 1100 deniers, a four-digit price
+click 408 111
+wait 3
+# REPEAT 90 click 360 357
+wait 10
+screenshot build/automation/trade4-big-price.png
+# the empire and the stocks
+click 192 111
+wait 5
+screenshot build/automation/trade4-empire.png
+click 624 111
+wait 5
+screenshot build/automation/trade4-stocks.png
+mpwait 600
+mpcheck
+quit

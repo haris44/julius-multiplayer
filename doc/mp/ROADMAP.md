@@ -770,7 +770,15 @@ Les journaux de l'essai ne sont pas sur le Mac de développement : diagnostic pa
   le salon avec la partie choisie, puis « Héberger »). *À valider* : la sauvegarde de « Sauvegarder » n'est que sur
   l'ordinateur qui l'a faite (c'est lui qui héberge la reprise) ; celle du mois est sur tous.
 - [ ] **T5.5** Pouvoir attaquer un autre joueur, même simplement (« nécessaire pour le commerce au démarrage »).
-- [ ] **T5.6** Simplifier la fenêtre du commerce ; attention aux textes qui se superposent.
+- [x] **T5.6** Simplifier la fenêtre du commerce ; attention aux textes qui se superposent.
+  *Fait* (D-078) : causes des textes superposés trouvées sur des captures à 2 et 4 joueurs, en français et en
+  anglais : en-têtes qui se touchent, « Vendre / au-dessus de » sur deux lignes, onglets réduits contre le titre, et
+  surtout la route (bouton et ligne d'état posés sur le cadre en bois, que seul le fond redessine) dont l'ancien texte
+  restait sous le nouveau quand l'état changeait. Page refaite en trois sortes d'onglets (Empire, un par joueur, Stocks)
+  à peu de colonnes, nombres alignés à droite, une ligne d'aide, un bouton de route dont le texte dit ce que fait un
+  clic ; le cadre est redessiné au changement d'état de la route. Dans l'onglet d'un joueur, la colonne « En route »
+  garde la raison de T5.7 quand rien n'est parti (« sans stock », « plein »…), en petits caractères. Tests : `tools/mp-trade4-test.sh` (quatre joueurs,
+  prix à quatre chiffres), `mp-trade-test.sh`, `mp-ui-test.sh`, `mp-solo-test.sh`.
 - [x] **T5.7** Impossible de commercer entre joueurs : les caravanes ne circulent pas.
   *Fait* (D-075, provisoire, **à valider**) : pas de panne franche reproduite (parties simulées à 2, 3 et 4 joueurs sur
   les deux cartes, lancées comme depuis le salon : les caravanes partent, arrivent, sont payées), mais trois causes de
@@ -780,8 +788,12 @@ Les journaux de l'essai ne sont pas sur le Mac de développement : diagnostic pa
   vendeur) ; rien ne disait pourquoi rien ne part (la colonne « En route » le dit, et `julius-log.txt`), et dans le
   vrai jeu la ligne de la route et son bouton se dessinaient l'un sur l'autre (redessinés quand l'état change). Tests
   `mp_trade_every_player_*`, `mp_trade_warehouse_apart*`, `mp_trade_purchase_state`, `tools/mp-trade3-test.sh`
-  (trois vrais jeux depuis le salon, routes et achats par clics). Protocole 20.
-- [ ] **T5.8** L'aqueduc de César ne doit pas suivre la route de si près.
+  (trois vrais jeux depuis le salon, routes et achats par clics). Protocole 20 (21 avec T5.8).
+- [x] **T5.8** L'aqueduc de César ne doit pas suivre la route de si près.
+  *Fait* (D-078) : le dernier tronçon courait à 4 cases de la route principale de la cité ; il est maintenant à
+  8 rangées (`AQUEDUCT_ROAD_GAP`, `src/mp/mapgen.c`), sur les 4 cartes préparées. Test d'abord : `simtool preparedmap`
+  (`mp_prepared_map*`) échoue si un tronçon d'aqueduc court à moins de 6 cases d'une route (19 à 58 cases trop
+  proches avant, 0 après). Images vérifiées avec `MAPGEN_PICTURE`. Protocole 21.
 
 ## MC — Cartes multijoueur préparées et César (D-033, D-034)
 - [ ] **MC.1** Ouvrages de César dessinés en blanc (la teinte actuelle ne fait que foncer les images) ; son aqueduc

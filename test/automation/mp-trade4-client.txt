@@ -1,0 +1,18 @@
+# Real game, network game of four players from the lobby (a client, three of them run): joins the game of the host and
+# plays on (see mp-trade4-host.txt)
+wait 10
+click 400 500
+wait 10
+click 400 172
+# the hosted game appears in the list within a second or two
+wait 150
+click 530 174
+wait 5
+mpwait 0
+wait 3
+key Return
+wait 2
+speed 300
+mpwait 800
+mpcheck
+quit

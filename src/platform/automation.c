@@ -15,6 +15,7 @@
 #include "window/city.h"
 #include "graphics/window.h"
 #include "window/mp_lobby.h"
+#include "window/mp_trade.h"
 
 #include "SDL.h"
 #include "mp/compose.h"
@@ -536,6 +537,14 @@ static int execute(char *line)
         log_message("mpcheck:", value);
         if (mp_lockstep_get_state() != MP_LOCKSTEP_RUNNING) {
             fail("network game is not running", 0);
+        }
+        return 0;
+    } else if (strcmp(command, "tradecheck") == 0) {
+        // the trade page redraws its frame when the state of the route changes (T5.6)
+        if (!window_mp_trade_frame_is_current()) {
+            fail("tradecheck: the trade page still shows the frame of an old route state", 0);
+        } else {
+            log_message("tradecheck:", "the frame shows the current route state");
         }
         return 0;
     } else if (strcmp(command, "speed") == 0) {

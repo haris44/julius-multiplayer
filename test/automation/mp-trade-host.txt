@@ -30,17 +30,27 @@ wait 5
 screenshot build/automation/trade-window.png
 # the marble row: + (the client marked it bought around tick 400)
 mpwait 800
-click 504 357
+click 360 357
 wait 2
-click 504 357
+click 360 357
 wait 5
 screenshot build/automation/trade-window-raised.png
+# the route with player 2, proposed from the button in the corner: the button and the help line change (T5.6)
+click 590 81
+wait 10
+screenshot build/automation/trade-route-waiting.png
+# the frame was redrawn for the new state, or the new texts sit over the old ones (the screenshot above shows it)
+tradecheck
+# the empire tab (T5.6): the price of Rome, the portorium and the price that applies
+click 192 111
+wait 5
+screenshot build/automation/trade-empire.png
 # the stock tab (T4.5, D-070): marble bought up to 8 loads, a command checked by mpcheck below
-click 656 81
+click 408 111
 wait 2
-click 650 357
+click 630 357
 wait 2
-click 650 357
+click 630 357
 wait 5
 screenshot build/automation/trade-stocks.png
 mpwait 1000

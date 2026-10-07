@@ -366,6 +366,7 @@ int mp_mapgen_create(const char *template_file, int num_players, int size, unsig
 #define ROAD_MARGIN 2
 #define MAX_ROADS 8
 #define MAX_SEA_POINTS 6
+#define AQUEDUCT_ROAD_GAP 8 // rows between the main road of a city and the last stretch of the aqueduct of Caesar
 
 typedef struct {
     int x1, y1, x2, y2; // along a row or a column, ends included
@@ -777,7 +778,8 @@ static int place_caesar_reservoir(int column, int side, int *rx, int *ry)
 }
 
 // for each player of the rocks, a reservoir of Caesar on the nearest coast and his aqueduct to the city: along a
-// column away from the sea, then westwards along a row to the east side of the city (D-034, D-047, D-062). He never
+// column away from the sea, then westwards along a row to the east side of the city (D-034, D-047, D-062), eight rows
+// north of the main road of the city (T5.8; four rows left no room to build along the road). He never
 // lets it dry up. Only the arrival points of the rocks have one (reservoir_side): two on the map for 4, one on the map
 // for 2, taken by a player or not, so that the map is the same for 3 and 4. The arrival point left free by 3 players
 // is on the coast (draw_arrival_points): it has no reservoir, and no free arrival point gets one.
@@ -797,7 +799,7 @@ static int place_caesar_water(void)
         int x = rx + 1;
         int y = side > 0 ? ry + 3 : ry - 1;
         int end_x = data.center_x[p] + CITY_RADIUS / 2 + 1;
-        int end_y = data.center_y[p] - 4;
+        int end_y = data.center_y[p] - AQUEDUCT_ROAD_GAP;
         if (end_x >= x || (side > 0 ? end_y < y : end_y > y)) {
             return 0; // the plan puts the player of the rocks west of the reservoir, away from the sea
         }

@@ -18,7 +18,7 @@ tools/run-automation.sh test/automation/mp-trade-client.txt 180 > build/automati
 CLIENT_STATUS=$?
 wait $HOST
 HOST_STATUS=$?
-grep -h -E "mpcheck|automation\] .*(fail|timed|stopped)" build/automation/mp-trade-host.log \
+grep -h -E "mpcheck|tradecheck|automation\] .*(fail|timed|stopped)" build/automation/mp-trade-host.log \
     build/automation/mp-trade-client.log | sed -E 's/^.*(INFO|ERROR): //'
 rm -f "$DATA_DIR"/mp-session-* "$DATA_DIR"/mp-desync-*
 mp_restore_autosave

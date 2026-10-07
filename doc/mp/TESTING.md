@@ -211,6 +211,7 @@ répertoire courant (lancer depuis la racine du dépôt).
 | `windowsweep` | ouvre et dessine, sans faire avancer la partie, chaque conseiller, onglet du commerce, fenêtre de dialogue, menu de construction, calque et fiche de bâtiment, de figure et de terrain ; échoue si l'une change l'état simulé (T5.3) |
 | `angrygod` | tests : un dieu en colère dans la cité locale, autre que le « moins content » qu'elle garde (change l'état de ce seul ordinateur : provoque une désynchronisation à plusieurs) |
 | `lobbylists NOM` / `lobbyselected NOM` | salon : échoue s'il ne liste pas le fichier NOM / si NOM n'est pas la partie choisie (T5.4) |
+| `tradecheck` | la page du commerce a redessiné son cadre pour l'état courant de la route (T5.6) ; échoue sinon |
 | `log TEXTE` | écrit un repère dans le journal |
 | `quit` | quitte ; c'est aussi automatique en fin de script |
 
@@ -244,7 +245,14 @@ Bon à savoir :
 - `tools/mp-trade-test.sh` : idem, puis l'hôte ouvre le conseiller au commerce, page commune à l'empire et aux
   joueurs (`build/automation/trade-window.png`) ; le client achète le marbre (`trade-client-buys.png`), l'hôte en
   monte le prix et le client voit l'alerte plein écran (`price-alert.png`, puis `price-alert-trade.png` après « Voir
-  le commerce »).
+  le commerce »). La commande `tradecheck` après la proposition de la route échoue si la page ne redessine pas son
+  cadre quand l'état de la route change (vérifié : sans le correctif, elle échoue) ; `trade-route-waiting.png` est la
+  capture à regarder pour ce défaut (bouton « Proposer la route » sans « Retirer la proposition » dessous, une seule
+  ligne d'aide).
+- `tools/mp-trade4-test.sh` : partie à quatre (un hôte et trois clients) ; l'hôte ouvre le commerce (cinq onglets : Empire,
+  trois joueurs, Stocks), monte un prix à quatre chiffres et prend les captures `trade4-*.png` : aucun texte ne doit
+  en recouvrir un autre (T5.6). La langue est celle des données du jeu ; pour l'anglais, forcer temporairement
+  `translation_load(LANGUAGE_ENGLISH)` dans `src/game/game.c`, sans commiter.
 - `tools/mp-trade3-test.sh` : trois vrais jeux depuis le salon (hôte et deux clients, partie pour 3) ; sur la page du
   commerce, chacun propose la route aux deux autres et achète du marbre au premier, du fer au second, par clics.
   Vérifie que les six achats sont examinés au même départ mensuel sur les trois machines (lignes « Trade between
@@ -264,7 +272,8 @@ coordonnées ; la barre latérale reste collée au bord droit (bouton industrie 
 |--------|--------|
 | `tools/mp-solo-test.sh` | salon à 1 joueur (règles, carte), lettre de César, mission et zone, missionnaire, pont, bandeau des lauriers, conseiller impérial et page du commerce seule (onglet Stocks) en 800 × 600 |
 | `tools/mp-lobby-test.sh` | salon hôte et client (partie trouvée, salle d'attente), partie à deux sans désynchronisation |
-| `tools/mp-trade-test.sh` | page du commerce (prix de Rome, portorium, onglet d'un joueur), achat, alerte de prix, onglet Stocks avec une limite |
+| `tools/mp-trade-test.sh` | page du commerce (onglet d'un joueur, route proposée, onglet Empire avec prix de Rome et portorium, onglet Stocks avec une limite), achat, alerte de prix |
+| `tools/mp-trade4-test.sh` | page du commerce à quatre joueurs (cinq onglets) et prix à quatre chiffres, sans texte superposé |
 | `tools/mp-trade3-test.sh` | partie à trois depuis le salon : routes proposées et achats par clics entre les trois joueurs, départs mensuels examinés partout, raison affichée quand rien ne part (T5.7) |
 | `tools/mp-real-test.sh` | partie en réseau sans salon (`--mp-host`), constructions et conseillers pendant le jeu |
 | `tools/mp-sweep-test.sh` | partie en réseau seule (cité de `brugle-lugdunum.sav`, ou la carte préparée avec `MP_SWEEP_ARGS=--mp-generate`) : `windowsweep`, avant et après `angrygod` |

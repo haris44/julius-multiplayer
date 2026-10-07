@@ -1262,3 +1262,50 @@
     départ ?
   - une partie reprise d'une ancienne `.mpsav` garde les rangs et salaires qu'elle avait.
 - Classique : inchangé.
+
+### D-078 — La page du commerce en trois sortes d'onglets ; l'aqueduc de César à huit rangées de la route (T5.6, T5.8, précise D-051, D-060, D-070)
+- 2026-10-07 · **adoptée provisoirement** (second essai d'Alexandre, travail sans lui)
+- **Les textes qui se superposaient** (essai à trois joueurs, 640 × 480, français et anglais), relevés sur des captures
+  à deux et à quatre joueurs :
+  - les en-têtes de colonnes se touchaient (« Payé/reçu », « Mon prix », « Son prix », « J'achète », « En route ») ;
+  - « Vendre / au-dessus de » sur deux lignes montait sur la ligne « Empire, portorium 50 % » ;
+  - à quatre joueurs, les trois onglets des joueurs, réduits en petite police, touchaient le titre ;
+  - la ligne « Route commerciale : fermée » touchait le titre, et **changeait sans que le cadre soit redessiné** :
+    quand une commande (la sienne, ou celle de l'autre joueur) changeait l'état de la route, le texte de l'ancien état
+    restait sous le nouveau (« Retirer la proposition » sur « Proposer la route »). Le tableau, lui, se redessine à
+    chaque image (panneau sombre) : seuls les textes posés sur le cadre en bois étaient touchés.
+- **Trois sortes d'onglets**, sous le titre, tous de la même largeur (jusqu'à cinq à quatre joueurs) : *Empire*, un
+  onglet par autre joueur, *Stocks*. Chacun a peu de colonnes, les nombres sont alignés à droite sous leur titre.
+  - **Empire** : stock, commerce (importe, exporte, aucun : le bouton d'origine), prix de Rome, portorium (en plus à
+    l'achat, en moins à la vente), prix payé ou reçu. Seul onglet à régler le commerce avec l'empire.
+  - **Un joueur** : stock, mon prix (− et +, quatre chiffres), son prix, le prix de l'empire à titre de comparaison
+    (le vert désigne toujours le moins cher), « J'achète », « En route ». Quand rien n'est en route pour un achat sur
+    une route ouverte, la colonne « En route » dit pourquoi aucune caravane n'est partie ce mois-ci (D-075 : « sans
+    stock », « plein »…), en petits caractères alignés à droite.
+  - **Stocks** : stock, « Vendre au-dessus de », « Acheter jusqu'à » (D-070, inchangés).
+  - Partie seule : les onglets Empire et Stocks (avant, Stocks seul). *À valider*.
+- **Une seule ligne d'aide** sous le tableau, propre à l'onglet (portorium de l'empire, règle des caravanes, règle des
+  bornes). Sur l'onglet d'un joueur, tant que la route n'est pas ouverte, elle dit où en est la route et ce qu'il
+  faut faire. Les deux lignes d'explication d'avant et le préfixe « Route commerciale : » disparaissent.
+- **La route** : un seul bouton, dans le coin du titre, dont le texte dit ce que fait un clic : « Proposer la route »,
+  « Retirer la proposition », « Accepter la route » (l'autre l'a proposée), « Fermer la route » (ouverte). Mêmes
+  commandes qu'avant.
+- **Le redessin** : la page fait redessiner le cadre dès que l'état de la route change (un seul mécanisme, qui
+  remplace celui de D-075 ; vérifié par la commande d'automatisation `tradecheck`).
+- Tests : `tools/mp-trade4-test.sh` (quatre instances du vrai jeu, cinq onglets, prix à quatre chiffres), `mp-trade-test.sh`
+  (route proposée, onglet Empire, onglet Stocks), `mp-ui-test.sh` (640 × 480 et 1024 × 736), `mp-solo-test.sh` (seul).
+  Contrôle par des captures regardées une à une, en français et en anglais (la langue forcée un instant, sans commit).
+- **L'aqueduc de César** longeait la route principale de la cité, **à quatre cases**, sur toute sa dernière portion :
+  en entrant dans la zone du joueur, il ne laissait que trois rangées pour bâtir entre la route et lui. Il court
+  maintenant **huit rangées** au nord de la route (`AQUEDUCT_ROAD_GAP`), sur les quatre cartes préparées (cartes 1 et 2,
+  à 2 et à 4 joueurs). Même point d'arrivée en colonne, même réservoir ; la colonne qui traverse la route d'un joueur
+  de la rive nord la traverse comme avant (l'aqueduc passe sur la route).
+  - Le test `simtool preparedmap` (donc les huit tests `mp_prepared_map*`) échoue si un tronçon d'aqueduc de César
+    court à moins de six cases d'une route, dans le sens de la route. Il échouait avant (4 cases, 19 à 58 cases
+    d'aqueduc trop proches selon la carte) et passe maintenant (8 cases).
+  - **Protocole 21** (le 20 est celui des caravanes de T5.7, D-075) : la carte préparée est générée chez chaque pair,
+    l'aqueduc déplacé change le terrain ; des versions d'avant et d'après se verraient refusées au salon au lieu de se
+    désynchroniser à la première somme de contrôle.
+  - *À valider* : huit rangées (le texte de la demande parlait de trois à cinq cases, déjà le cas avec quatre) ; un
+    aqueduc plus loin laisse la place entre la route et lui, mais coupe la moitié nord de la zone du joueur.
+- Classique : inchangé.
