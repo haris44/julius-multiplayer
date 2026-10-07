@@ -271,7 +271,7 @@ void city_finance_handle_month_change(void)
     collect_monthly_taxes();
     pay_monthly_wages();
     pay_monthly_interest();
-    mp_caesar_limit_salary(); // multiplayer: the salary cannot be above the rank (D-067)
+    mp_caesar_limit_salary(); // multiplayer: Rome pays the salary of the laurels rank, there is no choice (D-076)
     pay_monthly_salary();
 }
 

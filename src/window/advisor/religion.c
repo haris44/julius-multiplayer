@@ -8,7 +8,6 @@
 #include "graphics/lang_text.h"
 #include "graphics/panel.h"
 #include "graphics/text.h"
-#include "mp/session.h"
 
 static int get_religion_advice(int least_happy)
 {
@@ -82,15 +81,7 @@ static int draw_background(void)
     lang_text_draw(59, 8, 40, 166, FONT_NORMAL_WHITE);
     text_draw_number_centered(building_count_total(BUILDING_ORACLE), 230, 166, 50, FONT_NORMAL_WHITE);
 
-    int least_happy;
-    if (mp_session_is_networked()) {
-        // the city keeps the least happy god of its last month: in a network game, storing a newer one here would
-        // change the state of this computer only (T5.3)
-        least_happy = city_gods_least_happy_now();
-    } else {
-        city_gods_calculate_least_happy();
-        least_happy = city_god_least_happy();
-    }
+    int least_happy = city_gods_least_happy_shown();
 
     lang_text_draw_multiline(59, 21 + get_religion_advice(least_happy), 60, 196, 512, FONT_NORMAL_BLACK);
 

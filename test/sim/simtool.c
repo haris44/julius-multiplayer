@@ -208,7 +208,9 @@ static int usage(void)
     printf("  simtool badrules PORT                  a player refuses rules of the host out of their bounds\n");
     printf("  simtool attacksource SAVE SOURCE TICKS attacks of SOURCE (army, uprising, mars) come in a classic\n");
     printf("                                         game and with AI invasions on, none with them off\n");
-    printf("  simtool salaries SAVE                  three players: Rome pays each the salary of his rank, the same\n"
+    printf("  simtool windowwrites SAVE              a window must not write into the game: the religion advisor of a\n"
+           "                                         network game, with an angry god, leaves the checksum alone (T5.3)\n");
+    printf("  simtool salaries SAVE                 three players: Rome pays each the salary of his rank, the same\n"
            "                                         start and table for everybody (T5.2)\n");
     printf("  simtool caesarfree SAVE TICKS          Caesar (requests, anger, salary...) acts in a classic game\n");
     printf("                                         and not in a multiplayer game\n");
@@ -855,7 +857,7 @@ static int command_mpnode(int argc, char **argv)
 {
     // argv: mpnode host PORT PLAYERS SAVE TICKS [cities] | mpnode join ADDRESS PORT TICKS
     int is_host = argc >= 7 && strcmp(argv[2], "host") == 0;
-    int cities = 0, generate = 0, lobby_rules = 0, map2 = 0, save_resume = 0, drag_month = 0;
+    int cities = 0, generate = 0, lobby_rules = 0, map2 = 0, save_resume = 0, drag_month = 0, from_autosave = 0;
     for (int i = 6; i < argc; i++) {
         cities |= i >= 7 && strcmp(argv[i], "cities") == 0;
         generate |= i >= 7 && strcmp(argv[i], "generate") == 0;
@@ -866,6 +868,9 @@ static int command_mpnode(int argc, char **argv)
         save_resume |= strcmp(argv[i], "saveresume") == 0;
         // 'dragmonth' (with 'saveresume', host): the host drags a road while a month starts (T5.3 review)
         drag_month |= strcmp(argv[i], "dragmonth") == 0;
+        // 'autosaveresume' (with 'saveresume', host): the host resumes its monthly saved game (the one the desync
+        // status names) instead of the one of the File menu (T5.3 review)
+        from_autosave |= strcmp(argv[i], "autosaveresume") == 0;
     }
     int is_join = argc >= 6 && strcmp(argv[2], "join") == 0;
     if (!is_host && !is_join) {
@@ -1004,6 +1009,9 @@ next_session:;
         }
         if (state == MP_LOCKSTEP_RUNNING && start_tick < 0) {
             start_tick = mp_lockstep_base_tick();
+            if (is_host && save_resume) {
+                printf("game %d starts at tick %d\n", session + 1, start_tick);
+            }
             mp_lockstep_set_tick_limit(ticks);
             start_tax = city_finance_tax_percentage();
             if (expected_difficulty >= 0 && !check_start_cities(expected_difficulty, map_template)) {
@@ -1182,6 +1190,13 @@ next_session:;
         int saved = game_file_write_saved_game(name);
         snprintf(name, sizeof(name), "lan-save-%s-p%d.mpsav", is_host ? argv[3] : argv[4], mp_session_local_player_id());
         printf("session 1 saved in %s: %s\n", name, saved ? "yes" : "NO");
+        if (from_autosave && is_host) {
+            // the host resumes the monthly saved game of its game: the file that host_start_game reads, then writes
+            // again (the game goes on from the month start, not from the end)
+            snprintf(name, sizeof(name), "%s", month_drag.autosave);
+            saved = saved && access(name, F_OK) == 0;
+            printf("resuming the monthly saved game %s: %s\n", name, saved ? "yes" : "NO");
+        }
         print_trade_state("saved");
         int was_host = is_host;
         if (!was_host) {
@@ -4324,6 +4339,55 @@ static int command_farinvasion(const char *file)
 
 static void ignore_command(mp_command *command)
 {
+}
+
+// T5.3: "windowsweep" proves in the real game that no window writes into the simulated state, but needs the game
+// data. Here, without graphics: the religion advisor computes the least happy god of the city (the original stores it
+// in the city each time it is drawn, while the simulation does it only at some month starts); with an angry god other
+// than the stored one, drawing the advisor in a network game must not change the checksum of this computer, which
+// would then differ from the others'
+static int command_windowwrites(const char *file)
+{
+    if (!load(file)) {
+        return 2;
+    }
+    game_rules_settings rules;
+    game_rules_default_multiplayer_settings(&rules);
+    rules.gods_enabled = 1;
+    game_rules_set_multiplayer(&rules);
+    mp_session_init_network(0, ignore_command);
+    // an angry god other than the one the city holds for the least happy, as the automation "angrygod" does
+    int stored = city_god_least_happy();
+    int god = stored == GOD_MARS ? GOD_VENUS : GOD_MARS;
+    for (int i = 0; i < MAX_GODS; i++) {
+        city_data.religion.gods[i].wrath_bolts = i == god ? 30 : 0;
+    }
+    uint64_t before = mp_checksum_state();
+    // what the religion advisor computes when it is drawn
+    int shown = city_gods_least_happy_shown();
+    uint64_t after = mp_checksum_state();
+    printf("network game: angry god %d (held %d), advisor shows %d, checksum %016" PRIx64 " -> %016" PRIx64 "\n",
+        god, stored, shown, before, after);
+    int result = 1;
+    if (shown != god) {
+        printf("WRONG: the advisor does not show the angry god\n");
+        result = 0;
+    }
+    if (before != after) {
+        printf("WRONG: drawing the religion advisor changed the state of the simulation\n");
+        result = 0;
+    }
+    // control: the same in a game offline (classic), where the original stores the god in the city; if the checksum
+    // did not change here, the test above could not see a window writing
+    mp_session_init_offline();
+    shown = city_gods_least_happy_shown();
+    uint64_t offline = mp_checksum_state();
+    printf("offline game: advisor shows %d, checksum %016" PRIx64 "\n", shown, offline);
+    if (shown != god || offline == after) {
+        printf("WRONG: the test does not see the god stored in the city (no control)\n");
+        result = 0;
+    }
+    return result ? 0 : 1;
 }
 
 static const struct { int building; int resource; const char *name; } MENU_RAW[] = {
@@ -7975,6 +8039,8 @@ int main(int argc, char **argv)
         result = command_privatepopups(file, ticks);
     } else if (strcmp(command, "twins") == 0 && argc > 3) {
         result = command_twins(file, ticks);
+    } else if (strcmp(command, "windowwrites") == 0) {
+        result = command_windowwrites(file);
     } else if (strcmp(command, "mpnode") == 0) {
         result = command_mpnode(argc, argv);
     } else if (strcmp(command, "actionequiv") == 0) {

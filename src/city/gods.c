@@ -15,6 +15,7 @@
 #include "figuretype/water.h"
 #include "game/rules.h"
 #include "game/time.h"
+#include "mp/session.h"
 #include "scenario/property.h"
 #include "scenario/invasion.h"
 
@@ -371,6 +372,17 @@ int city_gods_calculate_least_happy(void)
 int city_gods_least_happy_now(void)
 {
     return find_least_happy() - 1;
+}
+
+int city_gods_least_happy_shown(void)
+{
+    if (mp_session_is_networked()) {
+        // the city keeps the least happy god of its last month: in a network game, storing a newer one here would
+        // change the state of this computer only (T5.3)
+        return city_gods_least_happy_now();
+    }
+    city_gods_calculate_least_happy();
+    return city_god_least_happy();
 }
 
 int city_god_happiness(int god_id)

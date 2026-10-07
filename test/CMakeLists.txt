@@ -302,6 +302,9 @@ add_test(NAME mp_lobby_resume_rules_before_score COMMAND simtool resumerules bru
 add_test(NAME mp_lobby_resume_rules_before_territories COMMAND simtool resumerules brugle-massilia-start.sav 27493 56)
 # T4.11: "AI invasions: no" stops every source of attack (armies and local uprisings of the scenario, the uprising
 # sent by an angry Mars), which all come in a classic game and with the option on
+# T5.3 review: a window (the religion advisor, with an angry god) does not write into the game of a network session;
+# the real game's "windowsweep" (tools/mp-sweep-test.sh) needs the game data, this one does not
+add_test(NAME mp_window_writes_brugle-lugdunum COMMAND simtool windowwrites brugle-lugdunum.sav)
 add_test(NAME mp_attack_source_army COMMAND simtool attacksource inv0.sav army 20000)
 add_test(NAME mp_attack_source_uprising COMMAND simtool attacksource tower.sav uprising 2000)
 add_test(NAME mp_attack_source_mars COMMAND simtool attacksource kknight.sav mars 3200)
@@ -441,8 +444,11 @@ if(NOT WIN32)
     # drags a road while a month starts, which must not be in the monthly saved game (T5.3 review)
     add_test(NAME mp_lan_save_resume_3_players COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/sim/lan_test.sh $<TARGET_FILE:simtool> 27522 3 brugle-massilia-start.sav 900 generate saveresume)
     add_test(NAME mp_lan_save_resume_map2_2_players COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/sim/lan_test.sh $<TARGET_FILE:simtool> 27523 2 brugle-massilia-start.sav 900 generate map2 saveresume dragmonth)
-    set_tests_properties(mp_lan_save_resume_3_players mp_lan_save_resume_map2_2_players PROPERTIES TIMEOUT 240
-        RESOURCE_LOCK mp_lan_heavy)
+    # T5.3 review: the host resumes its monthly saved game (the one named after a desync), not the File menu one;
+    # the other players join it again; same checksums at the end
+    add_test(NAME mp_lan_autosave_resume_3_players COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/sim/lan_test.sh $<TARGET_FILE:simtool> 27524 3 brugle-massilia-start.sav 900 generate autosaveresume)
+    set_tests_properties(mp_lan_save_resume_3_players mp_lan_save_resume_map2_2_players mp_lan_autosave_resume_3_players
+        PROPERTIES TIMEOUT 240 RESOURCE_LOCK mp_lan_heavy)
     # T5.1, T5.2: three players on a generated map; the cities start with the funds, favor, rank, salary and savings of
     # the difficulty of the lobby and of everybody, on the host and on the clients, whatever the settings of the
     # computers and the rank of the template (a free map with rank 5 and funds 3000, or a saved game)

@@ -28,6 +28,14 @@ int city_god_least_happy(void);
  */
 int city_gods_least_happy_now(void);
 
+/**
+ * The least happy god as the religion advisor shows it: in a network game as city_gods_least_happy_now (the state is
+ * not written), otherwise as the original does (calculated and stored in the city). Kept apart from the advisor so
+ * that a test without graphics can prove a window does not write into the game (T5.3)
+ * @return god id, or -1 when no god is unhappy
+ */
+int city_gods_least_happy_shown(void);
+
 int city_god_spirit_of_mars_power(void);
 void city_god_spirit_of_mars_mark_used(void);
 
