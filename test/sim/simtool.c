@@ -182,7 +182,8 @@ static int usage(void)
     printf("                                         reach player 1\n");
     printf("  simtool lobbyrules SAVE                the lobby proposes an easy game; hosted alone, the game starts\n");
     printf("                                         with the rules changed after hosting\n");
-    printf("  simtool resumerules TEMPLATE PORT      a multiplayer game resumed from the lobby keeps its saved rules\n");
+    printf("  simtool resumerules TEMPLATE PORT [HEADER]  a multiplayer game resumed from the lobby keeps its saved\n"
+           "                                        rules (HEADER: bytes of an older header, missing rules read as 0)\n");
     printf("  simtool badrules PORT                  a player refuses rules of the host out of their bounds\n");
     printf("  simtool attacksource SAVE SOURCE TICKS attacks of SOURCE (army, uprising, mars) come in a classic\n");
     printf("                                         game and with AI invasions on, none with them off\n");
@@ -1714,7 +1715,44 @@ static int same_rules(const game_rules_settings *a, const game_rules_settings *b
 // K-review-fixes (T4.11, D-073): a multiplayer game resumed from the lobby (.mpsav) goes on with its saved rules
 // (territories, fog, score...): the lobby shows them and cannot change them, the rules changed before and after
 // "Host" are not those of the game
-static int command_resumerules(const char *file, int port)
+// K-review-fixes (T4.11): shortens the piece mp_header of a .mpsav to SIZE bytes, as written before the last rules
+static int shorten_mp_header(const char *filename, int size)
+{
+    FILE *fp = fopen(filename, "rb");
+    if (!fp) {
+        return 0;
+    }
+    fseek(fp, 0, SEEK_END);
+    long length = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+    uint8_t *bytes = malloc(length);
+    int ok = bytes && fread(bytes, 1, length, fp) == (size_t) length;
+    fclose(fp);
+    // after the magic and the version: name length, name, size of the data, data
+    long at = 8;
+    ok = ok && length > at + 1 && bytes[at] == 9 && memcmp(&bytes[at + 1], "mp_header", 9) == 0;
+    if (ok) {
+        buffer buf;
+        buffer_init(&buf, &bytes[at + 10], 4);
+        int old_size = buffer_read_i32(&buf);
+        ok = size < old_size;
+        if (ok) {
+            buffer_init(&buf, &bytes[at + 10], 4);
+            buffer_write_i32(&buf, size);
+            fp = fopen(filename, "wb");
+            long cut_from = at + 14 + size, cut_to = at + 14 + old_size;
+            ok = fp && fwrite(bytes, 1, cut_from, fp) == (size_t) cut_from &&
+                fwrite(&bytes[cut_to], 1, length - cut_to, fp) == (size_t) (length - cut_to);
+            if (fp) {
+                fclose(fp);
+            }
+        }
+    }
+    free(bytes);
+    return ok;
+}
+
+static int command_resumerules(const char *file, int port, int header_size)
 {
     char save_file[64];
     snprintf(save_file, sizeof(save_file), "resumerules-%d.mpsav", port);
@@ -1736,6 +1774,25 @@ static int command_resumerules(const char *file, int port)
     if (!mp_savegame_write(save_file)) {
         printf("Unable to write %s\n", save_file);
         return 2;
+    }
+    if (header_size) {
+        // a game saved before the last rules: those missing read as 0 (6 numbers of the map, then the rules)
+        if (!shorten_mp_header(save_file, header_size)) {
+            printf("Unable to shorten the header of %s\n", save_file);
+            remove(save_file);
+            return 2;
+        }
+        int rules_read = (header_size - 6 * 4) / 4 - 1; // after the mode
+        if (rules_read < 10) {
+            saved.caesar_score = 0;
+        }
+        if (rules_read < 9) {
+            saved.fog_of_war = 0;
+        }
+        if (rules_read < 8) {
+            saved.territories = 0;
+        }
+        printf("header of %d bytes: %d rules saved\n", header_size, rules_read);
     }
     // the lobby proposes other rules, as the window does before "Host"
     mp_lobby_rules_init();
@@ -1773,8 +1830,8 @@ static int command_resumerules(const char *file, int port)
     if (mp_lockstep_get_state() != MP_LOCKSTEP_RUNNING) {
         printf("FAILED: the game did not start: %s\n", mp_lockstep_status());
         result = 1;
-    } else if (!same_rules(game, &saved) || !game_rules_territories() || game_rules_fog_of_war() ||
-        game_rules_difficulty() != DIFFICULTY_VERY_HARD) {
+    } else if (!same_rules(game, &saved) || game_rules_territories() != saved.territories ||
+        game_rules_fog_of_war() != saved.fog_of_war || game_rules_difficulty() != DIFFICULTY_VERY_HARD) {
         printf("WRONG: the resumed game does not keep its saved rules\n");
         result = 1;
     }
@@ -5347,7 +5404,7 @@ int main(int argc, char **argv)
     } else if (strcmp(command, "lobbyrules") == 0) {
         result = command_lobbyrules(file);
     } else if (strcmp(command, "resumerules") == 0 && argc > 3) {
-        result = command_resumerules(file, atoi(argv[3]));
+        result = command_resumerules(file, atoi(argv[3]), argc > 4 ? atoi(argv[4]) : 0);
     } else if (strcmp(command, "badrules") == 0) {
         result = command_badrules(atoi(file));
     } else if (strcmp(command, "attacksource") == 0 && argc > 4) {

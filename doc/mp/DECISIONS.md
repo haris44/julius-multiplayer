@@ -974,7 +974,9 @@
   territoires tombaient à 0 : les joueurs bâtissaient partout. Après « Héberger », le salon affiche les règles de la
   sauvegarde, grisées, et les changements n'ont plus d'effet ; les joueurs qui rejoignent les voient aussi. *À
   valider* : le salon ne peut plus rien changer d'une partie reprise. Avant « Héberger », il montre encore ses propres
-  réglages. Test `mp_lobby_resume_rules`.
+  réglages. Une sauvegarde plus ancienne (avant le score de César ou avant les territoires) garde aussi ses règles :
+  celles qui manquent valent 0, comme au chargement. Tests `mp_lobby_resume_rules`,
+  `mp_lobby_resume_rules_before_score` et `mp_lobby_resume_rules_before_territories`.
 - **Une carte multijoueur (`.mpmap`) garde ses territoires** ; les autres règles viennent du salon. *À valider*.
 - **Les règles reçues du réseau sont vérifiées** (salon et message d'accueil) : difficulté de 0 à 4, oui/non, fin de
   partie, années et score dans leurs bornes. Un message hors bornes est ignoré dans le salon ; un accueil hors bornes

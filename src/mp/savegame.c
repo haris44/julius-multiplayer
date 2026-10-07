@@ -352,8 +352,9 @@ int mp_savegame_read_rules(const char *filename, game_rules_settings *rules)
             buffer buf;
             buffer_init(&buf, (uint8_t *) header->data, header->size);
             buffer_skip(&buf, 6 * 4);
+            // as when loading the game: the rules missing from an older header read as 0
             int mode = game_rules_read_state(&buf, rules);
-            ok = !buf.overflow && mode == GAME_MODE_MULTIPLAYER && game_rules_settings_valid(rules);
+            ok = mode == GAME_MODE_MULTIPLAYER && game_rules_settings_valid(rules);
         }
     }
     free(reading.file);
