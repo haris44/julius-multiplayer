@@ -397,6 +397,17 @@ add_test(NAME mp_trade_empire_always_sells COMMAND simtool empiresells brugle-ma
 # Each player trades with the empire on his own: nothing of it leaks to another player (T4.12, D-061)
 add_test(NAME mp_trade_empire_isolation COMMAND simtool tradeisolation brugle-massilia-start.sav)
 add_test(NAME mp_trade_resume COMMAND simtool traderesume brugle-massilia-start.sav)
+# T5.7: in a game started as from the lobby, every player sells to every other, by roads of their own off the main
+# road: a caravan every month for each resource bought, while the earlier ones are on their way, on both maps
+foreach(players 2 3 4)
+    add_test(NAME mp_trade_every_player_${players}_players COMMAND simtool tradegame brugle-massilia-start.sav ${players})
+    add_test(NAME mp_trade_every_player_map2_${players}_players COMMAND simtool --map 2 tradegame brugle-massilia-start.sav ${players})
+endforeach()
+# T5.7: a first warehouse of the buyer on a road of its own does not stop the caravans to his other warehouses
+add_test(NAME mp_trade_warehouse_apart COMMAND simtool tradewarehouse brugle-massilia-start.sav 3)
+add_test(NAME mp_trade_warehouse_apart_map2 COMMAND simtool --map 2 tradewarehouse brugle-massilia-start.sav 2)
+# T5.7: the trade page tells the buyer why no caravan left (no stock, warehouse, road, room, money, limit)
+add_test(NAME mp_trade_purchase_state COMMAND simtool tradestatus brugle-massilia-start.sav 3)
 # Stock minimum and maximum: a buyer stops buying from players and the empire at his limit, a seller keeps his
 # threshold; network commands, saved, an older game loads with no limit (T4.5, D-070)
 add_test(NAME mp_trade_bounds COMMAND simtool tradebounds brugle-massilia-start.sav)

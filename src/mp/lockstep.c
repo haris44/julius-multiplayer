@@ -29,7 +29,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define PROTOCOL_VERSION 19 // 3: the rules of the game travel with the welcome message; 4: territories; 5: fog;
+#define PROTOCOL_VERSION 20 // 3: the rules of the game travel with the welcome message; 4: territories; 5: fog;
                             // 6: one forest map, games alone (D-044); 7: missions at the start (D-045);
                             // 8: a caravan per resource, the empire the dearer source (D-048);
                             // 9: wide places in messages, the missionary goes to the nearest walkable tile;
@@ -42,7 +42,9 @@
                             // 16: the prepared map in the rules, a second map for 2 and for 4 players (T4.14);
                             // 17: stock limits of the trade, a command and a piece of the state (T4.5, D-070);
                             // 18: a monthly history of the laurels of each city (T4.1, D-071);
-                            // 19: the number of players of the host in the rules of the lobby (T4.11)
+                            // 19: the number of players of the host in the rules of the lobby (T4.11);
+                            // 20: a caravan every month for each resource bought, to a warehouse on a road of the
+                            // seller with room for it (T5.7, D-075)
 #define TURN_TICKS 4
 #define TURN_DELAY 2
 #define HISTORY 256

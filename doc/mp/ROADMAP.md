@@ -742,7 +742,16 @@ Les journaux de l'essai ne sont pas sur le Mac de développement : diagnostic pa
 - [ ] **T5.4** Impossible de charger une partie sauvegardée.
 - [ ] **T5.5** Pouvoir attaquer un autre joueur, même simplement (« nécessaire pour le commerce au démarrage »).
 - [ ] **T5.6** Simplifier la fenêtre du commerce ; attention aux textes qui se superposent.
-- [ ] **T5.7** Impossible de commercer entre joueurs : les caravanes ne circulent pas.
+- [x] **T5.7** Impossible de commercer entre joueurs : les caravanes ne circulent pas.
+  *Fait* (D-075, provisoire, **à valider**) : pas de panne franche reproduite (parties simulées à 2, 3 et 4 joueurs sur
+  les deux cartes, lancées comme depuis le salon : les caravanes partent, arrivent, sont payées), mais trois causes de
+  « rien ne circule » trouvées et corrigées : une seule caravane à la fois par ressource alors que les trajets durent
+  de 3 à 7 mois sur les grandes cartes (désormais une par mois, ce qui est en route compté comme dépensé et rangé) ;
+  un premier entrepôt de l'acheteur sur une route à part bloquait tout (désormais un entrepôt joignable par le
+  vendeur) ; rien ne disait pourquoi rien ne part (la colonne « En route » le dit, et `julius-log.txt`), et dans le
+  vrai jeu la ligne de la route et son bouton se dessinaient l'un sur l'autre (redessinés quand l'état change). Tests
+  `mp_trade_every_player_*`, `mp_trade_warehouse_apart*`, `mp_trade_purchase_state`, `tools/mp-trade3-test.sh`
+  (trois vrais jeux depuis le salon, routes et achats par clics). Protocole 20.
 - [ ] **T5.8** L'aqueduc de César ne doit pas suivre la route de si près.
 
 ## MC — Cartes multijoueur préparées et César (D-033, D-034)
