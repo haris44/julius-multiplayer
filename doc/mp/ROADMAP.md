@@ -718,6 +718,20 @@ le note « à valider ».
   *Fait* (T4.14) : `simtool longroutes` vérifie aussi moins de 400 pas, sur chaque carte. Plus longs chemins par les
   routes : carte 1, 153 pas à 2 et 298 à 4 ; carte 2, 117 pas à 2 et 241 à 4.
 
+## T5 — Deuxième essai à plusieurs (2026-10-07)
+Essai d'Alexandre : 3 joueurs, 3 Mac, réseau local filaire stable, version de la nuit (`95190c7f`, protocole 19).
+Les journaux de l'essai ne sont pas sur le Mac de développement : diagnostic par le code et des parties simulées.
+- [ ] **T5.1** Vérifier que J2, J3 et J4 ne jouent pas en difficile (« voir si les J2/J3/J4 ne sont pas en mode
+  difficile »).
+- [ ] **T5.2** Aligner les salaires de Rome pour tous les joueurs.
+- [ ] **T5.3** Désynchronisation au tour 18954, puis impossible de reprendre la partie (« on était peut-être tous les
+  3 dans les menus à ce moment-là »).
+- [ ] **T5.4** Impossible de charger une partie sauvegardée.
+- [ ] **T5.5** Pouvoir attaquer un autre joueur, même simplement (« nécessaire pour le commerce au démarrage »).
+- [ ] **T5.6** Simplifier la fenêtre du commerce ; attention aux textes qui se superposent.
+- [ ] **T5.7** Impossible de commercer entre joueurs : les caravanes ne circulent pas.
+- [ ] **T5.8** L'aqueduc de César ne doit pas suivre la route de si près.
+
 ## MC — Cartes multijoueur préparées et César (D-033, D-034)
 - [ ] **MC.1** Ouvrages de César dessinés en blanc (la teinte actuelle ne fait que foncer les images) ; son aqueduc
   porte l'eau de son réservoir à toutes les cités. Le propriétaire existe déjà (T1.5).
