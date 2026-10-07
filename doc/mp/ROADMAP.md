@@ -721,9 +721,22 @@ le note « à valider ».
 ## T5 — Deuxième essai à plusieurs (2026-10-07)
 Essai d'Alexandre : 3 joueurs, 3 Mac, réseau local filaire stable, version de la nuit (`95190c7f`, protocole 19).
 Les journaux de l'essai ne sont pas sur le Mac de développement : diagnostic par le code et des parties simulées.
-- [ ] **T5.1** Vérifier que J2, J3 et J4 ne jouent pas en difficile (« voir si les J2/J3/J4 ne sont pas en mode
-  difficile »).
-- [ ] **T5.2** Aligner les salaires de Rome pour tous les joueurs.
+- [x] **T5.1** Vérifier que J2, J3 et J4 ne jouent pas en difficile (« voir si les J2/J3/J4 ne sont pas en mode
+  difficile »). *Fait* (D-076) : le bug était réel et touchait **toutes** les cités. Charger le modèle de carte remet le
+  jeu en mode classique, donc la difficulté du réglage local de l'hôte : le trésor et la faveur de départ (copiés dans
+  chaque cité) étaient ceux de ce réglage, pas ceux du salon. Reproduit par `mp_lan_start_easy` (salon facile, hôte
+  très difficile : 2 250 Dn au lieu de 6 000, faveur 40 au lieu de 60). Corrigé : la génération (et la composition de
+  copies) remet les règles du salon et recalcule fonds et faveur. Le reste (sentiment, loups, armées) se calculait déjà
+  par `game_rules_difficulty()`. Tests `mp_lan_start_easy`, `mp_lan_start_hard`, `mp_lan_start_easy_saved_template`,
+  `mp_lan_start_easy_cities_map` : 3 joueurs en réseau, mêmes valeurs sur l'hôte et les clients.
+  *Journal* : au lancement d'une partie, `julius-log.txt` de chaque ordinateur écrit les règles (difficulté, dieux,
+  invasions, carte, score) et le départ de chaque cité (trésor, faveur, rang, salaire, épargne), pour comparer les
+  joueurs après un essai. Le journal du lancement précédent est gardé (`julius-log-precedent.txt`).
+- [x] **T5.2** Aligner les salaires de Rome pour tous les joueurs. *Fait* (D-076, à valider) : les cités héritaient du
+  rang du modèle de carte (rang 5 : 20 Dn par mois au départ) et chacun choisissait son salaire. Maintenant même départ
+  pour tous (rang 0, salaire 0, épargne 0) et Rome verse à chacun le salaire de son rang de lauriers, même table, sans
+  choix. Tests `mp_salaries` (rangs 0, 1, 3 payés 0, 2, 8 Dn), `mp_lan_start_*` (départ identique malgré un modèle de
+  rang 5), `mp_caesar_gifts` mis à jour.
 - [x] **T5.3** Désynchronisation au tour 18954, puis impossible de reprendre la partie (« on était peut-être tous les
   3 dans les menus à ce moment-là »).
   *Fait* (D-074) : **cause trouvée** : le conseiller religieux écrivait dans la cité le « dieu le moins content »,
@@ -757,7 +770,16 @@ Les journaux de l'essai ne sont pas sur le Mac de développement : diagnostic pa
   l'ordinateur qui l'a faite (c'est lui qui héberge la reprise) ; celle du mois est sur tous.
 - [ ] **T5.5** Pouvoir attaquer un autre joueur, même simplement (« nécessaire pour le commerce au démarrage »).
 - [ ] **T5.6** Simplifier la fenêtre du commerce ; attention aux textes qui se superposent.
-- [ ] **T5.7** Impossible de commercer entre joueurs : les caravanes ne circulent pas.
+- [x] **T5.7** Impossible de commercer entre joueurs : les caravanes ne circulent pas.
+  *Fait* (D-075, provisoire, **à valider**) : pas de panne franche reproduite (parties simulées à 2, 3 et 4 joueurs sur
+  les deux cartes, lancées comme depuis le salon : les caravanes partent, arrivent, sont payées), mais trois causes de
+  « rien ne circule » trouvées et corrigées : une seule caravane à la fois par ressource alors que les trajets durent
+  de 3 à 7 mois sur les grandes cartes (désormais une par mois, ce qui est en route compté comme dépensé et rangé) ;
+  un premier entrepôt de l'acheteur sur une route à part bloquait tout (désormais un entrepôt joignable par le
+  vendeur) ; rien ne disait pourquoi rien ne part (la colonne « En route » le dit, et `julius-log.txt`), et dans le
+  vrai jeu la ligne de la route et son bouton se dessinaient l'un sur l'autre (redessinés quand l'état change). Tests
+  `mp_trade_every_player_*`, `mp_trade_warehouse_apart*`, `mp_trade_purchase_state`, `tools/mp-trade3-test.sh`
+  (trois vrais jeux depuis le salon, routes et achats par clics). Protocole 20.
 - [ ] **T5.8** L'aqueduc de César ne doit pas suivre la route de si près.
 
 ## MC — Cartes multijoueur préparées et César (D-033, D-034)

@@ -397,6 +397,17 @@ add_test(NAME mp_trade_empire_always_sells COMMAND simtool empiresells brugle-ma
 # Each player trades with the empire on his own: nothing of it leaks to another player (T4.12, D-061)
 add_test(NAME mp_trade_empire_isolation COMMAND simtool tradeisolation brugle-massilia-start.sav)
 add_test(NAME mp_trade_resume COMMAND simtool traderesume brugle-massilia-start.sav)
+# T5.7: in a game started as from the lobby, every player sells to every other, by roads of their own off the main
+# road: a caravan every month for each resource bought, while the earlier ones are on their way, on both maps
+foreach(players 2 3 4)
+    add_test(NAME mp_trade_every_player_${players}_players COMMAND simtool tradegame brugle-massilia-start.sav ${players})
+    add_test(NAME mp_trade_every_player_map2_${players}_players COMMAND simtool --map 2 tradegame brugle-massilia-start.sav ${players})
+endforeach()
+# T5.7: a first warehouse of the buyer on a road of its own does not stop the caravans to his other warehouses
+add_test(NAME mp_trade_warehouse_apart COMMAND simtool tradewarehouse brugle-massilia-start.sav 3)
+add_test(NAME mp_trade_warehouse_apart_map2 COMMAND simtool --map 2 tradewarehouse brugle-massilia-start.sav 2)
+# T5.7: the trade page tells the buyer why no caravan left (no stock, warehouse, road, room, money, limit)
+add_test(NAME mp_trade_purchase_state COMMAND simtool tradestatus brugle-massilia-start.sav 3)
 # Stock minimum and maximum: a buyer stops buying from players and the empire at his limit, a seller keeps his
 # threshold; network commands, saved, an older game loads with no limit (T4.5, D-070)
 add_test(NAME mp_trade_bounds COMMAND simtool tradebounds brugle-massilia-start.sav)
@@ -406,6 +417,8 @@ add_test(NAME mp_caesar_state COMMAND simtool caesarstate brugle-massilia-start.
 add_test(NAME mp_caesar_laurels COMMAND simtool caesarlaurels valentia57.sav)
 # Gifts, salary and donations to Caesar are network commands; a gift gives laurels, one counted a year (T4.2, D-067)
 add_test(NAME mp_caesar_gifts COMMAND simtool caesargifts brugle-massilia-start.sav)
+# T5.2 (D-076): Rome pays every player the salary of his rank; the same start for everybody
+add_test(NAME mp_salaries COMMAND simtool salaries brugle-massilia-start.sav)
 # Monthly history of the laurels of each city, for the ratings advisor: gain, trend, saved (T4.1, D-071)
 add_test(NAME mp_caesar_history COMMAND simtool caesarhistory brugle-massilia-start.sav)
 
@@ -420,11 +433,20 @@ if(NOT WIN32)
     add_test(NAME mp_lan_generated_map COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/sim/lan_test.sh $<TARGET_FILE:simtool> 27441 3 brugle-massilia-start.sav 600 generate)
     # T4.14: three players on the prepared map 2 chosen in the lobby
     add_test(NAME mp_lan_generated_map2 COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/sim/lan_test.sh $<TARGET_FILE:simtool> 27451 3 brugle-massilia-start.sav 600 generate map2)
-    set_tests_properties(mp_lan_generated_map mp_lan_generated_map2 PROPERTIES TIMEOUT 120)
     # T5.4: a game saved by every player as the File menu does, then hosted again as the lobby does (same process),
     # joined again by the players, one of them a new process: 3 players on map 1, 2 players on map 2
     add_test(NAME mp_lan_save_resume_3_players COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/sim/lan_test.sh $<TARGET_FILE:simtool> 27522 3 brugle-massilia-start.sav 900 generate saveresume)
     add_test(NAME mp_lan_save_resume_map2_2_players COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/sim/lan_test.sh $<TARGET_FILE:simtool> 27523 2 brugle-massilia-start.sav 900 generate map2 saveresume)
     set_tests_properties(mp_lan_save_resume_3_players mp_lan_save_resume_map2_2_players PROPERTIES TIMEOUT 240)
+    # T5.1, T5.2: three players on a generated map; the cities start with the funds, favor, rank, salary and savings of
+    # the difficulty of the lobby and of everybody, on the host and on the clients, whatever the settings of the
+    # computers and the rank of the template (a free map with rank 5 and funds 3000, or a saved game)
+    add_test(NAME mp_lan_start_easy COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/sim/lan_test.sh $<TARGET_FILE:simtool> 27540 3 brugle-massilia-start.sav 200 generate difficulty-easy map-template)
+    add_test(NAME mp_lan_start_hard COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/sim/lan_test.sh $<TARGET_FILE:simtool> 27541 3 brugle-massilia-start.sav 200 generate difficulty-hard map-template)
+    add_test(NAME mp_lan_start_easy_saved_template COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/sim/lan_test.sh $<TARGET_FILE:simtool> 27542 3 brugle-massilia-start.sav 200 generate difficulty-easy)
+    # the same for separate copies of a free map of the game (not a generated map)
+    add_test(NAME mp_lan_start_easy_cities_map COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/sim/lan_test.sh $<TARGET_FILE:simtool> 27543 3 brugle-massilia-start.sav 200 cities difficulty-easy map-template)
+    set_tests_properties(mp_lan_generated_map mp_lan_generated_map2 mp_lan_start_easy mp_lan_start_hard
+        mp_lan_start_easy_saved_template mp_lan_start_easy_cities_map PROPERTIES TIMEOUT 120)
 endif()
 

@@ -197,8 +197,8 @@ int mp_caesar_gift_sent(int player_id, int size);
 int mp_caesar_salary_rank_limit(int player_id);
 
 /**
- * Monthly, before the salary is paid: brings the salary of the current city down to its rank, if it is above, and
- * to the amount of the table for the rank it has
+ * Monthly, before the salary is paid: Rome pays the current city the salary of its rank, the same table for every
+ * player (D-076), and the rank of the original game follows it
  */
 void mp_caesar_limit_salary(void);
 

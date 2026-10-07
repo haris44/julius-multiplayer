@@ -1,5 +1,9 @@
 #include "lockstep.h"
 
+#include "city/data.h"
+#include "city/emperor.h"
+#include "city/finance.h"
+#include "city/ratings.h"
 #include "core/buffer.h"
 #include "core/dir.h"
 #include "core/io.h"
@@ -25,7 +29,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define PROTOCOL_VERSION 19 // 3: the rules of the game travel with the welcome message; 4: territories; 5: fog;
+#define PROTOCOL_VERSION 20 // 3: the rules of the game travel with the welcome message; 4: territories; 5: fog;
                             // 6: one forest map, games alone (D-044); 7: missions at the start (D-045);
                             // 8: a caravan per resource, the empire the dearer source (D-048);
                             // 9: wide places in messages, the missionary goes to the nearest walkable tile;
@@ -38,7 +42,9 @@
                             // 16: the prepared map in the rules, a second map for 2 and for 4 players (T4.14);
                             // 17: stock limits of the trade, a command and a piece of the state (T4.5, D-070);
                             // 18: a monthly history of the laurels of each city (T4.1, D-071);
-                            // 19: the number of players of the host in the rules of the lobby (T4.11)
+                            // 19: the number of players of the host in the rules of the lobby (T4.11);
+                            // 20: a caravan every month for each resource bought, to a warehouse on a road of the
+                            // seller with room for it (T5.7, D-075)
 #define TURN_TICKS 4
 #define TURN_DELAY 2
 #define HISTORY 256
@@ -385,6 +391,27 @@ static void host_issue_turn(int turn)
 
 // ---------- game start ----------
 
+// julius-log.txt of every computer: the rules of the game and the start of every city, to compare the players
+// after a game (T5.1: a city that started at another difficulty than the lobby's)
+static void log_game_start(int player)
+{
+    char line[200];
+    const game_rules_settings *rules = game_rules_multiplayer_settings();
+    snprintf(line, sizeof(line), "difficulty %d, gods %d, AI invasions %d, fog %d, end %d, score %d, map %d, tick %d",
+        rules->difficulty, rules->gods_enabled, rules->ai_invasions, rules->fog_of_war, rules->end_condition,
+        rules->caesar_score, rules->prepared_map, game_time_absolute_tick());
+    log_info("Multiplayer: rules of the game:", line, 0);
+    int previous = player_context_current();
+    for (int p = 0; p < player_context_num_players(); p++) {
+        player_context_switch(p);
+        snprintf(line, sizeof(line), "player %d%s: treasury %d, favor %d, rank %d, salary %d, savings %d", p + 1,
+            p == player ? " (this computer)" : "", city_finance_treasury(), city_rating_favor(),
+            city_emperor_salary_rank(), city_emperor_salary_amount(), city_emperor_personal_savings());
+        log_info("Multiplayer:", line, 0);
+    }
+    player_context_switch(previous);
+}
+
 static void start_session(int player, int base_tick, const game_rules_settings *rules)
 {
     game_rules_set_multiplayer(rules);
@@ -399,6 +426,7 @@ static void start_session(int player, int base_tick, const game_rules_settings *
         }
     }
     mp_session_init_network(player, data.is_host ? host_sink : client_sink);
+    log_game_start(player);
     data.state = MP_LOCKSTEP_RUNNING;
     if (data.started_callback) {
         data.started_callback();
@@ -434,6 +462,8 @@ static int host_generate_map(void)
     // The seed of the lobby also draws the arrival points
     int map = mp_mapgen_choose_prepared_map(data.rules.prepared_map, data.map_seed);
     data.rules.prepared_map = map;
+    // the cities start with the funds and the favor of the difficulty of the lobby, not of this computer (T5.1)
+    game_rules_set_multiplayer(&data.rules);
     if (!mp_mapgen_create_prepared_map(data.saved_game, data.num_players, map, data.map_seed)) {
         return 0;
     }
@@ -458,8 +488,17 @@ static int host_compose_cities(void)
     } else {
         loaded = game_file_load_saved_game(data.saved_game);
     }
-    if (!loaded ||
-        !mp_compose_separate_cities(data.num_players, MP_COMPOSE_CITY_GAP)) {
+    if (!loaded) {
+        return 0;
+    }
+    // loading put the game back in classic mode, at the difficulty of this computer: the cities, copies of this one,
+    // start with the rules of the lobby, and every player with the same rank, salary and savings (T5.1, T5.2, D-076)
+    game_rules_set_multiplayer(&data.rules);
+    if (is_scenario(data.saved_game)) {
+        city_data_init_scenario();
+    }
+    city_emperor_init_multiplayer(is_scenario(data.saved_game));
+    if (!mp_compose_separate_cities(data.num_players, MP_COMPOSE_CITY_GAP)) {
         return 0;
     }
     // players may build between their cities and join them (D-018)

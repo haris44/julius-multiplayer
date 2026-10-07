@@ -377,8 +377,13 @@ void mp_actions_execute(const mp_command *command)
             }
             break;
         case MP_ACTION_SET_SALARY:
-            if (arg1 >= 0 && arg1 <= 10 &&
-                (!mp_caesar_is_active() || arg1 <= mp_caesar_salary_rank_limit(player_context_current_player))) {
+            if (mp_caesar_is_active()) {
+                // Rome pays everybody the salary of his rank: the choice is gone, the command brings the salary up to
+                // date at once (D-076)
+                city_emperor_set_paid_rank(mp_caesar_salary_rank_limit(player_context_current_player));
+                city_finance_update_salary();
+                city_ratings_update_favor_explanation();
+            } else if (arg1 >= 0 && arg1 <= 10) {
                 city_emperor_set_salary_rank(arg1);
                 city_finance_update_salary();
                 city_ratings_update_favor_explanation();

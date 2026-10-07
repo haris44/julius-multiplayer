@@ -80,6 +80,9 @@ MAPGEN_PICTURE=carte.ppm ./simtool preparedmap SAVE 2 10   # ... et son image (s
                                             # difficile, avec réservoirs et fontaines : tableau des chiffres, échoue si une règle multijoueur les change (§2 ter) ;
                                             # blank : carte libre classique faite par le test ; CARTE.map : une carte du jeu, à la main
                                             # (donnees-c3, jamais dans le dépôt) ; RESTRICT_TRACE=1 : population, moral et chômage chaque mois
+./simtool tradegame SAVE 3 [TIRAGE]         # partie lancée comme depuis le salon : chacun vend à chacun, une caravane
+                                            # par mois et par ressource achetée (T5.7) ; tradewarehouse : un premier
+                                            # entrepôt à part ne bloque rien ; tradestatus : pourquoi rien ne part
 ./simtool caravans SAVE                     # caravanes entre joueurs ; tradeconservation, traderesume :
                                             # conservation, reprise
 ./simtool importprice SAVE                  # prix de Rome et portorium (D-060) ; empiresells : l'empire vend
@@ -242,6 +245,11 @@ Bon à savoir :
   joueurs (`build/automation/trade-window.png`) ; le client achète le marbre (`trade-client-buys.png`), l'hôte en
   monte le prix et le client voit l'alerte plein écran (`price-alert.png`, puis `price-alert-trade.png` après « Voir
   le commerce »).
+- `tools/mp-trade3-test.sh` : trois vrais jeux depuis le salon (hôte et deux clients, partie pour 3) ; sur la page du
+  commerce, chacun propose la route aux deux autres et achète du marbre au premier, du fer au second, par clics.
+  Vérifie que les six achats sont examinés au même départ mensuel sur les trois machines (lignes « Trade between
+  players » du journal), sans désynchronisation ; captures `trade3-*.png` (ligne de la route lisible, raison dans la
+  colonne « En route ») (T5.7).
 - `tools/mp-ui-test.sh` : hôte en 640 × 480 et client en 1024 × 768 (l'écran factice le ramène à 1024 × 736),
   depuis le salon ; captures `build/automation/ui-*.png` des fenêtres revues par T4 (voir le tableau ci-dessous).
 - `test/automation/display.txt` : les options d'affichage (plus grande fenêtre qui tient sur l'écran).
@@ -257,6 +265,7 @@ coordonnées ; la barre latérale reste collée au bord droit (bouton industrie 
 | `tools/mp-solo-test.sh` | salon à 1 joueur (règles, carte), lettre de César, mission et zone, missionnaire, pont, bandeau des lauriers, conseiller impérial et page du commerce seule (onglet Stocks) en 800 × 600 |
 | `tools/mp-lobby-test.sh` | salon hôte et client (partie trouvée, salle d'attente), partie à deux sans désynchronisation |
 | `tools/mp-trade-test.sh` | page du commerce (prix de Rome, portorium, onglet d'un joueur), achat, alerte de prix, onglet Stocks avec une limite |
+| `tools/mp-trade3-test.sh` | partie à trois depuis le salon : routes proposées et achats par clics entre les trois joueurs, départs mensuels examinés partout, raison affichée quand rien ne part (T5.7) |
 | `tools/mp-real-test.sh` | partie en réseau sans salon (`--mp-host`), constructions et conseillers pendant le jeu |
 | `tools/mp-sweep-test.sh` | partie en réseau seule (cité de `brugle-lugdunum.sav`, ou la carte préparée avec `MP_SWEEP_ARGS=--mp-generate`) : `windowsweep`, avant et après `angrygod` |
 | `tools/mp-menus-test.sh` | trois joueurs (`--mp-host`, cités de `brugle-lugdunum.sav`) : `windowsweep` des trois en même temps, puis de chacun seul, partie qui continue sans désynchronisation |

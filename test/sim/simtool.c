@@ -22,6 +22,8 @@
 #include "city/population.h"
 #include "city/ratings.h"
 #include "scenario/data.h"
+#include "scenario/editor.h"
+#include "scenario/empire.h"
 #include "scenario/editor_map.h"
 #include "scenario/invasion.h"
 #include "scenario/property.h"
@@ -180,6 +182,10 @@ static int usage(void)
     printf("                                         another player stays the same\n");
     printf("  simtool tradeconservation SAVE         trade between players makes and loses no goods nor money\n");
     printf("  simtool traderesume SAVE               a game saved while caravans travel goes on the same\n");
+    printf("  simtool tradegame SAVE [PLAYERS [DRAW]]  every player sells to every other in a game started as from the\n");
+    printf("                                         lobby: a caravan every month for each resource bought (T5.7)\n");
+    printf("  simtool tradewarehouse SAVE [PLAYERS [DRAW]]  a first warehouse apart does not stop the caravans\n");
+    printf("  simtool tradestatus SAVE [PLAYERS [DRAW]]  why no caravan leaves, as the trade page shows it\n");
     printf("  simtool caesarstate SAVE               laurels and wrath of Caesar: in the checksum, saved, resumed\n");
     printf("  simtool caesarlaurels SAVE             notes and monthly laurels of a city, ranks, the score wins\n");
     printf("  simtool caesarhistory SAVE             monthly history of the laurels of each city: gain, trend, saved\n");
@@ -202,6 +208,8 @@ static int usage(void)
     printf("  simtool badrules PORT                  a player refuses rules of the host out of their bounds\n");
     printf("  simtool attacksource SAVE SOURCE TICKS attacks of SOURCE (army, uprising, mars) come in a classic\n");
     printf("                                         game and with AI invasions on, none with them off\n");
+    printf("  simtool salaries SAVE                  three players: Rome pays each the salary of his rank, the same\n"
+           "                                         start and table for everybody (T5.2)\n");
     printf("  simtool caesarfree SAVE TICKS          Caesar (requests, anger, salary...) acts in a classic game\n");
     printf("                                         and not in a multiplayer game\n");
     printf("  simtool mpresume SAVE TICKS MORE       twin cities: saving after TICKS (.mpsav), then loading it and\n");
@@ -684,6 +692,54 @@ static void print_trade_state(const char *when)
     }
 }
 
+// T5.1, T5.2: what each city starts with, as every machine of the network sees it
+static void set_local_difficulty(int difficulty);
+
+static void count_trade_cities(int *land, int *sea);
+static int check_start_cities(int expected_difficulty, int from_map)
+{
+    int ok = 1;
+    int local = player_context_current();
+    if (game_rules_difficulty() != expected_difficulty) {
+        printf("WRONG: the game is played at difficulty %d, not %d\n", game_rules_difficulty(), expected_difficulty);
+        ok = 0;
+    }
+    printf("start difficulty %d\n", game_rules_difficulty());
+    // what the difficulty decides while playing: the base sentiment, the size of the armies, the bite of the wolves
+    int easy = expected_difficulty == DIFFICULTY_EASY;
+    printf("sentiment %d, enemies %d%%, wolf attack %d\n", difficulty_sentiment(), difficulty_adjust_enemies(100),
+        difficulty_adjust_wolf_attack(8));
+    if (difficulty_sentiment() != (easy ? 70 : 50) || difficulty_adjust_enemies(100) != (easy ? 60 : 100) ||
+        difficulty_adjust_wolf_attack(8) != (easy ? 4 : 8)) {
+        printf("WRONG: the sentiment, enemies or wolves are not those of the difficulty of the game\n");
+        ok = 0;
+    }
+    for (int p = 0; p < player_context_num_players(); p++) {
+        player_context_switch(p);
+        int funds = difficulty_adjust_money(scenario_initial_funds());
+        printf("start city %d: treasury %d favor %d savings %d salary rank %d amount %d rank %d\n", p,
+            city_finance_treasury(), city_rating_favor(), city_emperor_personal_savings(),
+            city_emperor_salary_rank(), city_emperor_salary_amount(), city_emperor_rank());
+        if (city_finance_treasury() != funds) {
+            printf("WRONG: city %d starts with %d denarii, the funds of the scenario at this difficulty are %d\n", p,
+                city_finance_treasury(), funds);
+            ok = 0;
+        }
+        if (from_map && city_rating_favor() != difficulty_starting_favor()) {
+            printf("WRONG: city %d starts with favor %d, not %d\n", p, city_rating_favor(),
+                difficulty_starting_favor());
+            ok = 0;
+        }
+        if (city_emperor_personal_savings() || city_emperor_salary_rank() || city_emperor_salary_amount() ||
+            city_emperor_rank()) {
+            printf("WRONG: city %d does not start with the rank, salary and savings of everybody\n", p);
+            ok = 0;
+        }
+    }
+    player_context_switch(local);
+    return ok;
+}
+
 static int command_mpnode(int argc, char **argv)
 {
     // argv: mpnode host PORT PLAYERS SAVE TICKS [cities] | mpnode join ADDRESS PORT TICKS
@@ -701,6 +757,51 @@ static int command_mpnode(int argc, char **argv)
     int is_join = argc >= 6 && strcmp(argv[2], "join") == 0;
     if (!is_host && !is_join) {
         return usage();
+    }
+    // 'difficulty-easy' / 'difficulty-hard' (T5.1, T5.2): the lobby sets this difficulty on a host whose own setting is
+    // the other end of the scale and on clients whose setting is "normal"; the template of the host ('blank') is a free
+    // map with a rank and funds of its own. Every city of every machine must start with the values of the game rules
+    int expected_difficulty = -1;
+    for (int i = 6; i < argc; i++) {
+        if (strcmp(argv[i], "difficulty-easy") == 0) {
+            expected_difficulty = DIFFICULTY_EASY;
+        } else if (strcmp(argv[i], "difficulty-hard") == 0) {
+            expected_difficulty = DIFFICULTY_HARD;
+        }
+    }
+    int map_template = 0; // 'map-template': the saved game becomes a free map (rank 5, funds 3000) for the host
+    for (int i = 6; i < argc; i++) {
+        map_template |= strcmp(argv[i], "map-template") == 0;
+    }
+    char template_file[64] = "";
+    if (map_template && is_host) {
+        snprintf(template_file, sizeof(template_file), "mp-template-%s.map", argv[3]);
+        if (!game_file_load_saved_game(argv[5])) {
+            printf("FAILED: cannot load %s\n", argv[5]);
+            return 1;
+        }
+        scenario_editor_set_player_rank(5);
+        scenario_editor_set_initial_funds(3000);
+        // the empire of a free map is one of the empires of the game, which must trade by land and by sea
+        for (int empire = 0; empire < 40; empire++) {
+            int land, sea;
+            empire_load(1, scenario_empire_id());
+            empire_init_scenario();
+            count_trade_cities(&land, &sea);
+            if (land > 0 && sea > 0) {
+                break;
+            }
+            scenario_editor_change_empire(1);
+        }
+        if (!game_file_editor_write_scenario(template_file)) {
+            printf("FAILED: cannot write the template\n");
+            return 1;
+        }
+        argv[5] = template_file;
+    }
+    if (expected_difficulty >= 0) {
+        set_local_difficulty(is_host ? (expected_difficulty == DIFFICULTY_EASY ? DIFFICULTY_VERY_HARD :
+            DIFFICULTY_VERY_EASY) : DIFFICULTY_NORMAL);
     }
     int ticks = atoi(is_host ? argv[6] : argv[5]);
     int cheat = is_join && argc >= 7 && strcmp(argv[6], "desync") == 0;
@@ -728,10 +829,15 @@ static int command_mpnode(int argc, char **argv)
         mp_lobby_rules_settings(&rules_at_host);
         mp_lockstep_set_rules(&rules_at_host);
     }
-    if (map2 && is_host) {
+    if ((map2 || expected_difficulty >= 0) && is_host) {
         game_rules_settings rules;
         game_rules_default_multiplayer_settings(&rules);
-        rules.prepared_map = GAME_MAP_2;
+        if (map2) {
+            rules.prepared_map = GAME_MAP_2;
+        }
+        if (expected_difficulty >= 0) {
+            rules.difficulty = expected_difficulty;
+        }
         mp_lockstep_set_rules(&rules);
     }
     time_t pause_start = 0, pause_seen_at = 0;
@@ -755,6 +861,7 @@ next_session:;
     time_t deadline = time(0) + 120;
     int start_tick = -1;
     int start_tax = 0;
+    int start_cities_wrong = 0;
     int last_played = -1;
     while (time(0) < deadline) {
         mp_lockstep_state state = mp_lockstep_get_state();
@@ -781,6 +888,9 @@ next_session:;
             start_tick = mp_lockstep_base_tick();
             mp_lockstep_set_tick_limit(ticks);
             start_tax = city_finance_tax_percentage();
+            if (expected_difficulty >= 0 && !check_start_cities(expected_difficulty, map_template)) {
+                start_cities_wrong = 1;
+            }
         }
         int before = game_time_absolute_tick();
         if (start_tick >= 0) {
@@ -869,7 +979,7 @@ next_session:;
     printf("map %d, %d tiles wide\n", game_rules_multiplayer_settings()->prepared_map + 1, map_grid_width());
     printf("pause seen: %d, ticks run while paused: %d\n", paused_seen, ticks_while_paused);
     int result = mp_lockstep_get_state() == MP_LOCKSTEP_RUNNING && start_tick >= 0 &&
-        game_time_absolute_tick() - start_tick == ticks;
+        game_time_absolute_tick() - start_tick == ticks && !start_cities_wrong;
     if (player_context_num_players() > 1) {
         // separate cities: the interface shows the local city, and every player changed only its own taxes
         int local = mp_session_local_player_id();
@@ -4604,8 +4714,8 @@ static int command_tradeconservation(const char *file)
     CHECK(conserved_days(40, marble, money), "short of money: goods and money conserved every day");
     CHECK(marble_of(0) == 2 && treasury_of(0) == 0, "he got the 2 loads he could pay for");
 
-    // his warehouse full of timber but for the space of his 2 loads of marble: the next caravan stores 2 more, he pays
-    // for them, the 6 others go back
+    // his warehouse full of timber but for the space of his 2 loads of marble: the next caravan brings only the 2 he
+    // has room for (T5.7), he pays for them, the rest stays with the seller
     player_context_switch(0);
     city_data.finance.treasury += savings;
     money += savings;
@@ -4620,7 +4730,7 @@ static int command_tradeconservation(const char *file)
     printf("player 1: %d loads; player 2: %d loads, earned %d\n", marble_of(0), marble_of(1),
         treasury_of(1) - seller_money);
     CHECK(marble_of(0) == 4 && marble_of(1) == 12 && treasury_of(1) - seller_money == 2 * 150,
-        "2 loads stored and paid, 6 back to the seller");
+        "2 loads sent, stored and paid, the rest stays with the seller");
 
     // room again: the rest comes
     player_context_switch(0);
@@ -4785,6 +4895,369 @@ static int command_tradeisolation(const char *file)
 #undef CHECK
     printf("%s\n", failures ? "DIFFERENT: the trade of a player with the empire leaks to another" :
         "Identical: each player trades with the empire on his own");
+    return failures ? 1 : 0;
+}
+
+// ---------- trade between every player, in a game started as from the lobby (T5.7) ----------
+
+#define TRADEGAME_MONTHS 14
+#define TRADEGAME_FUNDS 100000
+static const int TRADEGAME_GOODS[4] = { RESOURCE_MARBLE, RESOURCE_TIMBER, RESOURCE_IRON, RESOURCE_CLAY };
+
+static const char *tradegame_name(int resource)
+{
+    return resource == RESOURCE_MARBLE ? "marble" : resource == RESOURCE_TIMBER ? "timber" :
+        resource == RESOURCE_IRON ? "iron" : "clay";
+}
+
+static int is_caesar_road(int x, int y)
+{
+    if (!map_grid_is_inside(x, y, 1)) {
+        return 0;
+    }
+    int o = map_grid_offset(x, y);
+    return map_terrain_is(o, TERRAIN_ROAD) && map_owner_get_claimed(o) == MAP_OWNER_CAESAR;
+}
+
+static int next_to_caesar_road(const building *b)
+{
+    for (int y = b->y - 1; y <= b->y + b->size; y++) {
+        for (int x = b->x - 1; x <= b->x + b->size; x++) {
+            if (is_caesar_road(x, y)) {
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
+
+static int tiles_are_clear(int x, int y, int dx, int dy, int length)
+{
+    for (int i = 0; i < length; i++) {
+        if (map_terrain_is(map_grid_offset(x + i * dx, y + i * dy), TERRAIN_NOT_CLEAR)) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+static int tradegame_warehouse_at(int player_id, int x, int y)
+{
+    player_context_switch(player_id);
+    building *b = building_main(building_get(map_building_at(map_grid_offset(x, y))));
+    int id = b->type == BUILDING_WAREHOUSE && !next_to_caesar_road(b) ? b->id : 0;
+    player_context_switch(0);
+    return id;
+}
+
+// As a player does: a road of his own leaving the main road of Caesar near his city, and a warehouse at its end, out
+// of reach of the main road; returns the id of the warehouse. With `joined` 0, the road stops one tile short of the
+// main road: the warehouse stands on a road network of its own. The roads leave the main road at least 12 tiles away
+// from (avoid_x, avoid_y).
+static int build_warehouse_away(int player_id, int joined, int avoid_x, int avoid_y)
+{
+    static const int DIRS[4][2] = { { 0, 1 }, { 0, -1 }, { 1, 0 }, { -1, 0 } };
+    int cx, cy;
+    mp_mapgen_city_center(player_id, &cx, &cy);
+    for (int r = 0; r < 16; r++) {
+        for (int y = cy - r; y <= cy + r; y++) {
+            for (int x = cx - r; x <= cx + r; x++) {
+                if ((abs(x - cx) != r && abs(y - cy) != r) || !is_caesar_road(x, y) ||
+                    (abs(x - avoid_x) < 12 && abs(y - avoid_y) < 12)) {
+                    continue;
+                }
+                for (int d = 0; d < 4; d++) {
+                    int dx = DIRS[d][0], dy = DIRS[d][1];
+                    int ex = x + 7 * dx, ey = y + 7 * dy;
+                    if (!map_grid_is_inside(ex - 4, ey - 4, 9) || !tiles_are_clear(x + dx, y + dy, dx, dy, 7)) {
+                        continue;
+                    }
+                    int first = joined ? 1 : 2;
+                    build_as(player_id, BUILDING_ROAD, x + first * dx, y + first * dy, ex, ey);
+                    // beside the last three tiles of the road, four tiles or more away from the main road
+                    int wx = dx ? (dx > 0 ? ex - 2 : ex) : ex + 1;
+                    int wy = dy ? (dy > 0 ? ey - 2 : ey) : ey + 1;
+                    if (build_as(player_id, BUILDING_WAREHOUSE, wx, wy, wx, wy)) {
+                        int id = tradegame_warehouse_at(player_id, wx, wy);
+                        if (id) {
+                            return id;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return 0;
+}
+
+static int build_warehouse_off_main_road(int player_id, int joined)
+{
+    return build_warehouse_away(player_id, joined, -100, -100);
+}
+
+static int stock_in(int player_id, int warehouse_id, int resource)
+{
+    player_context_switch(player_id);
+    int loads = building_warehouse_get_amount(building_get(warehouse_id), resource);
+    player_context_switch(0);
+    return loads;
+}
+
+static void set_stock(int player_id, int warehouse_id, int resource, int loads)
+{
+    player_context_switch(player_id);
+    building *store = building_get(warehouse_id);
+    int have = building_warehouse_get_amount(store, resource);
+    if (have > loads) {
+        building_warehouse_remove_resource(store, resource, have - loads);
+    }
+    for (int i = have; i < loads; i++) {
+        building_warehouse_add_resource(store, resource);
+    }
+    player_context_switch(0);
+}
+
+static void set_funds(int player_id, int funds)
+{
+    player_context_switch(player_id);
+    city_data.finance.treasury = funds;
+    player_context_switch(0);
+}
+
+static int start_tradegame(const char *file, int num_players, unsigned int seed, const char *test)
+{
+    // the game of the lobby: the map written and read back as the players receive it, easy (D-063); a file of its own
+    // for each test, map, number of players and draw (ctest runs them together)
+    char map_file[100];
+    snprintf(map_file, sizeof(map_file), "trade%s-map%d-%d-%u.mpsav", test, options.prepared_map + 1, num_players,
+        seed);
+    if (num_players < 2 || num_players > 4 || !create_prepared(file, num_players, seed) ||
+        !mp_savegame_write(map_file) || !mp_savegame_read(map_file)) {
+        printf("Unable to create the prepared map\n");
+        return 0;
+    }
+    remove(map_file);
+    game_rules_settings rules;
+    game_rules_default_multiplayer_settings(&rules);
+    rules.difficulty = DIFFICULTY_EASY;
+    rules.ai_invasions = 0;
+    game_rules_set_multiplayer(&rules);
+    printf("prepared map %d for %d players, draw %u\n", options.prepared_map + 1, num_players, seed);
+    return 1;
+}
+
+// Every player sells his own material to every other player over an open route, as the trade page asks for it: both
+// propose the route, the buyer marks the material bought. Each player has three warehouses at the end of roads of his
+// own: two receive (a far seller has up to seven months of caravans on the road, and none leaves without room for
+// it), the third holds what he sells, given back every month; what he receives is counted and taken away every month. Every pair must trade, month after month, as the trade page says: a caravan every month for
+// every resource bought (T5.7).
+static int command_tradegame(const char *file, int num_players, unsigned int seed)
+{
+    if (!start_tradegame(file, num_players, seed, "game")) {
+        return 2;
+    }
+    int failures = 0;
+#define CHECK(condition, text) do { int ok_ = (condition); printf("%-70s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
+    int receives[4] = { 0 }, receives_too[4] = { 0 }, sells[4] = { 0 };
+    int all_built = 1;
+    for (int p = 0; p < num_players; p++) {
+        receives[p] = build_warehouse_off_main_road(p, 1);
+        receives_too[p] = build_warehouse_off_main_road(p, 1);
+        sells[p] = build_warehouse_off_main_road(p, 1);
+        all_built &= receives[p] && receives_too[p] && sells[p];
+        set_funds(p, TRADEGAME_FUNDS);
+    }
+    CHECK(all_built, "every player has three warehouses off the main road");
+    if (!all_built) {
+        player_context_set_num_players(1);
+        return 1;
+    }
+    for (int p = 0; p < num_players; p++) {
+        for (int q = 0; q < num_players; q++) {
+            if (p != q) {
+                city_action(p, MP_ACTION_PROPOSE_ROUTE, q, 1, 0);
+                city_action(p, MP_ACTION_SET_BUYS_FROM, q, TRADEGAME_GOODS[q], 1);
+            }
+        }
+    }
+    int delivered[4][4] = { { 0 } };
+    int months_with_delivery[4][4] = { { 0 } };
+    int first_month[4][4] = { { 0 } };
+    int most_on_the_way = 0;
+    for (int month = 0; month < TRADEGAME_MONTHS; month++) {
+        for (int p = 0; p < num_players; p++) {
+            set_stock(p, sells[p], TRADEGAME_GOODS[p], 8 * (num_players - 1));
+        }
+        run_trace(16 * 50, 16 * 50, 0, 0);
+        printf("month %2d: caravans of each player on the road:", month + 1);
+        for (int p = 0; p < num_players; p++) {
+            int caravans = count_caravans(p);
+            printf(" %d", caravans);
+            most_on_the_way = caravans > most_on_the_way ? caravans : most_on_the_way;
+        }
+        printf("\n");
+        for (int b = 0; b < num_players; b++) {
+            for (int s = 0; s < num_players; s++) {
+                if (b == s) {
+                    continue;
+                }
+                int got = stock_in(b, receives[b], TRADEGAME_GOODS[s]) +
+                    stock_in(b, receives_too[b], TRADEGAME_GOODS[s]) + stock_in(b, sells[b], TRADEGAME_GOODS[s]);
+                if (got && !delivered[b][s]) {
+                    first_month[b][s] = month + 1;
+                }
+                // the last six months: a delivery every month
+                months_with_delivery[b][s] += got && month >= TRADEGAME_MONTHS - 6;
+                delivered[b][s] += got;
+                set_stock(b, receives[b], TRADEGAME_GOODS[s], 0);
+                set_stock(b, receives_too[b], TRADEGAME_GOODS[s], 0);
+                set_stock(b, sells[b], TRADEGAME_GOODS[s], 0);
+            }
+        }
+    }
+    int all_trade = 1, steady = 1;
+    for (int b = 0; b < num_players; b++) {
+        for (int s = 0; s < num_players; s++) {
+            if (b != s) {
+                printf("player %d bought %3d loads of %s from player %d (first in month %d, %d of the last 6 months)\n",
+                    b + 1, delivered[b][s], tradegame_name(TRADEGAME_GOODS[s]), s + 1, first_month[b][s],
+                    months_with_delivery[b][s]);
+                all_trade &= delivered[b][s] > 0;
+                steady &= months_with_delivery[b][s] == 6;
+            }
+        }
+    }
+    CHECK(all_trade, "every player bought from every other");
+    CHECK(most_on_the_way > num_players - 1, "a seller has several caravans on the road to a far buyer");
+    CHECK(steady, "a delivery every month once the first caravans arrived");
+    player_context_switch(0);
+    player_context_set_num_players(1);
+#undef CHECK
+    printf("%s\n", failures ? "DIFFERENT: the players do not all trade with each other, month after month" :
+        "Identical: every player trades with every other, month after month");
+    return failures ? 1 : 0;
+}
+
+// A buyer whose first warehouse stands on a road of its own, not joined to the main road (a quarter not yet joined,
+// a harbour), and whose second one is joined to it: the caravans go to the second (T5.7)
+static int command_tradewarehouse(const char *file, int num_players, unsigned int seed)
+{
+    if (!start_tradegame(file, num_players, seed, "warehouse")) {
+        return 2;
+    }
+    int failures = 0;
+#define CHECK(condition, text) do { int ok_ = (condition); printf("%-70s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
+    int seller = num_players - 1;
+    int apart = build_warehouse_off_main_road(0, 0);
+    player_context_switch(0);
+    int apart_x = building_get(apart)->x, apart_y = building_get(apart)->y;
+    int joined = build_warehouse_away(0, 1, apart_x, apart_y);
+    int store = build_warehouse_off_main_road(seller, 1);
+    CHECK(apart && joined && store && apart < joined, "the buyer's first warehouse is apart, his second joined");
+    if (!apart || !joined || !store) {
+        player_context_set_num_players(1);
+        return 1;
+    }
+    run_trace(50, 50, 0, 0); // the warehouses come into use, their road networks are known
+    player_context_switch(0);
+    int apart_network = building_get(apart)->road_network_id, joined_network = building_get(joined)->road_network_id;
+    player_context_switch(seller);
+    int store_network = building_get(store)->road_network_id;
+    player_context_switch(0);
+    printf("road networks: warehouse apart %d, joined %d, seller's %d\n", apart_network, joined_network, store_network);
+    CHECK(apart_network != store_network && joined_network == store_network,
+        "only the second warehouse of the buyer is on the road network of the seller");
+    set_stock(seller, store, RESOURCE_MARBLE, 16);
+    city_action(0, MP_ACTION_PROPOSE_ROUTE, seller, 1, 0);
+    city_action(seller, MP_ACTION_PROPOSE_ROUTE, 0, 1, 0);
+    city_action(0, MP_ACTION_SET_BUYS_FROM, seller, RESOURCE_MARBLE, 1);
+    int on_the_way = 0, days = 0;
+    for (; days < 300 && stock_of(0, RESOURCE_MARBLE) < 8; days++) {
+        run_trace(50, 50, 0, 0);
+        int loads = mp_trade_loads_on_the_way(seller, 0, RESOURCE_MARBLE);
+        on_the_way = loads > on_the_way ? loads : on_the_way;
+    }
+    printf("after %d days: %d loads were on the way at most, player 1 has %d marble\n", days, on_the_way,
+        stock_of(0, RESOURCE_MARBLE));
+    CHECK(on_the_way >= 8, "a caravan of 8 loads leaves for the joined warehouse");
+    CHECK(stock_of(0, RESOURCE_MARBLE) >= 8, "it arrives");
+    player_context_switch(0);
+    player_context_set_num_players(1);
+#undef CHECK
+    printf("%s\n", failures ? "DIFFERENT: a warehouse apart stops the caravans" :
+        "Identical: a warehouse apart does not stop the caravans");
+    return failures ? 1 : 0;
+}
+
+// Why no caravan leaves, as the trade page of the buyer shows it next to what he buys (T5.7): the seller has none, the
+// buyer has no warehouse, or none on a road of the seller, no room, no money, his stock limit; then a caravan leaves.
+// Display only: the same game with and without anyone looking at it.
+static int command_tradestatus(const char *file, int num_players, unsigned int seed)
+{
+    if (!start_tradegame(file, num_players, seed, "status")) {
+        return 2;
+    }
+    int failures = 0;
+#define CHECK(condition, text) do { int ok_ = (condition); printf("%-70s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
+#define STATE() mp_trade_purchase_state(seller, 0, RESOURCE_MARBLE)
+    int seller = num_players - 1;
+    int store = build_warehouse_off_main_road(seller, 1);
+    set_funds(0, TRADEGAME_FUNDS);
+    city_action(0, MP_ACTION_PROPOSE_ROUTE, seller, 1, 0);
+    city_action(seller, MP_ACTION_PROPOSE_ROUTE, 0, 1, 0);
+    city_action(0, MP_ACTION_SET_BUYS_FROM, seller, RESOURCE_MARBLE, 1);
+    CHECK(STATE() == MP_TRADE_PURCHASE_UNKNOWN, "before the first month: nothing known");
+    run_trace(16 * 50, 16 * 50, 0, 0);
+    CHECK(STATE() == MP_TRADE_PURCHASE_NO_STOCK, "the seller has no marble: no stock");
+    CHECK(mp_trade_purchase_state(0, seller, RESOURCE_MARBLE) == MP_TRADE_PURCHASE_UNKNOWN,
+        "nothing for what is not bought");
+
+    set_stock(seller, store, RESOURCE_MARBLE, 16);
+    run_trace(16 * 50, 16 * 50, 0, 0);
+    CHECK(STATE() == MP_TRADE_PURCHASE_NO_WAREHOUSE, "the buyer has no warehouse: no warehouse");
+
+    int apart = build_warehouse_off_main_road(0, 0);
+    player_context_switch(0);
+    int apart_x = building_get(apart)->x, apart_y = building_get(apart)->y;
+    run_trace(16 * 50, 16 * 50, 0, 0);
+    CHECK(STATE() == MP_TRADE_PURCHASE_NO_ROAD, "his only warehouse is on a road of its own: no road");
+
+    int joined = build_warehouse_away(0, 1, apart_x, apart_y);
+    set_funds(0, 0);
+    run_trace(16 * 50, 16 * 50, 0, 0);
+    CHECK(STATE() == MP_TRADE_PURCHASE_NO_MONEY, "a warehouse on the road of the seller, but no money: no money");
+
+    set_funds(0, TRADEGAME_FUNDS);
+    set_stock(0, joined, RESOURCE_MARBLE, 4);
+    city_action(0, MP_ACTION_CHANGE_BUY_LIMIT, RESOURCE_MARBLE, 4, 0);
+    run_trace(16 * 50, 16 * 50, 0, 0);
+    CHECK(STATE() == MP_TRADE_PURCHASE_LIMIT, "4 loads in stock, bought up to 4: limit");
+
+    city_action(0, MP_ACTION_CHANGE_BUY_LIMIT, RESOURCE_MARBLE, -4, 0);
+    set_stock(0, apart, RESOURCE_TIMBER, 32);
+    set_stock(0, joined, RESOURCE_TIMBER, 28);
+    run_trace(16 * 50, 16 * 50, 0, 0);
+    CHECK(STATE() == MP_TRADE_PURCHASE_NO_ROOM, "his warehouses full: full");
+    CHECK(mp_trade_loads_on_the_way(seller, 0, RESOURCE_MARBLE) == 0 && stock_in(seller, store, RESOURCE_MARBLE) == 16,
+        "no caravan left, the seller keeps his marble");
+
+    set_stock(0, joined, RESOURCE_TIMBER, 0);
+    run_trace(16 * 50, 16 * 50, 0, 0);
+    CHECK(STATE() == MP_TRADE_PURCHASE_SENT && mp_trade_loads_on_the_way(seller, 0, RESOURCE_MARBLE) == 8,
+        "room again: a caravan of 8 loads leaves");
+
+    // the state is shown, never played: a game where nobody reads it goes the same
+    uint64_t looked = mp_checksum_state();
+    for (int i = 0; i < 100; i++) {
+        mp_trade_purchase_state(seller, 0, RESOURCE_MARBLE);
+    }
+    CHECK(mp_checksum_state() == looked, "reading it changes nothing");
+    player_context_switch(0);
+    player_context_set_num_players(1);
+#undef STATE
+#undef CHECK
+    printf("%s\n", failures ? "DIFFERENT: the trade page does not tell why no caravan leaves" :
+        "Identical: the trade page tells why no caravan leaves");
     return failures ? 1 : 0;
 }
 
@@ -5314,13 +5787,13 @@ static int play_gifts(int verify)
     city_action(0, MP_ACTION_SEND_GIFT, -1, 0, 0);
     CHECK(savings_of(0) == savings, "an unknown size of gift is refused");
 
-    // the salary is limited by the rank (3 at 300 laurels), and takes effect for him only
+    // Rome pays the salary of the rank (3 at 300 laurels), whatever the command asks (D-076), to him only
     int rank_of_1 = salary_rank_of(1);
     CHECK(mp_caesar_rank(0) == 3, "player 1 is of rank 3");
     city_action(0, MP_ACTION_SET_SALARY, 5, 0, 0);
-    CHECK(salary_rank_of(0) != 5, "a salary above the rank is refused");
-    city_action(0, MP_ACTION_SET_SALARY, 3, 0, 0);
-    CHECK(salary_rank_of(0) == 3 && salary_amount_of(0) == 8, "the salary of his rank, 8 denarii, is accepted");
+    CHECK(salary_rank_of(0) == 3 && salary_amount_of(0) == 8, "a salary above the rank is not paid: the rank's, 8 denarii");
+    city_action(0, MP_ACTION_SET_SALARY, 0, 0, 0);
+    CHECK(salary_rank_of(0) == 3 && salary_amount_of(0) == 8, "nor a lower one: Rome pays the salary of the rank");
     city_action(0, MP_ACTION_SET_SALARY, 11, 0, 0);
     city_action(0, MP_ACTION_SET_SALARY, -1, 0, 0);
     CHECK(salary_rank_of(0) == 3, "no such rank, no change");
@@ -5386,6 +5859,75 @@ static void write_old_caesar_state(buffer *buf, int version)
             buffer_write_i32(buf, p + 1); // waiting time of the gifts
         }
     }
+}
+
+// T5.2 (D-076): Rome pays every player the salary of his rank, from the same table; every city starts with the same
+// rank, salary and savings; nobody chooses a salary. Three players, one of each laurels.
+static int command_salaries(const char *file)
+{
+    static const int LAURELS_TENTHS[3] = { 0, 1000, 3000 }; // rank 0, 1 and 3
+    static const int SALARY_OF_RANK[11] = { 0, 2, 5, 8, 12, 20, 30, 40, 60, 80, 100 };
+    if (!create_prepared(file, 3, 0)) {
+        printf("Unable to create the prepared map\n");
+        return 2;
+    }
+    game_rules_settings rules;
+    game_rules_default_multiplayer_settings(&rules);
+    rules.ai_invasions = 0;
+    game_rules_set_multiplayer(&rules);
+    int failures = 0;
+#define CHECK(condition, text) do { int ok_ = (condition); printf("%-62s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
+    int same_start = 1;
+    for (int p = 0; p < 3; p++) {
+        player_context_switch(p);
+        same_start &= city_emperor_rank() == 0 && city_emperor_salary_rank() == 0 && city_emperor_salary_amount() == 0 &&
+            city_emperor_personal_savings() == 0;
+    }
+    player_context_switch(0);
+    CHECK(same_start, "the three cities start with no rank, no salary and no savings");
+    for (int p = 0; p < 3; p++) {
+        mp_caesar_add_laurels(p, MP_LAURELS_PROSPERITY, LAURELS_TENTHS[p]);
+    }
+    // nobody chooses: asking for the highest salary, or for none, changes nothing
+    city_action(0, MP_ACTION_SET_SALARY, 10, 0, 0);
+    city_action(1, MP_ACTION_SET_SALARY, 10, 0, 0);
+    city_action(2, MP_ACTION_SET_SALARY, 0, 0, 0);
+    CHECK(salary_rank_of(0) == 0 && salary_rank_of(1) == 1 && salary_rank_of(2) == 3,
+        "at once, each salary is the one of the rank, whatever was asked");
+    int treasury[3];
+    for (int p = 0; p < 3; p++) {
+        treasury[p] = treasury_of(p);
+    }
+    run_to_next_month_fast();
+    int paid = 1, favor_untouched = 1;
+    for (int p = 0; p < 3; p++) {
+        int rank = mp_caesar_rank(p);
+        paid &= rank == (p == 0 ? 0 : p == 1 ? 1 : 3) && salary_rank_of(p) == rank &&
+            salary_amount_of(p) == SALARY_OF_RANK[rank] && savings_of(p) == SALARY_OF_RANK[rank];
+        printf("player %d: rank %d, salary %d, savings %d\n", p + 1, rank, salary_amount_of(p), savings_of(p));
+        player_context_switch(p);
+        // the favor of the original game finds the salary right for the rank: no penalty
+        favor_untouched &= city_emperor_rank() == rank && city_data.ratings.favor_salary_penalty == 0;
+        player_context_switch(0);
+    }
+    CHECK(paid, "every player is paid the salary of his rank, 0, 2 and 8 denarii");
+    CHECK(favor_untouched, "and the rank of the original follows, with no penalty of favor");
+    // the salary comes out of the treasury of the one who gets it
+    int taxes_only = 1;
+    for (int p = 0; p < 3; p++) {
+        taxes_only &= treasury_of(p) <= treasury[p];
+    }
+    CHECK(taxes_only, "the salary is taken from the treasury of each player");
+    // one more month: the savings add up; a rank gained or lost changes the salary the month after
+    mp_caesar_add_laurels(0, MP_LAURELS_PROSPERITY, 1000);
+    mp_caesar_add_laurels(2, MP_LAURELS_PROSPERITY, -3000);
+    run_to_next_month_fast();
+    CHECK(salary_amount_of(0) == 2 && savings_of(0) == 2 && salary_amount_of(1) == 2 && savings_of(1) == 4 &&
+        salary_amount_of(2) == 0 && savings_of(2) == 8, "a rank gained or lost changes the salary the month after");
+#undef CHECK
+    printf("%s\n", failures ? "DIFFERENT: Rome does not pay everybody the salary of his rank" :
+        "Identical: Rome pays everybody the salary of his rank");
+    return failures ? 1 : 0;
 }
 
 // Gifts, salary and donations to Caesar are network commands (T4.2, D-067): they act in the city of the sender,
@@ -7250,6 +7792,12 @@ int main(int argc, char **argv)
         result = command_tradeisolation(file);
     } else if (strcmp(command, "tradeconservation") == 0) {
         result = command_tradeconservation(file);
+    } else if (strcmp(command, "tradegame") == 0) {
+        result = command_tradegame(file, argc > 3 ? atoi(argv[3]) : 3, argc > 4 ? (unsigned int) atoi(argv[4]) : 0);
+    } else if (strcmp(command, "tradewarehouse") == 0) {
+        result = command_tradewarehouse(file, argc > 3 ? atoi(argv[3]) : 3, argc > 4 ? (unsigned int) atoi(argv[4]) : 0);
+    } else if (strcmp(command, "tradestatus") == 0) {
+        result = command_tradestatus(file, argc > 3 ? atoi(argv[3]) : 3, argc > 4 ? (unsigned int) atoi(argv[4]) : 0);
     } else if (strcmp(command, "traderesume") == 0) {
         result = command_traderesume(file);
     } else if (strcmp(command, "tradebounds") == 0) {
@@ -7258,6 +7806,8 @@ int main(int argc, char **argv)
         result = command_caesarstate(file);
     } else if (strcmp(command, "caesarlaurels") == 0) {
         result = command_caesarlaurels(file);
+    } else if (strcmp(command, "salaries") == 0) {
+        result = command_salaries(file);
     } else if (strcmp(command, "caesargifts") == 0) {
         result = command_caesargifts(file);
     } else if (strcmp(command, "caesarhistory") == 0) {

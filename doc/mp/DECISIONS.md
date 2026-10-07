@@ -1176,3 +1176,82 @@
   c'est lui qui doit héberger la reprise. La sauvegarde du mois, elle, est sur tous les ordinateurs.
 - Protocole et formats inchangés. Classique : inchangé (le conseiller religieux, « Charger » et le salon y gardent
   leur comportement, sauf la liste de « Charger », qui montre aussi les parties multijoueur).
+
+### D-075 — Une caravane par mois et par ressource, vers un entrepôt joignable ; la page dit pourquoi rien ne part (T5.7, revoit D-048)
+- 2026-10-07 · **adoptée provisoirement** (essai à trois d'Alexandre : « impossible de commercer entre chacun : les
+  caravanes ne circulent pas » ; sans ses journaux, diagnostic par des parties simulées et le vrai jeu à trois)
+- **Ce que l'essai n'a pas permis de voir** : dans une partie simulée à 2, 3 et 4 joueurs sur les deux cartes, partie
+  lancée comme depuis le salon (carte écrite puis relue, facile), routes proposées des deux côtés et achats cochés par
+  les commandes de la page, entrepôts au bout de routes propres à chaque joueur : les caravanes partent, suivent les
+  routes et le pont, arrivent et sont payées. Pas de panne franche. Mais trois défauts, chacun capable de donner
+  « rien ne circule » :
+  1. **Une seule caravane à la fois par ressource** (D-048), alors que la page annonce « une caravane par mois ». Sur
+     les grandes cartes, un trajet dure de 3 à 7 mois (carte 1 à 3 joueurs : premières livraisons aux mois 5 à 7) :
+     8 chargements tous les 5 mois environ, rien entre deux.
+  2. **Seul le premier entrepôt de l'acheteur comptait** : s'il est sur une route à part (quartier pas encore relié à
+     la grande route, port), aucune caravane ne part jamais, d'aucun vendeur, même vers ses autres entrepôts reliés.
+  3. **Rien ne disait pourquoi rien ne part** (vendeur sans stock au-dessus de son seuil, ou nourriture restée dans les
+     greniers ; acheteur sans entrepôt, sans place, sans argent, à sa limite). Et dans le vrai jeu, la ligne « Route
+     commerciale » et le bouton « Proposer / Retirer » se dessinaient l'un sur l'autre dès que l'état de la route
+     changeait page ouverte : on ne pouvait pas lire si la route était ouverte (vu à trois dans le vrai jeu).
+- **Une caravane chaque mois pour chaque ressource achetée**, même quand celles des mois précédents sont encore en
+  route : la règle que la page affiche. Ce qui est en route compte comme déjà dépensé (l'acheteur paie à l'arrivée :
+  pas de dette) et comme déjà rangé.
+- **Pas de départ sans place** : la caravane ne part qu'avec ce que les entrepôts de l'acheteur peuvent encore
+  recevoir, chargements en route déduits. Plus d'aller-retour à vide chaque mois vers des entrepôts pleins.
+- **L'entrepôt d'arrivée** est un entrepôt de l'acheteur qui prend la ressource et qui est sur un réseau routier où
+  le vendeur a un entrepôt, et non plus son premier entrepôt.
+- **La page du commerce dit pourquoi aucune caravane n'est partie** ce mois-ci, dans la colonne « En route » de
+  chaque ressource achetée : « sans stock », « sans entrepôt », « sans chemin », « plein », « sans argent »,
+  « limite ». C'est un état d'affichage, ni sauvegardé ni lu par la simulation (connu de nouveau un mois après un
+  chargement). Chaque changement est aussi écrit dans `julius-log.txt` (« Trade between players: player 2 to player
+  1, resource 12: the seller has none to sell »), pour le prochain essai.
+- **La ligne de la route** est redessinée dès que son état change, page ouverte (proposée, ouverte, fermée, ici ou par
+  l'autre joueur). Le reste des superpositions de la page relève de T5.6.
+- `PROTOCOL_VERSION` 20 : la simulation change (départs), deux versions ne doivent pas jouer ensemble. Sauvegardes
+  inchangées.
+- Tests : `mp_trade_every_player_*` (2, 3, 4 joueurs, deux cartes : chaque joueur achète à chacun, une livraison
+  chaque mois une fois les premières arrivées), `mp_trade_warehouse_apart*`, `mp_trade_purchase_state` ;
+  `tools/mp-trade3-test.sh` (trois vrais jeux depuis le salon, routes et achats par clics, les six achats examinés
+  au même mois sur les trois machines, page lisible). Vérifiés rouges avec l'ancien `mp/trade.c`.
+  - une caravane par mois même si la précédente roule encore (plutôt qu'une à la fois, D-048) ;
+  - les trajets de 3 à 7 mois sur les grandes cartes : des caravanes plus rapides (question déjà posée par D-048) ?
+  - la nourriture rangée dans les greniers ne se vend pas (comme à l'empire dans l'original) : la vendre aussi aux
+    joueurs ?
+- Classique : inchangé (pas de commerce entre joueurs).
+
+### D-076 — Les cités démarrent à la difficulté du salon ; Rome verse à chacun le salaire de son rang (T5.1, T5.2, précise D-063, D-067)
+- 2026-10-07 · **adoptée provisoirement** (retour du deuxième essai à 3 joueurs : « voir si J2/J3/J4 ne sont pas en
+  difficile », « aligner les salaires de Rome pour tous les joueurs »)
+- **Cause (T5.1)** : charger un modèle de carte (`.map`) ou une partie sauvegardée remet le jeu en mode classique
+  (`game_rules_set_classic`), donc la difficulté du **réglage local de l'hôte** (« difficile » par défaut). La
+  génération de la carte, qui se fait à ce moment-là, calculait avec ce réglage les **fonds de départ** (le trésor,
+  `difficulty_adjust_money`) et la **faveur de départ** ; les cités des joueurs 2 à 4 sont des copies de la première,
+  donc **toutes** les cités partaient à la difficulté de l'hôte, quelle que soit celle du salon. Tout le reste
+  (sentiment de base, loups, taille des armées, prêt de secours) se calcule en cours de partie par
+  `game_rules_difficulty()` et suit bien les règles de la partie, sur chaque machine. Les clients reçoivent la sauvegarde
+  de l'hôte : ils ont ses valeurs, et la difficulté affichée en ville est celle des règles (D-063).
+- **Correction** : `prepare_template` (génération) garde les règles actives avant le chargement et les remet après,
+  puis recalcule les fonds et la faveur de la première cité ; l'hôte règle les règles du salon (`game_rules_set_multiplayer`)
+  avant de générer la carte. Même chose dans la composition de copies d'une carte du jeu libre (`host_compose_cities`).
+  Une partie reprise d'une sauvegarde de partie (`.sav`) garde son trésor et sa faveur : seules les nouvelles cités
+  prennent la difficulté du salon.
+- **Salaire (T5.2)** : une cité héritait du **rang du modèle de carte** (par exemple 5, soit 20 Dn par mois jusqu'au
+  premier changement de mois) ou de la campagne, et chacun pouvait choisir un salaire différent sous le plafond de son
+  rang. Règle provisoire : **chaque joueur démarre avec le même rang 0, le même salaire 0 et la même épargne 0, puis
+  Rome lui verse chaque mois le salaire de son rang de lauriers, la même table pour tous** (0, 2, 5, 8, 12, 20, 30, 40,
+  60, 80, 100 Dn). Il n'y a plus de salaire à choisir : le bouton du conseiller impérial n'ouvre plus la fenêtre, et la
+  commande `MP_ACTION_SET_SALARY` (protocole inchangé) ramène simplement le salaire à celui du rang. Le rang de
+  l'original (`player_rank`) suit le rang de lauriers, pour que la faveur de l'original ne retire rien.
+- **Tests** : `mp_lan_start_easy`, `mp_lan_start_hard`, `mp_lan_start_easy_saved_template`,
+  `mp_lan_start_easy_cities_map` (3 joueurs en réseau, difficulté du salon à l'opposé du réglage de l'hôte, modèle de
+  carte de rang 5 et de 3 000 Dn : trésor, faveur, rang, salaire, épargne, sentiment, ennemis et loups de chaque cité,
+  identiques sur l'hôte et les clients, ports 27540 à 27543) et `mp_salaries` (3 joueurs de rangs 0, 1 et 3 payés 0, 2
+  et 8 Dn, un rang gagné ou perdu change le salaire le mois suivant).
+- *À valider* :
+  - plus de choix du salaire en multijoueur (Rome verse toujours celui du rang) : faut-il laisser choisir un salaire
+    plus bas ?
+  - au rang 0 le salaire est nul, donc **pas d'épargne** ni de cadeau avant le rang 1 (déjà noté en D-067) : épargne de
+    départ ?
+  - une partie reprise d'une ancienne `.mpsav` garde les rangs et salaires qu'elle avait.
+- Classique : inchangé.

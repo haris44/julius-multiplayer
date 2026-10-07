@@ -31,6 +31,21 @@ void city_emperor_init_scenario(int rank)
     city_emperor_set_salary_rank(salary_rank);
 }
 
+void city_emperor_init_multiplayer(int new_city)
+{
+    if (new_city) {
+        city_data.ratings.favor = difficulty_starting_favor();
+    }
+    city_data.emperor.personal_savings = 0;
+    city_emperor_set_paid_rank(0);
+}
+
+void city_emperor_set_paid_rank(int rank)
+{
+    city_data.emperor.player_rank = rank;
+    city_emperor_set_salary_rank(rank);
+}
+
 static void update_debt_state(void)
 {
     if (city_data.finance.treasury >= 0) {
