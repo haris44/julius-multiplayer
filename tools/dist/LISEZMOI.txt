@@ -113,7 +113,8 @@ Les règles propres au multijoueur :
   fixe ensuite ses prix comme il veut. La source la moins chère est en vert.
 - L'onglet « Stocks » du conseiller au commerce règle, pour chaque ressource, un stock minimum et un stock maximum,
   pour l'empire comme pour les joueurs : « vendre au-dessus de » (vous gardez ce stock et ne vendez rien en
-  dessous) et « acheter jusqu'à » (plus aucun achat dès que votre stock l'atteint ; « sans » : pas de limite).
+  dessous) et « acheter jusqu'à » (plus aucun achat dès que votre stock l'atteint ; « sans » : pas de limite
+  entre joueurs, la limite d'origine avec l'empire).
 - Un bras de mer traverse chaque carte, franchi par la route et le pont de César. Les emplacements sont tirés au
   sort à chaque partie. Les bois ne se traversent pas, mais aucun coin de terre n'est enfermé : on va partout.
 - Deux sortes d'emplacements. Les joueurs des terres ont le fer et le marbre (pas de bois) et les porcs ; ils vivent

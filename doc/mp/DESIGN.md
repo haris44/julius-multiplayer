@@ -265,7 +265,6 @@ Désactivées quand `game_rules.mode == MP` :
 - colère et invasions de César ;
 - batailles lointaines et service de l'empire ;
 - changement d'empereur ;
-- cadeaux, salaire, épargne et dons : revenus par commandes (D-067), avec des lauriers au lieu de faveur ;
 - rangs et promotions ;
 - victoire et renvoi de la campagne ;
 - blé fourni par Rome.
@@ -280,7 +279,9 @@ Conservés, car ils relèvent de l'économie ou de la vie interne de la cité :
 - révolte des gladiateurs ;
 - épidémies ;
 - règle du trésor à −5 000 (plus de construction possible) ;
-- tribut annuel et prêt de secours (D-026 ; la dette fait encore baisser la faveur, `city/emperor.c` `update_debt_state`).
+- tribut annuel et prêt de secours (D-026 ; la dette fait encore baisser la faveur, `city/emperor.c` `update_debt_state`) ;
+- cadeaux, salaire, épargne et don à la cité, par commandes (D-067), avec des lauriers au lieu de faveur ;
+  boutons du conseiller impérial visibles.
 
 Impact assumé (H2) : le salaire du gouverneur, de nouveau versé (D-067), est limité par le rang ; au rang 0, il
 est nul.
