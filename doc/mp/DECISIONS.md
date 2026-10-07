@@ -1013,7 +1013,7 @@
   (le plus petit des deux), empêcherait d'acheter 40 marbres à l'empire.
 - **L'état** : M est une nouvelle pièce de la sauvegarde multijoueur, `mp_trade_bounds` (toutes les cités, version
   1), comptée dans la somme de contrôle. Une partie d'avant n'a pas cette pièce : elle se charge sans borne. Le format
-  `.mpsav` ne change pas de version (pièce facultative). `PROTOCOL_VERSION` 16.
+  `.mpsav` ne change pas de version (pièce facultative). `PROTOCOL_VERSION` 17.
 - **La page du commerce** : un onglet **« Stocks »** à droite des onglets des joueurs. Il remplace la partie du
   joueur choisi par les deux bornes, avec − et + (4 chargements par clic, une place d'entrepôt), sur les 16 lignes ;
   « sans » quand M vaut 0. Deux lignes d'explication en bas. Tout tient en 640 × 480. À 4 joueurs, les quatre
@@ -1053,9 +1053,10 @@
 - **Les trois autres piliers restent ceux d'origine** : culture et prospérité sont aussi deux des cinq notes de
   César. La paix ne rapporte pas de lauriers ; elle reste, car elle dit toujours l'état de la cité.
 - **Historique** : chaque cité note ses lauriers à la fin de chacun de ses mois, les 12 derniers sont gardés
-  (`mp_caesar`, `STATE_VERSION` 4, protocole 16 ; les anciennes parties se chargent, sans historique). Gain du
+  (`mp_caesar`, `STATE_VERSION` 4, protocole 18 ; les anciennes parties se chargent, sans historique). Gain du
   mois : l'écart entre les deux derniers bilans, cadeaux compris. Tendance : les 3 derniers mois contre les 3
   d'avant, « stable » à un laurier par mois ou un dixième près. Cet historique pourra nourrir les Annales (T4.6).
+- *À valider* :
   - la lecture 2 (l'estime = les lauriers rapportés au score) plutôt que la 1 ;
   - garder le pilier de la paix, ou le remplacer par une note de César (commerce ou habitat) ;
   - sans score, la hauteur rapportée au rang suivant retombe à chaque nouveau rang. Autre choix : la rapporter aux

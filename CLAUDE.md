@@ -37,6 +37,7 @@ La commande `/suite` enchaîne tout cela, puis les tâches du jalon.
 | Lancer le vrai jeu sans fenêtre, piloté par un script | `tools/run-automation.sh test/automation/smoke.txt` (captures dans `build/automation/`, à regarder avec `Read`) |
 | Partie en réseau du vrai jeu, sans fenêtre (hôte + client scriptés) | `tools/mp-real-test.sh` |
 | Depuis le salon : partie seule, partie à deux, page du commerce et alerte de prix (sans fenêtre) | `tools/mp-solo-test.sh`, `tools/mp-lobby-test.sh`, `tools/mp-trade-test.sh` |
+| Écrans de la nuit T4 (salon client, menus par emplacement, conseillers, commerce et Stocks), en 640×480 et 1024×768 | `tools/serial.sh tools/mp-ui-test.sh` |
 | Lire une sauvegarde multijoueur ou une zone de la carte préparée | `build/test/simtool inspect PARTIE.mpsav`, `build/test/simtool terrain SAVE 2 X Y W H` |
 | Partie en réseau dans de vraies fenêtres, **pour Alexandre uniquement** | `tools/play-mp.sh [JOUEURS] [SAUVEGARDE]` |
 | Vrai jeu contre simulation de test (mêmes sommes de contrôle ?) | `tools/cross-check.sh SAVE TICKS PAS` |
