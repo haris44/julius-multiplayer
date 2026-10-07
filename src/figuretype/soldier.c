@@ -15,6 +15,7 @@
 #include "map/figure.h"
 #include "map/grid.h"
 #include "map/point.h"
+#include "mp/war.h"
 
 static const map_point ALTERNATIVE_POINTS[] = {{-1, -6},
     {0, -1}, {1, -1}, {1, 0}, {1, 1}, {0, 1}, {-1, 1}, {-1, 0}, {-1, -1},
@@ -334,6 +335,9 @@ void figure_soldier_action(figure *f)
                     javelin_launch_missile(f);
                 } else if (f->type == FIGURE_FORT_LEGIONARY) {
                     legionary_attack_adjacent_enemy(f);
+                }
+                if (f->action_state == FIGURE_ACTION_84_SOLDIER_AT_STANDARD && mp_war_any_fighting()) {
+                    mp_war_soldier_attack_buildings(f); // players at war (T5.5): never in a classic game
                 }
             }
             break;

@@ -22,6 +22,7 @@
 #include "game/resource.h"
 #include "game/rules.h"
 #include "mp/session.h"
+#include "mp/war.h"
 #include "translation/translation.h"
 
 #include <string.h>
@@ -425,7 +426,8 @@ void mp_trade_dispatch_caravans(void)
     }
     int seller = player_context_current_player;
     for (int buyer = 0; buyer < player_context_num_players(); buyer++) {
-        if (mp_trade_route_is_open(seller, buyer)) {
+        // no caravan between players at war (T5.5), nor during the notice of an honourable war
+        if (mp_trade_route_is_open(seller, buyer) && mp_war_status(seller, buyer) == MP_WAR_PEACE) {
             dispatch_to(buyer);
         }
     }
@@ -563,6 +565,10 @@ void mp_trade_caravan_action(figure *f)
     f->use_cross_country = 0;
     figure_image_increase_offset(f, 12);
     f->cart_image_id = 0;
+    if (mp_war_intercept_caravan(f)) {
+        f->state = FIGURE_STATE_DEAD; // taken by a soldier of an enemy of the seller (T5.5)
+        return;
+    }
     figure_movement_move_ticks(f, 1);
     if (f->direction == DIR_FIGURE_AT_DESTINATION) {
         deliver(f);

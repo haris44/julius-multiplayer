@@ -14,12 +14,20 @@
 #include "scenario/invasion.h"
 #include "window/city.h"
 #include "mp/actions.h"
+#include "translation/translation.h"
+#include "window/mp_war.h"
 
 #define ADVISOR_HEIGHT 26
 
 static void button_go_to_legion(int legion_id, int param2);
 static void button_return_to_fort(int legion_id, int param2);
 static void button_empire_service(int legion_id, int param2);
+static void button_war(int param1, int param2);
+
+// multiplayer: war and peace with the other players (T5.5), top right of the advisor
+static generic_button war_button[] = {
+    {480, 12, 140, 24, button_war, button_none, 0, 0},
+};
 
 static generic_button fort_buttons[] = {
     {400, 83, 30, 30, button_go_to_legion, button_none, 1, 0},
@@ -43,7 +51,16 @@ static generic_button fort_buttons[] = {
 };
 
 static int focus_button_id;
+static int focus_war_button;
 static int num_legions;
+
+static void draw_war_button(void)
+{
+    if (window_mp_war_is_available()) {
+        button_border_draw(480, 12, 140, 24, focus_war_button == 1);
+        text_draw_centered(translation_for(TR_MP_WAR_BUTTON), 480, 18, 140, FONT_NORMAL_BLACK, 0);
+    }
+}
 
 static int draw_background(void)
 {
@@ -152,6 +169,7 @@ static int draw_background(void)
 
 static void draw_foreground(void)
 {
+    draw_war_button();
     num_legions = formation_get_num_legions();
     for (int i = 0; i < num_legions; i++) {
         button_border_draw(400, 83 + 44 * i, 30, 30, focus_button_id == 3 * i + 1);
@@ -162,7 +180,15 @@ static void draw_foreground(void)
 
 static int handle_mouse(const mouse *m)
 {
+    if (window_mp_war_is_available() && generic_buttons_handle_mouse(m, 0, 0, war_button, 1, &focus_war_button)) {
+        return 1;
+    }
     return generic_buttons_handle_mouse(m, 0, 0, fort_buttons, 3 * num_legions, &focus_button_id);
+}
+
+static void button_war(int param1, int param2)
+{
+    window_mp_war_show();
 }
 
 static void button_go_to_legion(int legion_id, int param2)

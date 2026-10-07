@@ -87,6 +87,8 @@ MAPGEN_PICTURE=carte.ppm ./simtool preparedmap SAVE 2 10   # ... et son image (s
 ./simtool caesarstate SAVE                  # lauriers et colère de César : somme de contrôle, sauvegarde, reprise
 ./simtool caesarlaurels SAVE                # notes et lauriers mensuels, rangs, lettre, victoire au score
 ./simtool caesarhistory SAVE                # historique mensuel des lauriers : gain, tendance, estime, sauvegarde
+./simtool war SAVE                          # guerre entre joueurs (T5.5, D-077) : déclaration, préavis, paix, sauvegarde ;
+                                            # légion chez l'adversaire, bâtiments abattus, combat, caravane prise
 ```
 
 Pour voir César dans une vraie cité (lettre d'un nouveau rang, conseiller impérial) :
@@ -235,6 +237,9 @@ Bon à savoir :
   le commerce »).
 - `tools/mp-ui-test.sh` : hôte en 640 × 480 et client en 1024 × 768 (l'écran factice le ramène à 1024 × 736),
   depuis le salon ; captures `build/automation/ui-*.png` des fenêtres revues par T4 (voir le tableau ci-dessous).
+- `tools/mp-war-test.sh` : hôte en 640 × 480 et client en 1024 × 768 ; l'hôte déclare une guerre brutale depuis le
+  conseiller militaire (bouton « Guerre », deux clics), le client la voit annoncée sur sa cité et propose la paix,
+  l'hôte l'accepte ; captures `build/automation/war-*.png` (T5.5).
 - `test/automation/display.txt` : les options d'affichage (plus grande fenêtre qui tient sur l'écran).
 
 Taille de l'écran dans un script : `key F7` (640 × 480), `key F8` (800 × 600, la taille par défaut), `key F9`
@@ -250,6 +255,7 @@ coordonnées ; la barre latérale reste collée au bord droit (bouton industrie 
 | `tools/mp-trade-test.sh` | page du commerce (prix de Rome, portorium, onglet d'un joueur), achat, alerte de prix, onglet Stocks avec une limite |
 | `tools/mp-real-test.sh` | partie en réseau sans salon (`--mp-host`), constructions et conseillers pendant le jeu |
 | `tools/mp-ui-test.sh` | salon du client avec les règles de l'hôte (carte 1, difficulté changée), menus fermes et matières premières d'un joueur des terres et d'un joueur de la côte, menu Options sans Difficulté, conseiller impérial, évaluation (pilier des lauriers), commerce et Stocks, en 640 × 480 et 1024 × 736 |
+| `tools/mp-war-test.sh` | conseiller militaire (bouton « Guerre »), fenêtre « Guerre et paix » en paix, confirmation, en guerre, offre de paix reçue, paix signée, annonces sur la cité, en 640 × 480 et 1024 × 736 |
 | `caesar-advisor.txt`, `caesar-gifts.txt`, `caesar-ratings.txt` | César dans une grande cité (`rules mp`) : lettre de rang, conseiller impérial, cadeau, don, salaire, pilier des lauriers |
 | `smoke.txt`, `run.txt`, `build-road.txt`, `display.txt` | classique : menu, chargement, boucle du jeu, route à la souris, options d'affichage |
 
@@ -265,7 +271,9 @@ c'est là qu'on lit ce qui s'est passé chez Alexandre sans ouvrir de fenêtre.
 - **Sans tête, dans ctest** : `test/sim/lan_test.sh` lance un hôte et des clients `simtool mpnode` sur la machine,
   qui envoient des commandes scriptées (routes, maisons, impôts). Tests `mp_lan_2_players`, `mp_lan_4_players`
   (sommes de contrôle finales identiques et tous les tours vérifiés) et `mp_lan_desync_detected` (un client modifie
-  son état en local : tous détectent la désynchronisation au même tour).
+  son état en local : tous détectent la désynchronisation au même tour). `mp_lan_war` (T5.5, port 27550) : deux
+  copies d'`inv0.sav`, le joueur 1 déclare une guerre brutale et envoie ses javeliniers chez le joueur 2, puis tous
+  deux signent la paix ; mêmes pertes, même état de guerre et même somme de contrôle chez les deux.
 - **Vrai jeu** : `tools/mp-real-test.sh` lance deux instances du jeu sans fenêtre, hôte et client, pilotées par
   `test/automation/mp-host.txt` et `mp-client.txt`. Elles construisent à la souris et ouvrent des conseillers
   pendant que le jeu tourne. Constaté : 150 tours vérifiés, sans désynchronisation.

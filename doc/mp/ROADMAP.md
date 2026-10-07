@@ -727,7 +727,15 @@ Les journaux de l'essai ne sont pas sur le Mac de développement : diagnostic pa
 - [ ] **T5.3** Désynchronisation au tour 18954, puis impossible de reprendre la partie (« on était peut-être tous les
   3 dans les menus à ce moment-là »).
 - [ ] **T5.4** Impossible de charger une partie sauvegardée.
-- [ ] **T5.5** Pouvoir attaquer un autre joueur, même simplement (« nécessaire pour le commerce au démarrage »).
+- [x] **T5.5** Pouvoir attaquer un autre joueur, même simplement (« nécessaire pour le commerce au démarrage »).
+  *Fait* (D-077, *à valider*) : il n'y avait aucun état de guerre, les soldats ne voyaient que les ennemis de l'IA.
+  Bouton « Guerre » du conseiller militaire : guerre brutale (tout de suite) ou honorable (3 mois de préavis), paix
+  signée quand les deux la proposent ; état par paire de joueurs, commandes, somme de contrôle, sauvegarde, annonces à
+  tous. En guerre, les légions se battent chez l'adversaire, abattent ses bâtiments comme les envahisseurs et prennent
+  ses caravanes ; plus de caravane entre ennemis. Tests `mp_war` (déclaration, préavis, sauvegarde, légion chez J2,
+  bâtiments abattus, combat, paix, caravane prise, même somme de contrôle rejouée), `mp_lan_war` (deux joueurs en
+  réseau, même guerre et mêmes pertes) et `tools/mp-war-test.sh` (vrai jeu, 640 × 480 et 1024 × 768). Reste pour
+  M10 : motifs, lauriers, colère de César, portes, terre de César.
 - [ ] **T5.6** Simplifier la fenêtre du commerce ; attention aux textes qui se superposent.
 - [ ] **T5.7** Impossible de commercer entre joueurs : les caravanes ne circulent pas.
 - [ ] **T5.8** L'aqueduc de César ne doit pas suivre la route de si près.
@@ -902,6 +910,9 @@ César revient comme arbitre de la partie. Jouable en paix et **seul** : livré 
   Alexandre.
 
 ## M10 — La guerre sous l'œil de César ([CESAR.md](CESAR.md) §7, DESIGN §7)
+> Une première tranche jouable est faite avec T5.5 (D-077) : état de guerre par paire, déclaration brutale ou
+> honorable, paix des deux, légions qui se battent et abattent les bâtiments chez l'ennemi, caravanes prises. Restent
+> dans M10.1 à M10.3 : hostilité des portes et murs, ordre « attaquer », route coupée ; puis M10.4 et la suite.
 - [ ] **M10.1** Hostilité par propriétaire et état de guerre par paire de joueurs : déclaration (commande, annonce ;
   guerre honorable avec 3 mois de préavis, ou brutale et immédiate, D-053), paix proposée des deux côtés. En classique, la matrice actuelle exactement.
 - [ ] **M10.2** Légions chez l'adversaire, ordre « attaquer », portes et murs qui ne laissent passer que leur

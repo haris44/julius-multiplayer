@@ -1,0 +1,65 @@
+# Real game, war between players in a network game from the lobby (see tools/mp-war-test.sh): host, player 1, at
+# 640 x 480. The advisors and the window of war are 640 x 480 dialogs: at this size, their coordinates are those of the
+# screen. Player 1 declares a brutal war on player 2 (two clicks), who then proposes peace; player 1 accepts it.
+wait 10
+key F7
+wait 5
+click 320 440
+wait 10
+# main menu: Multiplayer
+click 320 112
+wait 10
+# first map of the list, map 1 instead of a map drawn by lot, then Host
+click 100 110
+wait 2
+click 258 358
+wait 2
+click 160 406
+mpplayers 2
+wait 30
+click 160 406
+mpwait 0
+# Caesar's letter
+wait 3
+key Return
+wait 2
+mpwait 100
+# the military advisor, with the button of war and peace at the top right
+key 2
+wait 5
+screenshot build/automation/war-host-advisor.png
+click 550 24
+wait 5
+screenshot build/automation/war-host-peace.png
+# brutal war on player 2: the first click asks for a confirmation, the second declares it
+click 271 194
+wait 3
+screenshot build/automation/war-host-confirm.png
+click 271 194
+wait 5
+mpwait 200
+screenshot build/automation/war-host-war.png
+key Escape
+wait 3
+key Escape
+wait 5
+# player 2 proposes peace; player 1 sees it in the window of war, and accepts it
+mpwait 700
+key 2
+wait 5
+click 550 24
+wait 5
+screenshot build/automation/war-host-offer.png
+click 543 194
+wait 5
+mpwait 760
+screenshot build/automation/war-host-signed.png
+key Escape
+wait 3
+key Escape
+wait 5
+mpwait 800
+mpcheck
+# keep the game running a little so that the client reaches its own check
+wait 200
+quit

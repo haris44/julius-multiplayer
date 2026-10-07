@@ -30,6 +30,7 @@
 #include "widget/top_menu.h"
 #include "widget/sidebar/city.h"
 #include "widget/sidebar/military.h"
+#include "mp/war.h"
 #include "window/advisors.h"
 #include "window/file_dialog.h"
 #include "window/mp_caesar_letter.h"
@@ -124,6 +125,7 @@ static void draw_foreground(void)
         city_message_process_queue();
         window_mp_price_alert_show_pending();
         window_mp_caesar_letter_show_pending();
+        mp_war_show_pending_announcements();
     }
 }
 

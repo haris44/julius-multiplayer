@@ -17,6 +17,7 @@
 #include "mp/missionary.h"
 #include "mp/session.h"
 #include "mp/trade.h"
+#include "mp/war.h"
 #include "city/military.h"
 #include "figure/formation.h"
 #include "figure/formation_legion.h"
@@ -187,6 +188,16 @@ void mp_action_donate(int amount)
 void mp_action_change_buy_limit(int resource, int delta)
 {
     submit(MP_ACTION_CHANGE_BUY_LIMIT, resource, delta);
+}
+
+void mp_action_declare_war(int other, int form)
+{
+    submit(MP_ACTION_DECLARE_WAR, other, form);
+}
+
+void mp_action_propose_peace(int other, int propose)
+{
+    submit(MP_ACTION_PROPOSE_PEACE, other, propose);
 }
 
 // Legion that can receive orders; the user interface made the same checks before
@@ -360,6 +371,12 @@ void mp_actions_execute(const mp_command *command)
             break;
         case MP_ACTION_CHANGE_BUY_LIMIT:
             mp_trade_change_buy_limit(arg1, arg2);
+            break;
+        case MP_ACTION_DECLARE_WAR:
+            mp_war_declare(arg1, arg2);
+            break;
+        case MP_ACTION_PROPOSE_PEACE:
+            mp_war_propose_peace(arg1, arg2);
             break;
         case MP_ACTION_SEND_REQUEST:
             scenario_request_dispatch(arg1);

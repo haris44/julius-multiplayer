@@ -10,6 +10,7 @@
 #include "map/point.h"
 #include "sound/effect.h"
 #include "map/grid.h"
+#include "mp/war.h"
 
 static const int CLOUD_TILE_OFFSETS[] = {0, 0, 0, 1, 1, 2};
 
@@ -101,6 +102,25 @@ static int is_non_citizen(figure *f)
 static int get_non_citizen_on_tile(int grid_offset)
 {
     return map_figure_foreach_until(grid_offset, is_non_citizen);
+}
+
+// players at war (T5.5): the player whose missile flies, for the callback below
+static int missile_owner;
+
+static int is_enemy_soldier_of_missile_owner(figure *f)
+{
+    return mp_war_is_enemy_soldier(missile_owner, f) ? f->id : 0;
+}
+
+// what the javelin or bolt of a player hits: the original targets, then a soldier of a player at war with him
+static int get_missile_target_on_tile(const figure *missile)
+{
+    int target_id = get_non_citizen_on_tile(missile->grid_offset);
+    if (!target_id && mp_war_any_fighting()) {
+        missile_owner = FIGURE_OWNER(missile->id);
+        target_id = map_figure_foreach_until(missile->grid_offset, is_enemy_soldier_of_missile_owner);
+    }
+    return target_id;
 }
 
 void figure_explosion_cloud_action(figure *f)
@@ -196,9 +216,10 @@ void figure_javelin_action(figure *f)
         f->state = FIGURE_STATE_DEAD;
     }
     int should_die = figure_movement_move_ticks_cross_country(f, 4);
-    int target_id = get_non_citizen_on_tile(f->grid_offset);
+    int target_id = get_missile_target_on_tile(f);
     if (target_id) {
-        missile_hit_target(f, target_id, FIGURE_ENEMY_CAESAR_LEGIONARY);
+        missile_hit_target(f, target_id,
+            figure_get(target_id)->type == FIGURE_FORT_LEGIONARY ? FIGURE_FORT_LEGIONARY : FIGURE_ENEMY_CAESAR_LEGIONARY);
         sound_effect_play(SOUND_EFFECT_JAVELIN);
     } else if (should_die) {
         f->state = FIGURE_STATE_DEAD;
@@ -215,7 +236,7 @@ void figure_bolt_action(figure *f)
         f->state = FIGURE_STATE_DEAD;
     }
     int should_die = figure_movement_move_ticks_cross_country(f, 4);
-    int target_id = get_non_citizen_on_tile(f->grid_offset);
+    int target_id = get_missile_target_on_tile(f);
     if (target_id) {
         figure *target = figure_get(target_id);
         const figure_properties *target_props = figure_properties_for_type(target->type);

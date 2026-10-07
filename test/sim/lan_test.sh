@@ -11,6 +11,8 @@
 # With 'rules': the host changes every rule of the lobby once the players are there, then starts the game; every
 # player must play with the changed rules, which the clients saw in their lobby (T4.11).
 # With 'map2' (and 'generate'): the host chooses the prepared map 2; every player must play on it (T4.14).
+# With 'war' (and 'cities'): player 1 declares a brutal war on player 2 and sends a legion to his city, then both sign
+# peace; every player must see the same war, the same soldiers lost and the same checksum (T5.5).
 SIMTOOL=$1; PORT=$2; PLAYERS=$3; SAVE=$4; TICKS=$5; MODE=$6
 CITIES=""
 MAP2=""
@@ -27,6 +29,7 @@ HOST_ARGS=""
 [ "$MODE" = "desync" ] && HOST_ARGS="expect-desync"
 [ "$MODE" = "baddata" ] && HOST_ARGS="expect-reject"
 [ "$MODE" = "rules" ] && HOST_ARGS="rules"
+[ "$MODE" = "war" ] && HOST_ARGS="war"
 "$SIMTOOL" mpnode host "$PORT" "$PLAYERS" "$SAVE" "$TICKS" $CITIES $MAP2 $HOST_ARGS > "$DIR/host.log" 2>&1 &
 HOST=$!
 sleep 0.3
@@ -40,6 +43,7 @@ while [ $i -lt "$PLAYERS" ]; do
     [ "$MODE" = "leave" ] && [ $i -eq $((PLAYERS - 1)) ] && CLIENT_MODE="leave"
     [ "$MODE" = "baddata" ] && CLIENT_MODE="baddata"
     [ "$MODE" = "rules" ] && CLIENT_MODE="rules"
+    [ "$MODE" = "war" ] && CLIENT_MODE="war"
     "$SIMTOOL" mpnode join 127.0.0.1 "$PORT" "$TICKS" $CLIENT_MODE > "$DIR/client$i.log" 2>&1 &
     PIDS="$PIDS $!"
     i=$((i + 1))
@@ -64,6 +68,11 @@ if [ "$MODE" = "rules" ]; then
     # every player, the clients having joined by address, saw the number of players of the host in his lobby (T4.11)
     SEEN=$(grep -h "^lobby players: $PLAYERS\$" "$DIR"/*.log | wc -l | tr -d ' ')
     [ "$SEEN" = "$PLAYERS" ] || { echo "The players do not all see $PLAYERS players in their lobby"; FAILED=1; }
+fi
+if [ "$MODE" = "war" ]; then
+    SEEN=$(grep -h "^war: " "$DIR"/*.log | wc -l | tr -d ' ')
+    DIFFERENT=$(grep -h "^war: " "$DIR"/*.log | sort -u | wc -l | tr -d ' ')
+    [ "$SEEN" = "$PLAYERS" ] && [ "$DIFFERENT" = "1" ] || { echo "The players did not all see the same war"; FAILED=1; }
 fi
 if [ -n "$MAP2" ]; then
     # every log must prove the map by its width: map 2 is 220 tiles wide for 2 players and 240 for 3 or 4
