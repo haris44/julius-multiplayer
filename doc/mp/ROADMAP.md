@@ -381,7 +381,10 @@ le note « à valider ».
   sec ; deux parties identiques donnent la même somme de contrôle. Le test échouait avant le correctif.
   *Fait (revue, D-073)* : le test ajoute, à 2, 3 et 4 joueurs, un réservoir et un aqueduc de chaque autre joueur dans
   sa zone, loin de l'eau : ils restent à sec, l'eau du joueur des terres ne les atteint pas ; à 4, l'autre joueur des
-  terres a l'eau dans son réservoir et dans l'aqueduc qui en part.
+  terres a l'eau dans son réservoir et dans l'aqueduc qui en part. Cas risqué (zones qui se touchent) : le joueur
+  suivant raccorde son propre aqueduc, puis un réservoir à lui, au bout de l'aqueduc que le joueur des terres tire
+  de son réservoir ; l'eau s'arrête à la limite : l'aqueduc et le réservoir de l'autre restent à sec. Sans le
+  contrôle du propriétaire dans `fill_aqueducts_from_offset`, ce test échoue.
 - [x] **T4.10** **La difficulté est celle du salon, pour toute la partie** (essai du soir). Celle réglée dans le menu
   principal ne règle pas la partie, et on ne doit plus pouvoir la régler par joueur.
   *État* : la simulation lit bien la difficulté du salon (`game_rules_difficulty`). Mais le menu Options,

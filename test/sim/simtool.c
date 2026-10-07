@@ -2647,6 +2647,38 @@ static int inland_water_game(const char *file, int num_players, int seed, int p,
             built &= map_terrain_is(map_grid_offset(fed_x[q], fed_y[q]), TERRAIN_AQUEDUCT);
         }
     }
+    // K-review-fixes (T4.9): the zones touch (they grow with the cities and missions, D-036). The player inland
+    // draws an aqueduct from his reservoir, and the next player q joins his own aqueduct to it, then to a reservoir
+    // of his, away from water. The water of the player inland runs in his aqueduct, but stops where q's begins:
+    // q's aqueduct and reservoir stay dry (the owner check of fill_aqueducts_from_offset)
+    int q_joined = (p + 1) % num_players;
+    int own_x = 0, own_y = 0, joined_reservoir = 0;
+    if (built) {
+        building *r = building_get(map_building_at(map_grid_offset(ax - 2, ay)));
+        own_x = r->x - 1; // his aqueduct leaves the west side of his reservoir, 4 tiles westwards
+        own_y = r->y + 1;
+        build_as(p, BUILDING_CLEAR_LAND, own_x - 12, own_y - 1, own_x, own_y + 1);
+        build_as(p, BUILDING_AQUEDUCT, own_x, own_y, own_x - 3, own_y);
+        build_as(q_joined, BUILDING_AQUEDUCT, own_x - 4, own_y, own_x - 6, own_y);
+        // q's reservoir, east of which his aqueduct ends: built where his zone has grown (here: territories off a
+        // moment, the water does not look at zones but at who owns each aqueduct tile)
+        game_rules_settings no_zones = rules;
+        no_zones.territories = 0;
+        game_rules_set_multiplayer(&no_zones);
+        build_as(q_joined, BUILDING_DRAGGABLE_RESERVOIR, own_x - 8, own_y, own_x - 8, own_y);
+        game_rules_set_multiplayer(&rules);
+        joined_reservoir = map_building_at(map_grid_offset(own_x - 8, own_y));
+        building *qr = building_get(joined_reservoir);
+        for (int i = 0; i < 7; i++) {
+            int o = map_grid_offset(own_x - i, own_y);
+            built &= map_terrain_is(o, TERRAIN_AQUEDUCT) && map_owner_get_claimed(o) == (i < 4 ? p : q_joined);
+        }
+        built &= qr->type == BUILDING_RESERVOIR && BUILDING_OWNER(joined_reservoir) == q_joined &&
+            qr->x + 3 == own_x - 6 && qr->y + 1 == own_y;
+        if (!built) {
+            printf("Unable to join the aqueduct of player %d to that of player %d\n", q_joined + 1, p + 1);
+        }
+    }
     if (!built) {
         printf("Unable to build in the zones of the players (reservoir %d fountain %d house %d)\n",
             building_get(map_building_at(map_grid_offset(ax - 2, ay)))->type,
@@ -2726,6 +2758,23 @@ static int inland_water_game(const char *file, int num_players, int seed, int p,
                 "the other player inland: his reservoir and his aqueduct have water");
         }
     }
+    int own_wet = 1, joined_dry = 1;
+    for (int i = 0; i < 7; i++) {
+        int wet = map_aqueduct_at(map_grid_offset(own_x - i, own_y)) != 0;
+        if (i < 4) {
+            own_wet &= wet;
+        } else {
+            joined_dry &= !wet;
+        }
+    }
+    player_context_switch(p);
+    CHECK(building_get(reservoir_id)->has_water_access && own_wet,
+        "his reservoir and the aqueduct he draws from it have water");
+    player_context_switch(q_joined);
+    printf("  player %d joins his aqueduct to that of player %d: reservoir %d, aqueduct %s\n", q_joined + 1, p + 1,
+        building_get(joined_reservoir)->has_water_access, joined_dry ? "dry" : "with water");
+    CHECK(!building_get(joined_reservoir)->has_water_access && joined_dry,
+        "another player's aqueduct joined to his, and its reservoir, stay dry");
     player_context_switch(0);
     *checksum = mp_checksum_state();
 #undef CHECK
