@@ -233,6 +233,10 @@ Bon à savoir :
   joueurs (`build/automation/trade-window.png`) ; le client achète le marbre (`trade-client-buys.png`), l'hôte en
   monte le prix et le client voit l'alerte plein écran (`price-alert.png`, puis `price-alert-trade.png` après « Voir
   le commerce »).
+- `tools/mp-trade4-test.sh` : partie à quatre (un hôte et trois clients) ; l'hôte ouvre le commerce (cinq onglets : Empire,
+  trois joueurs, Stocks), monte un prix à quatre chiffres et prend les captures `trade4-*.png` : aucun texte ne doit
+  en recouvrir un autre (T5.6). La langue est celle des données du jeu ; pour l'anglais, forcer temporairement
+  `translation_load(LANGUAGE_ENGLISH)` dans `src/game/game.c`, sans commiter.
 - `tools/mp-ui-test.sh` : hôte en 640 × 480 et client en 1024 × 768 (l'écran factice le ramène à 1024 × 736),
   depuis le salon ; captures `build/automation/ui-*.png` des fenêtres revues par T4 (voir le tableau ci-dessous).
 - `test/automation/display.txt` : les options d'affichage (plus grande fenêtre qui tient sur l'écran).
@@ -247,7 +251,8 @@ coordonnées ; la barre latérale reste collée au bord droit (bouton industrie 
 |--------|--------|
 | `tools/mp-solo-test.sh` | salon à 1 joueur (règles, carte), lettre de César, mission et zone, missionnaire, pont, bandeau des lauriers, conseiller impérial et page du commerce seule (onglet Stocks) en 800 × 600 |
 | `tools/mp-lobby-test.sh` | salon hôte et client (partie trouvée, salle d'attente), partie à deux sans désynchronisation |
-| `tools/mp-trade-test.sh` | page du commerce (prix de Rome, portorium, onglet d'un joueur), achat, alerte de prix, onglet Stocks avec une limite |
+| `tools/mp-trade-test.sh` | page du commerce (onglet d'un joueur, route proposée, onglet Empire avec prix de Rome et portorium, onglet Stocks avec une limite), achat, alerte de prix |
+| `tools/mp-trade4-test.sh` | page du commerce à quatre joueurs (cinq onglets) et prix à quatre chiffres, sans texte superposé |
 | `tools/mp-real-test.sh` | partie en réseau sans salon (`--mp-host`), constructions et conseillers pendant le jeu |
 | `tools/mp-ui-test.sh` | salon du client avec les règles de l'hôte (carte 1, difficulté changée), menus fermes et matières premières d'un joueur des terres et d'un joueur de la côte, menu Options sans Difficulté, conseiller impérial, évaluation (pilier des lauriers), commerce et Stocks, en 640 × 480 et 1024 × 736 |
 | `caesar-advisor.txt`, `caesar-gifts.txt`, `caesar-ratings.txt` | César dans une grande cité (`rules mp`) : lettre de rang, conseiller impérial, cadeau, don, salaire, pilier des lauriers |

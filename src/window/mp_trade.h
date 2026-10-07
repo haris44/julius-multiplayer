@@ -5,9 +5,12 @@
 
 /**
  * @file
- * The trade advisor in a game of several players (D-043, D-051): the empire and the other players on one page. For
- * each resource, its stock, what the city does with the empire and at what price, and for the selected player the
- * price asked to him, his price, whether the city buys from him and what his caravans bring.
+ * The trade advisor in a game of several players (D-043, D-051, T5.6): tabs under the title, with few columns each.
+ * The empire: what the city does with it, the price of Rome, the portorium and the price that applies. One tab per
+ * other player: the price asked to him, his price, the empire to compare with, whether the city buys from him and what
+ * his caravans bring, with the route in the corner of the title. The stocks: when the city sells and when it stops
+ * buying. A help line under the table, and no text over another one, whatever the language, at four players and with
+ * four-digit prices (tools/mp-trade4-test.sh).
  */
 
 /**

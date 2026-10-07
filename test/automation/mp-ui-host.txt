@@ -51,10 +51,14 @@ screenshot build/automation/ui-host-imperial.png
 key 4
 wait 5
 screenshot build/automation/ui-host-ratings.png
-# the trade advisor, its stock tab (T4.5)
+# the trade advisor: the tab of the player, the empire, then the stocks (T4.5, T5.6)
 key 5
 wait 5
-click 576 21
+screenshot build/automation/ui-host-trade.png
+click 112 51
+wait 5
+screenshot build/automation/ui-host-empire.png
+click 328 51
 wait 5
 screenshot build/automation/ui-host-stocks.png
 key Escape
