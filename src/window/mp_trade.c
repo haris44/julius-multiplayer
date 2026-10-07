@@ -9,7 +9,9 @@
 #include "game/resource.h"
 #include "game/rules.h"
 #include "graphics/button.h"
+#include "graphics/color.h"
 #include "graphics/generic_button.h"
+#include "graphics/graphics.h"
 #include "graphics/image.h"
 #include "graphics/lang_text.h"
 #include "graphics/panel.h"
@@ -175,10 +177,18 @@ static int route_status_text(void)
     return TR_MP_ROUTE_STATUS_CLOSED;
 }
 
+// button_border_draw needs two blocks of 16 px to draw a bottom border (and the right one with a single block of
+// width): the buttons of a row, 16 px high, get a rectangle in the colours of the borders instead (T4.5)
 static void draw_button(int index)
 {
     const generic_button *b = &buttons[index];
-    button_border_draw(b->x, b->y, b->width, b->height, data.focus_button_id == index + 1);
+    int focus = data.focus_button_id == index + 1;
+    if (b->height > 16) {
+        button_border_draw(b->x, b->y, b->width, b->height, focus);
+        return;
+    }
+    graphics_draw_rect(b->x, b->y, b->width, b->height, focus ? COLOR_FONT_YELLOW : COLOR_INSET_DARK);
+    graphics_draw_rect(b->x + 1, b->y + 1, b->width - 2, b->height - 2, focus ? COLOR_FONT_YELLOW : COLOR_WHITE);
 }
 
 // the empire: what the city does with it, the price of Rome, and the price that applies, portorium included (paid

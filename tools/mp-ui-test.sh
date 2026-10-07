@@ -20,7 +20,7 @@ grep -h -E "mpcheck|automation\] .*(fail|timed|stopped)" build/automation/mp-ui-
 DATA_DIR=${C3_DATA_DIR:-$ROOT/../donnees-c3}
 rm -f "$DATA_DIR"/mp-session-* "$DATA_DIR"/mp-desync-*
 MISSING=0
-for shot in host-lobby host-farms host-raw host-imperial host-ratings host-stocks \
+for shot in host-lobby host-city host-farms host-raw host-imperial host-ratings host-stocks \
     client-lobby client-farms client-raw client-options client-ratings client-trade; do
     [ -s "build/automation/ui-$shot.png" ] || { echo "missing screenshot ui-$shot.png"; MISSING=1; }
 done
