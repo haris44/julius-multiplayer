@@ -368,6 +368,11 @@ foreach(players 2 4)
     add_test(NAME mp_prepared_map_reachable_${players}_players COMMAND simtool reachable brugle-massilia-start.sav ${players})
     add_test(NAME mp_prepared_map2_reachable_${players}_players COMMAND simtool --map 2 reachable brugle-massilia-start.sav ${players})
 endforeach()
+# Is the multiplayer game more restrictive than the original? The same small city built by commands and played two years
+# under classic and multiplayer rules, alone and with four cities, at two difficulties: the numbers stay alike (T4.16, D-072).
+# "blank" is a free classic map made by the test (80 x 80, a lake): the multiplayer cities are no poorer than the city of
+# the same plan on it. The maps of the game itself (Lugdunum.map...) can be added by hand: they are not in the repository
+add_test(NAME mp_restrictiveness COMMAND simtool restrictiveness brugle-massilia-start.sav blank)
 # The message of a disaster far on a large map goes to it (Alexandre, 2026-10-06)
 add_test(NAME mp_message_location COMMAND simtool messagelocation brugle-massilia-start.sav)
 

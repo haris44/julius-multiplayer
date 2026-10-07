@@ -76,6 +76,10 @@ MAPGEN_PICTURE=carte.ppm ./simtool preparedmap SAVE 2 10   # ... et son image (s
 ./simtool inlandwater SAVE 4                # l'aqueduc de César arrose le joueur des terres, J1 à J4 (placement tiré au sort)
 ./simtool longroutes SAVE                   # carte à 4 : chemins les plus longs, caravane entre les joueurs les plus éloignés, mer
 ./simtool menuowner SAVE                    # le menu de construction du joueur local ignore ce que font les autres
+./simtool restrictiveness SAVE blank [CARTE.map ...]  # la même petite cité jouée 2 ans en classique et en multijoueur (seule, à 4), facile et
+                                            # difficile, avec réservoirs et fontaines : tableau des chiffres, échoue si une règle multijoueur les change (D-072) ;
+                                            # blank : carte libre classique faite par le test ; CARTE.map : une carte du jeu, à la main
+                                            # (donnees-c3, jamais dans le dépôt) ; RESTRICT_TRACE=1 : population, moral et chômage chaque mois
 ./simtool caravans SAVE                     # caravanes entre joueurs ; tradeconservation, traderesume :
                                             # conservation, reprise
 ./simtool importprice SAVE                  # prix de Rome et portorium (D-060) ; empiresells : l'empire vend

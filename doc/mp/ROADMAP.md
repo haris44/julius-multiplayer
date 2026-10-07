@@ -575,7 +575,7 @@ le note « à valider ».
     joueurs des terres à 3 et 4, pas de bois dans les terres, autorisations) ; `mp_prepared_map_*_players`
     (autorisations identiques après écriture et lecture de la carte, menu et commande : porcs refusés sur la côte et
     permis dans les terres, fruits l'inverse ; les deux joueurs des terres ont l'eau de César dans leur réservoir).
-- [ ] **T4.16** **Le jeu paraît plus restrictif qu'en classique** (Alexandre : distance d'effet des bâtiments,
+- [x] **T4.16** **Le jeu paraît plus restrictif qu'en classique** (Alexandre : distance d'effet des bâtiments,
   emplacement des habitations, manque de main-d'œuvre ; « peut-être lié à la difficulté en difficile par
   défaut »).
   *Lu dans le code* : rien en multijoueur ne touche la portée des promeneurs, l'embauche ni la migration ; les
@@ -586,6 +586,41 @@ le note « à valider ».
   *À faire* : ne pas toucher aux règles intérieures (I2) ; « facile » par défaut (T4.4) ; puis **mesurer** : la
   même petite cité bâtie par script sur une carte classique et sur la carte préparée, même difficulté, comparer
   population, employés et couverture après deux ans. Un écart serait un bug à chercher, pas une règle à desserrer.
+  *Fait* (D-072) : `simtool restrictiveness` bâtit par commandes la même petite cité (63 bâtiments : maisons, boucle de
+  routes, puits, grenier, marché, temple, préfecture, ingénieur, ateliers, **réservoirs et fontaines** alimentés par
+  l'aqueduc de César ou la mer) puis, au mois 2, 2 fermes et 7 à 9 ateliers ou hôpitaux (plus d'emplois que de bras).
+  Elle la joue deux ans, en facile et en difficile, en classique et en multijoueur, seule et à 4 joueurs, et à 4 avec
+  un seul bâtisseur. **Pas de bug** : population, maisons, niveau, couverture (fontaines, puits, nourriture, religion,
+  portée du marché, du temple, de la préfecture et des ingénieurs), employés, manque de bras, désirabilité,
+  immigrants et moral sont identiques entre classique et multijoueur (seule : 434 habitants à 24 mois, 14 maisons de
+  niveau 2,2, 13 servies par les fontaines, 7 emplois vides, moral 96 en facile ; 246 contre 274 habitants à 6 mois
+  en difficile). Écarts expliqués : difficulté (12 000 Dn et moral 70 contre 6 000 Dn et 50), zone (un atelier de J3
+  à cheval sur la zone d'un voisin), mission de départ (20 employés en classique, aucun en multijoueur : plus de bras
+  libres), terrain de chaque emplacement. Test `mp_restrictiveness` : deux fautes volontaires sont vues (portée des
+  fontaines du multijoueur supprimée ; 40 % de bras en moins).
+  *Deuxième passe* : le même plan est aussi bâti sur du **terrain libre d'une vraie carte classique** (`blank` : carte
+  libre faite par le test, dans ctest ; `Lugdunum`, `Londinium`, `Cyrene`, `Valentia`, `Lindum` de `donnees-c3`, lancées
+  à la main). Chiffres à 24 mois, en tableau (détail dans D-072) :
+
+  | Cité | Difficulté | Pop. à 6 mois | Pop. à 24 mois | Employés | Emplois vides |
+  |------|------------|---------------|----------------|----------|---------------|
+  | Classique, carte libre du test et 5 cartes d'origine, une cité seule | facile | 198 à 342 | 246 à 406 | 76 à 172 | 0 à 96 |
+  | | difficile | 196 à 328 | 236 à 406 | 76 à 172 | 0 à 95 |
+  | Classique = multijoueur, carte préparée, seule | facile / difficile | 274 / 246 | 434 | 189 | 6 à 7 |
+  | Multijoueur (= classique), carte préparée, 4 joueurs J1 à J4 | facile | 179 à 236 | 334 à 380 | 142 à 162 | 1 à 44 |
+  | | difficile | 173 à 222 | 334 à 380 | 142 à 162 | 1 à 44 |
+
+  **Conclusion : pas de bug.** Les cités multijoueur sont dans l'intervalle des cartes d'origine ou au-dessus, jamais
+  en dessous ; le plus grand écart est la place 1 ou 2 à 4 joueurs (334) contre Valentia (406), qui est un effet de
+  place (la cité classique de la même place a les mêmes 334). Début de partie : à 6 mois, les cités à 4 joueurs
+  (173 à 236) sont plus petites que celles des cartes d'origine (196 à 342), les « classiques » de la même carte aussi :
+  piste, non isolée, la route d'entrée plus longue (48 à 63 cases). Test `mp_restrictiveness` : garde aussi que le plan
+  tient sur `blank`, que son eau coule et qu'aucune cité multijoueur n'est plus de 15 % sous la plus faible cité
+  classique. **Limites** : (1) la série dite « classique » à 4 joueurs passe déjà par le code de la carte
+  multijoueur (`game_rules_multiplayer_map()` vrai dès 2 cités) : seules les séries « seule » et « carte
+  d'origine » comparent de vraies parties classiques ; (2) une cité et une place par carte d'origine : comparaison par
+  intervalle, pas au chiffre près ; (3) le manque de main-d'œuvre par rétrécissement de la zone n'est pas mesuré
+  (*à valider* avec Alexandre : où et quand sent-il la gêne ?).
 - [x] **T4.17** **Circulation des marchandises sur les grandes cartes** (Alexandre : « la circulation des
   marchands n'est pas altérée pour toi ? »). *Lu dans le code* : charretiers, marchés (40 cases, comme l'original),
   entrepôts et greniers travaillent chacun dans sa cité, sans changement ; chaque cité a bien son propre point
