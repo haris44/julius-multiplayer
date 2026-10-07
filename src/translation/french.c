@@ -275,6 +275,7 @@ static translation_string all_strings[] = {
     {TR_MP_STATUS_HOST_LOST, "Connexion à l'hôte perdue"},
     {TR_MP_STATUS_PLAYER_DISCONNECTED, "Le joueur %d s'est déconnecté : sa cité continue sans lui"},
     {TR_MP_STATUS_DESYNC, "Désynchronisation au tour %d : la partie se reprend depuis le salon (%s)"},
+    {TR_MP_STATUS_DESYNC_NO_SAVE, "Désynchronisation au tour %d (état écrit dans %s)"},
     {TR_MP_STATUS_MAP_NO_TRADE, "La carte choisie ne commerce pas par terre et par mer : choisissez-en une autre"},
     {TR_MP_STATUS_CANNOT_COMPOSE, "Impossible de composer les cités des joueurs"},
     {TR_MP_STATUS_CANNOT_LOAD_START, "Impossible de charger la sauvegarde de départ"},

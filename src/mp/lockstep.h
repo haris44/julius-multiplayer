@@ -83,6 +83,11 @@ void mp_lockstep_set_generated_map(int generate, unsigned int seed);
  * Tests: this computer pretends to have other game data than the host, which must refuse it
  */
 void mp_lockstep_test_alter_game_data(void);
+
+/**
+ * Tests: the monthly saved game of this computer gets this name instead of MP_LOCKSTEP_AUTOSAVE (0: back to it)
+ */
+void mp_lockstep_test_set_autosave_name(const char *name);
 void mp_lockstep_start_game(void);
 
 /**

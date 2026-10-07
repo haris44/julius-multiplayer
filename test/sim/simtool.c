@@ -740,11 +740,122 @@ static int check_start_cities(int expected_difficulty, int from_map)
     return ok;
 }
 
+// T5.3 review: the local player drags a road while a month starts; the monthly saved game written then must not
+// hold the preview of that road (which nobody built nor paid)
+#define DRAG_LENGTH 6
+static struct {
+    int state; // 0: not yet, 1: dragging, 2: done, -1: no place to drag
+    int month;
+    int x, y;
+    char autosave[64];
+    char copy[80];
+} month_drag;
+
+static int count_roads_of_drag(void)
+{
+    int roads = 0;
+    for (int i = 0; i < DRAG_LENGTH; i++) {
+        roads += map_terrain_is(map_grid_offset(month_drag.x + i, month_drag.y), TERRAIN_ROAD) ? 1 : 0;
+    }
+    return roads;
+}
+
+static int copy_file(const char *from, const char *to)
+{
+    FILE *in = fopen(from, "rb");
+    FILE *out = in ? fopen(to, "wb") : 0;
+    int ok = in && out;
+    char chunk[4096];
+    size_t n;
+    while (ok && (n = fread(chunk, 1, sizeof(chunk), in)) > 0) {
+        ok = fwrite(chunk, 1, n, out) == n;
+    }
+    if (in) {
+        fclose(in);
+    }
+    if (out) {
+        fclose(out);
+    }
+    return ok;
+}
+
+// between two frames, as the mouse would: start dragging a road on clear land of the local city, away from the
+// buildings of mpnode_play; when the month changed, copy the monthly saved game and release the drag
+static void month_drag_frame(void)
+{
+    if (month_drag.state == 0) {
+        int x0 = 0, y0 = 0, size = 0;
+        mp_compose_city_area(mp_session_local_player_id(), MP_COMPOSE_CITY_GAP, &x0, &y0, &size);
+        month_drag.state = -1;
+        for (int y = y0 + 2; y < y0 + 19 && month_drag.state < 0; y++) {
+            for (int x = x0 + 2; x + DRAG_LENGTH < x0 + size && month_drag.state < 0; x++) {
+                int clear = 1;
+                for (int i = 0; i < DRAG_LENGTH && clear; i++) {
+                    clear = map_grid_is_inside(x + i, y, 1) &&
+                        !map_terrain_is(map_grid_offset(x + i, y), TERRAIN_NOT_CLEAR);
+                }
+                if (!clear) {
+                    continue;
+                }
+                month_drag.x = x;
+                month_drag.y = y;
+                building_construction_set_type(BUILDING_ROAD);
+                building_construction_start(x, y, map_grid_offset(x, y));
+                building_construction_update(x + DRAG_LENGTH - 1, y, map_grid_offset(x + DRAG_LENGTH - 1, y));
+                if (building_construction_in_progress() && count_roads_of_drag() == DRAG_LENGTH) {
+                    month_drag.state = 1;
+                    month_drag.month = game_time_month();
+                    printf("dragging a road at %d,%d in month %d\n", x, y, month_drag.month);
+                } else {
+                    building_construction_cancel();
+                    building_construction_clear_type();
+                }
+            }
+        }
+    } else if (month_drag.state == 1 && game_time_month() == month_drag.month && !building_construction_in_progress()) {
+        // the preview could not come back after the ticks of a frame (a building of the game waiting in the undo
+        // state blocks the start of any construction): the player presses the mouse again
+        int x = month_drag.x, y = month_drag.y;
+        building_construction_set_type(BUILDING_ROAD);
+        building_construction_start(x, y, map_grid_offset(x, y));
+        building_construction_update(x + DRAG_LENGTH - 1, y, map_grid_offset(x + DRAG_LENGTH - 1, y));
+    } else if (month_drag.state == 1 && game_time_month() != month_drag.month) {
+        int still_dragging = building_construction_in_progress() && count_roads_of_drag() == DRAG_LENGTH;
+        int copied = copy_file(month_drag.autosave, month_drag.copy);
+        printf("month %d started while dragging: %s (in progress %d, %d road tiles), monthly save %s\n",
+            game_time_month(), still_dragging ? "still dragging" : "DRAG LOST", building_construction_in_progress(),
+            count_roads_of_drag(), copied ? "copied" : "NOT WRITTEN");
+        building_construction_cancel();
+        building_construction_clear_type();
+        month_drag.month = game_time_month();
+        month_drag.state = still_dragging && copied ? 2 : -1;
+    }
+}
+
+// the monthly saved game written while the road was dragged: the month that started, without the road
+static int month_drag_check(void)
+{
+    if (month_drag.state != 2) {
+        printf("WRONG: no road was dragged while a month started\n");
+        return 0;
+    }
+    int ok = mp_savegame_read(month_drag.copy);
+    int roads = ok ? count_roads_of_drag() : -1;
+    printf("monthly save written while dragging: month %d, %d road tiles of the drag\n", ok ? game_time_month() : -1,
+        roads);
+    remove(month_drag.copy);
+    if (!ok || game_time_month() != month_drag.month || roads != 0) {
+        printf("WRONG: the monthly saved game holds the road being dragged, or is not that of the month\n");
+        return 0;
+    }
+    return 1;
+}
+
 static int command_mpnode(int argc, char **argv)
 {
     // argv: mpnode host PORT PLAYERS SAVE TICKS [cities] | mpnode join ADDRESS PORT TICKS
     int is_host = argc >= 7 && strcmp(argv[2], "host") == 0;
-    int cities = 0, generate = 0, lobby_rules = 0, map2 = 0, save_resume = 0;
+    int cities = 0, generate = 0, lobby_rules = 0, map2 = 0, save_resume = 0, drag_month = 0;
     for (int i = 6; i < argc; i++) {
         cities |= i >= 7 && strcmp(argv[i], "cities") == 0;
         generate |= i >= 7 && strcmp(argv[i], "generate") == 0;
@@ -753,6 +864,8 @@ static int command_mpnode(int argc, char **argv)
         // 'saveresume' (T5.4): at the end, every player saves the game as the File menu does; the host then hosts
         // that saved game as the lobby does, in the same process, and the clients join it again
         save_resume |= strcmp(argv[i], "saveresume") == 0;
+        // 'dragmonth' (with 'saveresume', host): the host drags a road while a month starts (T5.3 review)
+        drag_month |= strcmp(argv[i], "dragmonth") == 0;
     }
     int is_join = argc >= 6 && strcmp(argv[2], "join") == 0;
     if (!is_host && !is_join) {
@@ -840,6 +953,11 @@ static int command_mpnode(int argc, char **argv)
         }
         mp_lockstep_set_rules(&rules);
     }
+    // the monthly saved game of this process, apart from those of the other tests running in this folder
+    snprintf(month_drag.autosave, sizeof(month_drag.autosave), "lan-autosave-%s-%d.mpsav", is_host ? argv[3] : argv[4],
+        (int) getpid());
+    snprintf(month_drag.copy, sizeof(month_drag.copy), "%s.drag", month_drag.autosave);
+    mp_lockstep_test_set_autosave_name(month_drag.autosave);
     time_t pause_start = 0, pause_seen_at = 0;
     int paused_seen = 0, ticks_while_paused = 0, tick_at_pause = -1;
     int ok = is_host ? mp_lockstep_host(atoi(argv[3]), atoi(argv[4]), argv[5], cities || generate)
@@ -935,6 +1053,10 @@ next_session:;
         clock_millis += 2;
         time_set_millis(clock_millis);
         game_run();
+        if (drag_month && save_resume && is_host && session == 0 && start_tick >= 0 &&
+            game_time_absolute_tick() - start_tick >= 8) {
+            month_drag_frame();
+        }
         if (game_time_absolute_tick() == before) {
             usleep(500);
         }
@@ -957,6 +1079,16 @@ next_session:;
         // expected outcome: the desynchronisation is detected
         int detected = mp_lockstep_get_state() == MP_LOCKSTEP_DESYNC;
         printf("desync %s\n", detected ? "detected" : "NOT detected");
+        // T5.3 review: the status names the game to resume only when this game wrote it (from its start on)
+        if (detected) {
+            int with_save = mp_lockstep_status_key() == TR_MP_STATUS_DESYNC;
+            printf("desync status: %s\n", mp_lockstep_status());
+            if (with_save != mp_savegame_is_needed() || (with_save && (access(month_drag.autosave, F_OK) != 0 ||
+                !strstr(mp_lockstep_status(), month_drag.autosave)))) {
+                printf("WRONG: the desync status does not name the saved game of this game\n");
+                detected = 0;
+            }
+        }
         if (is_host) {
             usleep(500 * 1000); // let the clients read the notice before the connection closes
         }
@@ -1057,6 +1189,9 @@ next_session:;
         }
         mp_lockstep_stop();
         if (!saved) {
+            return 1;
+        }
+        if (was_host && drag_month && !month_drag_check()) {
             return 1;
         }
         if (was_host) {

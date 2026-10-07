@@ -226,7 +226,10 @@ if(UNIX)
     set_tests_properties(mp_lan_pause mp_lan_player_leaves mp_lan_resume_mpsav mp_lan_other_game_data_refused
         mp_lan_lobby_rules PROPERTIES TIMEOUT 120)
     set_tests_properties(mp_lan_2_players mp_lan_4_players mp_lan_desync_detected mp_lan_cities_2_players
-        mp_lan_cities_4_players mp_lan_cities_desync_detected PROPERTIES TIMEOUT 120)
+        mp_lan_cities_desync_detected PROPERTIES TIMEOUT 120)
+    # the heaviest network games (4 processes, or a game played twice) never run at the same time: together, on a
+    # loaded computer, they ran out of time (T5.3 review)
+    set_tests_properties(mp_lan_cities_4_players PROPERTIES TIMEOUT 240 RESOURCE_LOCK mp_lan_heavy)
 endif()
 
 # Large grids (M3.3): a city moved to a larger grid behaves exactly as on its original grid
@@ -434,10 +437,12 @@ if(NOT WIN32)
     # T4.14: three players on the prepared map 2 chosen in the lobby
     add_test(NAME mp_lan_generated_map2 COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/sim/lan_test.sh $<TARGET_FILE:simtool> 27451 3 brugle-massilia-start.sav 600 generate map2)
     # T5.4: a game saved by every player as the File menu does, then hosted again as the lobby does (same process),
-    # joined again by the players, one of them a new process: 3 players on map 1, 2 players on map 2
+    # joined again by the players, one of them a new process: 3 players on map 1, 2 players on map 2; on map 2 the host
+    # drags a road while a month starts, which must not be in the monthly saved game (T5.3 review)
     add_test(NAME mp_lan_save_resume_3_players COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/sim/lan_test.sh $<TARGET_FILE:simtool> 27522 3 brugle-massilia-start.sav 900 generate saveresume)
-    add_test(NAME mp_lan_save_resume_map2_2_players COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/sim/lan_test.sh $<TARGET_FILE:simtool> 27523 2 brugle-massilia-start.sav 900 generate map2 saveresume)
-    set_tests_properties(mp_lan_save_resume_3_players mp_lan_save_resume_map2_2_players PROPERTIES TIMEOUT 240)
+    add_test(NAME mp_lan_save_resume_map2_2_players COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/sim/lan_test.sh $<TARGET_FILE:simtool> 27523 2 brugle-massilia-start.sav 900 generate map2 saveresume dragmonth)
+    set_tests_properties(mp_lan_save_resume_3_players mp_lan_save_resume_map2_2_players PROPERTIES TIMEOUT 240
+        RESOURCE_LOCK mp_lan_heavy)
     # T5.1, T5.2: three players on a generated map; the cities start with the funds, favor, rank, salary and savings of
     # the difficulty of the lobby and of everybody, on the host and on the clients, whatever the settings of the
     # computers and the rank of the template (a free map with rank 5 and funds 3000, or a saved game)

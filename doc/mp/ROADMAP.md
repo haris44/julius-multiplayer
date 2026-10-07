@@ -752,8 +752,9 @@ Les journaux de l'essai ne sont pas sur le Mac de développement : diagnostic pa
   vérifiés, sans désynchronisation). **Reprise** : après la désynchronisation, la partie restait « en cours » et le
   salon refusait d'héberger et de rejoindre ; et il n'y avait pas de sauvegarde à reprendre à plusieurs. Désormais
   « Fichier, Nouvelle partie » et le salon terminent la partie finie, chaque ordinateur sauvegarde la partie en réseau
-  au début de chaque mois (`autosave.mpsav`, listée par le salon), et le message de désynchronisation dit de
-  reprendre depuis le salon. Test `tools/mp-resume-test.sh` (vrai jeu, deux joueurs depuis le salon : désynchronisation
+  à son lancement et au début de chaque mois (`autosave.mpsav`, listée par le salon, sans l'aperçu de construction en
+  cours), et le message de désynchronisation dit de reprendre depuis le salon quand ce fichier est bien celui de la
+  partie. Test `tools/mp-resume-test.sh` (vrai jeu, deux joueurs depuis le salon : désynchronisation
   provoquée, retour au menu, reprise hébergée et rejointe depuis le salon, sans désynchronisation).
 - [x] **T5.4** Impossible de charger une partie sauvegardée.
   *Fait* (D-074) : en multijoueur, « Sauvegarder » écrit un `.mpsav`, que la fenêtre « Charger » ne montrait pas

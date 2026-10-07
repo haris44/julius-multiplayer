@@ -14,6 +14,8 @@
 # With 'saveresume' (T5.4): the players also trade; at the end every player saves the game as the File menu does, the
 # host hosts its saved game as the lobby does (same process), the other players join it again, except the last one,
 # replaced by a new process; the resumed game must run TICKS more ticks with the same checksums everywhere.
+# With 'dragmonth' (and 'saveresume'): the host drags a road while a month starts; the monthly saved game written then
+# must not hold that road (T5.3 review).
 # With 'difficulty-easy' or 'difficulty-hard' (and 'generate'; with 'map-template' the host's template is a free map made of SAVE, rank 5 and funds 3000):
 # the host's lobby sets that difficulty while the settings of the computers are other ones; every city of every
 # computer must start with the funds, favor, rank, salary and savings of that difficulty and of everybody (T5.1, T5.2).
@@ -21,6 +23,7 @@ SIMTOOL=$1; PORT=$2; PLAYERS=$3; SAVE=$4; TICKS=$5; MODE=$6
 CITIES=""
 MAP2=""
 RESUME=""
+DRAG=""
 DIFF=""
 MAPT=""
 for arg in "$@"; do
@@ -30,6 +33,7 @@ for arg in "$@"; do
     [ "$arg" = "generate" ] && CITIES="generate"
     [ "$arg" = "map2" ] && MAP2="map2"
     [ "$arg" = "saveresume" ] && RESUME="saveresume"
+    [ "$arg" = "dragmonth" ] && DRAG="dragmonth"
 done
 [ "$MODE" = "cities" ] && MODE=""
 [ "$MODE" = "generate" ] && MODE=""
@@ -42,7 +46,7 @@ HOST_ARGS=""
 [ "$MODE" = "desync" ] && HOST_ARGS="expect-desync"
 [ "$MODE" = "baddata" ] && HOST_ARGS="expect-reject"
 [ "$MODE" = "rules" ] && HOST_ARGS="rules"
-"$SIMTOOL" mpnode host "$PORT" "$PLAYERS" "$SAVE" "$TICKS" $CITIES $MAP2 $RESUME $DIFF $MAPT $HOST_ARGS > "$DIR/host.log" 2>&1 &
+"$SIMTOOL" mpnode host "$PORT" "$PLAYERS" "$SAVE" "$TICKS" $CITIES $MAP2 $RESUME $DRAG $DIFF $MAPT $HOST_ARGS > "$DIR/host.log" 2>&1 &
 HOST=$!
 sleep 0.3
 PIDS=""
@@ -129,5 +133,5 @@ elif [ "$MODE" != "desync" ] && [ "$MODE" != "baddata" ]; then
     [ "$COUNT" = "1" ] || { echo "Final checksums differ"; FAILED=1; }
 fi
 rm -rf "$DIR" mp-template-"$PORT".map mp-session-"$PORT"-p*.sav mp-session-"$PORT"-p*.mpsav mp-desync-"$PORT"-*.sav mp-desync-"$PORT"-*.mpsav \
-    lan-save-"$PORT"-p*.mpsav mp-autosave-"$PORT"-p*.tmp
+    lan-save-"$PORT"-p*.mpsav mp-autosave-"$PORT"-p*.tmp lan-autosave-"$PORT"-*.mpsav lan-autosave-"$PORT"-*.mpsav.drag
 exit $FAILED

@@ -118,7 +118,11 @@ static struct {
     void (*started_callback)(void);
     char status[160];
     int status_key;           // translation key of the status, -1 before the first one
+    int autosave_written;     // this session wrote MP_LOCKSTEP_AUTOSAVE: the game to resume after a desync is there
 } data;
+
+// tests: several games run at once in one folder, each reads back its own monthly saved game
+static char autosave_name[64] = MP_LOCKSTEP_AUTOSAVE;
 
 // The status texts are translated (T4.11): the key is kept for the tests, which have no translation tables.
 // A text carries its numbers and names as "%d" and "%s", replaced here in order (no printf: the text comes from a
@@ -315,8 +319,13 @@ static void desync(int turn)
         game_file_write_saved_game(filename);
     }
     log_info("Multiplayer: state at the desynchronisation written to", filename, 0);
-    // the game goes on from the last monthly saved game, which the lobby lists (T5.3)
-    set_status(TR_MP_STATUS_DESYNC, turn, MP_LOCKSTEP_AUTOSAVE);
+    // the game goes on from the last monthly saved game, which the lobby lists (T5.3); only when this game wrote it:
+    // an autosave.mpsav of another game must not be offered
+    if (data.autosave_written) {
+        set_status(TR_MP_STATUS_DESYNC, turn, autosave_name);
+    } else {
+        set_status(TR_MP_STATUS_DESYNC_NO_SAVE, turn, filename);
+    }
 }
 
 // Host: compares every client checksum known for this turn with its own
@@ -428,6 +437,7 @@ static void start_session(int player, int base_tick, const game_rules_settings *
     mp_session_init_network(player, data.is_host ? host_sink : client_sink);
     log_game_start(player);
     data.state = MP_LOCKSTEP_RUNNING;
+    data.autosave_written = 0;
     if (data.started_callback) {
         data.started_callback();
     }
@@ -556,6 +566,8 @@ static void host_start_game(void)
     }
     free(payload);
     free(save);
+    // the game to resume exists from the start, not only from the first month change (T5.3 review)
+    mp_lockstep_autosave();
     set_status(TR_MP_STATUS_STARTED);
 }
 
@@ -606,6 +618,7 @@ static void client_welcome(buffer *buf)
         desync(-1);
         return;
     }
+    mp_lockstep_autosave();
     set_status(TR_MP_STATUS_JOINED, player + 1, data.num_players);
 }
 
@@ -802,6 +815,11 @@ static void reset(void)
 void mp_lockstep_test_alter_game_data(void)
 {
     altered_fingerprint = game_data_fingerprint() ^ 0x5a5a5a5a5a5a5a5aULL;
+}
+
+void mp_lockstep_test_set_autosave_name(const char *name)
+{
+    snprintf(autosave_name, sizeof(autosave_name), "%s", name && *name ? name : MP_LOCKSTEP_AUTOSAVE);
 }
 
 void mp_lockstep_set_generated_map(int generate, unsigned int seed)
@@ -1085,12 +1103,13 @@ int mp_lockstep_autosave(void)
         remove(temporary);
         return 0;
     }
-    remove(MP_LOCKSTEP_AUTOSAVE); // a rename does not replace a file on Windows
-    if (rename(temporary, MP_LOCKSTEP_AUTOSAVE) != 0) {
+    remove(autosave_name); // a rename does not replace a file on Windows
+    if (rename(temporary, autosave_name) != 0) {
         remove(temporary);
-        log_error("Multiplayer: unable to write the monthly saved game", MP_LOCKSTEP_AUTOSAVE, 0);
+        log_error("Multiplayer: unable to write the monthly saved game", autosave_name, 0);
         return 0;
     }
+    data.autosave_written = 1;
     return 1;
 }
 

@@ -200,12 +200,13 @@ static void run_multiplayer(void)
         mp_lockstep_after_tick();
         new_month |= game_time_month() != month;
     }
+    if (new_month) {
+        // every computer keeps the game of the start of the month, to resume it from the lobby (T5.3, D-074);
+        // written while the local construction preview is still suspended: never save a road being dragged
+        mp_lockstep_autosave();
+    }
     if (preview_suspended) {
         building_construction_resume_preview();
-    }
-    if (new_month) {
-        // every computer keeps the game of the start of the month, to resume it from the lobby (T5.3, D-074)
-        mp_lockstep_autosave();
     }
     mp_endgame_notify();
 }

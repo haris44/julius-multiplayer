@@ -275,6 +275,7 @@ static translation_string all_strings[] = {
     {TR_MP_STATUS_HOST_LOST, "Connection to the host lost"},
     {TR_MP_STATUS_PLAYER_DISCONNECTED, "Player %d disconnected: their city goes on without them"},
     {TR_MP_STATUS_DESYNC, "Out of sync at turn %d: resume the game from the lobby (%s)"},
+    {TR_MP_STATUS_DESYNC_NO_SAVE, "Out of sync at turn %d (state written to %s)"},
     {TR_MP_STATUS_MAP_NO_TRADE, "The chosen map does not trade by both land and sea: choose another one"},
     {TR_MP_STATUS_CANNOT_COMPOSE, "Unable to set up the cities of the players"},
     {TR_MP_STATUS_CANNOT_LOAD_START, "Unable to load the starting saved game"},

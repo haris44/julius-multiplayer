@@ -1153,9 +1153,16 @@
   (`mp-desync-…`) sont cachés du salon. Désormais :
   - « Fichier, Nouvelle partie » quitte la partie en réseau, et le salon, à son ouverture, termine une partie finie
     (désynchronisée, hôte perdu) ou abandonnée : on peut héberger ou rejoindre aussitôt ;
-  - **chaque ordinateur sauvegarde la partie en réseau au début de chaque mois** (`autosave.mpsav`, écrit à côté puis
-    renommé), sans dépendre de l'option de sauvegarde automatique ; le salon la liste ; le message de
-    désynchronisation dit de reprendre la partie depuis le salon. *À valider* : tous les mois, toujours (le fichier
+  - **chaque ordinateur sauvegarde la partie en réseau à son lancement et au début de chaque mois**
+    (`autosave.mpsav`, écrit à côté puis renommé), sans dépendre de l'option de sauvegarde automatique ; le salon la
+    liste ; le message de désynchronisation dit de reprendre la partie depuis le salon, seulement si cette partie a
+    écrit ce fichier (sinon il donne l'état écrit à la désynchronisation : jamais un `autosave.mpsav` d'une autre
+    partie). La sauvegarde du mois s'écrit avant que l'aperçu de construction du joueur (route, aqueduc, mur,
+    maisons en cours de tracé) ne revienne sur la carte : une route en cours de tracé au changement de mois n'est pas
+    dans le fichier (test : `mp_lan_save_resume_map2_2_players` trace une route pendant un changement de mois et
+    relit la sauvegarde ; échouait avant). *Constaté en écrivant ce test, non corrigé* : quand, après les tours d'une
+    image, un bâtiment de la partie attend dans l'état « annulable » (maison retirée faute de route, fréquent à
+    trois), l'aperçu du tracé ne peut pas revenir et le tracé en cours du joueur est perdu ; il faut recliquer. *À valider* : tous les mois, toujours (le fichier
     pèse quelques Mo), et le même nom pour toutes les parties (la dernière jouée).
 - **« Impossible de charger une partie sauvegardée »** : en multijoueur, « Sauvegarder » écrit un `.mpsav`, mais la
   fenêtre « Charger » ne listait que les `.sav` (et « Sauvegarder » montrait les `.sav`, pas les parties
