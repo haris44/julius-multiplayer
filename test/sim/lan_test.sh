@@ -63,9 +63,13 @@ if [ "$MODE" = "rules" ]; then
     [ "$SEEN" = "$PLAYERS" ] && [ "$DIFFERENT" = "1" ] || { echo "The players do not play with the same rules"; FAILED=1; }
 fi
 if [ -n "$MAP2" ]; then
-    SEEN=$(grep -h "^map 2, " "$DIR"/*.log | wc -l | tr -d ' ')
+    # every log must prove the map by its width: map 2 is 220 tiles wide for 2 players and 240 for 3 or 4
+    # (map 1 would be 200 and 260)
+    WIDTH=240
+    [ "$PLAYERS" -le 2 ] && WIDTH=220
+    SEEN=$(grep -h "^map 2, $WIDTH tiles wide\$" "$DIR"/*.log | wc -l | tr -d ' ')
     DIFFERENT=$(grep -h "^map " "$DIR"/*.log | sort -u | wc -l | tr -d ' ')
-    [ "$SEEN" = "$PLAYERS" ] && [ "$DIFFERENT" = "1" ] || { echo "The players do not all play on map 2"; FAILED=1; }
+    [ "$SEEN" = "$PLAYERS" ] && [ "$DIFFERENT" = "1" ] || { echo "The players do not all play on map 2, $WIDTH tiles wide"; FAILED=1; }
 fi
 if [ "$MODE" != "desync" ] && [ "$MODE" != "baddata" ]; then
     COUNT=$(grep -h "checksum" "$DIR"/*.log | awk '{print $4}' | sort -u | wc -l | tr -d ' ')

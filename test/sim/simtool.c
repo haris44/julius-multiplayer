@@ -232,9 +232,20 @@ static int load(const char *file)
 }
 
 // the prepared map chosen by --map (map 1 by default): every test of the prepared maps runs on each of them (T4.14)
+// and every success proves the map is the chosen one: its width is the one of that map, so a test run with --map 2
+// can not silently run on map 1
 static int create_prepared(const char *file, int num_players, unsigned int placement_seed)
 {
-    return mp_mapgen_create_prepared_map(file, num_players, options.prepared_map, placement_seed);
+    if (!mp_mapgen_create_prepared_map(file, num_players, options.prepared_map, placement_seed)) {
+        return 0;
+    }
+    int expected = mp_mapgen_prepared_map_size(options.prepared_map, num_players);
+    if (map_grid_width() != expected) {
+        printf("FAILED: map %d for %d players should be %d tiles wide, it is %d\n", options.prepared_map + 1,
+            num_players, expected, map_grid_width());
+        return 0;
+    }
+    return 1;
 }
 
 static int prepared_size(int num_players)
@@ -1697,7 +1708,11 @@ static int command_mapchoice(const char *file)
     CHECK(read && game_rules_multiplayer_settings()->prepared_map == GAME_MAP_2, "a saved game keeps its map");
 
     // hosted with a map drawn by lot, the game is played on the map of the draw, which its rules keep
-    for (unsigned int seed = 1; seed <= 2; seed++) {
+    // (seeds 1 and 2 draw map 2, seed 7 draws map 1: the host follows the draw both ways)
+    const unsigned int seeds[] = { 1, 2, 7 };
+    CHECK(mp_mapgen_choose_prepared_map(GAME_MAP_RANDOM, 7) == 0, "seed 7 draws map 1");
+    for (int s = 0; s < 3; s++) {
+        unsigned int seed = seeds[s];
         int expected = mp_mapgen_choose_prepared_map(GAME_MAP_RANDOM, seed);
         int width = 0;
         int map = hosted_map(file, GAME_MAP_RANDOM, seed, &width);
@@ -2589,7 +2604,7 @@ static int command_preparedmap(const char *file, int num_players, int ticks)
     }
     // as in a network game, the map goes through a file
     char map_file[64];
-    snprintf(map_file, sizeof(map_file), "prepared-%d.mpmap", num_players);
+    snprintf(map_file, sizeof(map_file), "prepared-%d-%d.mpmap", options.prepared_map + 1, num_players);
     if (!mp_savegame_write(map_file) || !mp_savegame_read(map_file)) {
         printf("Unable to write and read the map\n");
         return 2;
@@ -2737,7 +2752,7 @@ static int command_drying(const char *file, int num_players)
     // as a game prepared by the lobby: the map goes through a file, then the rules of the game come, with
     // territories, alone too; no enemy army comes to destroy the reservoir
     char map_file[64];
-    snprintf(map_file, sizeof(map_file), "drying-%d.mpmap", num_players);
+    snprintf(map_file, sizeof(map_file), "drying-%d-%d.mpmap", options.prepared_map + 1, num_players);
     if (!create_prepared(file, num_players, 0) || !mp_savegame_write(map_file) ||
         !mp_savegame_read(map_file)) {
         printf("Unable to create the prepared map\n");
@@ -2856,7 +2871,7 @@ static int own_reservoir_with_aqueduct(int player_id, int cx, int cy, int *ax, i
 static int inland_water_game(const char *file, int num_players, int seed, int p, uint64_t *checksum)
 {
     char map_file[64];
-    snprintf(map_file, sizeof(map_file), "inlandwater-%d-%d.mpmap", num_players, p);
+    snprintf(map_file, sizeof(map_file), "inlandwater-%d-%d-%d.mpmap", options.prepared_map + 1, num_players, p);
     player_context_switch(0);
     player_context_set_num_players(1);
     if (!create_prepared(file, num_players, seed) || !mp_savegame_write(map_file) ||
@@ -5429,7 +5444,7 @@ static int command_viewcorners(const char *file, int num_players)
 {
     int size = mp_mapgen_default_size(num_players);
     char map_file[64]; // one file per test: ctest runs them in parallel
-    snprintf(map_file, sizeof(map_file), "viewcorners-%d.mpmap", num_players);
+    snprintf(map_file, sizeof(map_file), "viewcorners-%d-%d.mpmap", options.prepared_map + 1, num_players);
     if (!mp_mapgen_create(file, num_players, size, 11) || !mp_savegame_write(map_file) ||
         !mp_savegame_read(map_file)) {
         printf("Unable to generate the map\n");
