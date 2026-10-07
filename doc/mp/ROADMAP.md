@@ -729,6 +729,9 @@ Les journaux de l'essai ne sont pas sur le Mac de développement : diagnostic pa
   copies) remet les règles du salon et recalcule fonds et faveur. Le reste (sentiment, loups, armées) se calculait déjà
   par `game_rules_difficulty()`. Tests `mp_lan_start_easy`, `mp_lan_start_hard`, `mp_lan_start_easy_saved_template`,
   `mp_lan_start_easy_cities_map` : 3 joueurs en réseau, mêmes valeurs sur l'hôte et les clients.
+  *Journal* : au lancement d'une partie, `julius-log.txt` de chaque ordinateur écrit les règles (difficulté, dieux,
+  invasions, carte, score) et le départ de chaque cité (trésor, faveur, rang, salaire, épargne), pour comparer les
+  joueurs après un essai. Le journal du lancement précédent est gardé (`julius-log-precedent.txt`).
 - [x] **T5.2** Aligner les salaires de Rome pour tous les joueurs. *Fait* (D-076, à valider) : les cités héritaient du
   rang du modèle de carte (rang 5 : 20 Dn par mois au départ) et chacun choisissait son salaire. Maintenant même départ
   pour tous (rang 0, salaire 0, épargne 0) et Rome verse à chacun le salaire de son rang de lauriers, même table, sans

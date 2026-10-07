@@ -2,6 +2,8 @@
 
 #include "city/data.h"
 #include "city/emperor.h"
+#include "city/finance.h"
+#include "city/ratings.h"
 #include "core/buffer.h"
 #include "core/dir.h"
 #include "core/io.h"
@@ -385,6 +387,27 @@ static void host_issue_turn(int turn)
 
 // ---------- game start ----------
 
+// julius-log.txt of every computer: the rules of the game and the start of every city, to compare the players
+// after a game (T5.1: a city that started at another difficulty than the lobby's)
+static void log_game_start(int player)
+{
+    char line[200];
+    const game_rules_settings *rules = game_rules_multiplayer_settings();
+    snprintf(line, sizeof(line), "difficulty %d, gods %d, AI invasions %d, fog %d, end %d, score %d, map %d, tick %d",
+        rules->difficulty, rules->gods_enabled, rules->ai_invasions, rules->fog_of_war, rules->end_condition,
+        rules->caesar_score, rules->prepared_map, game_time_absolute_tick());
+    log_info("Multiplayer: rules of the game:", line, 0);
+    int previous = player_context_current();
+    for (int p = 0; p < player_context_num_players(); p++) {
+        player_context_switch(p);
+        snprintf(line, sizeof(line), "player %d%s: treasury %d, favor %d, rank %d, salary %d, savings %d", p + 1,
+            p == player ? " (this computer)" : "", city_finance_treasury(), city_rating_favor(),
+            city_emperor_salary_rank(), city_emperor_salary_amount(), city_emperor_personal_savings());
+        log_info("Multiplayer:", line, 0);
+    }
+    player_context_switch(previous);
+}
+
 static void start_session(int player, int base_tick, const game_rules_settings *rules)
 {
     game_rules_set_multiplayer(rules);
@@ -399,6 +422,7 @@ static void start_session(int player, int base_tick, const game_rules_settings *
         }
     }
     mp_session_init_network(player, data.is_host ? host_sink : client_sink);
+    log_game_start(player);
     data.state = MP_LOCKSTEP_RUNNING;
     if (data.started_callback) {
         data.started_callback();

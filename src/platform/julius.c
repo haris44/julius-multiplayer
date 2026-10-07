@@ -156,6 +156,9 @@ static void setup_logging(void)
 static void open_log_in_data_directory(void)
 {
     if (!platform_automation_is_active()) {
+        // the log of the previous launch is kept: a game relaunched after a test must not lose what happened
+        remove("julius-log-precedent.txt");
+        rename("julius-log.txt", "julius-log-precedent.txt");
         log_file = file_open("julius-log.txt", "wt");
     }
 }
