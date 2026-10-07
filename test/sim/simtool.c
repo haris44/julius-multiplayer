@@ -38,6 +38,7 @@
 #include "core/time.h"
 #include "game/difficulty.h"
 #include "game/file.h"
+#include "game/file_editor.h"
 #include "game/game.h"
 #include "game/rules.h"
 #include "game/settings.h"
@@ -143,9 +144,10 @@ static int usage(void)
     printf("  simtool preparedmap SAVE PLAYERS TICKS prepared map: land reached from the main road, food and\n");
     printf("                                         materials of each arrival point, permissions, farms;\n");
     printf("                                         MAPGEN_PICTURE=F.ppm\n");
-    printf("  simtool restrictiveness SAVE           the same small city built by commands and played two years under\n");
+    printf("  simtool restrictiveness SAVE [blank|MAP...] the same small city built by commands and played two years under\n");
     printf("                                         classic and multiplayer rules, alone and with four cities, easy\n");
-    printf("                                         and hard: table of the numbers, fails if they differ (T4.16)\n");
+    printf("                                         and hard, and on free land of a classic map (blank: made here;\n");
+    printf("                                         MAP: a .map of the game): table, fails if they differ (T4.16)\n");
     printf("  simtool reservoirlevel SAVE            prepared map: a reservoir cut off from its source empties\n");
     printf("                                         slowly, joined again it fills\n");
     printf("  simtool drying SAVE PLAYERS            prepared map: no pond; the city of the rocks dries up when\n");
@@ -4740,6 +4742,7 @@ static int command_idempotence(const char *file, int ticks, int step)
 #define RESTRICT_TICKS_PER_MONTH 800 // 16 days of 50 ticks
 #define RESTRICT_EXTRA_MONTH 2       // the month the extra workshops are built: the zone of a multiplayer city has grown
 #define RESTRICT_FUNDS 100000        // the same treasury for every variant: money explains nothing here
+#define RESTRICT_MAX_CLASSIC 8       // real classic maps given on the command line
 #define RESTRICT_WANTED 63           // 44 houses, 5 wells, granary, market, temple, prefecture, engineers, 4 workshops,
                                      // 2 reservoirs, 3 fountains (the extra workshops come on top, see restrict_result)
 
@@ -4764,6 +4767,7 @@ typedef struct {
     int reservoir_id[2];
     int fountain_count;    // fountains of the plan that were built
     int origin_x, origin_y; // the block of the plan
+    int pond;              // the reservoir of the source had no water near: a pond was dug for it (classic maps)
 } restrict_result;
 
 typedef struct {
@@ -4771,6 +4775,8 @@ typedef struct {
     int num_players;   // cities on the map
     int difficulty;    // DIFFICULTY_*
     int only;          // the only city that builds (the others stay as the map made them), or -1 for all
+    const char *classic; // a real classic map (.map of the free game) or mission save, played alone instead of the
+                         // prepared map; 0 for the prepared map
 } restrict_setup;
 
 static void set_local_difficulty(int difficulty)
@@ -4803,15 +4809,16 @@ static int restrict_area_clear(int x, int y, int width, int height)
 // clear tiles around the block: the room of the extra workshops (3 tiles) against its roads
 #define RESTRICT_MARGIN 1
 
-static int restrict_find_origin(int cx, int cy, int max_distance, int *ox, int *oy)
+static int restrict_find_origin(int cx, int cy, int max_distance, int edge, int *ox, int *oy)
 {
     int x0 = cx - RESTRICT_SIZE / 2, y0 = cy - RESTRICT_SIZE / 2;
     for (int d = 0; d <= max_distance; d++) {
         for (int y = y0 - d; y <= y0 + d; y++) {
             for (int x = x0 - d; x <= x0 + d; x++) {
                 int dx = x > x0 ? x - x0 : x0 - x, dy = y > y0 ? y - y0 : y0 - y;
-                if ((dx > dy ? dx : dy) == d && restrict_area_clear(x - RESTRICT_MARGIN, y - RESTRICT_MARGIN, RESTRICT_SIZE + 2 * RESTRICT_MARGIN,
-                        RESTRICT_SIZE + 2 * RESTRICT_MARGIN)) {
+                int margin = RESTRICT_MARGIN + edge; // a real map: the plan keeps off the edge of the map
+                if ((dx > dy ? dx : dy) == d && restrict_area_clear(x - margin, y - margin, RESTRICT_SIZE + 2 * margin,
+                        RESTRICT_SIZE + 2 * margin)) {
                     *ox = x;
                     *oy = y;
                     return 1;
@@ -4949,18 +4956,53 @@ static int restrict_reservoir_at(int x, int y)
 
 // water for the plan, as a player does it: a reservoir at the source, an aqueduct to a second reservoir beside the
 // plan, three fountains on the service row. The reservoirs of Caesar (no, the aqueduct of Caesar) feed the inland ones
-static int restrict_build_water(int player_id, int ox, int oy, restrict_result *r)
+// takes down the reservoir that was built at (x, y): the source did not lead to a place for the second one
+static void restrict_remove_reservoir(int x, int y)
 {
-    int source_x = -1, source_y = -1, tried[RESTRICT_MAX_TRIES][2], num_tried = 0;
+    building *b = building_get(map_building_at(map_grid_offset(x, y)));
+    map_building_tiles_remove(b->id, b->x, b->y);
+    b->state = BUILDING_STATE_UNUSED;
+}
+
+// one try: a reservoir at the next source and a second one beside the plan, joined by an aqueduct
+static int restrict_build_reservoirs(int player_id, int ox, int oy, int classic_map, int use_pond, int tried[][2],
+    int *num_tried, restrict_result *r)
+{
+    int source_x = -1, source_y = -1;
     int end[2];
-    int inland = mp_mapgen_caesar_aqueduct_end(player_id, &end[0], &end[1]);
-    int found = inland ?
-        restrict_find_site(end[0], end[1], 3, restrict_fits_aqueduct, end, tried, &num_tried, &source_x, &source_y) :
-        restrict_find_site(ox + RESTRICT_SIZE / 2, oy + RESTRICT_SIZE / 2, 45, restrict_fits_sea, 0, tried, &num_tried,
-            &source_x, &source_y);
+    int inland = !classic_map && mp_mapgen_caesar_aqueduct_end(player_id, &end[0], &end[1]);
+    int found = 0;
+    if (use_pond) {
+        // a map with no water the aqueduct can use near the plan: a pond is dug beside the plan, where there is room, as
+        // the sea is for the other maps (the same place for every difficulty)
+        for (int d = 5; d <= 14 && !found; d++) {
+            for (int y = oy - d; y <= oy + RESTRICT_SIZE + d && !found; y += 2) {
+                for (int x = ox - d; x <= ox + RESTRICT_SIZE + d && !found; x += 2) {
+                    int dx = x < ox ? ox - x : x - (ox + RESTRICT_SIZE - 1), dy = y < oy ? oy - y : y - (oy + RESTRICT_SIZE - 1);
+                    if ((dx > dy ? dx : dy) != d || !restrict_area_clear(x, y, 1, 1)) {
+                        continue;
+                    }
+                    map_terrain_add(map_grid_offset(x, y), TERRAIN_WATER);
+                    *num_tried = 0;
+                    found = restrict_find_site(x, y, 4, restrict_fits_sea, 0, tried, num_tried, &source_x, &source_y);
+                    if (found) {
+                        r->pond = 1;
+                    } else {
+                        map_terrain_remove(map_grid_offset(x, y), TERRAIN_WATER);
+                    }
+                }
+            }
+        }
+        map_routing_update_land();
+    } else {
+        found = inland ?
+            restrict_find_site(end[0], end[1], 3, restrict_fits_aqueduct, end, tried, num_tried, &source_x, &source_y) :
+            restrict_find_site(ox + RESTRICT_SIZE / 2, oy + RESTRICT_SIZE / 2, 45, restrict_fits_sea, 0, tried,
+                num_tried, &source_x, &source_y);
+    }
     if (!found) {
         printf("    player %d: no place for the reservoir of the source\n", player_id + 1);
-        return 0;
+        return -1;
     }
     if (!build_as(player_id, BUILDING_DRAGGABLE_RESERVOIR, source_x, source_y, source_x, source_y) ||
         !restrict_reservoir_at(source_x, source_y)) {
@@ -4969,7 +5011,6 @@ static int restrict_build_water(int player_id, int ox, int oy, restrict_result *
             mp_territory_is_active() ? mp_territory_owner(map_grid_offset(source_x, source_y)) + 1 : 0);
         return 0;
     }
-    r->reservoir_id[r->reservoirs++] = map_building_at(map_grid_offset(source_x, source_y));
     if (inland && !game_rules_multiplayer_map()) {
         // the aqueduct of Caesar is a feature of the multiplayer map: a classic game has none that carries water. The
         // classic source of the same place is a pond beside the reservoir, the water of the original rules
@@ -4989,13 +5030,37 @@ static int restrict_build_water(int player_id, int ox, int oy, restrict_result *
             .args = { BUILDING_DRAGGABLE_RESERVOIR, 0, source_x, source_y, x, y, 0, 0 } };
         mp_command_execute(&drag);
         if (restrict_reservoir_at(x, y)) {
-            r->reservoir_id[r->reservoirs++] = map_building_at(map_grid_offset(x, y));
-            break;
+            r->reservoir_id[0] = map_building_at(map_grid_offset(source_x, source_y));
+            r->reservoir_id[1] = map_building_at(map_grid_offset(x, y));
+            r->reservoirs = 2;
+            return 1;
         }
     }
-    if (r->reservoirs < 2) {
-        printf("    player %d: no reservoir beside the plan could be joined to the source at (%d, %d)\n", player_id + 1,
-            source_x, source_y);
+    printf("    player %d: no reservoir beside the plan could be joined to the source at (%d, %d)\n", player_id + 1,
+        source_x, source_y);
+    restrict_remove_reservoir(source_x, source_y);
+    return 0;
+}
+
+// water for the plan, as a player does it: a reservoir at the source, an aqueduct to a second reservoir beside the
+// plan, three fountains on the service row. The reservoirs of Caesar (no, the aqueduct of Caesar) feed the inland ones.
+// A real classic map tries several sources (the nearest water may be a lake without room for the aqueduct)
+static int restrict_build_water(int player_id, int ox, int oy, int classic_map, restrict_result *r)
+{
+    int tried[RESTRICT_MAX_TRIES][2], num_tried = 0;
+    int built = 0;
+    int attempts = classic_map ? 4 : 1;
+    for (int attempt = 0; attempt < attempts + classic_map && !built; attempt++) {
+        // after the natural water, a pond (the last attempt)
+        int result = restrict_build_reservoirs(player_id, ox, oy, classic_map, attempt == attempts, tried, &num_tried, r);
+        if (result < 0 && attempt < attempts) {
+            attempt = attempts - 1; // no more natural sources
+        } else if (result < 0) {
+            break;
+        }
+        built = result > 0;
+    }
+    if (!built) {
         return 0;
     }
     static const int fountain_x[3] = { 1, 6, 10 };
@@ -5062,10 +5127,12 @@ static void restrict_build_extra_workshops(int player_id, int ox, int oy, restri
 
 // the plan, in coordinates of the block (0, 0) to (12, 12): roads every three tiles with two rows of houses
 // between them, a service row (wells, granary, market, temple, prefecture, engineers), workshops to the south
-static int restrict_build_city(int player_id, int cx, int cy, int max_distance, restrict_result *r)
+static int restrict_build_city(int player_id, int cx, int cy, int max_distance, int classic_map, restrict_result *r)
 {
     int ox, oy;
-    if (!restrict_find_origin(cx, cy, max_distance, &ox, &oy)) {
+    // a real map: room around the plan if there is some (the extra workshops need 3 tiles on each side), else the edge
+    if (!restrict_find_origin(cx, cy, max_distance, classic_map ? 5 : 0, &ox, &oy) &&
+        !(classic_map && restrict_find_origin(cx, cy, max_distance, 0, &ox, &oy))) {
         printf("    player %d: no clear block near (%d, %d)\n", player_id + 1, cx, cy);
         return 0;
     }
@@ -5084,6 +5151,15 @@ static int restrict_build_city(int player_id, int cx, int cy, int max_distance, 
         }
     }
     restrict_road(player_id, ex, ey, tx[best], ty[best]);
+    if (classic_map && !map_terrain_is(map_grid_offset(tx[best], ty[best]), TERRAIN_ROAD)) {
+        printf("    the plan at (%d, %d) cannot be joined to the entry point (%d, %d)\n", ox, oy, ex, ey);
+        return 0;
+    }
+    if (getenv("RESTRICT_TRACE")) {
+        printf("  entry (%d, %d), road to (%d, %d): entry %s, end %s\n", ex, ey, tx[best], ty[best],
+            map_terrain_is(map_grid_offset(ex, ey), TERRAIN_ROAD) ? "road" : "no road",
+            map_terrain_is(map_grid_offset(tx[best], ty[best]), TERRAIN_ROAD) ? "road" : "no road");
+    }
     restrict_road(player_id, ox, oy, ox + 12, oy);
     restrict_road(player_id, ox, oy + 3, ox + 12, oy + 3);
     restrict_road(player_id, ox, oy + 7, ox + 12, oy + 7);
@@ -5110,7 +5186,9 @@ static int restrict_build_city(int player_id, int cx, int cy, int max_distance, 
     restrict_place(player_id, BUILDING_FURNITURE_WORKSHOP, ox + 4, oy + 11);
     restrict_place(player_id, BUILDING_WEAPONS_WORKSHOP, ox + 7, oy + 11);
     restrict_place(player_id, BUILDING_POTTERY_WORKSHOP, ox + 10, oy + 11);
-    restrict_build_water(player_id, ox, oy, r);
+    if (!restrict_build_water(player_id, ox, oy, classic_map, r) && classic_map) {
+        return 0;
+    }
     r->origin_x = ox;
     r->origin_y = oy;
     return 1;
@@ -5242,7 +5320,26 @@ static int restrict_play(const char *file, const restrict_setup *setup, restrict
     memset(results, 0, sizeof(restrict_result) * MP_MAPGEN_MAX_PLAYERS);
     game_rules_set_classic();
     int max_distance = 18;
-    if (!mp_mapgen_create_prepared(file, setup->num_players, 0)) {
+    int base = 0; // buildings the map already has (a classic mission save has a few)
+    if (setup->classic) {
+        // a real classic map: free land near its entry point, the rules of the original
+        max_distance = 80;
+        if (!load(setup->classic)) {
+            return 0;
+        }
+        base = restrict_count_buildings(0);
+        if (getenv("RESTRICT_TRACE")) {
+            int water = 0, meadow = 0;
+            for (int y = 0; y < map_grid_height(); y++) {
+                for (int x = 0; x < map_grid_width(); x++) {
+                    water += map_terrain_is(map_grid_offset(x, y), TERRAIN_WATER) != 0;
+                    meadow += (map_terrain_get(map_grid_offset(x, y)) & TERRAIN_MEADOW) != 0;
+                }
+            }
+            printf("  %s: %d x %d tiles, %d water, %d meadow, %d buildings\n", setup->classic, map_grid_width(),
+                map_grid_height(), water, meadow, base);
+        }
+    } else if (!mp_mapgen_create_prepared(file, setup->num_players, 0)) {
         printf("Unable to create the prepared map\n");
         return 0;
     }
@@ -5274,20 +5371,25 @@ static int restrict_play(const char *file, const restrict_setup *setup, restrict
             continue;
         }
         int cx, cy;
-        mp_mapgen_city_center(p, &cx, &cy);
+        if (setup->classic) {
+            cx = city_map_entry_point()->x;
+            cy = city_map_entry_point()->y;
+        } else {
+            mp_mapgen_city_center(p, &cx, &cy);
+        }
         // a classic game starts with the favor of its difficulty; the prepared map leaves it at zero, which would
         // bring the legions of Caesar after a year: that is the rule of the original, not what is measured here
         player_context_switch(p);
         city_data.ratings.favor = city_data.ratings.favor_last_year = difficulty_starting_favor();
         player_context_switch(0);
-        if (!restrict_build_city(p, cx, cy, max_distance, &results[p])) {
+        if (!restrict_build_city(p, cx, cy, max_distance, setup->classic != 0, &results[p])) {
             return 0;
         }
         restrict_stock_granary(p, 3200);
         if (!setup->multiplayer) {
             restrict_remove_missions(p);
         }
-        results[p].built = restrict_count_buildings(p);
+        results[p].built = restrict_count_buildings(p) - base;
         player_context_switch(p);
         results[p].spent = RESTRICT_FUNDS - city_finance_treasury();
         player_context_switch(0);
@@ -5365,6 +5467,7 @@ static int restrict_play(const char *file, const restrict_setup *setup, restrict
         results[p].extra = keep.extra;
         results[p].origin_x = keep.origin_x;
         results[p].origin_y = keep.origin_y;
+        results[p].pond = keep.pond;
         results[p].built = keep.built;
         results[p].farms = keep.farms;
         results[p].peak = keep.peak;
@@ -5376,6 +5479,23 @@ static int restrict_play(const char *file, const restrict_setup *setup, restrict
         results[p].spent = keep.spent;
     }
     return 1;
+}
+
+// A free map with nothing on it, as the editor of the game makes one (80 x 80 tiles, entry point on the east side), with
+// a lake in the north and meadow on all the land: the free land of a classic game, written in the format of the maps of
+// the game, so that the test needs no map of the game itself (which is not in the repository)
+#define RESTRICT_BLANK_MAP "restrictiveness-blank.map"
+
+static int restrict_write_blank_map(void)
+{
+    game_file_editor_create_scenario(2);
+    for (int y = 0; y < map_grid_height(); y++) {
+        for (int x = 0; x < map_grid_width(); x++) {
+            int lake = x >= 40 && x < 48 && y >= 8 && y < 16;
+            map_terrain_add(map_grid_offset(x, y), lake ? TERRAIN_WATER : TERRAIN_MEADOW);
+        }
+    }
+    return game_file_editor_write_scenario(RESTRICT_BLANK_MAP);
 }
 
 // the funds a city starts with, at a difficulty: the same money for both sets of rules (the difficulty decides)
@@ -5457,16 +5577,70 @@ static int restrict_alike(const char *what, const restrict_result *a, const rest
     return ok;
 }
 
+// The multiplayer city is not worse off than the same plan on free land of real classic maps: its people, houses served
+// by water and jobs filled are at least those of the weakest classic city, within a tolerance. The places differ (trees,
+// slopes, the water near the plan, the length of the road from the entry point): the classic cities alone span 306 to
+// 406 people, so the multiplayer one is only asked not to fall under that range. The number of houses is not compared:
+// they merge into larger ones as they evolve
+typedef struct {
+    int population, staffed, water; // the weakest classic city: people, employed, houses served by water (percent)
+    int cities;
+} restrict_floor;
+
+static int restrict_water_percent(const restrict_result *r)
+{
+    return r->inhabited ? 100 * r->water / r->inhabited : 0;
+}
+
+static void restrict_floor_add(restrict_floor *floor, const restrict_result *classic)
+{
+    if (!floor->cities || classic->population < floor->population) {
+        floor->population = classic->population;
+    }
+    if (!floor->cities || classic->staffed < floor->staffed) {
+        floor->staffed = classic->staffed;
+    }
+    if (!floor->cities || restrict_water_percent(classic) < floor->water) {
+        floor->water = restrict_water_percent(classic);
+    }
+    floor->cities++;
+}
+
+static int restrict_no_worse(const char *what, const restrict_result *mp, const restrict_floor *floor)
+{
+    int ok = mp->population >= floor->population * 85 / 100 - 6 && restrict_water_percent(mp) >= floor->water - 20 &&
+        mp->staffed >= floor->staffed * 85 / 100 - 6;
+    if (!ok) {
+        printf("  DIFFERENT: %s: %d people, water %d%%, %d employed; the weakest classic city has %d, %d%%, %d\n", what,
+            mp->population, restrict_water_percent(mp), mp->staffed, floor->population, floor->water, floor->staffed);
+    }
+    return ok;
+}
+
 // A: classic rules, a city alone; B: multiplayer rules, a city alone; C, D: the same with four cities on the map
 // for four (C still runs the multiplayer-map code: water ranges of several cities, build permissions); E: multiplayer
 // rules, four cities on the map but only one builds. Prints the table, checks that A and B, C and D, D and E are
 // alike (the zone rule and the mission post excepted: the mission post of the prepared map is removed from the
 // classic cities, and a building on the border of a neighbour's zone is not built, which is all they differ by)
-static int command_restrictiveness(const char *file)
+static int command_restrictiveness(const char *file, int num_classic, char **classic)
 {
     static const char *NAMES[] = { "very easy", "easy", "normal", "hard", "very hard" };
     static const int DIFFICULTIES[2] = { DIFFICULTY_EASY, DIFFICULTY_HARD };
     int failures = 0;
+    // "blank" stands for a free map of the editor of the game, made here, first: the file has the grid of a map of the
+    // game, which the prepared maps (larger grids) change
+    static char blank_name[] = RESTRICT_BLANK_MAP;
+    int blank_written = 0;
+    for (int i = 0; i < num_classic; i++) {
+        if (strcmp(classic[i], "blank") == 0) {
+            if (!blank_written && !restrict_write_blank_map()) {
+                printf("Unable to write the blank map\n");
+                return 2;
+            }
+            blank_written = 1;
+            classic[i] = blank_name;
+        }
+    }
     for (int d = 0; d < 2; d++) {
         int classic = restrict_starting_funds(file, 0, DIFFICULTIES[d]);
         int multiplayer = restrict_starting_funds(file, 1, DIFFICULTIES[d]);
@@ -5510,7 +5684,16 @@ static int command_restrictiveness(const char *file)
             only[p] = results[p];
             checked_only[p] = 1;
         }
-        char label[64];
+        char label[128];
+        restrict_result real[RESTRICT_MAX_CLASSIC];
+        int real_played[RESTRICT_MAX_CLASSIC] = { 0 };
+        for (int i = 0; i < num_classic && i < RESTRICT_MAX_CLASSIC; i++) {
+            restrict_setup setup = { 0, 1, difficulty, -1, classic[i] };
+            restrict_result results[MP_MAPGEN_MAX_PLAYERS];
+            // a map without a clear block or without water near the entry point cannot hold the plan: it is left out
+            real_played[i] = restrict_play(file, &setup, results);
+            real[i] = results[0];
+        }
         for (int multiplayer = 0; multiplayer < 2; multiplayer++) {
             snprintf(label, sizeof(label), "%s %s alone", NAMES[difficulty], multiplayer ? "MP" : "classic");
             restrict_print(label, &alone[multiplayer][0]);
@@ -5527,6 +5710,18 @@ static int command_restrictiveness(const char *file)
                 restrict_print(label, &only[p]);
             }
         }
+        for (int i = 0; i < num_classic && i < RESTRICT_MAX_CLASSIC; i++) {
+            if (!real_played[i]) {
+                printf("%s: left out, the plan does not fit\n", classic[i]);
+                continue;
+            }
+            const char *name = strrchr(classic[i], '/');
+            snprintf(label, sizeof(label), "%.12s %s", strcmp(classic[i], RESTRICT_BLANK_MAP) == 0 ? "blank map" :
+                name ? name + 1 : classic[i], NAMES[difficulty]);
+            restrict_print(label, &real[i]);
+            printf("    block of the plan at (%d, %d)%s\n", real[i].origin_x, real[i].origin_y,
+                real[i].pond ? ", water from a pond dug beside it" : "");
+        }
         printf("zone of the multiplayer city after two years, in clear tiles (%s): alone %d; with four %d %d %d %d\n",
             NAMES[difficulty], alone[1][0].zone, four[1][0].zone, four[1][1].zone, four[1][2].zone, four[1][3].zone);
         snprintf(label, sizeof(label), "%s: classic and multiplayer rules, alone", NAMES[difficulty]);
@@ -5538,6 +5733,34 @@ static int command_restrictiveness(const char *file)
                 snprintf(label, sizeof(label), "%s: player %d of 4, with and without the other builders",
                     NAMES[difficulty], p + 1);
                 failures += !restrict_alike(label, &four[1][p], &only[p]);
+            }
+        }
+        // the plan on free land of a real classic map: it stands, its water runs, and no multiplayer city is poorer. The
+        // free map of the test must be there; a map of the game that does not hold the plan is left out
+        restrict_floor floor = { 0, 0, 0, 0 };
+        for (int i = 0; i < num_classic && i < RESTRICT_MAX_CLASSIC; i++) {
+            int blank = strcmp(classic[i], RESTRICT_BLANK_MAP) == 0;
+            if (!real_played[i]) {
+                failures += blank;
+                continue;
+            }
+            const restrict_result *c = &real[i];
+            if (c->built != RESTRICT_WANTED || c->reservoirs_watered != 2 || c->fountain_count != 3 || c->fountain <= 0 ||
+                c->population < 150) {
+                printf("  DIFFERENT: %s, %s: %d buildings of %d, %d reservoirs with water of 2, %d fountains of 3 serving %d "
+                    "houses, population %d\n", NAMES[difficulty], classic[i], c->built, RESTRICT_WANTED,
+                    c->reservoirs_watered, c->fountain_count, c->fountain, c->population);
+                failures++;
+            }
+            restrict_floor_add(&floor, c);
+        }
+        if (floor.cities) {
+            snprintf(label, sizeof(label), "%s: multiplayer alone against the classic maps", NAMES[difficulty]);
+            failures += !restrict_no_worse(label, &alone[1][0], &floor);
+            for (int p = 0; p < 4; p++) {
+                snprintf(label, sizeof(label), "%s: multiplayer player %d of 4 against the classic maps", NAMES[difficulty],
+                    p + 1);
+                failures += !restrict_no_worse(label, &four[1][p], &floor);
             }
         }
         // the whole plan stands, the water reaches the houses by the fountains, the jobs outnumber the people who
@@ -5560,6 +5783,10 @@ static int command_restrictiveness(const char *file)
     player_context_switch(0);
     player_context_set_num_players(1);
     game_rules_set_classic();
+    scenario_set_custom(0);
+    if (blank_written) {
+        remove(RESTRICT_BLANK_MAP);
+    }
     printf("%s\n", failures ? "DIFFERENT: the multiplayer game is more restrictive than the classic one" :
         "Identical: the multiplayer rules change nothing inside a city (zone and mission post apart)");
     return failures ? 1 : 0;
@@ -5712,7 +5939,7 @@ int main(int argc, char **argv)
     } else if (strcmp(command, "run") == 0 && argc > 4) {
         result = command_run(file, ticks, argv[4]);
     } else if (strcmp(command, "restrictiveness") == 0) {
-        result = command_restrictiveness(file);
+        result = command_restrictiveness(file, argc - 3, argv + 3);
     } else if (strcmp(command, "trace") == 0 && argc > 3) {
         result = command_trace(file, ticks, step);
     } else if (strcmp(command, "pieces") == 0) {

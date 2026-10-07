@@ -977,7 +977,7 @@
   - le grenier est **rempli chaque mois** (3 200 de blé) : les maisons ne meurent pas de faim ; pas d'incendie ni
     d'effondrement (le hasard d'un incendie dans une cité et pas dans l'autre noierait la mesure) ; pas de dieux, pas
     d'armées ni de demandes de César ; 100 000 Dn pour que l'argent n'explique rien.
-  Quatre séries, en **facile** et en **difficile** (par les règles du jeu : réglage local en classique, règles du
+  Cinq séries, en **facile** et en **difficile** (par les règles du jeu : réglage local en classique, règles du
   salon en multijoueur) :
   1. *classique*, une cité seule sur la carte préparée (terrain libre, sans zone). **Seule cette série compare une
      vraie partie classique** à une partie multijoueur. L'aqueduc de César ne porte pas d'eau en classique (c'est un
@@ -989,7 +989,18 @@
      (`game_rules_multiplayer_map()` est vrai dès qu'il y a plusieurs cités : eau par cité, autorisations de
      construire). Elle ne diffère de la série multijoueur que par la zone et `is_multiplayer` : elle ne prouve rien
      sur les portées d'eau, seule la série 1 le fait ;
-  4. multijoueur à 4 où **un seul** joueur bâtit : une cité n'est pas gênée par les trois autres.
+  4. multijoueur à 4 où **un seul** joueur bâtit : une cité n'est pas gênée par les trois autres ;
+  5. **le même plan sur du terrain libre d'une vraie carte classique** (partie (a) de la tâche, faite dans une
+     deuxième passe) : `simtool restrictiveness SAVE blank [CARTE.map ...]`. Le plan est posé sur le bloc dégagé le
+     plus proche du point d'entrée (avec de la place autour si la carte en a), relié au point d'entrée par une route,
+     eau tirée du lac ou de la mer le plus proche, sinon d'un étang creusé à côté (« étang » dans le tableau). Règles
+     classiques d'origine, scénario d'origine (climat, faveur, mission de départ) : ce que la carte préparée change
+     (données du modèle Massilia, climat nordique forcé, mission) n'y est **pas**. Deux sortes de cartes :
+     - `blank` : une carte libre faite par le test avec l'éditeur du jeu (80 × 80, un lac) : **dans ctest**, sans
+       donnée du jeu ;
+     - les cartes du jeu (`Lugdunum.map`, `Londinium.map`, `Cyrene.map`, `Valentia.map`, `Lindum.map` de
+       `donnees-c3`), **lancées à la main** (jamais copiées dans le dépôt, I4). Corinthus, Toletum et Tarraco sont
+       laissées de côté : pas de bloc dégagé près de l'entrée, ou route impossible jusqu'au bloc.
 - **Résultats** (2 ans ; population à 6, 12 et 24 mois ; maisons habitées ; niveau moyen des maisons : 0 petite tente,
   1 grande tente, 2 petite cabane ; maisons servies par une fontaine / par la nourriture ; « manque » : emplois que
   personne ne peut occuper ; moral de la cité ; migration) :
@@ -1003,6 +1014,35 @@
   | À 4, facile, J3 (classique ; MP) | 207 / 353 / 380 ; 207 / 353 / 380 | 17 | 1,5 | 16 / 9 | 162 | 44 ; 34 | 78 | 100 % |
   | À 4, facile, J4 | 179 / 338 / 372 | 17 | 1,2 | 16 / 6 | 156 | 40 | 78 | 100 % |
   | À 4, difficile, J1 à J4 | 222 / 333 / 334 ; 191 / 310 / 334 ; 199 / 347 / 380 ; 173 / 329 / 372 | 17 à 20 | 0,9 à 1,5 | 16–17 / 4–9 | 142 à 162 | 44 ; 1 ; 44 (MP 35) ; 39 | 86 ; 62 ; 64 ; 60 | 100 ; 75 ; 75 ; 50 % |
+
+  **Le même plan sur les cartes classiques** (règles d'origine, une cité seule ; population à 6 / 12 / 24 mois,
+  niveau moyen, maisons servies par une fontaine, employés, emplois vides) :
+
+  | Carte classique | Pop. 6 / 12 / 24 mois | Niveau | Fontaine | Employés | Manque | Remarque |
+  |-----------------|----------------------|--------|----------|----------|--------|----------|
+  | Carte libre du test (`blank`), facile / difficile | 306 / 306 / 306 ; 306 / 308 / 308 | 0,6 / 0,7 | 18 | 133 / 141 | 83 / 45 | lac, terrain plat |
+  | Lugdunum, facile / difficile | 342 / 281 / 246 ; 328 / 322 / 236 | 1,2 / 1,0 | 14 | 76 | 0 (39 sans emploi) | bloc au bord de la carte : aucun atelier de plus n'y tient, donc des chômeurs, des départs (67 à 75) |
+  | Londinium | 286 / 318 / 333 ; 253 / 318 / 333 | 1,0 | 17 | 142 | 44 / 46 | étang |
+  | Cyrene, facile / difficile | 327 / 340 / 340 ; 315 / 382 / 382 | 1,0 / 1,5 | 14 / 11 | 144 / 163 | 52 / 33 | |
+  | Valentia | 302 / 406 / 406 ; 267 / 399 / 406 | 1,4 | 16 | 172 | 14 | étang |
+  | Lindum | 198 / 255 / 266 ; 196 / 253 / 266 | 0,3 | 19 | 120 | 96 / 95 | forêt, désirabilité −11,6 : maisons restées en tentes |
+  | *Pour mémoire : carte préparée, seule (classique = multijoueur)* | 274 / 426 / 434 | 2,2 | 13 | 189 | 7 | |
+  | *Pour mémoire : carte préparée, 4 joueurs, multijoueur (J1 à J4)* | de 207 / 316 / 334 à 236 / 334 / 334 | 0,9 à 1,5 | 16–17 | 142 à 162 | 1 à 44 | |
+
+  Les cités classiques seules vont de **246 à 406 habitants** à 24 mois (306 pour la carte libre du test) ; les
+  cités multijoueur de la carte préparée font **334 à 380** à 4 joueurs et **434** seule : **dans cet intervalle ou
+  au-dessus**, jamais en dessous. Le plus grand écart : Valentia (406) contre les places 1 et 2 de la carte à 4
+  (334, soit 18 % de moins, 142–145 employés contre 172). Ce n'est pas une règle : la cité « classique » à 4 joueurs
+  de la même place a **exactement** les mêmes chiffres (334), c'est la place (pente, voisinage, longueur de la route
+  d'entrée), et Londinium (333) ou Cyrene (340) donnent les mêmes chiffres que ces places. *Non mesuré plus avant :*
+  ce qui, dans ces places, coûte les 18 %.
+  **Début de partie** : à 6 mois, les cités de la carte à 4 joueurs sont plus petites (173 à 236 habitants) que celles
+  des cartes d'origine (196 à 342) ; elles les rejoignent à 12 et 24 mois. Les cités « classiques » de la même carte
+  ont **les mêmes** 173 à 236 : ce n'est pas une règle multijoueur. Piste, *non isolée* : la route du point d'entrée
+  au plan, plus longue sur la carte à 4 (48 à 63 cases jusqu'à la boucle, contre 38 seul sur la carte préparée et
+  19 sur la carte libre du test) ; les immigrants arrivent plus tard. *À valider* : si c'est ce que sent Alexandre
+  (« rien ne vient au début »), rapprocher le point d'entrée du centre de chaque joueur serait une décision de carte,
+  pas de règles.
 
   Entre classique et multijoueur, **identiques au chiffre près** : population, maisons, niveau, maisons servies
   (fontaines, puits, nourriture, religion), portée du marché, du temple, de la préfecture et des ingénieurs,
@@ -1023,9 +1063,11 @@
      refusée. Mesuré dans une version précédente du test (fermes bâties au jour 0) : J3, facile, 304 habitants
      contre 278 à 12 mois (9 %), 252 contre 250 à 24 mois. Les fermes et ateliers sont maintenant bâtis au mois 2,
      quand la zone a grandi, ce qui retire cet écart ; il reste celui d'un atelier à cheval sur la zone d'un voisin.
-  4. **Le terrain** de chaque emplacement (arbres, côte, pente) : désirabilité moyenne des maisons de -0,8 seule
-     contre -4,5 à -7,8 à 4, ce qui explique les maisons restées tentes à 4 joueurs (niveau 0,9 à 1,5) ; identique en
-     classique. Aucune maison ne dépasse la petite cabane : c'est le plan (pas d'école, de bains ni de variété de
+  4. **Le terrain** de chaque emplacement (pente, bord de l'eau, bâtiments voisins) : désirabilité moyenne des maisons
+     de -0,8 seule contre -4,5 à -7,8 à 4, ce qui explique les maisons restées tentes à 4 joueurs (niveau 0,9 à 1,5) ;
+     identique en classique, et du même ordre sur les cartes d'origine (-3,5 à -8,6 ; -11,6 à Lindum). Les arbres ne
+     comptent pas dans la désirabilité (`src/map/desirability.c` : bâtiments, jardins, places, gravats ; `building.c` :
+     pente et bord de l'eau) : ils obligent seulement à défricher. Aucune maison ne dépasse la petite cabane : c'est le plan (pas d'école, de bains ni de variété de
      nourriture), pas une règle.
   5. **La faveur de César** : la carte préparée la laisse à 0. En classique, cela ferait venir les légions de César
      après 14 mois (règle de l'original : faveur ≤ 10). En multijoueur elle ne sert plus (D-026). La mesure la met
@@ -1037,8 +1079,10 @@
   D-063 : moitié moins d'argent, migration réduite d'un tiers), par la **zone** (on ne bâtit qu'à 20 cases d'une
   maison habitée ou d'un bâtiment pourvu) et par le **terrain** de forêt de la carte préparée (il faut défricher ; les
   emplacements diffèrent beaucoup d'un joueur à l'autre : niveau moyen des maisons de 0,9 à 2,2, des tentes aux
-  cabanes). Le **manque de main-d'œuvre** existe quand les emplois dépassent les bras, autant en classique qu'en
-  multijoueur (mesuré : mêmes chiffres). *Non mesuré, à valider* : qu'un rétrécissement de la zone d'une cité sans
+  cabanes) : les cartes d'origine donnent les mêmes ordres de grandeur (246 à 406 habitants, niveau 0,3 à 1,5) que
+  les cités de la carte préparée (334 à 434). Le **manque de main-d'œuvre** existe quand les emplois dépassent les
+  bras, autant en classique qu'en multijoueur (mesuré : mêmes chiffres, et sur les cartes d'origine : 14 à 96 emplois
+  vides). *Non mesuré, à valider* : qu'un rétrécissement de la zone d'une cité sans
   bras (un bâtiment hors zone s'effondre après 3 mois, D-036) soit la cause de ce que ressent Alexandre : la mesure ne
   fait jamais perdre de zone à une cité, ce n'est qu'une hypothèse.
 - **Garde** : le test `mp_restrictiveness` échoue si une règle multijoueur change la population, les maisons, leur
@@ -1048,11 +1092,19 @@
   Vérifié par deux fautes volontaires, retirées ensuite : (1) la portée des fontaines et des réservoirs de la cité
   multijoueur supprimée (`add_range` de `water_supply.c`) : les fontaines ne servent plus aucune maison, la série
   « seule » est vue (434 habitants contre 358) ; (2) 40 % de bras en moins en multijoueur seul : vu.
-- **Limite — non faite** : la partie (a) de la tâche, « une sauvegarde ou une carte classique avec terrain libre »,
-  **n'est pas faite**. Les sauvegardes de `test/data` sont toutes des cités déjà grandes (celle de Massilia : 324
-  maisons, 11 000 habitants), pas un terrain libre ; le « classique » ci-dessus est la **carte préparée jouée avec les
-  règles classiques**. La mesure compare donc les règles, pas la carte : les données du scénario issues du modèle
-  Massilia, le climat nordique forcé, la désirabilité de la forêt et la mission de départ ne sont **pas** comparés à
-  une vraie carte classique. Ce sont les pistes restantes pour la gêne qu'Alexandre ressent. *Suite proposée* :
-  vider par commandes un coin d'une sauvegarde de mission classique (ou fournir une carte libre) et y rejouer le
-  plan. *À valider* : si Alexandre sent encore une gêne en « facile », lui demander où et quand (une capture).
+- **Limites** : (1) la série « classique » à 4 joueurs passe déjà par le code de la carte multijoueur (voir plus
+  haut) ; seules les séries 1 et 5 comparent de vraies cartes classiques. (2) Sur les cartes d'origine, une seule
+  cité par carte et une seule place par carte : la place compte beaucoup (246 à 406), la comparaison est donc par
+  intervalle (« pas en dessous de la plus faible », tolérance de 15 %), pas au chiffre près. (3) Le climat des
+  cartes d'origine n'est pas isolé (il change avec la carte) ; les données du scénario issues du modèle Massilia
+  non plus (la carte préparée est la seule à les avoir) : on voit seulement que les cités qu'elles donnent sont dans
+  l'intervalle des cartes d'origine. (4) Non mesuré : un rétrécissement de la zone d'une cité sans bras (un bâtiment
+  hors zone s'effondre après 3 mois, D-036), qui pourrait être la gêne que ressent Alexandre : la mesure ne fait
+  jamais perdre de zone à une cité, ce n'est qu'une hypothèse. *À valider* : si Alexandre sent encore une gêne en
+  « facile », lui demander où et quand (une capture).
+- **Garde, deuxième partie** : le test `mp_restrictiveness` bâtit aussi le plan sur la carte libre `blank` et
+  échoue si (a) le plan n'y tient plus en entier ou si son eau ne coule plus, (b) une cité multijoueur (seule ou à 4)
+  a moins de 85 % de la population et des employés, ou 20 points de moins de maisons servies par l'eau, que la plus
+  faible cité classique. *Pas de faute volontaire pour cette seconde garde* : le bac à sable interdit de modifier
+  `src/` pour la tester ; la première garde (même carte, classique contre multijoueur) est celle qui a été vérifiée
+  par deux fautes volontaires.
