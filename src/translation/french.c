@@ -216,6 +216,7 @@ static translation_string all_strings[] = {
     {TR_MP_END_CAESAR, "héritier de César à "},
     {TR_MP_LAURELS, " lauriers"},
     {TR_MP_BANNER_TARGET, "héritier à "},
+    {TR_MP_BANNER_PLAYER, "Multijoueur - joueur "},
     {TR_MP_HEIR, "Héritier de César"},
     {TR_MP_LAURELS_LABEL, "lauriers : "},
     {TR_MP_CAESAR_RESULT_RULE, "César fait son héritier de la première cité qui atteint le score de lauriers."},

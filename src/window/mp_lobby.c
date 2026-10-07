@@ -117,6 +117,7 @@ static struct {
     int num_files;
     int selected_file;
     int num_players;
+    int joined_num_players; // the players of the game joined from the list, 0 when joined by address
     int missing_template;
     uint8_t address[ADDRESS_LENGTH];
     char local_address[16];
@@ -213,9 +214,19 @@ static void draw_games(void)
         } else {
             snprintf(name, sizeof(name), "%s", game->map_name);
         }
-        char line[128];
-        snprintf(line, sizeof(line), "%s (%d/%d) %s", name, game->joined_players, game->num_players, game->address);
-        draw_text_utf8(line, 344, 108 + 20 * i, data.focus_game == i + 1 ? FONT_NORMAL_WHITE : FONT_NORMAL_GREEN);
+        // the players and the address of the host on the right, the name before them: a long name is shortened
+        // rather than drawn over the border of the list
+        font_t font = data.focus_game == i + 1 ? FONT_NORMAL_WHITE : FONT_NORMAL_GREEN;
+        char line[64];
+        snprintf(line, sizeof(line), "(%d/%d) %s", game->joined_players, game->num_players, game->address);
+        uint8_t right[64];
+        encoding_from_utf8(line, right, sizeof(right));
+        int right_width = text_get_width(right, font);
+        text_draw(right, 608 - right_width, 108 + 20 * i, font, 0);
+        uint8_t converted[200];
+        encoding_from_utf8(name, converted, sizeof(converted));
+        text_ellipsize(converted, font, 608 - right_width - 8 - 344);
+        text_draw(converted, 344, 108 + 20 * i, font, 0);
     }
 }
 
@@ -257,7 +268,9 @@ static void draw_foreground(void)
     text_draw(translation_for(TR_MP_HOST_TITLE), 16, 56, FONT_NORMAL_BLACK, 0);
     draw_files();
     int width = text_draw(translation_for(TR_MP_PLAYERS), 16, 285, FONT_NORMAL_BLACK, 0);
-    text_draw_number(data.num_players, 0, "", 16 + width, 285, FONT_NORMAL_BLACK);
+    // a player who joined a game of the list sees its number of players, not his own choice
+    int joined = mp_lockstep_get_state() != MP_LOCKSTEP_OFF && !mp_lockstep_is_host() && data.joined_num_players;
+    text_draw_number(joined ? data.joined_num_players : data.num_players, 0, "", 16 + width, 285, FONT_NORMAL_BLACK);
     // a player who joined sees the rules of the host, and cannot change them (T4.11)
     const game_rules_settings *rules = mp_lobby_rules_shown();
     int editable = mp_lobby_rules_editable();
@@ -428,7 +441,8 @@ static void join(const char *address, int port)
 static void button_select_game(int index, int param2)
 {
     const mp_discovered_game *game = mp_discovery_get(index);
-    if (game) {
+    if (game && mp_lockstep_get_state() == MP_LOCKSTEP_OFF) {
+        data.joined_num_players = game->num_players;
         join(game->address, game->port);
     }
 }
@@ -437,7 +451,8 @@ static void button_join(int param1, int param2)
 {
     char address[ADDRESS_LENGTH];
     encoding_to_utf8(data.address, address, ADDRESS_LENGTH, 0);
-    if (address[0]) {
+    if (address[0] && mp_lockstep_get_state() == MP_LOCKSTEP_OFF) {
+        data.joined_num_players = 0;
         join(address, MP_LOCKSTEP_DEFAULT_PORT);
     }
 }

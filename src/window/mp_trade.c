@@ -27,7 +27,7 @@
 
 #define ADVISOR_HEIGHT 27
 #define PRICE_STEP 10
-#define FIRST_ROW_Y 92
+#define FIRST_ROW_Y 90
 #define ROW_HEIGHT 18
 #define NUM_RESOURCES (RESOURCE_MAX - RESOURCE_MIN)
 
@@ -280,7 +280,8 @@ static void draw_headers(void)
     text_draw_centered(translation_for(TR_MP_TRADE_I_SELL), X_MY_PRICE, 78, 72, FONT_SMALL_PLAIN, COLOR_WHITE);
     text_draw_centered(translation_for(TR_MP_TRADE_HE_SELLS), X_HIS_PRICE, 78, 50, FONT_SMALL_PLAIN, COLOR_WHITE);
     text_draw_centered(translation_for(TR_MP_TRADE_I_BUY), X_BUY, 78, 56, FONT_SMALL_PLAIN, COLOR_WHITE);
-    text_draw_centered(translation_for(TR_MP_RESOURCE_ON_THE_WAY), X_ON_THE_WAY, 78, 50, FONT_SMALL_PLAIN,
+    // wider than its column in English: centered over a wider box, within the panel
+    text_draw_centered(translation_for(TR_MP_RESOURCE_ON_THE_WAY), X_ON_THE_WAY - 8, 78, 66, FONT_SMALL_PLAIN,
         COLOR_WHITE);
 }
 
@@ -317,7 +318,7 @@ void window_mp_trade_draw_foreground(void)
     }
 
     // one row per resource: the empire on the left, the selected player on the right
-    inner_panel_draw(16, 56, 38, 20);
+    inner_panel_draw(16, 56, 38, 19);
     draw_headers();
     for (int i = 0; i < NUM_RESOURCES; i++) {
         int resource = RESOURCE_MIN + i;
@@ -339,9 +340,10 @@ void window_mp_trade_draw_foreground(void)
         }
         button += data.buttons_per_row;
     }
-    text_draw(translation_for(stock_tab_shown() ? TR_MP_TRADE_BOUNDS_RULE : TR_MP_TRADE_RULE), 48, 378,
+    // two lines of rules between the table and the buttons, apart enough not to touch each other nor the buttons
+    text_draw(translation_for(stock_tab_shown() ? TR_MP_TRADE_BOUNDS_RULE : TR_MP_TRADE_RULE), 32, 366,
         FONT_SMALL_PLAIN, 0);
-    text_draw(translation_for(stock_tab_shown() ? TR_MP_TRADE_BOUNDS_RULE_2 : TR_MP_TRADE_RULE_2), 48, 388,
+    text_draw(translation_for(stock_tab_shown() ? TR_MP_TRADE_BOUNDS_RULE_2 : TR_MP_TRADE_RULE_2), 32, 380,
         FONT_SMALL_PLAIN, 0);
 
     draw_button(button);

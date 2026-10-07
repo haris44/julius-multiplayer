@@ -5,6 +5,7 @@
 #include "graphics/graphics.h"
 #include "graphics/screen.h"
 #include "graphics/text.h"
+#include "graphics/window.h"
 #include "game/player_context.h"
 #include "game/rules.h"
 #include "mp/caesar.h"
@@ -46,20 +47,28 @@ void widget_mp_status_draw(void)
     if (state == MP_LOCKSTEP_OFF) {
         return;
     }
-    char text[200];
+    // the lobby shows the state of the network itself, under its rules: no banner over its title on a small screen
+    if (state != MP_LOCKSTEP_RUNNING && window_is(WINDOW_MP_LOBBY)) {
+        return;
+    }
+    // on a small screen, the windows over the city (advisors, build menus) reach the bottom: no banner over them
+    if (state == MP_LOCKSTEP_RUNNING && screen_height() < 600 && !window_is(WINDOW_CITY) &&
+        !window_is(WINDOW_CITY_MILITARY)) {
+        return;
+    }
     color_t color = COLOR_FONT_YELLOW;
+    uint8_t encoded[200] = { 0 };
     if (state == MP_LOCKSTEP_RUNNING) {
         // small reminder of who we are
-        snprintf(text, sizeof(text), "Multijoueur - joueur %d", mp_session_local_player_id() + 1);
+        string_copy(translation_for(TR_MP_BANNER_PLAYER), encoded, 100);
+        string_from_int(encoded + string_length(encoded), mp_session_local_player_id() + 1, 0);
         color = COLOR_WHITE;
     } else {
-        snprintf(text, sizeof(text), "%s", mp_lockstep_status());
+        encoding_from_utf8(mp_lockstep_status(), encoded, sizeof(encoded));
         if (state != MP_LOCKSTEP_WAITING_FOR_PLAYERS) {
             color = COLOR_FONT_RED;
         }
     }
-    uint8_t encoded[200];
-    encoding_from_utf8(text, encoded, sizeof(encoded));
     int width = text_get_width(encoded, FONT_NORMAL_PLAIN) + 16;
     // the laurels of the players, each in its color, public (D-053); the provisional score of a game ended by years
     // is hidden by the fog of war (D-038); then the score of Caesar's heir, and the pause

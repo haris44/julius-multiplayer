@@ -1,0 +1,64 @@
+# Real game, the windows changed by T4 in a network game from the lobby (see tools/mp-ui-test.sh): host, at 640 x 480.
+# The lobby is a 640 x 480 dialog: at this size, its coordinates are those of the screen.
+wait 10
+key F7
+wait 5
+click 320 440
+wait 10
+# main menu: Multiplayer
+click 320 112
+wait 10
+# a new game; map 1 instead of a map drawn by lot, and the next difficulty: the client must see these rules (T4.11)
+click 100 110
+wait 2
+click 258 358
+wait 2
+click 100 314
+wait 2
+click 160 406
+# the client joins, and takes a screenshot of the lobby with these rules before the start
+mpplayers 2
+wait 60
+screenshot build/automation/ui-host-lobby.png
+click 160 406
+mpwait 0
+# Caesar's letter
+wait 3
+key Return
+wait 2
+mpwait 100
+# industry, then the farms and the raw materials of this place (D-064, D-069): inland or on the coast
+click 608 422
+wait 3
+click 340 329
+wait 3
+screenshot build/automation/ui-host-farms.png
+rclick 300 200
+wait 3
+click 608 422
+wait 3
+click 340 353
+wait 3
+screenshot build/automation/ui-host-raw.png
+rclick 300 200
+wait 3
+# the imperial advisor: gift, donation and salary (T4.2); the ratings, with the laurels pillar (T4.1)
+key 3
+wait 5
+screenshot build/automation/ui-host-imperial.png
+key 4
+wait 5
+screenshot build/automation/ui-host-ratings.png
+# the trade advisor, its stock tab (T4.5)
+key 5
+wait 5
+click 576 21
+wait 5
+screenshot build/automation/ui-host-stocks.png
+key Escape
+wait 2
+mpwait 300
+mpcheck
+# keep the game running a little so that the client reaches its own check
+wait 200
+quit
