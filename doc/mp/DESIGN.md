@@ -249,8 +249,9 @@ réseau et à trouver par dichotomie le premier tick fautif dans les tests.
 > `MP_ACTION_DONATE`), appliquées dans la cité de l'expéditeur avec le code d'origine (`city/emperor.c`). La taille du
 > cadeau et le montant du don choisis dans la fenêtre restent un état de la fenêtre. `mp_caesar_gift_sent` donne les
 > lauriers du cadeau et lance l'attente de 12 mois (compteur par joueur dans `mp_caesar`, version 3) ; la faveur
-> d'origine n'est jamais touchée (D-073). Le salaire est de nouveau versé, au plus le rang : la commande refuse un
-> rang plus haut, et `mp_caesar_limit_salary` le rabaisse chaque mois (`city/finance.c`).
+> d'origine n'est jamais touchée (D-073). Le salaire est de nouveau versé, mais sans choix (D-076, à valider) : toutes
+> les cités démarrent au rang 0, salaire 0, épargne 0, et `mp_caesar_limit_salary` (`city/finance.c`) règle chaque mois
+> le salaire sur celui du rang de lauriers ; `MP_ACTION_SET_SALARY` ramène simplement le salaire à celui du rang.
 >
 > Depuis D-071 : l'estime de César n'est qu'une lecture des lauriers (`mp_caesar_esteem` : lauriers rapportés au
 > score, ou au rang suivant sans score). `mp_caesar` garde les lauriers de chaque cité à la fin de ses 12 derniers
@@ -283,8 +284,8 @@ Conservés, car ils relèvent de l'économie ou de la vie interne de la cité :
 - cadeaux, salaire, épargne et don à la cité, par commandes (D-067), avec des lauriers au lieu de faveur ;
   boutons du conseiller impérial visibles.
 
-Impact assumé (H2) : le salaire du gouverneur, de nouveau versé (D-067), est limité par le rang ; au rang 0, il
-est nul.
+Impact assumé (H2) : le salaire du gouverneur est de nouveau versé (D-067), sans choix : Rome verse chaque mois
+celui du rang de lauriers (D-076, à valider) ; tout le monde démarre au rang 0, salaire 0, épargne 0.
 
 ### 5.2 Arrivée des joueurs
 

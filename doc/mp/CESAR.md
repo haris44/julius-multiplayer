@@ -159,7 +159,8 @@ concerne le service de César. La part achetée par l'argent (cadeaux et fêtes)
 - Pas de durée fixe ni de consulat anticipé : le score les remplace. Une partie jouée d'avance s'arrête d'elle-même,
   quand le premier atteint le score.
 - **Rangs** : ceux de l'original (Citoyen… Proconsul, César), un par dixième du score. Le dernier, César, c'est la
-  victoire. En cours de partie, le rang fixe le salaire maximal (§6.1), comme les promotions de la campagne.
+  victoire. En cours de partie, le rang fixe le salaire que Rome verse chaque mois (§6.1, D-076), comme les
+  promotions de la campagne.
 - **Partie seule** : pas de rival. Atteindre le score est la victoire, et le rang mesure le chemin parcouru.
   Alexandre peut ainsi mesurer ses parties seul : en combien d'années il atteint le score.
 - Le mode « score à durée limitée » actuel (culture + prospérité + paix + population / 100, provisoire) disparaît
@@ -241,15 +242,17 @@ Chaque action rapporte un nombre fixe de lauriers, affiché à côté du bouton 
   suivant. C'est ce qui fait des « nombreuses fêtes » une habitude à tenir, sans jauge à surveiller.
 - Ces actions donnent des lauriers en multijoueur, et plus de faveur : la faveur d'origine reste figée et cachée.
 
-### 6.1 Cadeaux, salaire et épargne (D-067, fait)
+### 6.1 Cadeaux, salaire et épargne (D-067, salaire remplacé par D-076)
 - **Trois commandes réseau**, appliquées dans la cité de l'expéditeur avec le code d'origine (`city/emperor.c`) :
   `MP_ACTION_SEND_GIFT` (cadeau à César), `MP_ACTION_SET_SALARY` (salaire), `MP_ACTION_DONATE` (don à la cité). Les
   boutons du conseiller impérial reviennent en multijoueur. La taille du cadeau et le montant du don choisis dans la
   fenêtre restent un état de la fenêtre, jamais de la simulation.
-- **Salaire** : le gouverneur touche chaque mois un salaire selon son rang (0, 2, 5, 8, 12, 20, 30, 40, 60, 80 ou
-  100 Dn), prélevé sur le trésor de la cité et versé à son **épargne personnelle**. Il ne peut pas dépasser le
-  **rang** (§4.3) : la commande refuse un rang plus haut, et le salaire retombe au rang le mois suivant si la cité
-  perd des lauriers. C'est plus simple que la pénalité d'origine.
+- **Salaire** (D-076, *à valider*) : **tous les joueurs démarrent pareil, au rang 0, avec un salaire de 0 et une
+  épargne de 0**. Chaque mois, Rome verse à chacun le salaire de son **rang de lauriers** (§4.3), la même table pour
+  tous (0, 2, 5, 8, 12, 20, 30, 40, 60, 80 ou 100 Dn), prélevé sur le trésor de la cité et versé à son **épargne
+  personnelle**. **Il n'y a pas de salaire à choisir** : le bouton du conseiller impérial n'ouvre plus la fenêtre de
+  choix, et la commande `MP_ACTION_SET_SALARY` ramène simplement le salaire à celui du rang. Un rang gagné ou perdu
+  change le salaire le mois suivant. (D-067 laissait choisir un salaire sous le plafond du rang : abandonné.)
 - **Cadeau à César** : payé sur l'épargne, au coût d'origine : épargne / 8 + 20 (modeste), épargne / 4 + 50
   (généreux) ou épargne / 2 + 100 (somptueux). Il rapporte 4, 7 ou 10 lauriers de cadeaux.
   - **Un seul cadeau compte tous les 12 mois** : un cadeau envoyé pendant l'attente est payé et ne rapporte rien. La
@@ -260,9 +263,9 @@ Chaque action rapporte un nombre fixe de lauriers, affiché à côté du bouton 
 - **Don à la cité** : de l'épargne vers le trésor, plafonné à l'épargne. Il ne rapporte pas de lauriers.
 - **Choix pour le joueur** : se payer pour offrir, c'est prendre de l'argent à la cité (constructions, commerce)
   pour quelques lauriers. C'est un vrai arbitrage, sans bonne réponse évidente.
-- *À valider* (D-067) : au rang 0, le salaire est de 0 ; il n'y a donc pas d'épargne avant le rang 1 (100 lauriers
-  pour un score de 1 000), ni de cadeau possible au début, sauf épargne de départ de la carte. Faut-il une épargne
-  de départ ou un salaire plus tôt ?
+- *À valider* (D-067, D-076) : au rang 0, le salaire est de 0 et l'épargne de départ aussi ; il n'y a donc pas
+  d'épargne avant le rang 1 (100 lauriers pour un score de 1 000), ni de cadeau possible au début. Faut-il une épargne
+  de départ ou un salaire plus tôt ? Et faut-il laisser choisir un salaire plus bas que celui du rang ?
 
 ### 6.2 Fêtes
 - Les fêtes d'origine gardent leur coût, qui suit la population : population / 20 + 10 pour une petite fête, / 10 + 20
@@ -519,7 +522,7 @@ Chaque mois, chaque guerre en cours ajoute à la jauge :
 |---------|-----------|
 | Deux joueurs se renvoient les mêmes marchandises pour gonfler le commerce | flux nets par paire et par ressource, au prix de référence (§5.2) |
 | Prix de vente absurde entre complices | volume compté au prix de référence de l'empire |
-| Acheter des lauriers avec l'épargne | un cadeau compté par an (10 lauriers au plus), salaire limité par le rang |
+| Acheter des lauriers avec l'épargne | un cadeau compté par an (10 lauriers au plus), salaire fixé par le rang (Rome le verse, sans choix, D-076) |
 | Fêtes à la chaîne | une fête comptée tous les 6 mois |
 | Fêtes très bon marché en début de partie (leur coût suit la population) | plafond par semestre ; si la télémétrie montre qu'elles pèsent trop au début, les points suivront la population |
 | Le dernier déclenche exprès la colère pour faire perdre tout le monde | le fautif perd 25 % de ses lauriers : la manœuvre le fait plonger plus que les autres |

@@ -14,6 +14,9 @@
 # With 'saveresume' (T5.4): the players also trade; at the end every player saves the game as the File menu does, the
 # host hosts its saved game as the lobby does (same process), the other players join it again, except the last one,
 # replaced by a new process; the resumed game must run TICKS more ticks with the same checksums everywhere.
+# With 'autosaveresume' (implies 'saveresume'): the host resumes its monthly saved game (lan-autosave-PORT-PID.mpsav, the
+# one a desync names) instead of the File menu one; the resumed game must start later than the first and end with the
+# same checksum everywhere (T5.3 review).
 # With 'dragmonth' (and 'saveresume'): the host drags a road while a month starts; the monthly saved game written then
 # must not hold that road (T5.3 review).
 # With 'difficulty-easy' or 'difficulty-hard' (and 'generate'; with 'map-template' the host's template is a free map made of SAVE, rank 5 and funds 3000):
@@ -26,6 +29,7 @@ CITIES=""
 MAP2=""
 RESUME=""
 DRAG=""
+AUTOSAVE=""
 DIFF=""
 MAPT=""
 for arg in "$@"; do
@@ -36,6 +40,7 @@ for arg in "$@"; do
     [ "$arg" = "map2" ] && MAP2="map2"
     [ "$arg" = "saveresume" ] && RESUME="saveresume"
     [ "$arg" = "dragmonth" ] && DRAG="dragmonth"
+    [ "$arg" = "autosaveresume" ] && AUTOSAVE="autosaveresume" && RESUME="saveresume"
 done
 [ "$MODE" = "cities" ] && MODE=""
 [ "$MODE" = "generate" ] && MODE=""
@@ -49,7 +54,7 @@ HOST_ARGS=""
 [ "$MODE" = "baddata" ] && HOST_ARGS="expect-reject"
 [ "$MODE" = "rules" ] && HOST_ARGS="rules"
 [ "$MODE" = "war" ] && HOST_ARGS="war"
-"$SIMTOOL" mpnode host "$PORT" "$PLAYERS" "$SAVE" "$TICKS" $CITIES $MAP2 $RESUME $DRAG $DIFF $MAPT $HOST_ARGS > "$DIR/host.log" 2>&1 &
+"$SIMTOOL" mpnode host "$PORT" "$PLAYERS" "$SAVE" "$TICKS" $CITIES $MAP2 $RESUME $AUTOSAVE $DRAG $DIFF $MAPT $HOST_ARGS > "$DIR/host.log" 2>&1 &
 HOST=$!
 sleep 0.3
 PIDS=""
@@ -134,6 +139,19 @@ if [ -n "$RESUME" ]; then
     COUNT=$(echo "$RESUMED" | awk '{print $4}' | sort -u | wc -l | tr -d ' ')
     SEEN=$(echo "$RESUMED" | grep -c checksum | tr -d ' ')
     [ "$COUNT" = "1" ] && [ "$SEEN" = "$PLAYERS" ] || { echo "The resumed game did not end the same for every player"; FAILED=1; }
+    if [ -n "$AUTOSAVE" ]; then
+        # the resumed game started from the monthly save (a month start, during the first game), not from the save of the
+        # File menu, which is written at the end of the first game: the host names its monthly save in the resume line
+        # and the second game starts at a month start (800 ticks) before the end of the first one
+        [ "$(grep -c '^resuming the monthly saved game lan-autosave-.*: yes$' "$DIR/host.log")" = "1" ] || { echo "The host did not resume its monthly saved game"; FAILED=1; }
+        FIRST=$(grep -h '^game 1 starts at tick' "$DIR/host.log" | awk '{print $6}')
+        SECOND=$(grep -h '^game 2 starts at tick' "$DIR/host.log" | awk '{print $6}')
+        if [ -n "$FIRST" ] && [ -n "$SECOND" ] && [ "$SECOND" -gt "$FIRST" ] && [ "$SECOND" -lt "$((FIRST + TICKS))" ] && [ "$((SECOND % 800))" = "0" ]; then
+            :
+        else
+            echo "The resumed game does not start at a month start during the first one ($FIRST, $SECOND)"; FAILED=1
+        fi
+    fi
     # the trade between players, as every player of the resumed game sees it at its end
     DIFFERENT=$(grep -h "^trade of city .* (end)" "$DIR"/host.log "$DIR"/new-client.txt | sort | uniq -c | awk '{print $1}' | sort -u | tr -d ' \n')
     [ "$DIFFERENT" = "2" ] || { echo "The players do not see the same trade"; FAILED=1; }
