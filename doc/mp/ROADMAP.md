@@ -728,9 +728,20 @@ Les journaux de l'essai ne sont pas sur le Mac de développement : diagnostic pa
   3 dans les menus à ce moment-là »).
 - [ ] **T5.4** Impossible de charger une partie sauvegardée.
 - [ ] **T5.5** Pouvoir attaquer un autre joueur, même simplement (« nécessaire pour le commerce au démarrage »).
-- [ ] **T5.6** Simplifier la fenêtre du commerce ; attention aux textes qui se superposent.
+- [x] **T5.6** Simplifier la fenêtre du commerce ; attention aux textes qui se superposent.
+  *Fait* (D-078) : causes des textes superposés trouvées sur des captures à 2 et 4 joueurs, en français et en
+  anglais : en-têtes qui se touchent, « Vendre / au-dessus de » sur deux lignes, onglets réduits contre le titre, et
+  surtout la route (bouton et ligne d'état posés sur le cadre en bois, que seul le fond redessine) dont l'ancien texte
+  restait sous le nouveau quand l'état changeait. Page refaite en trois sortes d'onglets (Empire, un par joueur, Stocks)
+  à peu de colonnes, nombres alignés à droite, une ligne d'aide, un bouton de route dont le texte dit ce que fait un
+  clic ; le cadre est redessiné au changement d'état de la route. Tests : `tools/mp-trade4-test.sh` (quatre joueurs,
+  prix à quatre chiffres), `mp-trade-test.sh`, `mp-ui-test.sh`, `mp-solo-test.sh`.
 - [ ] **T5.7** Impossible de commercer entre joueurs : les caravanes ne circulent pas.
-- [ ] **T5.8** L'aqueduc de César ne doit pas suivre la route de si près.
+- [x] **T5.8** L'aqueduc de César ne doit pas suivre la route de si près.
+  *Fait* (D-078) : le dernier tronçon courait à 4 cases de la route principale de la cité ; il est maintenant à
+  8 rangées (`AQUEDUCT_ROAD_GAP`, `src/mp/mapgen.c`), sur les 4 cartes préparées. Test d'abord : `simtool preparedmap`
+  (`mp_prepared_map*`) échoue si un tronçon d'aqueduc court à moins de 6 cases d'une route (19 à 58 cases trop
+  proches avant, 0 après). Images vérifiées avec `MAPGEN_PICTURE`.
 
 ## MC — Cartes multijoueur préparées et César (D-033, D-034)
 - [ ] **MC.1** Ouvrages de César dessinés en blanc (la teinte actuelle ne fait que foncer les images) ; son aqueduc

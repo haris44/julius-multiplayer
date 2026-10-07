@@ -2422,6 +2422,49 @@ static int count_ponds(int size)
     return ponds;
 }
 
+// the aqueducts of Caesar must not follow a road closely (T5.8): along a row (or a column) of aqueduct, a road in the
+// same column (or row) nearer than `gap` tiles leaves no room to build between them. An aqueduct that crosses a road
+// is not beside it: only the tiles that are not on the road count, and a road has to run in the direction of their
+// run. Returns the number of aqueduct tiles beside a road, the nearest distance found in `closest`
+#define AQUEDUCT_ROAD_GAP 6 // the maps leave 8 (mapgen.c)
+static int count_aqueduct_beside_road(int size, int gap, int *closest, int *aqueduct_tiles)
+{
+    int beside = 0;
+    *closest = size;
+    *aqueduct_tiles = 0;
+    for (int y = 0; y < size; y++) {
+        for (int x = 0; x < size; x++) {
+            int offset = map_grid_offset(x, y);
+            if (!map_terrain_is(offset, TERRAIN_AQUEDUCT)) {
+                continue;
+            }
+            (*aqueduct_tiles)++;
+            if (map_terrain_is(offset, TERRAIN_ROAD)) {
+                continue; // the crossing
+            }
+            int along_row = (x > 0 && map_terrain_is(map_grid_offset(x - 1, y), TERRAIN_AQUEDUCT)) ||
+                (x < size - 1 && map_terrain_is(map_grid_offset(x + 1, y), TERRAIN_AQUEDUCT));
+            int along_column = (y > 0 && map_terrain_is(map_grid_offset(x, y - 1), TERRAIN_AQUEDUCT)) ||
+                (y < size - 1 && map_terrain_is(map_grid_offset(x, y + 1), TERRAIN_AQUEDUCT));
+            for (int d = 1; d < size; d++) {
+                int road = 0;
+                for (int sign = -1; sign <= 1; sign += 2) {
+                    int yy = y + sign * d, xx = x + sign * d;
+                    road |= along_row && yy >= 0 && yy < size && map_terrain_is(map_grid_offset(x, yy), TERRAIN_ROAD);
+                    road |= along_column && xx >= 0 && xx < size &&
+                        map_terrain_is(map_grid_offset(xx, y), TERRAIN_ROAD);
+                }
+                if (road) {
+                    *closest = d < *closest ? d : *closest;
+                    beside += d < gap;
+                    break;
+                }
+            }
+        }
+    }
+    return beside;
+}
+
 // what the plan of the prepared maps gives or refuses to each arrival point: food and raw materials (T4.15, D-062)
 static const int PLAN_RESOURCES[] = { RESOURCE_WHEAT, RESOURCE_VEGETABLES, RESOURCE_FRUIT, RESOURCE_OLIVES,
     RESOURCE_VINES, RESOURCE_MEAT, RESOURCE_IRON, RESOURCE_TIMBER, RESOURCE_CLAY, RESOURCE_MARBLE };
@@ -2444,7 +2487,8 @@ static int permissions_match_slot(int player_id)
 }
 
 // a place for a farm near the city of a player: three by three tiles of clear land or meadow, some meadow, away from
-// the rows of the houses, of the start mission and of the reservoirs that the test builds
+// the rows of the houses, of the start mission and of the reservoirs that the test builds, up to the aqueduct of
+// Caesar (rows cy - 8 to cy - 4)
 static int find_farm_place(int player_id, int *fx, int *fy)
 {
     int cx, cy;
@@ -2453,7 +2497,7 @@ static int find_farm_place(int player_id, int *fx, int *fy)
         for (int y = cy - d; y <= cy + d; y++) {
             for (int x = cx - d; x <= cx + d; x++) {
                 int dx = x > cx ? x - cx : cx - x, dy = y > cy ? y - cy : cy - y;
-                if ((dx > dy ? dx : dy) != d || (y + 2 >= cy - 7 && y <= cy + 3)) {
+                if ((dx > dy ? dx : dy) != d || (y + 2 >= cy - 10 && y <= cy + 3)) {
                     continue;
                 }
                 int clear = 1, meadow = 0;
@@ -2545,6 +2589,12 @@ static int command_preparedmap(const char *file, int num_players, int ticks)
     int ponds = count_ponds(size);
     printf("water away from the sea: %d tiles\n", ponds);
     failures += ponds != 0;
+    // the aqueduct of Caesar keeps its distance from the roads, room to build along them (T5.8)
+    int closest, aqueduct_tiles;
+    int beside = count_aqueduct_beside_road(size, AQUEDUCT_ROAD_GAP, &closest, &aqueduct_tiles);
+    printf("aqueduct of Caesar: %d tiles, nearest road along it %d tiles away, %d tiles within %d of a road\n",
+        aqueduct_tiles, closest, beside, AQUEDUCT_ROAD_GAP);
+    failures += beside != 0 || aqueduct_tiles == 0;
     int water = count_terrain_near(size / 2, size / 2, size / 2 - 1, TERRAIN_WATER);
     int trees = count_terrain_near(size / 2, size / 2, size / 2 - 1, TERRAIN_TREE);
     printf("water: %d%% of the map, forest: %d%%, climate %d\n", 100 * water / (size * size),
@@ -2852,7 +2902,7 @@ static int command_drying(const char *file, int num_players)
         printf("Nobody has the aqueduct of Caesar\n");
         return 2;
     }
-    // the aqueduct comes from the east along a row: a reservoir at its end, the cut a few tiles upstream
+    // the aqueduct comes from the east along a row: a reservoir at its end, the cut a few tiles upstream (the row of the aqueduct is 8 rows north of the main road, the fountain and the house stay north of it)
     int cut_x = ax + 5;
     int cut = map_grid_offset(cut_x, ay);
     if (!map_terrain_is(cut, TERRAIN_AQUEDUCT) || map_owner_get_claimed(cut) != MAP_OWNER_CAESAR) {
@@ -2861,7 +2911,7 @@ static int command_drying(const char *file, int num_players)
     }
     mp_command reservoir = { .type = MP_COMMAND_BUILD, .player_id = p, .args = { BUILDING_DRAGGABLE_RESERVOIR, 0, ax - 2, ay, ax - 2, ay, 0, 0 } };
     mp_command_execute(&reservoir);
-    int ranged = map_grid_offset(ax - 2, ay + 8); // a fountain there would have water from the reservoir
+    int ranged = map_grid_offset(ax - 2, ay + 7); // a fountain there would have water from the reservoir
     mp_command clear = { .type = MP_COMMAND_BUILD, .player_id = p, .args = { BUILDING_CLEAR_LAND, 0, cut_x, ay, cut_x, ay, 0, 0 } };
     mp_command mend = { .type = MP_COMMAND_BUILD, .player_id = p, .args = { BUILDING_AQUEDUCT, 0, cut_x, ay, cut_x, ay, 0, 0 } };
     int full = map_water_supply_reservoir_level_full();
@@ -2968,8 +3018,8 @@ static int inland_water_game(const char *file, int num_players, int seed, int p,
     int failures = 0;
 #define CHECK(condition, text) do { int ok_ = (condition); printf("  %-70s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
     int built = build_as(p, BUILDING_DRAGGABLE_RESERVOIR, ax - 2, ay, ax - 2, ay);
-    built &= build_as(p, BUILDING_FOUNTAIN, ax - 2, ay + 6, ax - 2, ay + 6);
-    built &= build_as(p, BUILDING_HOUSE_VACANT_LOT, ax - 2, ay + 8, ax - 2, ay + 8);
+    built &= build_as(p, BUILDING_FOUNTAIN, ax - 2, ay + 5, ax - 2, ay + 5);
+    built &= build_as(p, BUILDING_HOUSE_VACANT_LOT, ax - 2, ay + 7, ax - 2, ay + 7);
     // an aqueduct apart from everything, for each player: it stays dry
     int dry_x[MP_MAPGEN_MAX_PLAYERS], dry_y[MP_MAPGEN_MAX_PLAYERS];
     for (int q = 0; q < num_players; q++) {
@@ -3043,14 +3093,14 @@ static int inland_water_game(const char *file, int num_players, int seed, int p,
     if (!built) {
         printf("Unable to build in the zones of the players (reservoir %d fountain %d house %d)\n",
             building_get(map_building_at(map_grid_offset(ax - 2, ay)))->type,
-            building_get(map_building_at(map_grid_offset(ax - 2, ay + 6)))->type,
-            building_get(map_building_at(map_grid_offset(ax - 2, ay + 8)))->type);
+            building_get(map_building_at(map_grid_offset(ax - 2, ay + 5)))->type,
+            building_get(map_building_at(map_grid_offset(ax - 2, ay + 7)))->type);
         return -1;
     }
     setting_reset_speeds(500, setting_scroll_speed());
     int reservoir_id = map_building_at(map_grid_offset(ax - 2, ay));
-    int fountain_id = map_building_at(map_grid_offset(ax - 2, ay + 6));
-    int house_id = map_building_at(map_grid_offset(ax - 2, ay + 8));
+    int fountain_id = map_building_at(map_grid_offset(ax - 2, ay + 5));
+    int house_id = map_building_at(map_grid_offset(ax - 2, ay + 7));
     // two days, then to the tick before the water: the fountain has a worker (nobody lives here yet)
     for (int day = 0; day < 2; day++) {
         while (game_time_tick() != 27) {
