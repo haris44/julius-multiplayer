@@ -301,8 +301,10 @@ c'est là qu'on lit ce qui s'est passé chez Alexandre sans ouvrir de fenêtre.
   processus ; mêmes sommes de contrôle et même commerce pour tous.
 - **Reprise de la sauvegarde mensuelle** (T5.3, ctest) : `mp_lan_autosave_resume_3_players`
   (`lan_test.sh … autosaveresume`) : l'hôte reprend `lan-autosave-PORT-PID.mpsav`, la sauvegarde du début du mois que
-  nomme le message de désynchronisation, et non celle du menu Fichier. Le test vérifie que la partie reprise démarre
-  au début d'un mois postérieur au premier départ, puis que les trois joueurs finissent avec la même somme de contrôle.
+  nomme le message de désynchronisation, et non celle du menu Fichier. Le test vérifie que la ligne de reprise nomme
+  `lan-autosave-…` et que la partie reprise démarre au début d'un mois (tick multiple de 800) **avant la fin** de la
+  première (la sauvegarde du menu Fichier, écrite à la fin, ne passerait pas), puis que les trois joueurs finissent avec
+  la même somme de contrôle. Constaté : en supprimant la ligne qui donne ce nom à l'hôte, le test échoue.
   (`host_start_game` lit ce fichier puis le réécrit par `mp_lockstep_autosave` : la reprise de lui-même fonctionne.)
 - **Aucune fenêtre n'écrit dans la partie** (T5.3, ctest) : `mp_window_writes_brugle-lugdunum`
   (`simtool windowwrites`) : sans données du jeu ni graphique, session réseau, dieu en colère comme `angrygod`,

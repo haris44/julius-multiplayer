@@ -300,11 +300,11 @@ add_test(NAME mp_lobby_resume_rules COMMAND simtool resumerules brugle-massilia-
 # territories (56 bytes): the missing rules read as 0, the others are kept
 add_test(NAME mp_lobby_resume_rules_before_score COMMAND simtool resumerules brugle-massilia-start.sav 27492 64)
 add_test(NAME mp_lobby_resume_rules_before_territories COMMAND simtool resumerules brugle-massilia-start.sav 27493 56)
-# T4.11: "AI invasions: no" stops every source of attack (armies and local uprisings of the scenario, the uprising
-# sent by an angry Mars), which all come in a classic game and with the option on
 # T5.3 review: a window (the religion advisor, with an angry god) does not write into the game of a network session;
 # the real game's "windowsweep" (tools/mp-sweep-test.sh) needs the game data, this one does not
 add_test(NAME mp_window_writes_brugle-lugdunum COMMAND simtool windowwrites brugle-lugdunum.sav)
+# T4.11: "AI invasions: no" stops every source of attack (armies and local uprisings of the scenario, the uprising
+# sent by an angry Mars), which all come in a classic game and with the option on
 add_test(NAME mp_attack_source_army COMMAND simtool attacksource inv0.sav army 20000)
 add_test(NAME mp_attack_source_uprising COMMAND simtool attacksource tower.sav uprising 2000)
 add_test(NAME mp_attack_source_mars COMMAND simtool attacksource kknight.sav mars 3200)

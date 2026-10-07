@@ -759,7 +759,8 @@ Les journaux de l'essai ne sont pas sur le Mac de développement : diagnostic pa
   *Revue (reliquats)* : (1) `mp_lan_autosave_resume_3_players` reprend en ctest la sauvegarde **mensuelle** de l'hôte
   (`lan-autosave-PORT-PID.mpsav`, pas celle du menu Fichier) avec les clients qui rejoignent : la partie reprise
   démarre au début d'un mois (tick 153 600 après un premier départ au tick 153 084) et les trois joueurs finissent avec
-  la même somme de contrôle. Reprendre ce fichier alors que `host_start_game` le lit puis le réécrit fonctionne.
+  la même somme de contrôle ; le script exige le nom `lan-autosave-…` et un départ avant la fin de la première partie (constaté : le test
+  échoue si l'hôte reprend la sauvegarde du menu Fichier). Reprendre ce fichier alors que `host_start_game` le lit puis le réécrit fonctionne.
   (2) `mp_window_writes_brugle-lugdunum` (`simtool windowwrites`, sans données du jeu, donc lancé par `check.sh` et la
   CI) : session réseau, dieu en colère comme `angrygod`, calcul du conseiller de la religion
   (`city_gods_least_happy_shown`, la fonction que son `draw_background` appelle désormais) : somme de contrôle

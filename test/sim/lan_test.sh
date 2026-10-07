@@ -131,11 +131,17 @@ if [ -n "$RESUME" ]; then
     SEEN=$(echo "$RESUMED" | grep -c checksum | tr -d ' ')
     [ "$COUNT" = "1" ] && [ "$SEEN" = "$PLAYERS" ] || { echo "The resumed game did not end the same for every player"; FAILED=1; }
     if [ -n "$AUTOSAVE" ]; then
-        # the resumed game started from a month start of the first one, later than its start
-        [ "$(grep -c '^resuming the monthly saved game .*: yes$' "$DIR/host.log")" = "1" ] || { echo "The host did not resume its monthly saved game"; FAILED=1; }
+        # the resumed game started from the monthly save (a month start, during the first game), not from the save of the
+        # File menu, which is written at the end of the first game: the host names its monthly save in the resume line
+        # and the second game starts at a month start (800 ticks) before the end of the first one
+        [ "$(grep -c '^resuming the monthly saved game lan-autosave-.*: yes$' "$DIR/host.log")" = "1" ] || { echo "The host did not resume its monthly saved game"; FAILED=1; }
         FIRST=$(grep -h '^game 1 starts at tick' "$DIR/host.log" | awk '{print $6}')
         SECOND=$(grep -h '^game 2 starts at tick' "$DIR/host.log" | awk '{print $6}')
-        [ -n "$FIRST" ] && [ -n "$SECOND" ] && [ "$SECOND" -gt "$FIRST" ] || { echo "The resumed game does not start after a month start of the first one ($FIRST, $SECOND)"; FAILED=1; }
+        if [ -n "$FIRST" ] && [ -n "$SECOND" ] && [ "$SECOND" -gt "$FIRST" ] && [ "$SECOND" -lt "$((FIRST + TICKS))" ] && [ "$((SECOND % 800))" = "0" ]; then
+            :
+        else
+            echo "The resumed game does not start at a month start during the first one ($FIRST, $SECOND)"; FAILED=1
+        fi
     fi
     # the trade between players, as every player of the resumed game sees it at its end
     DIFFERENT=$(grep -h "^trade of city .* (end)" "$DIR"/host.log "$DIR"/new-client.txt | sort | uniq -c | awk '{print $1}' | sort -u | tr -d ' \n')
