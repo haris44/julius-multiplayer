@@ -204,6 +204,7 @@ répertoire courant (lancer depuis la racine du dépôt).
 | `mpplayers N` | partie en réseau, hôte : attend que N joueurs (hôte compris) soient connectés |
 | `mpwait N` | partie en réseau : attend qu'elle ait démarré et tourné N ticks ; échoue en cas de désynchronisation ou de déconnexion |
 | `mpcheck` | partie en réseau : écrit l'état et le nombre de tours vérifiés ; échoue si la partie ne tourne plus |
+| `tradecheck` | la page du commerce a redessiné son cadre pour l'état courant de la route (T5.6) ; échoue sinon |
 | `log TEXTE` | écrit un repère dans le journal |
 | `quit` | quitte ; c'est aussi automatique en fin de script |
 
@@ -232,7 +233,10 @@ Bon à savoir :
 - `tools/mp-trade-test.sh` : idem, puis l'hôte ouvre le conseiller au commerce, page commune à l'empire et aux
   joueurs (`build/automation/trade-window.png`) ; le client achète le marbre (`trade-client-buys.png`), l'hôte en
   monte le prix et le client voit l'alerte plein écran (`price-alert.png`, puis `price-alert-trade.png` après « Voir
-  le commerce »).
+  le commerce »). La commande `tradecheck` après la proposition de la route échoue si la page ne redessine pas son
+  cadre quand l'état de la route change (vérifié : sans le correctif, elle échoue) ; `trade-route-waiting.png` est la
+  capture à regarder pour ce défaut (bouton « Proposer la route » sans « Retirer la proposition » dessous, une seule
+  ligne d'aide).
 - `tools/mp-trade4-test.sh` : partie à quatre (un hôte et trois clients) ; l'hôte ouvre le commerce (cinq onglets : Empire,
   trois joueurs, Stocks), monte un prix à quatre chiffres et prend les captures `trade4-*.png` : aucun texte ne doit
   en recouvrir un autre (T5.6). La langue est celle des données du jeu ; pour l'anglais, forcer temporairement

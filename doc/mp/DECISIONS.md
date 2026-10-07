@@ -1171,6 +1171,9 @@
   - Le test `simtool preparedmap` (donc les huit tests `mp_prepared_map*`) échoue si un tronçon d'aqueduc de César
     court à moins de six cases d'une route, dans le sens de la route. Il échouait avant (4 cases, 19 à 58 cases
     d'aqueduc trop proches selon la carte) et passe maintenant (8 cases).
+  - **Protocole 20** : la carte préparée est générée chez chaque pair, l'aqueduc déplacé change le terrain ; des
+    versions d'avant et d'après se verraient refusées au salon au lieu de se désynchroniser à la première somme de
+    contrôle.
   - *À valider* : huit rangées (le texte de la demande parlait de trois à cinq cases, déjà le cas avec quatre) ; un
     aqueduc plus loin laisse la place entre la route et lui, mais coupe la moitié nord de la zone du joueur.
 - Classique : inchangé.

@@ -207,7 +207,7 @@ réseau et à trouver par dichotomie le premier tick fautif dans les tests.
 - Désynchronisation : sommes de contrôle différentes. On met le jeu en pause, chaque pair écrit une sauvegarde
   multijoueur, puis on les compare avec l'outil `compare`.
 - **Salon** : l'hôte choisit la carte et les règles, les clients rejoignent par découverte UDP sur le réseau local
-  ou par adresse IP. On vérifie les versions (`PROTOCOL_VERSION` de `mp/lockstep.c`, 18 depuis T4.1 ; il change à
+  ou par adresse IP. On vérifie les versions (`PROTOCOL_VERSION` de `mp/lockstep.c`, 20 depuis T5.8 ; il change à
   chaque changement de l'état ou des messages) et les sommes de contrôle des données. Tous démarrent par le même
   chemin déterministe (remise à zéro de l'état caché, chargement de la carte, application des règles).
 - **Règles du salon** (D-063, D-069, D-073) :

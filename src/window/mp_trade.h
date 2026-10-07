@@ -18,6 +18,13 @@
  */
 int window_mp_trade_is_active(void);
 
+/**
+ * Whether the frame drawn by the background shows the current state of the route: once the page has had a frame to
+ * redraw, a false answer means that the route button and the help line are drawn over the text of an old state
+ * (T5.6). Checked by the automation command tradecheck.
+ */
+int window_mp_trade_frame_is_current(void);
+
 int window_mp_trade_draw_background(void);
 void window_mp_trade_draw_foreground(void);
 int window_mp_trade_handle_mouse(const mouse *m);

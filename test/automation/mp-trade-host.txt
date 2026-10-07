@@ -39,6 +39,8 @@ screenshot build/automation/trade-window-raised.png
 click 590 81
 wait 10
 screenshot build/automation/trade-route-waiting.png
+# the frame was redrawn for the new state, or the new texts sit over the old ones (the screenshot above shows it)
+tradecheck
 # the empire tab (T5.6): the price of Rome, the portorium and the price that applies
 click 192 111
 wait 5

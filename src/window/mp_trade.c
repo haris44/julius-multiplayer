@@ -154,6 +154,11 @@ static int route_state(void)
         mp_trade_route_is_proposed(me, data.tab) ? 2 : mp_trade_route_is_proposed(data.tab, me) ? 1 : 0;
 }
 
+int window_mp_trade_frame_is_current(void)
+{
+    return route_state() == data.drawn_route_state;
+}
+
 static void init_buttons(void)
 {
     data.num_buttons = 0;
