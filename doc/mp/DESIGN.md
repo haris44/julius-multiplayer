@@ -383,6 +383,13 @@ Les conditions de fin se choisissent dans le salon :
   ordre « attaquer ». Les portes et les murs ne laissent passer que leur propriétaire.
 - Moral, totaux et sons de combat sont propres à chaque camp. Les arcs de triomphe, qui venaient des batailles
   lointaines, récompenseront les victoires contre un joueur.
+- **Fait en première tranche** (T5.5, D-077) : `mp/war.c` tient l'état de chaque paire de joueurs (paix, préavis,
+  combats) et les propositions de paix, sauvegardés dans le morceau `mp_war`. L'hostilité est ajoutée aux tests
+  existants, jamais à leur place : `figure_combat_attack_figure_at`, les recherches de cible des soldats et des tours,
+  les javelots et carreaux, l'ordre « nettoyer » consultent `mp_war_*` seulement quand deux joueurs se battent
+  (`mp_war_any_fighting`), si bien que la matrice d'origine reste exacte en classique et en paix. Les recherches
+  parcourent d'abord la tranche de la cité, puis celles de ses ennemis. Un bâtiment abattu s'effondre dans le
+  contexte de son propriétaire. Une caravane entre joueurs regarde chaque tick les soldats ennemis à une case.
 
 ### 7.1 Le pont de César (T4.8, D-068, *à valider* ; règles de jeu : [CESAR.md](CESAR.md) §7.6)
 

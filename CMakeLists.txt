@@ -579,6 +579,7 @@ set(WINDOW_FILES
     ${PROJECT_SOURCE_DIR}/src/window/main_menu.c
     ${PROJECT_SOURCE_DIR}/src/window/mp_lobby.c
     ${PROJECT_SOURCE_DIR}/src/window/mp_price_alert.c
+    ${PROJECT_SOURCE_DIR}/src/window/mp_war.c
     ${PROJECT_SOURCE_DIR}/src/window/mp_caesar_letter.c
     ${PROJECT_SOURCE_DIR}/src/window/mp_imperial.c
     ${PROJECT_SOURCE_DIR}/src/window/mp_ratings.c
@@ -625,6 +626,7 @@ set(MP_FILES
     ${PROJECT_SOURCE_DIR}/src/mp/missionary.c
     ${PROJECT_SOURCE_DIR}/src/mp/fog.c
     ${PROJECT_SOURCE_DIR}/src/mp/trade.c
+    ${PROJECT_SOURCE_DIR}/src/mp/war.c
     ${PROJECT_SOURCE_DIR}/src/mp/lobby.c
     ${PROJECT_SOURCE_DIR}/src/mp/lockstep.c
     ${PROJECT_SOURCE_DIR}/src/mp/mapgen.c

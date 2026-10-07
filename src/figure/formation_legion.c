@@ -11,6 +11,7 @@
 #include "map/figure.h"
 #include "map/grid.h"
 #include "map/routing.h"
+#include "mp/war.h"
 #include "scenario/distant_battle.h"
 
 int formation_legion_create_for_fort(building *fort)
@@ -351,7 +352,7 @@ void formation_legion_update(void)
         } else if (m->layout == FORMATION_MOP_UP) {
             if (enemy_army_total_enemy_formations() +
                 city_figures_rioters() +
-                city_figures_attacking_natives() > 0) {
+                city_figures_attacking_natives() > 0 || mp_war_current_player_has_enemy_soldiers()) {
                 for (int n = 0; n < MAX_FORMATION_FIGURES; n++) {
                     if (m->figures[n] != 0) {
                         figure *f = figure_get(m->figures[n]);

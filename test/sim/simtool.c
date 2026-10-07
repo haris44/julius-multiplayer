@@ -79,6 +79,7 @@
 #include "mp/compose.h"
 #include "mp/savegame.h"
 #include "mp/trade.h"
+#include "mp/war.h"
 #include "mp/fog.h"
 #include "building/warehouse.h"
 #include "mp/missionary.h"
@@ -132,6 +133,7 @@ static int usage(void)
     printf("  simtool actionequiv SAVE               same for city settings (taxes, wages, storage, trade...)\n");
     printf("  simtool mpnode host PORT PLAYERS SAVE TICKS [cities]  network game host (headless); with\n");
     printf("                                         'cities' every player has a copy of the city\n");
+    printf("                                         'war' (with 'cities'): a scripted war, then peace (T5.5)\n");
     printf("  simtool mpnode join ADDRESS PORT TICKS [desync]  network game client (headless); with\n");
     printf("                                         'desync' it changes its own state to test detection\n");
     printf("                                         each player issues scripted commands; prints the\n");
@@ -189,6 +191,8 @@ static int usage(void)
     printf("  simtool caesarstate SAVE               laurels and wrath of Caesar: in the checksum, saved, resumed\n");
     printf("  simtool caesarlaurels SAVE             notes and monthly laurels of a city, ranks, the score wins\n");
     printf("  simtool caesarhistory SAVE             monthly history of the laurels of each city: gain, trend, saved\n");
+    printf("  simtool war SAVE                       prepared map: war between players by commands, saved; legions\n");
+    printf("                                         fight in the enemy city, pull down buildings, take caravans (T5.5)\n");
     printf("  simtool terrain MAP PLAYERS X Y W H [raw]  the terrain of a part of the prepared map (or of an .mpsav),\n");
     printf("                                         one letter a tile; raw: terrain bits, image and elevation too\n");
     printf("  simtool tradecities MAP                trade cities of the empire of a map, by land and by sea\n");
@@ -644,6 +648,44 @@ static void mpnode_trade(int tick_in_game)
     }
 }
 
+// 'war' (T5.5): player 1 declares a brutal war on player 2 and sends his first legion to the copy of his second fort
+// in the city of player 2; at three quarters of the game both propose peace. Every computer must end with the same
+// war, the same soldiers lost and the same checksum.
+static int mpnode_war_ticks;
+
+static void mpnode_play_war(int tick_in_game)
+{
+    int player = mp_session_local_player_id();
+    int peace_tick = mpnode_war_ticks * 3 / 4;
+    if (player == 0 && tick_in_game == 20) {
+        mp_action_declare_war(1, MP_WAR_BRUTAL);
+    }
+    if (player == 0 && tick_in_game == 24 && formation_get_num_legions() >= 2) {
+        int x0, y0, x1, y1, size;
+        mp_compose_city_area(0, MP_COMPOSE_CITY_GAP, &x0, &y0, &size);
+        mp_compose_city_area(1, MP_COMPOSE_CITY_GAP, &x1, &y1, &size);
+        const formation *attacker = formation_get(formation_for_legion(1));
+        const formation *target = formation_get(formation_for_legion(2));
+        mp_action_legion_move(attacker->id, target->x_home + x1 - x0, target->y_home + y1 - y0 - 3);
+    }
+    if (player == 0 && tick_in_game == peace_tick) {
+        mp_action_propose_peace(1, 1);
+    }
+    if (player == 1 && tick_in_game == peace_tick + 8) {
+        mp_action_propose_peace(0, 1);
+    }
+}
+
+static int mpnode_soldiers_of(int player_id)
+{
+    int count = 0;
+    for (int i = player_id * MAX_FIGURES + 1; i < (player_id + 1) * MAX_FIGURES; i++) {
+        figure *f = figure_get(i);
+        count += f->state == FIGURE_STATE_ALIVE && figure_is_legion(f) && f->action_state != FIGURE_ACTION_149_CORPSE;
+    }
+    return count;
+}
+
 // T4.11: the rules chosen in the lobby, as a player sees them
 static int same_lobby_rules(const game_rules_settings *a, const game_rules_settings *b)
 {
@@ -855,8 +897,9 @@ static int command_mpnode(int argc, char **argv)
 {
     // argv: mpnode host PORT PLAYERS SAVE TICKS [cities] | mpnode join ADDRESS PORT TICKS
     int is_host = argc >= 7 && strcmp(argv[2], "host") == 0;
-    int cities = 0, generate = 0, lobby_rules = 0, map2 = 0, save_resume = 0, drag_month = 0;
+    int cities = 0, generate = 0, lobby_rules = 0, map2 = 0, save_resume = 0, drag_month = 0, war = 0;
     for (int i = 6; i < argc; i++) {
+        war |= strcmp(argv[i], "war") == 0; // 'war' (T5.5): see mpnode_play_war
         cities |= i >= 7 && strcmp(argv[i], "cities") == 0;
         generate |= i >= 7 && strcmp(argv[i], "generate") == 0;
         lobby_rules |= i >= 7 && strcmp(argv[i], "rules") == 0;
@@ -917,6 +960,9 @@ static int command_mpnode(int argc, char **argv)
             DIFFICULTY_VERY_EASY) : DIFFICULTY_NORMAL);
     }
     int ticks = atoi(is_host ? argv[6] : argv[5]);
+    war |= is_join && argc >= 7 && strcmp(argv[6], "war") == 0;
+    mpnode_war_ticks = ticks;
+    int soldiers_at_start[2] = { -1, -1 };
     int cheat = is_join && argc >= 7 && strcmp(argv[6], "desync") == 0;
     // 'pause': this client pauses the game at half time and resumes it one to two seconds after it saw the pause
     // (time() counts whole seconds: a pause of 'one second' from the request could end at once on a busy computer,
@@ -976,7 +1022,7 @@ static int command_mpnode(int argc, char **argv)
     int session = 0;
     int resumed_ok = 1;
 next_session:;
-    time_t deadline = time(0) + 120;
+    time_t deadline = time(0) + 120 + ticks / 25; // long games (the war of T5.5) on a loaded computer
     int start_tick = -1;
     int start_tax = 0;
     int start_cities_wrong = 0;
@@ -1008,6 +1054,10 @@ next_session:;
             start_tax = city_finance_tax_percentage();
             if (expected_difficulty >= 0 && !check_start_cities(expected_difficulty, map_template)) {
                 start_cities_wrong = 1;
+            }
+            if (war && player_context_num_players() > 1) {
+                soldiers_at_start[0] = mpnode_soldiers_of(0);
+                soldiers_at_start[1] = mpnode_soldiers_of(1);
             }
         }
         int before = game_time_absolute_tick();
@@ -1043,6 +1093,9 @@ next_session:;
                 mpnode_play(t);
                 if (save_resume) {
                     mpnode_trade(t);
+                }
+                if (war) {
+                    mpnode_play_war(t);
                 }
                 if (cheat && t == ticks / 2) {
                     city_finance_change_tax_percentage(3); // changed on this computer only
@@ -1132,6 +1185,17 @@ next_session:;
     }
     if (is_host) {
         result = result && mp_lockstep_last_verified_turn() == (ticks / 4) - 1;
+    }
+    if (war) {
+        // the same on every computer (lan_test.sh compares these lines): peace signed after the war, soldiers lost
+        int lost0 = soldiers_at_start[0] - mpnode_soldiers_of(0);
+        int lost1 = soldiers_at_start[1] - mpnode_soldiers_of(1);
+        printf("war: status %d, soldiers lost by player 1: %d, by player 2: %d\n", mp_war_status(0, 1), lost0, lost1);
+        printf("war announcements: %d\n", mp_war_announcements());
+        if (mp_war_status(0, 1) != MP_WAR_PEACE || mp_war_announcements() < 3 || lost0 + lost1 <= 0) {
+            printf("WRONG: the war did not go as scripted (a war with losses, then peace)\n");
+            result = 0;
+        }
     }
     if (lobby_rules) {
         const game_rules_settings *game = game_rules_multiplayer_settings();
@@ -6360,6 +6424,422 @@ static int command_caesarhistory(const char *file)
     return failures ? 1 : 0;
 }
 
+// ---------- war between players (T5.5, D-077) ----------
+
+// a fort of the player built by command, with soldiers given to its legion as the barracks would give them
+static int make_legion(int player_id, int fort_type, int x, int y, int soldiers)
+{
+    if (!build_as(player_id, fort_type, x, y, x, y)) {
+        return 0;
+    }
+    run_one_tick(); // the fort comes into use
+    player_context_switch(player_id);
+    building *fort = building_get(map_building_at(map_grid_offset(x, y)));
+    int formation_id = fort->formation_id;
+    formation *m = formation_get(formation_id);
+    for (int i = 0; i < soldiers && formation_id; i++) {
+        figure *f = figure_create(m->figure_type, m->x_home, m->y_home, DIR_0_TOP);
+        f->formation_id = formation_id;
+        f->formation_at_rest = 1;
+        f->action_state = FIGURE_ACTION_81_SOLDIER_GOING_TO_FORT;
+    }
+    formation_calculate_figures();
+    player_context_switch(0);
+    return formation_id;
+}
+
+static int alive_soldiers(int formation_id)
+{
+    int count = 0;
+    int owner = FORMATION_OWNER(formation_id);
+    for (int i = owner * MAX_FIGURES + 1; i < (owner + 1) * MAX_FIGURES; i++) {
+        figure *f = figure_get(i);
+        count += f->state == FIGURE_STATE_ALIVE && f->formation_id == formation_id &&
+            f->action_state != FIGURE_ACTION_149_CORPSE && figure_is_legion(f);
+    }
+    return count;
+}
+
+static int buildings_of(int player_id)
+{
+    int count = 0;
+    for (int i = player_id * MAX_BUILDINGS + 1; i < (player_id + 1) * MAX_BUILDINGS; i++) {
+        count += building_get(i)->state == BUILDING_STATE_IN_USE;
+    }
+    return count;
+}
+
+// ticks without the checksums of run_trace, which cost more than the ticks on the prepared map
+static void war_run(int ticks)
+{
+    setting_reset_speeds(500, setting_scroll_speed());
+    for (int i = 0; i < ticks; i++) {
+        run_one_tick();
+    }
+}
+
+static int soldiers_at_standard(int formation_id)
+{
+    int count = 0;
+    int owner = FORMATION_OWNER(formation_id);
+    for (int i = owner * MAX_FIGURES + 1; i < (owner + 1) * MAX_FIGURES; i++) {
+        figure *f = figure_get(i);
+        count += f->state == FIGURE_STATE_ALIVE && f->formation_id == formation_id && figure_is_legion(f) &&
+            f->action_state == FIGURE_ACTION_84_SOLDIER_AT_STANDARD;
+    }
+    return count;
+}
+
+// runs until the condition holds, `step` ticks at a time, at most `max_ticks`; war_ticks: the ticks run
+#define RUN_UNTIL(condition, step, max_ticks) do { \
+        war_ticks = 0; \
+        while (!(condition) && war_ticks < (max_ticks)) { war_run((step)); war_ticks += (step); } \
+    } while (0)
+
+typedef struct {
+    int legion[2];
+    int target_x, target_y;    // the standard of player 1 in the city of player 2, by his buildings
+    int buildings_at_peace;
+    int destroyed;             // buildings of player 2 pulled down during the war
+    int dead_attackers, dead_defenders;
+    int ticks_to_destroy, ticks_to_fight;
+    int lost_after_peace;      // soldiers and buildings lost after peace
+    int home_after_peace;
+    uint64_t checksum;
+} war_result;
+
+// The war of the tests, from the same start on every run: the legion of player 1 goes to the city of player 2 in
+// peace, then player 1 declares a brutal war; the legion of player 2 comes out; peace is signed by both
+static int play_war(war_result *r, int show)
+{
+    int failures = 0;
+    int war_ticks = 0;
+#define CHECK(condition, text) do { int ok_ = (condition); if (show) printf("%-70s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
+    int soldiers1 = alive_soldiers(r->legion[0]), soldiers2 = alive_soldiers(r->legion[1]);
+    int buildings2 = buildings_of(1);
+    city_action(0, MP_ACTION_LEGION_MOVE, r->legion[0], r->target_x, r->target_y);
+    RUN_UNTIL(soldiers_at_standard(r->legion[0]) >= soldiers1, 50, 6000);
+    war_run(500);
+    if (show) {
+        printf("in peace: the legion of player 1 reached the city of player 2 in %d ticks, %d soldiers at the standard\n",
+            war_ticks, soldiers_at_standard(r->legion[0]));
+    }
+    r->buildings_at_peace = buildings_of(1);
+    CHECK(soldiers_at_standard(r->legion[0]) == soldiers1, "in peace, the legion of player 1 goes to the city of player 2");
+    CHECK(buildings_of(1) == buildings2 && alive_soldiers(r->legion[0]) == soldiers1 &&
+        alive_soldiers(r->legion[1]) == soldiers2, "it harms nothing there: no building down, nobody dead");
+
+    uint64_t before = mp_checksum_state();
+    int announcements = mp_war_announcements();
+    city_action(0, MP_ACTION_DECLARE_WAR, 1, MP_WAR_BRUTAL, 0);
+    CHECK(mp_war_status(0, 1) == MP_WAR_FIGHTING && mp_war_status(1, 0) == MP_WAR_FIGHTING &&
+        mp_war_declarer(0, 1) == 0 && mp_war_form(1, 0) == MP_WAR_BRUTAL,
+        "a brutal war, declared by command: they fight at once");
+    CHECK(mp_checksum_state() != before, "the war is in the checksum");
+    CHECK(mp_war_announcements() == announcements + 1, "the declaration is announced");
+
+    RUN_UNTIL(buildings_of(1) < r->buildings_at_peace, 10, 3000);
+    r->ticks_to_destroy = war_ticks;
+    war_run(500);
+    r->destroyed = r->buildings_at_peace - buildings_of(1);
+    if (show) {
+        printf("at war: the first building of player 2 down after %d ticks, %d down 500 ticks later\n",
+            r->ticks_to_destroy, r->destroyed);
+    }
+    CHECK(r->destroyed > 0, "at war, the soldiers of player 1 pull down the buildings of player 2");
+
+    city_action(1, MP_ACTION_LEGION_MOVE, r->legion[1], r->target_x + 1, r->target_y);
+    RUN_UNTIL(alive_soldiers(r->legion[0]) < soldiers1 || alive_soldiers(r->legion[1]) < soldiers2, 10, 4000);
+    r->ticks_to_fight = war_ticks;
+    war_run(800);
+    r->dead_attackers = soldiers1 - alive_soldiers(r->legion[0]);
+    r->dead_defenders = soldiers2 - alive_soldiers(r->legion[1]);
+    if (show) {
+        printf("the legion of player 2 comes out: first death after %d ticks; 800 ticks later, %d of %d attackers and "
+            "%d of %d defenders dead\n", r->ticks_to_fight, r->dead_attackers, soldiers1, r->dead_defenders, soldiers2);
+    }
+    CHECK(r->dead_attackers > 0 && r->dead_defenders > 0, "the two legions fight: soldiers die on both sides");
+
+    city_action(0, MP_ACTION_PROPOSE_PEACE, 1, 1, 0);
+    CHECK(mp_war_status(0, 1) == MP_WAR_FIGHTING && mp_war_peace_proposed(0, 1),
+        "peace proposed by player 1 only: the war goes on");
+    city_action(1, MP_ACTION_PROPOSE_PEACE, 0, 1, 0);
+    CHECK(mp_war_status(0, 1) == MP_WAR_PEACE && !mp_war_any_fighting(), "proposed by both: peace is signed");
+    int soldiers_left1 = alive_soldiers(r->legion[0]), soldiers_left2 = alive_soldiers(r->legion[1]);
+    int buildings_left = buildings_of(1);
+    war_run(3000);
+    r->lost_after_peace = (soldiers_left1 - alive_soldiers(r->legion[0])) +
+        (soldiers_left2 - alive_soldiers(r->legion[1])) + (buildings_left - buildings_of(1));
+    r->home_after_peace = formation_get(r->legion[0])->is_at_fort && formation_get(r->legion[1])->is_at_fort;
+    if (show) {
+        printf("after peace: %d soldiers or buildings lost, both legions back at their fort: %d\n", r->lost_after_peace,
+            r->home_after_peace);
+    }
+    CHECK(r->lost_after_peace == 0, "peace stops the fight: nothing lost after it");
+    CHECK(r->home_after_peace, "and the legions go back to their forts");
+    r->checksum = mp_checksum_state();
+#undef CHECK
+    return failures;
+}
+
+static int start_war_game(const char *file, int *legion1, int *legion2, int *tx, int *ty)
+{
+    if (!start_trade_game(file)) {
+        return 0;
+    }
+    int x0, y0, x1, y1;
+    mp_mapgen_city_center(0, &x0, &y0);
+    mp_mapgen_city_center(1, &x1, &y1);
+    *legion1 = make_legion(0, BUILDING_FORT_LEGIONARIES, x0 - 10, y0 - 8, 16);
+    *legion2 = make_legion(1, BUILDING_FORT_LEGIONARIES, x1 + 6, y1 + 4, 16);
+    // what player 1 will attack: houses and a prefecture of player 2 north of his main road (the warehouse of the
+    // trade is south of it)
+    build_as(1, BUILDING_HOUSE_VACANT_LOT, x1 - 7, y1 - 3, x1 - 2, y1 - 3);
+    build_as(1, BUILDING_PREFECTURE, x1 - 4, y1 - 5, x1 - 4, y1 - 5);
+    *tx = x1 - 4;
+    *ty = y1 - 4;
+    war_run(400); // the soldiers reach their forts
+    return *legion1 && *legion2;
+}
+
+// figures of a player in a fight with a figure of the other player
+static int fighting_against(int player_id, int other)
+{
+    int count = 0;
+    for (int i = player_id * MAX_FIGURES + 1; i < (player_id + 1) * MAX_FIGURES; i++) {
+        figure *f = figure_get(i);
+        if (f->state == FIGURE_STATE_ALIVE && f->action_state == FIGURE_ACTION_150_ATTACK &&
+            ((f->opponent_id > 0 && FIGURE_OWNER(f->opponent_id) == other) ||
+            (f->attacker_id1 > 0 && FIGURE_OWNER(f->attacker_id1) == other) ||
+            (f->attacker_id2 > 0 && FIGURE_OWNER(f->attacker_id2) == other))) {
+            count++;
+        }
+    }
+    return count;
+}
+
+// the first caravan between players in the slice of the player
+static figure *caravan_of(int player_id)
+{
+    for (int i = player_id * MAX_FIGURES + 1; i < (player_id + 1) * MAX_FIGURES; i++) {
+        figure *f = figure_get(i);
+        if (f->state == FIGURE_STATE_ALIVE && mp_trade_is_caravan(f)) {
+            return f;
+        }
+    }
+    return 0;
+}
+
+// the tile of the path of a figure `before` steps before its end
+static int path_tile_before_end(const figure *f, int before, int *x, int *y)
+{
+    if (f->routing_path_id <= 0) {
+        return 0;
+    }
+    int px = f->x, py = f->y;
+    static const int DX[8] = { 0, 1, 1, 1, 0, -1, -1, -1 };
+    static const int DY[8] = { -1, -1, 0, 1, 1, 1, 0, -1 };
+    for (int i = f->routing_path_current_tile; i < f->routing_path_length - before; i++) {
+        int dir = figure_route_get_direction(f->routing_path_id, i);
+        if (dir < 0 || dir > 7) {
+            return 0;
+        }
+        px += DX[dir];
+        py += DY[dir];
+    }
+    *x = px;
+    *y = py;
+    return 1;
+}
+
+// war between players (T5.5, D-077): a war state per pair of players, changed by commands, in the checksum, saved;
+// legions fight in the city of the enemy, pull down his buildings and take his caravans; peace stops it all
+static int command_war(const char *file)
+{
+    int failures = 0;
+    int war_ticks = 0;
+#define CHECK(condition, text) do { int ok_ = (condition); printf("%-70s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
+    war_result first = { { 0, 0 } }, second = { { 0, 0 } };
+    if (!start_war_game(file, &first.legion[0], &first.legion[1], &first.target_x, &first.target_y)) {
+        printf("Unable to prepare the game\n");
+        return 2;
+    }
+    CHECK(mp_war_status(0, 1) == MP_WAR_PEACE && !mp_war_any_fighting(), "a new game: peace");
+    printf("legions: %d soldiers of player 1, %d of player 2\n", alive_soldiers(first.legion[0]),
+        alive_soldiers(first.legion[1]));
+    const char *start = "war-start.mpsav";
+    if (!mp_savegame_write(start)) {
+        printf("Unable to save\n");
+        return 2;
+    }
+
+    // an honourable war: three months of notice, the defender may strike first
+    city_action(0, MP_ACTION_DECLARE_WAR, 1, MP_WAR_HONOURABLE, 0);
+    CHECK(mp_war_status(0, 1) == MP_WAR_NOTICE && !mp_war_is_fighting(0, 1) && mp_war_days_until_fighting(1, 0) == 48,
+        "an honourable war: nobody fights during 48 days (3 months)");
+    city_action(0, MP_ACTION_DECLARE_WAR, 1, MP_WAR_HONOURABLE, 0);
+    city_action(1, MP_ACTION_DECLARE_WAR, 1, MP_WAR_BRUTAL, 0);
+    city_action(0, MP_ACTION_DECLARE_WAR, 7, MP_WAR_BRUTAL, 0);
+    CHECK(mp_war_status(0, 1) == MP_WAR_NOTICE && mp_war_days_until_fighting(1, 0) == 48,
+        "declaring it again, on oneself or on nobody changes nothing");
+    // saved and loaded during the notice
+    city_action(1, MP_ACTION_PROPOSE_PEACE, 0, 1, 0);
+    uint64_t notice_checksum = mp_checksum_state();
+    const char *saved = "war-saved.mpsav";
+    CHECK(mp_savegame_write(saved) && mp_savegame_read(saved), "(the game saved and read back during the notice)");
+    CHECK(mp_war_status(0, 1) == MP_WAR_NOTICE && mp_war_declarer(1, 0) == 0 &&
+        mp_war_form(0, 1) == MP_WAR_HONOURABLE && mp_war_days_until_fighting(0, 1) == 48 &&
+        mp_war_peace_proposed(1, 0) && !mp_war_peace_proposed(0, 1),
+        "the saved game keeps the war: form, declarer, notice, proposal of peace");
+    CHECK(mp_checksum_state() == notice_checksum, "and its checksum");
+    city_action(1, MP_ACTION_PROPOSE_PEACE, 0, 0, 0);
+    RUN_UNTIL(mp_war_is_fighting(0, 1), 1, 3000);
+    printf("the fighting begins %d ticks after the declaration\n", war_ticks);
+    CHECK(war_ticks == MP_WAR_NOTICE_TICKS, "the fighting begins at the end of the notice");
+    // a game saved before the war between players loads at peace
+    CHECK(remove_saved_piece(saved, "mp_war") && mp_savegame_read(saved) && mp_war_status(0, 1) == MP_WAR_PEACE,
+        "an older saved game, without war, loads at peace");
+    if (!mp_savegame_read(start)) {
+        return 2;
+    }
+    city_action(0, MP_ACTION_DECLARE_WAR, 1, MP_WAR_HONOURABLE, 0);
+    war_run(100);
+    city_action(1, MP_ACTION_DECLARE_WAR, 0, MP_WAR_BRUTAL, 0);
+    CHECK(mp_war_is_fighting(0, 1) && mp_war_declarer(0, 1) == 1 && mp_war_form(0, 1) == MP_WAR_BRUTAL,
+        "during the notice, the defender strikes first by a brutal war");
+    city_action(0, MP_ACTION_PROPOSE_PEACE, 1, 1, 0);
+    city_action(1, MP_ACTION_PROPOSE_PEACE, 0, 1, 0);
+    CHECK(mp_war_status(0, 1) == MP_WAR_PEACE, "(peace)");
+
+    // the war of the legions, played twice from the same start: the same checksum at the end
+    if (!mp_savegame_read(start)) {
+        return 2;
+    }
+    failures += play_war(&first, 1);
+    second.legion[0] = first.legion[0];
+    second.legion[1] = first.legion[1];
+    second.target_x = first.target_x;
+    second.target_y = first.target_y;
+    if (!mp_savegame_read(start)) {
+        return 2;
+    }
+    play_war(&second, 0);
+    CHECK(second.checksum == first.checksum && second.destroyed == first.destroyed &&
+        second.dead_attackers == first.dead_attackers,
+        "played again from the same start: the same war, the same checksum");
+
+    // peace signed in the middle of a melee: the fights between the two players stop at once, nobody dies after
+    if (!mp_savegame_read(start)) {
+        return 2;
+    }
+    city_action(0, MP_ACTION_DECLARE_WAR, 1, MP_WAR_BRUTAL, 0);
+    city_action(0, MP_ACTION_LEGION_MOVE, first.legion[0], first.target_x, first.target_y);
+    city_action(1, MP_ACTION_LEGION_MOVE, first.legion[1], first.target_x + 1, first.target_y);
+    RUN_UNTIL(fighting_against(0, 1) > 0 && fighting_against(1, 0) > 0, 1, 8000);
+    printf("melee after %d ticks: %d figures of player 1 and %d of player 2 fight each other\n", war_ticks,
+        fighting_against(0, 1), fighting_against(1, 0));
+    CHECK(fighting_against(0, 1) > 0 && fighting_against(1, 0) > 0, "at war, the two legions meet in melee");
+    city_action(0, MP_ACTION_PROPOSE_PEACE, 1, 1, 0);
+    city_action(1, MP_ACTION_PROPOSE_PEACE, 0, 1, 0);
+    CHECK(mp_war_status(0, 1) == MP_WAR_PEACE && fighting_against(0, 1) == 0 && fighting_against(1, 0) == 0,
+        "peace signed during the melee: every fight between them stops at once");
+    int alive1 = alive_soldiers(first.legion[0]), alive2 = alive_soldiers(first.legion[1]);
+    war_run(300);
+    CHECK(alive_soldiers(first.legion[0]) == alive1 && alive_soldiers(first.legion[1]) == alive2 &&
+        fighting_against(0, 1) == 0 && fighting_against(1, 0) == 0, "nobody dies after it, nobody fights again");
+
+    // caravans: player 2 sells marble to player 1, whose legion stands by the road of the caravans
+    if (!mp_savegame_read(start)) {
+        return 2;
+    }
+    setup_trade(16, 0, 1);
+    RUN_UNTIL(caravan_of(1) && caravan_of(1)->routing_path_id > 0, 10, 2000);
+    figure *caravan = caravan_of(1);
+    int px = 0, py = 0;
+    CHECK(caravan && path_tile_before_end(caravan, 15, &px, &py), "a caravan of player 2 is on its way to player 1");
+    if (!caravan) {
+        return 1;
+    }
+    printf("the legion of player 1 stands on the road at (%d, %d), 15 tiles before the warehouse\n", px, py);
+    city_action(0, MP_ACTION_LEGION_MOVE, first.legion[0], px, py);
+    RUN_UNTIL(marble_of(0) >= 8, 10, 3000);
+    printf("in peace: player 1 has %d marble, player 2 %d\n", marble_of(0), marble_of(1));
+    CHECK(marble_of(0) == 8 && soldiers_at_standard(first.legion[0]) > 0,
+        "in peace, the caravan passes the legion and delivers its 8 loads");
+    // the next caravan left a month after the first one (T5.7): war is declared once it passed the legion, 3 tiles
+    // before the warehouse; it turns back and meets the legion on its way home
+    caravan = caravan_of(1);
+    CHECK(caravan && caravan->loads_sold_or_carrying == 8, "the next caravan of 8 loads is on its way");
+    RUN_UNTIL(!caravan_of(1) || caravan_of(1)->routing_path_current_tile >= caravan_of(1)->routing_path_length - 3,
+        1, 3000);
+    int seller_money = treasury_of(1);
+    int taken = mp_war_loads_taken(), lost = mp_war_loads_lost();
+    CHECK(caravan_of(1) && caravan_of(1)->loads_sold_or_carrying == 8, "it passed the legion in peace too");
+    city_action(0, MP_ACTION_DECLARE_WAR, 1, MP_WAR_BRUTAL, 0);
+    war_run(1);
+    CHECK(caravan_of(1) && BUILDING_OWNER(caravan_of(1)->destination_building_id) == 1,
+        "at war, the caravan on its way to player 1 turns back home");
+    RUN_UNTIL(!caravan_of(1), 10, 3000);
+    printf("at war: player 1 has %d marble, player 2 %d; %d loads taken, %d lost\n", marble_of(0), marble_of(1),
+        mp_war_loads_taken() - taken, mp_war_loads_lost() - lost);
+    CHECK(marble_of(0) == 16 && marble_of(1) == 0 && mp_war_loads_taken() - taken == 8 && mp_war_loads_lost() == lost,
+        "on its way back, the soldiers of player 1 take the 8 loads of the caravan");
+    CHECK(treasury_of(1) <= seller_money, "player 2 is not paid for them");
+    // more marble for player 2: nothing goes to player 1 while they are at war
+    int x1, y1;
+    mp_mapgen_city_center(1, &x1, &y1);
+    player_context_switch(1);
+    building *store = building_get(map_building_at(map_grid_offset(x1 - 6, y1 + 1)));
+    for (int i = 0; i < 8; i++) {
+        building_warehouse_add_resource(store, RESOURCE_MARBLE);
+    }
+    player_context_switch(0);
+    war_run(40 * 50);
+    CHECK(!caravan_of(1) && marble_of(1) == 8, "no caravan between players at war");
+
+    // a caravan on its way when an honourable war is declared: nobody fights during the notice, yet it turns back and
+    // brings its goods home; nothing is delivered nor paid
+    if (!mp_savegame_read(start)) {
+        return 2;
+    }
+    setup_trade(8, 0, 1);
+    RUN_UNTIL(caravan_of(1) && caravan_of(1)->routing_path_id > 0, 10, 2000);
+    war_run(500);
+    caravan = caravan_of(1);
+    int tiles_left = caravan ? caravan->routing_path_length - caravan->routing_path_current_tile : 0;
+    seller_money = treasury_of(1);
+    int buyer_money = treasury_of(0);
+    city_action(1, MP_ACTION_DECLARE_WAR, 0, MP_WAR_HONOURABLE, 0);
+    war_run(1);
+    CHECK(caravan && tiles_left > 20 && caravan_of(1) && marble_of(1) == 0 &&
+        BUILDING_OWNER(caravan_of(1)->destination_building_id) == 1,
+        "an honourable war declared while a caravan travels: it turns back");
+    RUN_UNTIL(!caravan_of(1), 10, 4000);
+    printf("back home after %d ticks: player 1 has %d marble, player 2 %d; treasuries %+d and %+d\n", war_ticks,
+        marble_of(0), marble_of(1), treasury_of(0) - buyer_money, treasury_of(1) - seller_money);
+    CHECK(!caravan_of(1) && marble_of(1) == 8 && marble_of(0) == 0 && mp_war_status(0, 1) == MP_WAR_NOTICE,
+        "its 8 loads are back in the warehouse of player 2, before the fighting");
+    CHECK(treasury_of(1) < seller_money + 8 * 150 && treasury_of(0) > buyer_money - 8 * 150,
+        "nothing delivered, nothing paid");
+
+    remove(saved);
+    remove(start);
+    // a classic game: no war
+    player_context_switch(0);
+    player_context_set_num_players(1);
+    if (!load(file)) {
+        return 2;
+    }
+    uint64_t classic = mp_checksum_state();
+    city_action(0, MP_ACTION_DECLARE_WAR, 1, MP_WAR_BRUTAL, 0);
+    CHECK(mp_war_status(0, 1) == MP_WAR_PEACE && mp_checksum_state() == classic,
+        "a classic game: no war, nothing changes");
+#undef CHECK
+    printf("%s\n", failures ? "DIFFERENT: the war between players is not as designed" :
+        "Identical: the war between players is as designed");
+    return failures ? 1 : 0;
+}
+
 // the camera of a player reaches every corner of a generated map, after it went through a .mpmap file as in a game
 static int command_viewcorners(const char *file, int num_players)
 {
@@ -7997,6 +8477,8 @@ int main(int argc, char **argv)
         result = command_caesargifts(file);
     } else if (strcmp(command, "caesarhistory") == 0) {
         result = command_caesarhistory(file);
+    } else if (strcmp(command, "war") == 0) {
+        result = command_war(file);
     } else if (strcmp(command, "inspect") == 0) {
         result = command_inspect(file);
     } else if (strcmp(command, "tradecities") == 0) {

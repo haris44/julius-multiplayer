@@ -29,7 +29,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define PROTOCOL_VERSION 21 // 3: the rules of the game travel with the welcome message; 4: territories; 5: fog;
+#define PROTOCOL_VERSION 22 // 3: the rules of the game travel with the welcome message; 4: territories; 5: fog;
                             // 6: one forest map, games alone (D-044); 7: missions at the start (D-045);
                             // 8: a caravan per resource, the empire the dearer source (D-048);
                             // 9: wide places in messages, the missionary goes to the nearest walkable tile;
@@ -45,7 +45,8 @@
                             // 19: the number of players of the host in the rules of the lobby (T4.11);
                             // 20: a caravan every month for each resource bought, to a warehouse on a road of the
                             // seller with room for it (T5.7, D-075);
-                            // 21: the aqueduct of Caesar eight rows from the main road (T5.8, D-078)
+                            // 21: the aqueduct of Caesar eight rows from the main road (T5.8, D-078);
+                            // 22: war between players, commands and a piece of the state (T5.5, D-077)
 #define TURN_TICKS 4
 #define TURN_DELAY 2
 #define HISTORY 256

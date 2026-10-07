@@ -769,7 +769,17 @@ Les journaux de l'essai ne sont pas sur le Mac de développement : diagnostic pa
   dans le vrai jeu : `tools/mp-resume-test.sh` (« Sauvegarder », puis « Charger » depuis le menu principal, qui ouvre
   le salon avec la partie choisie, puis « Héberger »). *À valider* : la sauvegarde de « Sauvegarder » n'est que sur
   l'ordinateur qui l'a faite (c'est lui qui héberge la reprise) ; celle du mois est sur tous.
-- [ ] **T5.5** Pouvoir attaquer un autre joueur, même simplement (« nécessaire pour le commerce au démarrage »).
+- [x] **T5.5** Pouvoir attaquer un autre joueur, même simplement (« nécessaire pour le commerce au démarrage »).
+  *Fait* (D-077, *à valider*) : il n'y avait aucun état de guerre, les soldats ne voyaient que les ennemis de l'IA.
+  Bouton « Guerre » du conseiller militaire : guerre brutale (tout de suite) ou honorable (3 mois de préavis), paix
+  signée quand les deux la proposent ; état par paire de joueurs, commandes, somme de contrôle, sauvegarde, annonces à
+  tous. En guerre, les légions se battent chez l'adversaire, abattent ses bâtiments comme les envahisseurs et prennent
+  ses caravanes ; plus de caravane entre ennemis. Tests `mp_war` (déclaration, préavis, sauvegarde, légion chez J2,
+  bâtiments abattus, combat, paix, caravane prise, même somme de contrôle rejouée), `mp_lan_war` (deux joueurs en
+  réseau, même guerre et mêmes pertes) et `tools/mp-war-test.sh` (vrai jeu, 640 × 480 et 1024 × 768). Reste pour
+  M10 : motifs, lauriers, colère de César, portes, terre de César. *Intégration avec T5.7* : une caravane en route
+  vers l'ennemi à la déclaration fait demi-tour et rentre sans être payée (à valider), prise si elle croise ses
+  soldats ; `mp_war` couvre aussi la paix signée en pleine mêlée et le demi-tour. Protocole 22.
 - [x] **T5.6** Simplifier la fenêtre du commerce ; attention aux textes qui se superposent.
   *Fait* (D-078) : causes des textes superposés trouvées sur des captures à 2 et 4 joueurs, en français et en
   anglais : en-têtes qui se touchent, « Vendre / au-dessus de » sur deux lignes, onglets réduits contre le titre, et
@@ -777,8 +787,9 @@ Les journaux de l'essai ne sont pas sur le Mac de développement : diagnostic pa
   restait sous le nouveau quand l'état changeait. Page refaite en trois sortes d'onglets (Empire, un par joueur, Stocks)
   à peu de colonnes, nombres alignés à droite, une ligne d'aide, un bouton de route dont le texte dit ce que fait un
   clic ; le cadre est redessiné au changement d'état de la route. Dans l'onglet d'un joueur, la colonne « En route »
-  garde la raison de T5.7 quand rien n'est parti (« sans stock », « plein »…), en petits caractères. Tests : `tools/mp-trade4-test.sh` (quatre joueurs,
-  prix à quatre chiffres), `mp-trade-test.sh`, `mp-ui-test.sh`, `mp-solo-test.sh`.
+  garde la raison de T5.7 quand rien n'est parti (« sans stock », « plein »…), en petits caractères. Tests :
+  `tools/mp-trade4-test.sh` (quatre joueurs, prix à quatre chiffres), `mp-trade-test.sh`, `mp-ui-test.sh`,
+  `mp-solo-test.sh`.
 - [x] **T5.7** Impossible de commercer entre joueurs : les caravanes ne circulent pas.
   *Fait* (D-075, provisoire, **à valider**) : pas de panne franche reproduite (parties simulées à 2, 3 et 4 joueurs sur
   les deux cartes, lancées comme depuis le salon : les caravanes partent, arrivent, sont payées), mais trois causes de
@@ -965,6 +976,9 @@ César revient comme arbitre de la partie. Jouable en paix et **seul** : livré 
   Alexandre.
 
 ## M10 — La guerre sous l'œil de César ([CESAR.md](CESAR.md) §7, DESIGN §7)
+> Une première tranche jouable est faite avec T5.5 (D-077) : état de guerre par paire, déclaration brutale ou
+> honorable, paix des deux, légions qui se battent et abattent les bâtiments chez l'ennemi, caravanes prises. Restent
+> dans M10.1 à M10.3 : hostilité des portes et murs, ordre « attaquer », route coupée ; puis M10.4 et la suite.
 - [ ] **M10.1** Hostilité par propriétaire et état de guerre par paire de joueurs : déclaration (commande, annonce ;
   guerre honorable avec 3 mois de préavis, ou brutale et immédiate, D-053), paix proposée des deux côtés. En classique, la matrice actuelle exactement.
 - [ ] **M10.2** Légions chez l'adversaire, ordre « attaquer », portes et murs qui ne laissent passer que leur

@@ -8,6 +8,7 @@
 #include "figure/sound.h"
 #include "game/difficulty.h"
 #include "map/figure.h"
+#include "mp/war.h"
 #include "sound/effect.h"
 
 static int is_attacking_native(const figure *f)
@@ -171,6 +172,10 @@ int figure_combat_get_target_for_soldier(int x, int y, int max_distance)
             }
         }
     }
+    if (!min_figure_id && mp_war_any_fighting()) {
+        // players at war (T5.5): the nearest soldier of an enemy player, within the distance only
+        min_figure_id = mp_war_nearest_enemy_soldier(x, y, max_distance, 0, 0);
+    }
     if (min_figure_id) {
         return min_figure_id;
     }
@@ -287,6 +292,17 @@ int figure_combat_get_missile_target_for_soldier(figure *shooter, int max_distan
             }
         }
     }
+    if (mp_war_any_fighting()) {
+        // players at war (T5.5): a soldier of an enemy player strictly nearer, in sight
+        int distance = 0;
+        int enemy_id = mp_war_nearest_enemy_soldier(x, y, min_distance, 1, &distance);
+        if (enemy_id) {
+            figure *f = figure_get(enemy_id);
+            if (figure_movement_can_launch_cross_country_missile(x, y, f->x, f->y)) {
+                min_figure = f;
+            }
+        }
+    }
     if (min_figure) {
         map_point_store_result(min_figure->x, min_figure->y, tile);
         return min_figure->id;
@@ -390,6 +406,10 @@ void figure_combat_attack_figure_at(figure *f, int grid_offset)
             attack = 1;
         } else if (figure_category == FIGURE_CATEGORY_HOSTILE && opponent_category == FIGURE_CATEGORY_ANIMAL) {
             attack = 1;
+        }
+        if (!attack && mp_war_any_fighting() && opponent->state == FIGURE_STATE_ALIVE &&
+            opponent->action_state != FIGURE_ACTION_149_CORPSE && figure_category == FIGURE_CATEGORY_ARMED) {
+            attack = mp_war_may_attack(f, opponent); // players at war (T5.5): never in a classic game
         }
         if (attack && opponent->action_state == FIGURE_ACTION_150_ATTACK && opponent->num_attackers >= 2) {
             attack = 0;

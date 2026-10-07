@@ -44,6 +44,8 @@ typedef enum {
     MP_ACTION_SET_SALARY = 29,            /**< salary rank (0 to 10, at most the rank in multiplayer) */
     MP_ACTION_DONATE = 30,                /**< amount of denarii, from the savings to the treasury */
     MP_ACTION_CHANGE_BUY_LIMIT = 31,      /**< resource, delta: stock at which the city stops buying it (T4.5) */
+    MP_ACTION_DECLARE_WAR = 32,           /**< other player, form (mp_war_kind) (T5.5) */
+    MP_ACTION_PROPOSE_PEACE = 33,         /**< other player, 1 to propose or 0 to withdraw (T5.5) */
     MP_ACTION_MAX
 } mp_action_type;
 
@@ -78,6 +80,8 @@ void mp_action_send_gift(int size);
 void mp_action_set_salary(int rank);
 void mp_action_donate(int amount);
 void mp_action_change_buy_limit(int resource, int delta);
+void mp_action_declare_war(int other, int form);
+void mp_action_propose_peace(int other, int propose);
 
 /**
  * Applies an MP_COMMAND_CITY_ACTION command to the simulation

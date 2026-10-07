@@ -23,6 +23,7 @@
 #include "game/resource.h"
 #include "game/rules.h"
 #include "mp/session.h"
+#include "mp/war.h"
 #include "translation/translation.h"
 
 #include <stdio.h>
@@ -412,6 +413,12 @@ static void look_at_buyer(int buyer, int resource, const seller_view *seller, bu
     player_context_switch(previous);
 }
 
+// a caravan whose players went to war goes back to a warehouse of its own player, with its goods (T5.5, D-077)
+static int is_going_home(const figure *f)
+{
+    return BUILDING_OWNER(f->destination_building_id) == FIGURE_OWNER(f->id);
+}
+
 // what the buyer owes for the loads that caravans bring him, at the prices of their sellers: he pays on arrival, so
 // this is no longer his to spend
 static int value_on_the_way(int buyer)
@@ -419,7 +426,7 @@ static int value_on_the_way(int buyer)
     int value = 0;
     for (int i = 1; i < player_context_num_players() * MAX_FIGURES; i++) {
         figure *f = figure_get(i);
-        if (f->state == FIGURE_STATE_ALIVE && mp_trade_is_caravan(f) &&
+        if (f->state == FIGURE_STATE_ALIVE && mp_trade_is_caravan(f) && !is_going_home(f) &&
             BUILDING_OWNER(f->destination_building_id) == buyer) {
             value += f->loads_sold_or_carrying * mp_trade_price(FIGURE_OWNER(i), buyer, f->resource_id);
         }
@@ -537,7 +544,8 @@ void mp_trade_dispatch_caravans(void)
     seller_view sv;
     int looked = 0;
     for (int buyer = 0; buyer < player_context_num_players(); buyer++) {
-        if (mp_trade_route_is_open(seller, buyer)) {
+        // no caravan between players at war (T5.5), nor during the notice of an honourable war
+        if (mp_trade_route_is_open(seller, buyer) && mp_war_status(seller, buyer) == MP_WAR_PEACE) {
             if (!looked) {
                 look_at_seller(&sv);
                 looked = 1;
@@ -680,6 +688,45 @@ int mp_trade_loads_on_the_way(int seller, int buyer, int resource)
     return loads;
 }
 
+static int is_home_warehouse(building *b, map_point *road)
+{
+    return b->state == BUILDING_STATE_IN_USE && b->type == BUILDING_WAREHOUSE && b->has_road_access &&
+        map_has_road_access(b->x, b->y, b->size, road);
+}
+
+// A war between the seller and the buyer, notice included, stops their trade: a caravan on its way to the buyer
+// turns back to the warehouse it left (or another one of the seller), is not paid, and brings its goods home, where
+// they find room as any delivery. Soldiers of the enemy may still take it on its way back (T5.5, D-077).
+// @return 0 when it has nowhere to go: the goods are lost
+static int turn_back_at_war(figure *f)
+{
+    int seller = player_context_current_player;
+    int buyer = BUILDING_OWNER(f->destination_building_id);
+    if (buyer == seller || mp_war_status(seller, buyer) == MP_WAR_PEACE) {
+        return 1;
+    }
+    map_point road;
+    building *home = 0;
+    if (BUILDING_OWNER(f->building_id) == seller && is_home_warehouse(building_get(f->building_id), &road)) {
+        home = building_get(f->building_id);
+    }
+    for (int i = BUILDING_FIRST; i < BUILDING_END && !home; i++) {
+        if (is_home_warehouse(building_get(i), &road)) {
+            home = building_get(i);
+        }
+    }
+    log_info("Trade between players: war, a caravan goes back home, resource", 0, f->resource_id);
+    if (!home) {
+        return 0;
+    }
+    f->destination_building_id = home->id;
+    f->destination_x = road.x;
+    f->destination_y = road.y;
+    f->destination_grid_offset = map_grid_offset(road.x, road.y);
+    figure_route_remove(f);
+    return 1;
+}
+
 void mp_trade_caravan_action(figure *f)
 {
     f->is_ghost = 0;
@@ -687,9 +734,22 @@ void mp_trade_caravan_action(figure *f)
     f->use_cross_country = 0;
     figure_image_increase_offset(f, 12);
     f->cart_image_id = 0;
+    if (mp_war_intercept_caravan(f)) {
+        f->state = FIGURE_STATE_DEAD; // taken by a soldier of an enemy of the seller (T5.5)
+        return;
+    }
+    if (!turn_back_at_war(f)) {
+        f->state = FIGURE_STATE_DEAD;
+        return;
+    }
     figure_movement_move_ticks(f, 1);
     if (f->direction == DIR_FIGURE_AT_DESTINATION) {
-        deliver(f);
+        if (is_going_home(f)) {
+            building_warehouses_add_resource(f->resource_id, f->loads_sold_or_carrying);
+            f->loads_sold_or_carrying = 0;
+        } else {
+            deliver(f);
+        }
         f->state = FIGURE_STATE_DEAD;
     } else if (f->direction == DIR_FIGURE_REROUTE) {
         figure_route_remove(f);

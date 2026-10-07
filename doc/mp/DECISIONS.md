@@ -1263,6 +1263,67 @@
   - une partie reprise d'une ancienne `.mpsav` garde les rangs et salaires qu'elle avait.
 - Classique : inchangé.
 
+### D-077 — Une première guerre entre joueurs : déclarer, se battre, faire la paix (T5.5, tranche de M10.1 à M10.3)
+- 2026-10-07 · **adoptée provisoirement**, *à valider* (Alexandre, deuxième essai à trois : « pouvoir attaquer un
+  autre joueur (même simple) — nécessaire pour le commerce au démarrage »)
+- **État de guerre par paire de joueurs** (`mp/war.c`) : dans la somme de contrôle et dans le `.mpsav` (morceau
+  `mp_war` ; une sauvegarde plus ancienne se charge en paix). Il ne change que par deux commandes, lancées depuis le
+  conseiller militaire (bouton « Guerre » en haut à droite, fenêtre « Guerre et paix ») :
+  - **guerre brutale** : on se bat tout de suite ; **guerre honorable** : 3 mois de préavis (48 jours) pendant
+    lesquels personne ne se bat (D-053). Pendant le préavis, l'un ou l'autre peut déclarer une guerre brutale : le
+    défenseur frappe le premier, et la brutalité devient la sienne ;
+  - déclarer demande deux clics (« Confirmer ? ») ;
+  - **paix** : signée quand les deux joueurs l'ont proposée ; une proposition se retire. À la signature, les combats
+    en cours entre eux s'arrêtent et les légions des deux qui sont hors de leur fort y rentrent, sauf si leur joueur
+    est encore en guerre avec un troisième ;
+  - **annonces à tous** (déclaration, début des combats, proposition de paix, paix signée) : un avertissement en haut
+    de la cité, gardé jusqu'à ce que le joueur revienne sur la vue de la cité (il ne se perd pas dans un conseiller).
+- **Combats**, seulement entre deux joueurs qui se battent (sinon rien ne change, et rien en classique) :
+  - les légions allaient déjà partout : rien ne les retenait chez elles. Elles s'y battent désormais ;
+  - un soldat attaque les soldats, les gardes armés (préfets, sentinelles) et les habitants de l'ennemi, comme un
+    envahisseur, mais pas ses caravanes (voir plus bas) ; un préfet ou une sentinelle n'attaque que ses soldats ;
+    javelots, balistes et tours tirent sur ses soldats ; l'ordre « nettoyer » cherche ses soldats à 20 cases ;
+  - un soldat posté avec sa légion abat ce qui le touche de l'ennemi, bâtiments, murs et portes, comme les
+    envahisseurs (mêmes seuils que l'original : 10, porte 150, mur 200). Les bâtiments de César sont intacts.
+    L'effondrement est compté dans la cité de la victime (sa note de paix, ses sentinelles).
+- **Caravanes** (lien avec le commerce demandé par Alexandre) : aucune caravane ne part entre deux joueurs en guerre,
+  préavis compris. **Une caravane déjà en route vers l'ennemi au moment de la déclaration fait demi-tour** (préavis
+  compris) : elle rentre à l'entrepôt d'où elle est partie (ou à un autre de son joueur), sans livrer ni être payée,
+  et ses chargements y retrouvent leur place comme une livraison (choix de l'intégration de T5.5 et T5.7 : avec une
+  caravane par mois, D-075, plusieurs sont en route à la fois, et sans cela elles livraient et étaient payées en
+  pleine guerre). Une caravane d'un joueur qui passe à une case d'un soldat de son ennemi est prise, à l'aller comme
+  au retour : les entrepôts du preneur gardent ce qu'ils peuvent, le reste est perdu, et le vendeur n'est pas payé.
+  Les caravanes d'un joueur neutre passent. On peut ainsi couper le commerce d'un rival en tenant une route avec une
+  légion.
+- **Mesuré** (test `mp_war`, carte préparée pour 2) : la légion de J1 (16 légionnaires) met 1 750 ticks à rejoindre la
+  cité de J2 ; en guerre, le premier bâtiment tombe 20 ticks après la déclaration ; quand la légion de J2 sort, 14
+  attaquants meurent contre 3 défenseurs (la légion postée est prise de flanc). L'équilibre des troupes reste à faire
+  (MG.5).
+- **Tests ajoutés à l'intégration avec T5.7** (`mp_war`) : paix signée en pleine mêlée entre les deux légions :
+  tous les combats entre eux s'arrêtent à la signature et personne ne meurt ensuite (échoue sans l'arrêt des combats à
+  la paix, qui n'était pas couvert) ; la caravane suivante passe la légion de J1 en paix, la guerre est déclarée trois
+  cases avant l'entrepôt : elle fait demi-tour et les soldats la prennent sur le chemin du retour (8 chargements,
+  vendeur non payé) ; guerre honorable déclarée pendant un trajet : demi-tour, les 8 chargements reviennent chez J2
+  pendant le préavis, rien de livré ni de payé. Les deux derniers échouent sans le demi-tour (livrée et payée 1 200 Dn).
+  Cause de l'échec de `mp_war` après la fusion avec T5.7 : le test attendait la caravane suivante au départ, mais avec
+  une caravane par mois elle était déjà partie et avait dépassé la légion quand la guerre était déclarée.
+- **Pas dans cette tranche** (M10.2 à M10.8, D-068) : motif de la guerre et lauriers (−15 sans motif, −15 de plus pour
+  une guerre brutale), colère de César et ses suites (avertissement, ultimatum, expédition punitive), triomphes, délai
+  de 12 mois avant de redéclarer, portes et murs qui ne laissent passer que leur propriétaire, terre de César autour
+  du pont, moral et totaux par camp, ordre « attaquer » qui marche sur une cible. Le conseiller militaire ne dit pas
+  encore « en guerre contre le joueur 2 » sur sa page.
+- **À valider** :
+  - les soldats tuent aussi les habitants de l'ennemi, comme les envahisseurs ;
+  - à la paix, toutes les légions hors de leur fort rentrent ;
+  - une caravane prise plutôt que détruite, à une case d'un soldat ; plus de caravane entre ennemis, préavis compris ;
+  - une caravane en route à la déclaration fait demi-tour et rentre avec ses chargements (plutôt que d'être arrêtée
+    sur place, ses biens perdus ou rendus d'un coup) ; sur le chemin du retour, les soldats de l'ennemi peuvent encore
+    la prendre ;
+  - les annonces en bandeau plutôt qu'une fenêtre plein écran ;
+  - la paix signée par les deux, sans que César puisse encore l'imposer.
+- Réseau : protocole 22 (20 et 21 sont ceux de T5.7 et T5.8 ; commandes `MP_ACTION_DECLARE_WAR` et
+  `MP_ACTION_PROPOSE_PEACE`). Classique : inchangé.
+
 ### D-078 — La page du commerce en trois sortes d'onglets ; l'aqueduc de César à huit rangées de la route (T5.6, T5.8, précise D-051, D-060, D-070)
 - 2026-10-07 · **adoptée provisoirement** (second essai d'Alexandre, travail sans lui)
 - **Les textes qui se superposaient** (essai à trois joueurs, 640 × 480, français et anglais), relevés sur des captures

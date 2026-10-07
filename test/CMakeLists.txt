@@ -230,6 +230,10 @@ if(UNIX)
     # the heaviest network games (4 processes, or a game played twice) never run at the same time: together, on a
     # loaded computer, they ran out of time (T5.3 review)
     set_tests_properties(mp_lan_cities_4_players PROPERTIES TIMEOUT 240 RESOURCE_LOCK mp_lan_heavy)
+    # T5.5: two players at war over the network: a brutal war, a legion of player 1 in the city of player 2, soldiers
+    # lost, then peace; the same war and the same checksum on both computers (port 27550)
+    add_test(NAME mp_lan_war COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/sim/lan_test.sh $<TARGET_FILE:simtool> 27550 2 inv0.sav 3000 war cities)
+    set_tests_properties(mp_lan_war PROPERTIES TIMEOUT 300 RESOURCE_LOCK mp_lan_heavy)
 endif()
 
 # Large grids (M3.3): a city moved to a larger grid behaves exactly as on its original grid
@@ -424,6 +428,11 @@ add_test(NAME mp_caesar_gifts COMMAND simtool caesargifts brugle-massilia-start.
 add_test(NAME mp_salaries COMMAND simtool salaries brugle-massilia-start.sav)
 # Monthly history of the laurels of each city, for the ratings advisor: gain, trend, saved (T4.1, D-071)
 add_test(NAME mp_caesar_history COMMAND simtool caesarhistory brugle-massilia-start.sav)
+# War between players (T5.5, D-077): a state per pair of players changed by commands, in the checksum and the saved
+# game; a brutal war fights at once, an honourable one after 3 months; the legion of player 1 goes to the city of player 2,
+# pulls down his buildings and fights his legion; his soldiers take the caravans of the enemy; peace signed by both stops
+# it and sends the legions home; the same war played twice gives the same checksum; nothing in a classic game
+add_test(NAME mp_war COMMAND simtool war brugle-massilia-start.sav)
 
 # T1.5 (D-034): the roads of Caesar stay, untinted, and serve every city
 add_test(NAME mp_caesar_roads COMMAND simtool caesarroads brugle-massilia-start.sav)
