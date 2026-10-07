@@ -5,6 +5,51 @@
 
 ---
 
+## 2026-10-07 (nuit) — Les demandes du premier essai à plusieurs (T4.1 à T4.17, D-060 à D-073)
+
+**Demande d'Alexandre** : la liste T4 notée le soir, avec ses réponses pendant l'essai, à faire en autonomie la nuit,
+« demain matin tout est poussé sur master ». Travail en quatre vagues d'agents, chacun dans son worktree, chaque
+branche relue par un vérificateur adversarial (qui inverse le correctif pour voir le test échouer), puis fusionnée
+et testée sur master.
+
+**Fait** (détail et état dans ROADMAP §T4, en tête de section)
+- Bugs de l'essai : l'aqueduc de César arrose J2 à J4 (T4.9) ; le menu de construction est celui du joueur local,
+  plus celui du joueur qui ouvre une route (T4.13) ; les réglages du salon sont ceux de l'hôte, relus au lancement,
+  montrés aux joueurs qui rejoignent ; « Invasions IA : non » coupe aussi Mars (T4.11) ; difficulté du salon pour
+  toute la partie, « facile » par défaut (T4.4, T4.10) ; une partie reprise garde ses règles (D-073).
+- Commerce : prix de Rome et portorium de 50 %, l'empire vend toujours, chacun son commerce avec l'étranger (T4.12,
+  D-060, D-061, D-066) ; stock minimum et maximum, onglet « Stocks » (T4.5, D-070).
+- Cartes : à 4, deux joueurs des terres et deux de la côte, plus de bois dans les terres, nourriture du plan
+  vérifiée par les commandes (T4.15, D-062, D-065) ; une seconde carte pour 2 et pour 4, choisie dans le salon ou
+  tirée au sort (T4.14, D-069) ; recherches de chemin et armées ennemies à l'échelle des grandes cartes (T4.17).
+- César : mission de plus à 30 marbres (T4.7) ; cadeaux, salaire et dons par commandes, un cadeau rapporte des
+  lauriers (T4.2, D-067) ; pilier des lauriers dans l'évaluation de la cité, historique mensuel (T4.1, D-071).
+- Sans code : maquettes des statistiques (T4.6, MAQUETTES.md), le pont de César dans la guerre (T4.8, D-068) ;
+  mesure « le jeu paraît plus restrictif » : pas de bug, l'écart vient de la difficulté et de la zone (T4.16, D-072).
+- Finitions : passage complet du vrai jeu sans fenêtre (nouveau `tools/mp-ui-test.sh`, captures en 640×480 et
+  1024×768), défauts d'affichage corrigés, textes d'état du salon traduits, README, LISEZMOI, DESIGN, CESAR à jour.
+- Protocole 12 → 19. 216 tests (177 hier soir). `tools/serial.sh` : les tests réseau et l'automatisation passent un
+  worktree à la fois (ports fixes, données du jeu partagées).
+
+**Appris**
+- Les worktrees des agents partaient d'un commit de Julius amont, pas de master : chaque agent a dû se remettre sur
+  la bonne base. À dire dans la consigne dès le départ.
+- Deux variantes d'un même test lancées en parallèle par ctest écrivaient le même fichier `.mpmap` : un rouge au
+  hasard. Un nom de fichier par test, par carte et par nombre de joueurs.
+- Le correctif du menu (T4.13) change aussi ce que voient les tests qui lisaient le menu d'une autre cité : il faut
+  se mettre à la place du joueur local (`mp_session_init_network`).
+
+**Prochaine étape** : qu'Alexandre essaie la version de la CI, en facile, sur les deux cartes, et réponde aux
+questions « à valider » (liste en tête de ROADMAP §T4). Puis la hausse des prix à l'arrêt du commerce (T4.3), et M10.
+
+**Points ouverts**
+- T4.3 : la hausse des prix quand un joueur arrête le commerce n'est pas faite (options A, B, C dans D-066).
+- Évaluation de la cité en multijoueur : culture, prospérité et paix affichent « 0 requis » (pas d'objectif).
+- Salon : « Nouvelle partie (forêt) » raccourci dans la liste des parties ; fenêtre des cadeaux d'origine où
+  « Somptueux : » touche le nom du cadeau (déjà en classique).
+
+---
+
 ## 2026-10-06 — Défilement par les bords sous Linux (D-056)
 
 **Demande d'Alexandre** : « sur la version Linux (et Linux uniquement), le déplacement sur les bords d'écran est au

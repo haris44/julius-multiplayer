@@ -526,10 +526,10 @@ le note « à valider ».
   *Fait (revue, D-073)* : les règles reçues de l'hôte sont vérifiées, hors bornes elles sont ignorées (salon) ou
   refusées (accueil) : test `mp_lobby_bad_rules`. Une partie reprise d'un `.mpsav` garde ses règles enregistrées,
   territoires compris ; le salon les montre grisées (*à valider*) : test `mp_lobby_resume_rules`.
-  *Fait (finitions du salon, Q1-lobby-statuses)* : les textes d'état de `lockstep.c` sont des clés de traduction
+  *Fait (finitions du salon)* : les textes d'état de `lockstep.c` sont des clés de traduction
   (`TR_MP_STATUS_*`, français et anglais, chiffres par `%d` et `%s`), les tests comparent la clé
   (`mp_lockstep_status_key`) ; un joueur qui a rejoint ne voit plus « Héberger » ni « - / + » (idem « - / + » chez
-  l'hôte une fois la partie ouverte, qui ne changeaient que l'affichage) ; `MSG_RULES` porte le nombre de joueurs de
+  l'hôte une fois la partie ouverte, qui ne changeaient que l'affichage, *à valider*) ; `MSG_RULES` porte le nombre de joueurs de
   l'hôte (protocole 19), affiché en lecture seule même quand on rejoint par adresse. Tests : `mp_status_translations`,
   `mp_lobby_rules` (textes et nombre de joueurs), `mp_lobby_bad_rules` (nombre hors bornes), `mp_lan_lobby_rules`
   (chaque joueur voit 3 joueurs).
