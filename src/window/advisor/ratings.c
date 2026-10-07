@@ -94,7 +94,7 @@ static int draw_background(void)
     button_border_draw(440, 286, 110, 66, focus_button_id == SELECTED_RATING_FAVOR);
     if (window_mp_ratings_is_active()) {
         window_mp_ratings_draw_pillar_text(440, 110);
-        draw_rating_column(470, 274, window_mp_ratings_pillar_height(), 1);
+        draw_rating_column(470, 274, window_mp_ratings_pillar_height(), window_mp_ratings_goal_reached());
     } else {
         int has_favor_goal = !open_play && scenario_criteria_favor_enabled();
         lang_text_draw_centered(53, 4, 440, 294, 110, FONT_NORMAL_BLACK);

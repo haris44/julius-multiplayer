@@ -133,6 +133,12 @@ int mp_caesar_esteem(int player_id);
 int mp_caesar_esteem_goal(int player_id);
 
 /**
+ * Whether the laurels of a city have reached the laurels it is measured against (esteem goal): what the capital of the
+ * laurels pillar shows, instead of the height of the pillar alone
+ */
+int mp_caesar_esteem_goal_reached(int player_id);
+
+/**
  * Rank of a city (0 to MP_CAESAR_NUM_RANKS - 1): one for each tenth of the score, the last one at the score
  */
 int mp_caesar_rank(int player_id);

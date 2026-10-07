@@ -219,6 +219,12 @@ int mp_caesar_esteem_goal(int player_id)
     return mp_caesar_rank_laurels(rank < MP_CAESAR_NUM_RANKS - 1 ? rank + 1 : rank);
 }
 
+int mp_caesar_esteem_goal_reached(int player_id)
+{
+    // laurels in tenths, the goal in whole laurels
+    return mp_caesar_laurels(player_id) >= 10 * mp_caesar_esteem_goal(player_id);
+}
+
 int mp_caesar_esteem(int player_id)
 {
     int goal = mp_caesar_esteem_goal(player_id);

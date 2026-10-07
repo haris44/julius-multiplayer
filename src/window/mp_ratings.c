@@ -22,6 +22,11 @@ int window_mp_ratings_pillar_height(void)
     return mp_caesar_esteem(mp_session_local_player_id());
 }
 
+int window_mp_ratings_goal_reached(void)
+{
+    return mp_caesar_esteem_goal_reached(mp_session_local_player_id());
+}
+
 void window_mp_ratings_draw_pillar_text(int x, int width)
 {
     int player_id = mp_session_local_player_id();

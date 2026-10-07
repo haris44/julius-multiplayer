@@ -127,7 +127,8 @@ static void set_extra_info_objectives(void)
     if (scenario_criteria_peace_enabled()) {
         data.peace.target = scenario_criteria_peace();
     }
-    if (scenario_criteria_favor_enabled()) {
+    // (in multiplayer the laurels to reach win over the favor of the scenario)
+    if (scenario_criteria_favor_enabled() && !mp_caesar_is_active()) {
         data.favor.target = scenario_criteria_favor();
     }
     if (scenario_criteria_population_enabled()) {

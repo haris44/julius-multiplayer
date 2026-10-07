@@ -19,6 +19,12 @@ int window_mp_ratings_is_active(void);
 int window_mp_ratings_pillar_height(void);
 
 /**
+ * Whether the laurels of the local city have reached the laurels to reach (the score, or the next rank): then, and
+ * only then, the pillar wears its capital, as the others do when their goal is reached
+ */
+int window_mp_ratings_goal_reached(void);
+
+/**
  * Under the pillar, in its button: the name, the laurels, and the laurels to reach
  * @param x Left of the button
  * @param width Width of the button

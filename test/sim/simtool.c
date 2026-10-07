@@ -4994,6 +4994,8 @@ static int command_caesarlaurels(const char *file)
     int letters_before = mp_caesar_num_letters();
     mp_caesar_add_laurels(0, MP_LAURELS_GIFTS, 10 * 160);
     CHECK(mp_caesar_rank(0) == 3, "160 laurels and more: the fourth rank");
+    CHECK(mp_caesar_esteem_goal(0) == 500 && !mp_caesar_esteem_goal_reached(0),
+        "the pillar of the laurels has no capital below the score");
     run_to_next_month();
     const mp_caesar_letter *letter = mp_caesar_get_letter(mp_caesar_num_letters() - 1);
     CHECK(mp_caesar_num_letters() == letters_before + 1 && letter && letter->type == MP_CAESAR_LETTER_PROMOTION &&
@@ -5007,6 +5009,7 @@ static int command_caesarlaurels(const char *file)
     run_trace(1, 1, 0, 0);
     CHECK(mp_endgame_is_over() && mp_endgame_winner() == 0 && mp_endgame_score(0) == mp_caesar_laurels(0) / 10,
         "at the score, the city wins alone");
+    CHECK(mp_caesar_esteem_goal_reached(0), "and its pillar of laurels has its capital");
 
     // two cities at the score the same month: the most laurels win, then the most laurels of the city
     mp_endgame_reset();
