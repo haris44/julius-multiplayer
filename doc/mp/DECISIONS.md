@@ -978,7 +978,8 @@
 - **Une carte multijoueur (`.mpmap`) garde ses territoires** ; les autres règles viennent du salon. *À valider*.
 - **Les règles reçues du réseau sont vérifiées** (salon et message d'accueil) : difficulté de 0 à 4, oui/non, fin de
   partie, années et score dans leurs bornes. Un message hors bornes est ignoré dans le salon ; un accueil hors bornes
-  est refusé (« Message de l'hôte invalide »). Test `mp_lobby_bad_rules` (faux hôte, port 27490).
+  est refusé (« Message de l'hôte invalide »), comme un accueil dont le numéro du joueur ou le nombre de joueurs
+  (2 à 4) sort de ses bornes. Test `mp_lobby_bad_rules` (faux hôte, port 27490).
 - **Le conseiller religieux** suit les dieux de la partie, et non le réglage local. `tools/check-determinism.sh`
   refuse désormais toute autre lecture des réglages locaux que remplacent les règles (difficulté, dieux, correctifs).
 - **Cadeau à César en multijoueur** : il est payé sur l'épargne et rapporte ses lauriers (D-067), mais ne touche

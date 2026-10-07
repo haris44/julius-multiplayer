@@ -1635,34 +1635,65 @@ static int command_badrules(int port)
             result = 1;
         }
     }
-    // a welcome message whose rules are out of their bounds: the player leaves before reading the game
-    uint8_t welcome[256];
-    buffer buf;
-    buffer_init(&buf, welcome, sizeof(welcome));
-    buffer_write_i32(&buf, 0); // size, written below
-    buffer_write_u8(&buf, 2); // MSG_WELCOME
-    buffer_write_i32(&buf, 1); // player
-    buffer_write_i32(&buf, 2); // players
-    buffer_write_i32(&buf, 0); // base tick
-    buffer_write_u8(&buf, 1); // separate cities
-    buffer_write_u32(&buf, 0);
-    buffer_write_u32(&buf, 0);
-    const int welcome_rules[11] = { GAME_MODE_MULTIPLAYER, 42, 1, 0, 0, 1, 0, 10, 1, 1, 1000 };
-    for (int i = 0; i < 11; i++) {
-        buffer_write_i32(&buf, welcome_rules[i]);
-    }
-    buffer_write_i32(&buf, 4); // save size
-    buffer_write_u32(&buf, 0);
-    int size = buf.index;
-    buffer_set(&buf, 0);
-    buffer_write_i32(&buf, size - 4);
-    net_send(host, welcome, size);
-    poll_lockstep_for(200);
-    printf("after the welcome: state %d, %s\n", mp_lockstep_get_state(), mp_lockstep_status());
-    if (mp_lockstep_get_state() != MP_LOCKSTEP_DISCONNECTED ||
-        strcmp(mp_lockstep_status(), "Message de l'hôte invalide") != 0) {
-        printf("WRONG: a welcome message with rules out of their bounds is not refused\n");
-        result = 1;
+    // welcome messages with rules out of their bounds, then with a player index or a number of players out of
+    // theirs: the player leaves before reading the game
+    const int welcome_rules[11] = { GAME_MODE_MULTIPLAYER, DIFFICULTY_EASY, 1, 0, 0, 1, 0, 10, 1, 1, 1000 };
+    const struct { int player; int players; int difficulty; const char *what; } welcomes[] = {
+        { 1, 2, 42, "difficulty 42" },
+        { -1, 2, DIFFICULTY_EASY, "player -1" },
+        { 2, 2, DIFFICULTY_EASY, "player 3 of 2" },
+        { 1, 9, DIFFICULTY_EASY, "9 players" },
+        { 0, 1, DIFFICULTY_EASY, "1 player" },
+    };
+    for (int w = 0; w < (int) (sizeof(welcomes) / sizeof(welcomes[0])); w++) {
+        if (w > 0) {
+            mp_lockstep_stop();
+            net_close(host);
+            host = NET_INVALID_SOCKET;
+            if (!mp_lockstep_join("127.0.0.1", port)) {
+                printf("FAILED: %s\n", mp_lockstep_status());
+                net_close(listener);
+                return 2;
+            }
+            for (int i = 0; i < 100 && host == NET_INVALID_SOCKET; i++) {
+                host = net_accept(listener);
+                net_sleep(20);
+            }
+            if (host == NET_INVALID_SOCKET) {
+                printf("FAILED: the player did not connect again\n");
+                mp_lockstep_stop();
+                net_close(listener);
+                return 2;
+            }
+        }
+        uint8_t welcome[256];
+        buffer buf;
+        buffer_init(&buf, welcome, sizeof(welcome));
+        buffer_write_i32(&buf, 0); // size, written below
+        buffer_write_u8(&buf, 2); // MSG_WELCOME
+        buffer_write_i32(&buf, welcomes[w].player);
+        buffer_write_i32(&buf, welcomes[w].players);
+        buffer_write_i32(&buf, 0); // base tick
+        buffer_write_u8(&buf, 1); // separate cities
+        buffer_write_u32(&buf, 0);
+        buffer_write_u32(&buf, 0);
+        for (int i = 0; i < 11; i++) {
+            buffer_write_i32(&buf, i == 1 ? welcomes[w].difficulty : welcome_rules[i]);
+        }
+        buffer_write_i32(&buf, 4); // save size
+        buffer_write_u32(&buf, 0);
+        int size = buf.index;
+        buffer_set(&buf, 0);
+        buffer_write_i32(&buf, size - 4);
+        net_send(host, welcome, size);
+        poll_lockstep_for(200);
+        printf("after a welcome with %s: state %d, %s\n", welcomes[w].what, mp_lockstep_get_state(),
+            mp_lockstep_status());
+        if (mp_lockstep_get_state() != MP_LOCKSTEP_DISCONNECTED ||
+            strcmp(mp_lockstep_status(), "Message de l'hôte invalide") != 0) {
+            printf("WRONG: a welcome message with %s is not refused\n", welcomes[w].what);
+            result = 1;
+        }
     }
     mp_lockstep_stop();
     net_close(host);

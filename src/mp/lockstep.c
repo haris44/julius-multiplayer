@@ -473,7 +473,7 @@ static void host_start_game(void)
 static void client_welcome(buffer *buf)
 {
     int player = buffer_read_i32(buf);
-    data.num_players = buffer_read_i32(buf);
+    int num_players = buffer_read_i32(buf);
     int base_tick = buffer_read_i32(buf);
     data.separate_cities = buffer_read_u8(buf);
     uint64_t checksum = buffer_read_u32(buf);
@@ -481,12 +481,15 @@ static void client_welcome(buffer *buf)
     game_rules_settings rules; // the rules of the host
     int mode = game_rules_read_state(buf, &rules);
     int save_size = buffer_read_i32(buf);
+    // no number of the network is trusted: the player index and the number of players bound the arrays
     if (buf->overflow || mode != GAME_MODE_MULTIPLAYER || !game_rules_settings_valid(&rules) ||
+        num_players < 2 || num_players > MP_LOCKSTEP_MAX_PLAYERS || player < 0 || player >= num_players ||
         save_size <= 0 || save_size > buf->size - buf->index) {
         set_status("Message de l'hôte invalide");
         data.state = MP_LOCKSTEP_DISCONNECTED;
         return;
     }
+    data.num_players = num_players;
     game_rules_set_multiplayer(&rules);
     // the port keeps the files of several games on one computer apart (tests)
     snprintf(data.saved_game, sizeof(data.saved_game), "mp-session-%d-p%d.%s", data.port, player,
