@@ -254,6 +254,31 @@ typedef enum {
     TR_MP_MAP_CHOICE_1,
     TR_MP_MAP_CHOICE_2,
     TR_MP_MAP_CHOICE_RANDOM,
+    TR_MP_STATUS_WAITING_PLAYERS,
+    TR_MP_STATUS_ALL_HERE_START,
+    TR_MP_STATUS_ALL_HERE,
+    TR_MP_STATUS_PAUSED,
+    TR_MP_STATUS_RUNNING,
+    TR_MP_STATUS_HOST_LOST,
+    TR_MP_STATUS_PLAYER_DISCONNECTED,
+    TR_MP_STATUS_DESYNC,
+    TR_MP_STATUS_MAP_NO_TRADE,
+    TR_MP_STATUS_CANNOT_COMPOSE,
+    TR_MP_STATUS_CANNOT_LOAD_START,
+    TR_MP_STATUS_STARTED,
+    TR_MP_STATUS_HOST_MESSAGE_INVALID,
+    TR_MP_STATUS_CANNOT_WRITE_SAVE,
+    TR_MP_STATUS_CANNOT_LOAD_SAVE,
+    TR_MP_STATUS_JOINED,
+    TR_MP_STATUS_REFUSED_DATA,
+    TR_MP_STATUS_REFUSED_VERSION,
+    TR_MP_STATUS_REFUSED_BY_HOST_DATA,
+    TR_MP_STATUS_REFUSED_BY_HOST_VERSION,
+    TR_MP_STATUS_NETWORK_INVALID,
+    TR_MP_STATUS_PLAYER_LEFT,
+    TR_MP_STATUS_CANNOT_OPEN_PORT,
+    TR_MP_STATUS_CANNOT_JOIN,
+    TR_MP_STATUS_CONNECTED,
     TRANSLATION_MAX_KEY,
 } translation_key;
 
@@ -265,6 +290,12 @@ typedef struct {
 void translation_load(language_type language);
 
 const uint8_t *translation_for(translation_key key);
+
+/**
+ * The same text as UTF-8, as written in the translation tables (for logs and for messages built outside the
+ * interface); empty when the key is unknown
+ */
+const char *translation_utf8_for(translation_key key);
 
 void translation_czech(const translation_string **strings, int *num_strings);
 void translation_english(const translation_string **strings, int *num_strings);

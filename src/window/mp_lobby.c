@@ -279,9 +279,20 @@ static void draw_foreground(void)
     text_draw(translation_for(TR_MP_HOST_TITLE), 16, 56, FONT_NORMAL_BLACK, 0);
     draw_files();
     int width = text_draw(translation_for(TR_MP_PLAYERS), 16, 285, FONT_NORMAL_BLACK, 0);
-    // a player who joined a game of the list sees its number of players, not his own choice
-    int joined = mp_lockstep_get_state() != MP_LOCKSTEP_OFF && !mp_lockstep_is_host() && data.joined_num_players;
-    text_draw_number(joined ? data.joined_num_players : data.num_players, 0, "", 16 + width, 285, FONT_NORMAL_BLACK);
+    // once hosting or joined, the number of players is the one of the game, read-only: a player who joined sees the
+    // number of the host, sent with its rules (a game joined from the list also gave it before: T4.11)
+    int in_game = mp_lockstep_get_state() != MP_LOCKSTEP_OFF;
+    int joined = in_game && !mp_lockstep_is_host();
+    int shown_players = data.num_players;
+    if (in_game) {
+        shown_players = mp_lockstep_lobby_num_players();
+        if (!shown_players && joined) {
+            shown_players = data.joined_num_players;
+        }
+    }
+    if (shown_players) {
+        text_draw_number(shown_players, 0, "", 16 + width, 285, FONT_NORMAL_BLACK);
+    }
     // a player who joined sees the rules of the host, and cannot change them (T4.11)
     const game_rules_settings *rules = mp_lobby_rules_shown();
     int editable = mp_lobby_rules_editable();
@@ -313,12 +324,17 @@ static void draw_foreground(void)
     int map_choice = rules->prepared_map >= GAME_MAP_1 && rules->prepared_map <= GAME_MAP_RANDOM ?
         rules->prepared_map : GAME_MAP_RANDOM;
     text_draw(translation_for(TR_MP_MAP_CHOICE_1 + map_choice), 194, 352, rule_font(BUTTON_MAP, editable), color);
-    draw_button(&action_buttons[BUTTON_LESS], string_from_ascii("-"), data.focus_action == BUTTON_LESS + 1);
-    draw_button(&action_buttons[BUTTON_MORE], string_from_ascii("+"), data.focus_action == BUTTON_MORE + 1);
+    // the choice of the number of players ends with "Host"; a player who joined has no game to host
+    if (!in_game) {
+        draw_button(&action_buttons[BUTTON_LESS], string_from_ascii("-"), data.focus_action == BUTTON_LESS + 1);
+        draw_button(&action_buttons[BUTTON_MORE], string_from_ascii("+"), data.focus_action == BUTTON_MORE + 1);
+    }
     // once hosting, the same button starts the game when every player is there
     int hosting = mp_lockstep_get_state() == MP_LOCKSTEP_WAITING_FOR_PLAYERS && mp_lockstep_is_host();
-    draw_button(&action_buttons[BUTTON_HOST], translation_for(hosting ? TR_MP_START : TR_MP_HOST_BUTTON),
-        data.focus_action == BUTTON_HOST + 1);
+    if (!joined) {
+        draw_button(&action_buttons[BUTTON_HOST], translation_for(hosting ? TR_MP_START : TR_MP_HOST_BUTTON),
+            data.focus_action == BUTTON_HOST + 1);
+    }
 
     // joining
     text_draw(translation_for(TR_MP_JOIN_TITLE), 336, 56, FONT_NORMAL_BLACK, 0);
@@ -371,6 +387,9 @@ static void button_select_file(int index, int param2)
 
 static void button_players(int change, int param2)
 {
+    if (mp_lockstep_get_state() != MP_LOCKSTEP_OFF) {
+        return; // hosting or joined: the number of players of the game is fixed
+    }
     if (data.selected_file != NEW_GAME && mp_savegame_num_players(data.files[data.selected_file]) > 0) {
         return; // fixed by the saved game
     }
@@ -423,7 +442,7 @@ static void button_host(int param1, int param2)
         return;
     }
     if (mp_lockstep_get_state() != MP_LOCKSTEP_OFF) {
-        return;
+        return; // a player who joined has no game to host
     }
     int new_game = data.selected_file == NEW_GAME;
     const char *file = new_game ? mp_mapgen_prepared_template() : data.files[data.selected_file];

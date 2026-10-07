@@ -33,3 +33,17 @@ const uint8_t *translation_for(translation_key key)
 {
     return (const uint8_t *) "";
 }
+
+// The tests play in French (the language of the project): the texts of the translation table, no other tables
+const char *translation_utf8_for(translation_key key)
+{
+    const translation_string *strings;
+    int num_strings;
+    translation_french(&strings, &num_strings);
+    for (int i = 0; i < num_strings; i++) {
+        if (strings[i].key == key) {
+            return strings[i].string;
+        }
+    }
+    return "";
+}

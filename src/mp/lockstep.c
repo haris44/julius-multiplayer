@@ -18,12 +18,14 @@
 #include "mp/session.h"
 #include "scenario/property.h"
 #include "platform/net.h"
+#include "translation/translation.h"
 
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#define PROTOCOL_VERSION 18 // 3: the rules of the game travel with the welcome message; 4: territories; 5: fog;
+#define PROTOCOL_VERSION 19 // 3: the rules of the game travel with the welcome message; 4: territories; 5: fog;
                             // 6: one forest map, games alone (D-044); 7: missions at the start (D-045);
                             // 8: a caravan per resource, the empire the dearer source (D-048);
                             // 9: wide places in messages, the missionary goes to the nearest walkable tile;
@@ -35,7 +37,8 @@
                             // 15: the price of Rome and the portorium, the empire always sells (D-060);
                             // 16: the prepared map in the rules, a second map for 2 and for 4 players (T4.14);
                             // 17: stock limits of the trade, a command and a piece of the state (T4.5, D-070);
-                            // 18: a monthly history of the laurels of each city (T4.1, D-071)
+                            // 18: a monthly history of the laurels of each city (T4.1, D-071);
+                            // 19: the number of players of the host in the rules of the lobby (T4.11)
 #define TURN_TICKS 4
 #define TURN_DELAY 2
 #define HISTORY 256
@@ -85,6 +88,7 @@ static struct {
     game_rules_settings rules; // host: rules of the game, sent to the clients
     game_rules_settings lobby_rules; // client: the rules of the host, shown in the lobby (MSG_RULES)
     int has_lobby_rules;
+    int lobby_num_players;           // client: the number of players of the host, with the rules (MSG_RULES)
     int paused;                // the host issues no turn while paused: every computer stops at the same tick
     int dropped[MP_LOCKSTEP_MAX_PLAYERS]; // host: players who left a running game, no longer waited for
     int tick_limit;            // tests: no tick runs from this absolute tick on (0: no limit)
@@ -106,27 +110,52 @@ static struct {
     mp_command pending[MAX_PENDING];
     int num_pending;
     void (*started_callback)(void);
-    char status[128];
+    char status[160];
+    int status_key;           // translation key of the status, -1 before the first one
 } data;
 
-static void set_status(const char *text)
+// The status texts are translated (T4.11): the key is kept for the tests, which have no translation tables.
+// A text carries its numbers and names as "%d" and "%s", replaced here in order (no printf: the text comes from a
+// translation table).
+static void set_status(translation_key key, ...)
 {
-    snprintf(data.status, sizeof(data.status), "%s", text);
+    const char *format = translation_utf8_for(key);
+    char *out = data.status;
+    char *end = data.status + sizeof(data.status) - 1;
+    va_list args;
+    va_start(args, key);
+    while (*format && out < end) {
+        if (format[0] == '%' && (format[1] == 'd' || format[1] == 's')) {
+            char number[16];
+            const char *value = number;
+            if (format[1] == 'd') {
+                snprintf(number, sizeof(number), "%d", va_arg(args, int));
+            } else {
+                value = va_arg(args, const char *);
+            }
+            while (*value && out < end) {
+                *out++ = *value++;
+            }
+            format += 2;
+        } else {
+            *out++ = *format++;
+        }
+    }
+    *out = 0;
+    va_end(args);
+    data.status_key = key;
     log_info("Multiplayer:", data.status, 0);
 }
 
 // Host, before the start: how many players are still awaited, kept up to date as they join
 static void set_waiting_status(void)
 {
-    char text[128];
     int missing = data.num_players - mp_lockstep_connected_players();
     if (missing > 0) {
-        snprintf(text, sizeof(text), "En attente de %d joueur(s) sur le port %d", missing, data.port);
+        set_status(TR_MP_STATUS_WAITING_PLAYERS, missing, data.port);
     } else {
-        snprintf(text, sizeof(text), "%s", data.manual_start ? "Tous les joueurs sont là : lancez la partie" :
-            "Tous les joueurs sont là");
+        set_status(data.manual_start ? TR_MP_STATUS_ALL_HERE_START : TR_MP_STATUS_ALL_HERE);
     }
-    set_status(text);
 }
 
 // ---------- messages ----------
@@ -160,15 +189,13 @@ static void drop_player(int player)
         return;
     }
     data.dropped[player] = 1;
-    char text[128];
-    snprintf(text, sizeof(text), "Le joueur %d s'est déconnecté : sa cité continue sans lui", player + 1);
-    set_status(text);
+    set_status(TR_MP_STATUS_PLAYER_DISCONNECTED, player + 1);
 }
 
 static void set_paused(int paused)
 {
     data.paused = paused;
-    set_status(paused ? "Partie en pause" : "Partie en cours");
+    set_status(paused ? TR_MP_STATUS_PAUSED : TR_MP_STATUS_RUNNING);
     if (data.is_host) {
         uint8_t payload[2] = { MSG_PAUSED, (uint8_t) paused };
         send_to_clients(payload, 2);
@@ -236,11 +263,12 @@ static int read_rules(buffer *buf, game_rules_settings *rules)
 // Host: the rules of the game to come, for the lobby of a player (they travel again with the welcome message)
 static void send_rules(int player)
 {
-    uint8_t payload[1 + 11 * 4];
+    uint8_t payload[1 + 12 * 4];
     buffer buf;
     buffer_init(&buf, payload, sizeof(payload));
     buffer_write_u8(&buf, MSG_RULES);
     write_rules(&buf, &data.rules);
+    buffer_write_i32(&buf, data.num_players);
     if (data.sockets[player] != NET_INVALID_SOCKET && !send_message(data.sockets[player], payload, buf.index)) {
         net_close(data.sockets[player]); // the place is free again (mp_lockstep_poll)
         data.sockets[player] = NET_INVALID_SOCKET;
@@ -280,9 +308,7 @@ static void desync(int turn)
     } else {
         game_file_write_saved_game(filename);
     }
-    char text[128];
-    snprintf(text, sizeof(text), "Désynchronisation au tour %d (état écrit dans %s)", turn, filename);
-    set_status(text);
+    set_status(TR_MP_STATUS_DESYNC, turn, filename);
 }
 
 // Host: compares every client checksum known for this turn with its own
@@ -327,7 +353,7 @@ static void client_sink(mp_command *command)
     mp_command_write(command, &buf);
     if (!send_message(data.sockets[0], payload, buf.index)) {
         data.state = MP_LOCKSTEP_DISCONNECTED;
-        set_status("Connexion à l'hôte perdue");
+        set_status(TR_MP_STATUS_HOST_LOST);
     }
 }
 
@@ -448,9 +474,8 @@ static void host_start_game(void)
         data.separate_cities = 1;
     }
     if (data.separate_cities && !host_compose_cities()) {
-        set_status(data.generate_map && mp_mapgen_lacks_trade_routes() ?
-            "La carte choisie ne commerce pas par terre et par mer : choisissez-en une autre" :
-            "Impossible de composer les cités des joueurs");
+        set_status(data.generate_map && mp_mapgen_lacks_trade_routes() ? TR_MP_STATUS_MAP_NO_TRADE :
+            TR_MP_STATUS_CANNOT_COMPOSE);
         data.state = MP_LOCKSTEP_DISCONNECTED;
         return;
     }
@@ -460,7 +485,7 @@ static void host_start_game(void)
     uint8_t *save;
     int save_size = read_file(data.saved_game, &save);
     if (!save_size || (!data.separate_cities && !game_file_load_saved_game(data.saved_game))) {
-        set_status("Impossible de charger la sauvegarde de départ");
+        set_status(TR_MP_STATUS_CANNOT_LOAD_START);
         data.state = MP_LOCKSTEP_DISCONNECTED;
         return;
     }
@@ -490,7 +515,7 @@ static void host_start_game(void)
     }
     free(payload);
     free(save);
-    set_status("Partie lancée");
+    set_status(TR_MP_STATUS_STARTED);
 }
 
 static void client_welcome(buffer *buf)
@@ -508,7 +533,7 @@ static void client_welcome(buffer *buf)
     if (buf->overflow || mode != GAME_MODE_MULTIPLAYER || !game_rules_settings_valid(&rules) ||
         num_players < 2 || num_players > MP_LOCKSTEP_MAX_PLAYERS || player < 0 || player >= num_players ||
         save_size <= 0 || save_size > buf->size - buf->index) {
-        set_status("Message de l'hôte invalide");
+        set_status(TR_MP_STATUS_HOST_MESSAGE_INVALID);
         data.state = MP_LOCKSTEP_DISCONNECTED;
         return;
     }
@@ -522,14 +547,14 @@ static void client_welcome(buffer *buf)
         if (fp) {
             fclose(fp);
         }
-        set_status("Impossible d'écrire la sauvegarde reçue");
+        set_status(TR_MP_STATUS_CANNOT_WRITE_SAVE);
         data.state = MP_LOCKSTEP_DISCONNECTED;
         return;
     }
     fclose(fp);
     int loaded = data.separate_cities ? mp_savegame_read(data.saved_game) : game_file_load_saved_game(data.saved_game);
     if (!loaded || (data.separate_cities && player >= player_context_num_players())) {
-        set_status("Impossible de charger la sauvegarde reçue");
+        set_status(TR_MP_STATUS_CANNOT_LOAD_SAVE);
         data.state = MP_LOCKSTEP_DISCONNECTED;
         return;
     }
@@ -540,9 +565,7 @@ static void client_welcome(buffer *buf)
         desync(-1);
         return;
     }
-    char text[64];
-    snprintf(text, sizeof(text), "Partie rejointe : joueur %d sur %d", player + 1, data.num_players);
-    set_status(text);
+    set_status(TR_MP_STATUS_JOINED, player + 1, data.num_players);
 }
 
 // ---------- receiving ----------
@@ -582,8 +605,7 @@ static void reject(int player, int reason)
     net_close(data.sockets[player]);
     data.sockets[player] = NET_INVALID_SOCKET;
     data.accepted[player] = 0;
-    set_status(reason == REJECT_GAME_DATA ? "Joueur refusé : données du jeu différentes" :
-        "Joueur refusé : version du jeu différente");
+    set_status(reason == REJECT_GAME_DATA ? TR_MP_STATUS_REFUSED_DATA : TR_MP_STATUS_REFUSED_VERSION);
 }
 
 static void handle_message(int from, uint8_t *payload, int size)
@@ -642,8 +664,14 @@ static void handle_message(int from, uint8_t *payload, int size)
         } else if (type == MSG_RULES && data.state == MP_LOCKSTEP_WAITING_FOR_PLAYERS) {
             game_rules_settings rules;
             if (read_rules(&buf, &rules)) {
+                int num_players = buffer_read_i32(&buf);
+                if (buf.overflow || num_players < 1 || num_players > MP_LOCKSTEP_MAX_PLAYERS) {
+                    log_error("Multiplayer: number of players of the host out of its bounds, ignored", 0, 0);
+                    return;
+                }
                 data.lobby_rules = rules;
                 data.has_lobby_rules = 1;
+                data.lobby_num_players = num_players;
             } else {
                 log_error("Multiplayer: rules of the host out of their bounds, ignored", 0, 0);
             }
@@ -653,9 +681,8 @@ static void handle_message(int from, uint8_t *payload, int size)
             set_paused(buffer_read_u8(&buf));
         } else if (type == MSG_REJECT) {
             data.state = MP_LOCKSTEP_DISCONNECTED;
-            set_status(buffer_read_u8(&buf) == REJECT_GAME_DATA ?
-                "Refusé par l'hôte : données du jeu différentes (c3_model.txt, empire)" :
-                "Refusé par l'hôte : version du jeu différente");
+            set_status(buffer_read_u8(&buf) == REJECT_GAME_DATA ? TR_MP_STATUS_REFUSED_BY_HOST_DATA :
+                TR_MP_STATUS_REFUSED_BY_HOST_VERSION);
         }
     }
 }
@@ -694,7 +721,7 @@ static void receive_from(int player)
         int length = buffer_read_i32(&header);
         if (length <= 0 || length > MAX_MESSAGE) {
             data.state = MP_LOCKSTEP_DISCONNECTED;
-            set_status("Message réseau invalide");
+            set_status(TR_MP_STATUS_NETWORK_INVALID);
             return;
         }
         if (rb->size - offset - 4 < length) {
@@ -710,10 +737,10 @@ static void receive_from(int player)
         if (data.is_host && data.state == MP_LOCKSTEP_RUNNING) {
             drop_player(player);
         } else if (data.is_host) {
-            set_status("Un joueur est parti avant le lancement"); // its place is free again
+            set_status(TR_MP_STATUS_PLAYER_LEFT); // its place is free again
         } else {
             data.state = MP_LOCKSTEP_DISCONNECTED;
-            set_status("Connexion à l'hôte perdue");
+            set_status(TR_MP_STATUS_HOST_LOST);
         }
     }
 }
@@ -724,6 +751,7 @@ static void reset(void)
 {
     mp_lockstep_stop();
     memset(&data, 0, sizeof(data));
+    data.status_key = -1;
     data.listener = NET_INVALID_SOCKET;
     for (int p = 0; p < MP_LOCKSTEP_MAX_PLAYERS; p++) {
         data.sockets[p] = NET_INVALID_SOCKET;
@@ -788,6 +816,17 @@ int mp_lockstep_rules_from_saved_game(void)
     return data.state != MP_LOCKSTEP_OFF && data.is_host && data.rules_from_save;
 }
 
+int mp_lockstep_lobby_num_players(void)
+{
+    if (data.state == MP_LOCKSTEP_OFF) {
+        return 0;
+    }
+    if (data.is_host) {
+        return data.num_players;
+    }
+    return data.has_lobby_rules ? data.lobby_num_players : 0;
+}
+
 const game_rules_settings *mp_lockstep_lobby_rules(void)
 {
     if (data.state == MP_LOCKSTEP_OFF) {
@@ -831,7 +870,7 @@ int mp_lockstep_host(int port, int num_players, const char *saved_game, int sepa
     if (num_players > 1) {
         data.listener = net_listen(port);
         if (data.listener == NET_INVALID_SOCKET) {
-            set_status("Impossible d'ouvrir le port réseau");
+            set_status(TR_MP_STATUS_CANNOT_OPEN_PORT);
             return 0;
         }
     }
@@ -855,7 +894,7 @@ int mp_lockstep_join(const char *address, int port)
         net_sleep(250);
     }
     if (data.sockets[0] == NET_INVALID_SOCKET) {
-        set_status("Impossible de joindre l'hôte");
+        set_status(TR_MP_STATUS_CANNOT_JOIN);
         return 0;
     }
     uint8_t payload[32];
@@ -868,7 +907,7 @@ int mp_lockstep_join(const char *address, int port)
     buffer_write_u32(&buf, (uint32_t) (fingerprint >> 32));
     send_message(data.sockets[0], payload, buf.index);
     data.state = MP_LOCKSTEP_WAITING_FOR_PLAYERS;
-    set_status("Connecté, en attente du lancement par l'hôte");
+    set_status(TR_MP_STATUS_CONNECTED);
     return 1;
 }
 
@@ -987,7 +1026,7 @@ void mp_lockstep_after_tick(void)
         buffer_write_u32(&buf, (uint32_t) (checksum >> 32));
         if (!send_message(data.sockets[0], payload, buf.index)) {
             data.state = MP_LOCKSTEP_DISCONNECTED;
-            set_status("Connexion à l'hôte perdue");
+            set_status(TR_MP_STATUS_HOST_LOST);
         }
     }
 }
@@ -1025,7 +1064,7 @@ void mp_lockstep_request_pause(int paused)
         uint8_t payload[2] = { MSG_PAUSE_REQUEST, (uint8_t) paused };
         if (!send_message(data.sockets[0], payload, 2)) {
             data.state = MP_LOCKSTEP_DISCONNECTED;
-            set_status("Connexion à l'hôte perdue");
+            set_status(TR_MP_STATUS_HOST_LOST);
         }
     }
 }
@@ -1065,6 +1104,11 @@ int mp_lockstep_is_active(void)
 mp_lockstep_state mp_lockstep_get_state(void)
 {
     return data.state;
+}
+
+int mp_lockstep_status_key(void)
+{
+    return data.status_key;
 }
 
 const char *mp_lockstep_status(void)

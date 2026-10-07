@@ -10,6 +10,7 @@
 
 static struct {
     uint8_t *strings[TRANSLATION_MAX_KEY];
+    const char *utf8[TRANSLATION_MAX_KEY];
     uint8_t buffer[BUFFER_SIZE];
     int buf_index;
 } data;
@@ -27,6 +28,7 @@ static void set_strings(const translation_string *strings, int num_strings, int 
         int length_left = BUFFER_SIZE - data.buf_index;
         encoding_from_utf8(string->string, &data.buffer[data.buf_index], length_left);
         data.strings[string->key] = &data.buffer[data.buf_index];
+        data.utf8[string->key] = string->string;
         data.buf_index += 1 + string_length(&data.buffer[data.buf_index]);
     }
 }
@@ -90,6 +92,7 @@ void translation_load(language_type language)
     }
 
     memset(data.strings, 0, sizeof(data.strings));
+    memset(data.utf8, 0, sizeof(data.utf8));
     data.buf_index = 0;
     set_strings(strings, num_strings, 0);
     set_strings(default_strings, num_default_strings, 1);
@@ -98,4 +101,9 @@ void translation_load(language_type language)
 const uint8_t *translation_for(translation_key key)
 {
     return data.strings[key];
+}
+
+const char *translation_utf8_for(translation_key key)
+{
+    return data.utf8[key] ? data.utf8[key] : "";
 }

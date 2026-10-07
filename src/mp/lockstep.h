@@ -47,6 +47,13 @@ void mp_lockstep_set_rules(const game_rules_settings *rules);
 const game_rules_settings *mp_lockstep_lobby_rules(void);
 
 /**
+ * Number of players of the game being prepared: the host's own choice, or the one the host sent to this client with
+ * the rules, which a client who joined by address could not know otherwise (T4.11); 0 before it comes, or without a
+ * network game
+ */
+int mp_lockstep_lobby_num_players(void);
+
+/**
  * Host: whether the game hosted goes on from a multiplayer saved game (.mpsav), which keeps its saved rules: the
  * lobby shows them and cannot change them (doc/mp/DECISIONS.md D-073)
  */
@@ -137,9 +144,15 @@ int mp_lockstep_connected_players(void);
 mp_lockstep_state mp_lockstep_get_state(void);
 
 /**
- * @return Short description of the current state, for display and logs
+ * @return Short description of the current state, for display and logs: in the language of the game, in UTF-8
  */
 const char *mp_lockstep_status(void);
+
+/**
+ * @return The translation key (translation_key) of the status, -1 before the first one; the tests compare the keys,
+ * the texts depend on the language
+ */
+int mp_lockstep_status_key(void);
 
 /**
  * @return Number of the last turn whose checksum was verified identical on every computer (host only)

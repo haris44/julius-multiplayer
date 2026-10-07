@@ -61,6 +61,9 @@ if [ "$MODE" = "rules" ]; then
     SEEN=$(grep -h "^game rules:" "$DIR"/*.log | wc -l | tr -d ' ')
     DIFFERENT=$(grep -h "^game rules:" "$DIR"/*.log | sort -u | wc -l | tr -d ' ')
     [ "$SEEN" = "$PLAYERS" ] && [ "$DIFFERENT" = "1" ] || { echo "The players do not play with the same rules"; FAILED=1; }
+    # every player, the clients having joined by address, saw the number of players of the host in his lobby (T4.11)
+    SEEN=$(grep -h "^lobby players: $PLAYERS\$" "$DIR"/*.log | wc -l | tr -d ' ')
+    [ "$SEEN" = "$PLAYERS" ] || { echo "The players do not all see $PLAYERS players in their lobby"; FAILED=1; }
 fi
 if [ -n "$MAP2" ]; then
     # every log must prove the map by its width: map 2 is 220 tiles wide for 2 players and 240 for 3 or 4

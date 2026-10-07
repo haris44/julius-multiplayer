@@ -48,6 +48,7 @@ add_executable(autopilot
     stub/lang.c
     stub/log.c
     stub/model.c
+    ${PROJECT_SOURCE_DIR}/src/translation/french.c
     stub/sound_device.c
     stub/ui.c
     stub/video.c
@@ -74,6 +75,7 @@ add_executable(simtool
     stub/input.c
     stub/lang.c
     stub/model.c
+    ${PROJECT_SOURCE_DIR}/src/translation/french.c
     stub/sound_device.c
     stub/ui.c
     stub/video.c
@@ -282,6 +284,8 @@ endforeach()
 foreach(save inv0 kknight)
     add_test(NAME mp_ai_invasions_${save} COMMAND simtool aiinvasions ${save}.sav 20000)
 endforeach()
+# T4.11: the status texts of the network game are translated, with the same numbers in French and in English
+add_test(NAME mp_status_translations COMMAND translationcheck)
 # T4.4, T4.11: the lobby proposes an easy game; a game hosted alone starts with the rules changed after "Host"
 add_test(NAME mp_lobby_rules COMMAND simtool lobbyrules tower.sav)
 # K-review-fixes (T4.11): a player refuses rules of the host out of their bounds (lobby and welcome message)

@@ -52,6 +52,7 @@
 #include "map/grid.h"
 #include "figure/route.h"
 #include "mp/audit.h"
+#include "translation/translation.h"
 #include "map/road_network.h"
 #include "map/routing.h"
 #include "map/routing_path.h"
@@ -684,6 +685,7 @@ static int command_mpnode(int argc, char **argv)
     lobby_rules |= is_join && argc >= 7 && strcmp(argv[6], "rules") == 0;
     game_rules_settings rules_at_host = { 0 }, rules_changed = { 0 };
     int rules_were_changed = 0;
+    int lobby_players_in_lobby = 0; // the number of players of the host, as the lobby of a client showed it (T4.11)
     if (lobby_rules && is_host) {
         mp_lobby_rules_init();
         mp_lobby_rules_settings(&rules_at_host);
@@ -719,7 +721,8 @@ static int command_mpnode(int argc, char **argv)
         if (state == MP_LOCKSTEP_DESYNC || state == MP_LOCKSTEP_DISCONNECTED) {
             break;
         }
-        if (expect_reject && strstr(mp_lockstep_status(), "refusé")) {
+        if (expect_reject && (mp_lockstep_status_key() == TR_MP_STATUS_REFUSED_DATA ||
+            mp_lockstep_status_key() == TR_MP_STATUS_REFUSED_VERSION)) {
             printf("status: %s\n", mp_lockstep_status());
             mp_lockstep_stop();
             return 0;
@@ -730,6 +733,9 @@ static int command_mpnode(int argc, char **argv)
             mp_lobby_rules_settings(&rules_changed);
             rules_were_changed = 1;
             mp_lobby_start_game();
+        }
+        if (!lobby_players_in_lobby && state == MP_LOCKSTEP_WAITING_FOR_PLAYERS) {
+            lobby_players_in_lobby = mp_lockstep_lobby_num_players();
         }
         if (state == MP_LOCKSTEP_RUNNING && start_tick < 0) {
             start_tick = mp_lockstep_base_tick();
@@ -806,7 +812,8 @@ static int command_mpnode(int argc, char **argv)
     }
     if (bad_data) {
         printf("status: %s\n", mp_lockstep_status());
-        return strstr(mp_lockstep_status(), "Refusé") ? 0 : 1;
+        return mp_lockstep_status_key() == TR_MP_STATUS_REFUSED_BY_HOST_DATA ||
+            mp_lockstep_status_key() == TR_MP_STATUS_REFUSED_BY_HOST_VERSION ? 0 : 1;
     }
     if (leaver) {
         printf("left the game at tick %d\n", game_time_absolute_tick() - start_tick);
@@ -846,6 +853,7 @@ static int command_mpnode(int argc, char **argv)
         if (is_host) {
             print_lobby_rules("rules when hosting", &rules_at_host);
             print_lobby_rules("rules at the start", &rules_changed);
+            printf("lobby players: %d\n", mp_lockstep_lobby_num_players());
             if (!rules_were_changed || !every_lobby_rule_differs(&rules_at_host, &rules_changed) ||
                 !same_lobby_rules(game, &rules_changed)) {
                 printf("WRONG: the game does not play with the rules changed after hosting\n");
@@ -863,6 +871,13 @@ static int command_mpnode(int argc, char **argv)
             }
             if (!mp_lockstep_lobby_rules() || !same_lobby_rules(shown, game)) {
                 printf("WRONG: the lobby of this player did not show the rules of the game\n");
+                result = 0;
+            }
+            // a client who joined by address (as here) sees the number of players of the host, which came with the
+            // rules, while he was still in the lobby; lan_test.sh compares it with the number the host asked for
+            printf("lobby players: %d\n", lobby_players_in_lobby);
+            if (lobby_players_in_lobby != mp_lockstep_lobby_num_players()) {
+                printf("WRONG: the number of players of the host changed after the lobby\n");
                 result = 0;
             }
         }
@@ -1563,6 +1578,16 @@ static int command_lobbyrules(const char *file)
         printf("FAILED: %s\n", mp_lockstep_status());
         return 1;
     }
+    // the status is a translated text (T4.11); the tests, which play in French, compare the key and the text
+    if (mp_lockstep_status_key() != TR_MP_STATUS_ALL_HERE || strcmp(mp_lockstep_status(), "Tous les joueurs sont là")) {
+        printf("WRONG: status %d \"%s\" of a game hosted alone\n", mp_lockstep_status_key(), mp_lockstep_status());
+        result = 1;
+    }
+    // the number of players of the game, which the lobby of the host shows read-only (T4.11)
+    if (mp_lockstep_lobby_num_players() != 1) {
+        printf("WRONG: %d players in the lobby of a game hosted alone\n", mp_lockstep_lobby_num_players());
+        result = 1;
+    }
     mp_lockstep_set_manual_start(1);
     change_every_lobby_rule();
     game_rules_settings changed;
@@ -1583,10 +1608,31 @@ static int command_lobbyrules(const char *file)
         printf("WRONG: the game does not start with the rules changed after hosting\n");
         result = 1;
     }
+    if (mp_lockstep_status_key() != TR_MP_STATUS_STARTED || strcmp(mp_lockstep_status(), "Partie lancée")) {
+        printf("WRONG: status %d \"%s\" after the start\n", mp_lockstep_status_key(), mp_lockstep_status());
+        result = 1;
+    }
     mp_lockstep_stop();
     char name[64];
     snprintf(name, sizeof(name), "mp-session-%d-p0.mpsav", port);
     remove(name);
+    // two players awaited: the status counts them, with their numbers inside the translated text (T4.11)
+    player_context_switch(0);
+    player_context_set_num_players(1);
+    mp_lockstep_set_rules(&lobby);
+    if (!mp_lockstep_host(port, 2, file, 1)) {
+        printf("FAILED: %s\n", mp_lockstep_status());
+        return 1;
+    }
+    char waiting[80];
+    snprintf(waiting, sizeof(waiting), "En attente de 1 joueur(s) sur le port %d", port);
+    if (mp_lockstep_status_key() != TR_MP_STATUS_WAITING_PLAYERS || strcmp(mp_lockstep_status(), waiting) ||
+        mp_lockstep_lobby_num_players() != 2) {
+        printf("WRONG: status %d \"%s\", %d players, for a game of 2 players hosted alone\n",
+            mp_lockstep_status_key(), mp_lockstep_status(), mp_lockstep_lobby_num_players());
+        result = 1;
+    }
+    mp_lockstep_stop();
     return result;
 }
 
@@ -1732,18 +1778,20 @@ static int command_mapchoice(const char *file)
     return failures ? 1 : 0;
 }
 
-// K-review-fixes: a host sends the lobby of a player some rules; NUMBERS are the ten integers of the message
-static int send_raw_rules(int socket, const int *numbers)
+// K-review-fixes: a host sends the lobby of a player some rules; NUMBERS are the ten integers of the message, then
+// the prepared map and the number of players of the host (T4.11)
+static int send_raw_rules(int socket, const int *numbers, int num_players)
 {
-    uint8_t payload[4 + 1 + 11 * 4];
+    uint8_t payload[4 + 1 + 12 * 4];
     buffer buf;
     buffer_init(&buf, payload, sizeof(payload));
-    buffer_write_i32(&buf, 1 + 11 * 4);
+    buffer_write_i32(&buf, 1 + 12 * 4);
     buffer_write_u8(&buf, 10); // MSG_RULES of mp/lockstep.c
     for (int i = 0; i < 10; i++) {
         buffer_write_i32(&buf, numbers[i]);
     }
     buffer_write_i32(&buf, GAME_MAP_1); // the prepared map (T4.14)
+    buffer_write_i32(&buf, num_players);
     return net_send(socket, payload, buf.index);
 }
 
@@ -1796,7 +1844,7 @@ static int command_badrules(int port)
         { 1, 1, 0, 0, 1, 0, 10, 1, 1, -5 }
     };
     for (int i = 0; i < (int) (sizeof(bad) / sizeof(bad[0])); i++) {
-        send_raw_rules(host, bad[i]);
+        send_raw_rules(host, bad[i], 3);
         poll_lockstep_for(100);
         const game_rules_settings *seen = mp_lockstep_lobby_rules();
         const game_rules_settings *shown = mp_lobby_rules_shown();
@@ -1813,8 +1861,23 @@ static int command_badrules(int port)
         }
     }
     const int good[10] = { DIFFICULTY_VERY_HARD, 0, 1, 1, 0, GAME_END_CAESAR, 5, 1, 0, 1500 };
-    send_raw_rules(host, good);
+    // a number of players out of 1 to 4 spoils the message (T4.11): nothing of it reaches the lobby
+    const int bad_players[] = { 0, 5, -2, 1000000 };
+    for (int i = 0; i < (int) (sizeof(bad_players) / sizeof(bad_players[0])); i++) {
+        send_raw_rules(host, good, bad_players[i]);
+        poll_lockstep_for(100);
+        if (mp_lockstep_lobby_num_players() != 0 ||
+            (mp_lockstep_lobby_rules() && mp_lockstep_lobby_rules()->difficulty == DIFFICULTY_VERY_HARD)) {
+            printf("WRONG: %d players of the host reach the lobby of the player\n", bad_players[i]);
+            result = 1;
+        }
+    }
+    send_raw_rules(host, good, 3);
     poll_lockstep_for(100);
+    if (mp_lockstep_lobby_num_players() != 3) {
+        printf("WRONG: the lobby of the player shows %d players, the host sent 3\n", mp_lockstep_lobby_num_players());
+        result = 1;
+    }
     const game_rules_settings *seen = mp_lockstep_lobby_rules();
     if (!seen) {
         printf("WRONG: valid rules do not reach the lobby of the player\n");
@@ -1882,7 +1945,7 @@ static int command_badrules(int port)
         printf("after a welcome with %s: state %d, %s\n", welcomes[w].what, mp_lockstep_get_state(),
             mp_lockstep_status());
         if (mp_lockstep_get_state() != MP_LOCKSTEP_DISCONNECTED ||
-            strcmp(mp_lockstep_status(), "Message de l'hôte invalide") != 0) {
+            mp_lockstep_status_key() != TR_MP_STATUS_HOST_MESSAGE_INVALID) {
             printf("WRONG: a welcome message with %s is not refused\n", welcomes[w].what);
             result = 1;
         }
