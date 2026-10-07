@@ -299,6 +299,18 @@ c'est là qu'on lit ce qui s'est passé chez Alexandre sans ouvrir de fenêtre.
   (`lan_test.sh … saveresume`) : les joueurs commercent, sauvegardent comme le menu Fichier, l'hôte héberge sa
   sauvegarde comme le salon dans le même processus, les autres rejoignent, le dernier remplacé par un nouveau
   processus ; mêmes sommes de contrôle et même commerce pour tous.
+- **Reprise de la sauvegarde mensuelle** (T5.3, ctest) : `mp_lan_autosave_resume_3_players`
+  (`lan_test.sh … autosaveresume`) : l'hôte reprend `lan-autosave-PORT-PID.mpsav`, la sauvegarde du début du mois que
+  nomme le message de désynchronisation, et non celle du menu Fichier. Le test vérifie que la partie reprise démarre
+  au début d'un mois postérieur au premier départ, puis que les trois joueurs finissent avec la même somme de contrôle.
+  (`host_start_game` lit ce fichier puis le réécrit par `mp_lockstep_autosave` : la reprise de lui-même fonctionne.)
+- **Aucune fenêtre n'écrit dans la partie** (T5.3, ctest) : `mp_window_writes_brugle-lugdunum`
+  (`simtool windowwrites`) : sans données du jeu ni graphique, session réseau, dieu en colère comme `angrygod`,
+  calcul du conseiller de la religion (`city_gods_least_happy_shown`, appelé par son `draw_background`) : la somme de
+  contrôle ne change pas ; hors réseau, elle change (le contrôle prouve que le test voit l'écriture). Constaté en
+  inversant la condition de la garde : le test échoue. Il ne remplace pas `windowsweep`, qui ouvre toutes les fenêtres
+  mais exige les données : **avant tout commit qui touche `src/window/`, lancer `tools/serial.sh
+  tools/mp-sweep-test.sh`** (ni `check.sh` ni la CI ne lancent `windowsweep`).
 
 ## 4. Tests à construire (voir ROADMAP)
 

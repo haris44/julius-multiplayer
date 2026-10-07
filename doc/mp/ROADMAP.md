@@ -756,6 +756,16 @@ Les journaux de l'essai ne sont pas sur le Mac de développement : diagnostic pa
   cours), et le message de désynchronisation dit de reprendre depuis le salon quand ce fichier est bien celui de la
   partie. Test `tools/mp-resume-test.sh` (vrai jeu, deux joueurs depuis le salon : désynchronisation
   provoquée, retour au menu, reprise hébergée et rejointe depuis le salon, sans désynchronisation).
+  *Revue (reliquats)* : (1) `mp_lan_autosave_resume_3_players` reprend en ctest la sauvegarde **mensuelle** de l'hôte
+  (`lan-autosave-PORT-PID.mpsav`, pas celle du menu Fichier) avec les clients qui rejoignent : la partie reprise
+  démarre au début d'un mois (tick 153 600 après un premier départ au tick 153 084) et les trois joueurs finissent avec
+  la même somme de contrôle. Reprendre ce fichier alors que `host_start_game` le lit puis le réécrit fonctionne.
+  (2) `mp_window_writes_brugle-lugdunum` (`simtool windowwrites`, sans données du jeu, donc lancé par `check.sh` et la
+  CI) : session réseau, dieu en colère comme `angrygod`, calcul du conseiller de la religion
+  (`city_gods_least_happy_shown`, la fonction que son `draw_background` appelle désormais) : somme de contrôle
+  inchangée ; échoue si la garde est inversée (constaté). Limite : ce test ne couvre que le conseiller de la religion,
+  pas les 142 fenêtres de `windowsweep` ; **avant tout commit touchant `src/window/`, lancer `tools/serial.sh
+  tools/mp-sweep-test.sh`**.
 - [x] **T5.4** Impossible de charger une partie sauvegardée.
   *Fait* (D-074) : en multijoueur, « Sauvegarder » écrit un `.mpsav`, que la fenêtre « Charger » ne montrait pas
   (elle ne liste que les `.sav`), et le salon restait bloqué après une partie (T5.3). « Charger » liste maintenant
