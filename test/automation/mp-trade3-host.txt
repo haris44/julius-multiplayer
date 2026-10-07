@@ -1,57 +1,60 @@
-# Real game, network game of three players from the lobby (host, player 1; see tools/mp-trade3-test.sh): on the trade
-# page, each player proposes a route to the two others and buys marble from the first and iron from the second, by
-# clicks only. A month later the page tells why no caravan left: nobody has any to sell yet (T5.7)
+# Real game, network game of three players from the lobby (host, player 1; see tools/mp-trade3-test.sh). The host
+# loads the game written by "simtool tradesave" (a warehouse for each player, marble and iron for player 2) from the
+# main menu, which opens the lobby with it, and hosts it. On the trade page (T5.6), each player proposes a route to the
+# two others and buys marble from the first and iron from the second, by clicks only (T5.7). The page stays open while
+# the game runs: the caravans of player 2 leave and arrive, the other purchases say why nothing leaves.
 wait 10
 click 400 500
 wait 10
-# main menu: Multiplayer
-click 400 172
+# main menu: Load game; the multiplayer saved game opens the lobby, with that game chosen (T5.4)
+click 400 252
 wait 10
-# a new game for three players (the + of the number of players), then Host
-click 180 170
+text essai trade3
 wait 2
-click 300 350
-wait 2
+key Return
+wait 10
+lobbyselected essai trade3.mpsav
+# Host; the two clients find the game and join; then the host starts it with the same button
 click 240 466
-# the two clients find the game and join; then the host starts it with the same button
 mpplayers 3
 wait 5
 click 240 466
 mpwait 0
-# Caesar's letter at the start of the game (doc/mp/CESAR.md §11): read, then closed
+# Caesar's letter, if any: closed
 wait 3
 key Return
 wait 2
-speed 300
-mpwait 300
-# the trade advisor, on the tab of the first other player: propose the route, buy marble
+speed 500
+mpwait 200
+# the trade advisor (800 x 600: the page at 80, 60), on the tab of the first other player (player 2): propose the
+# route from the button in the corner of the title, buy marble (the button "I buy" of its row)
 key 5
 wait 5
-click 600 104
+click 590 81
 wait 20
-click 598 357
+click 570 357
 wait 20
-# the tab of the second other player: propose the route, buy iron
-click 575 81
+# the tab of the second other player (player 3): propose the route, buy iron
+click 408 111
 wait 10
-click 600 104
+click 590 81
 wait 20
-click 598 303
+click 570 301
 wait 10
 screenshot build/automation/trade3-host-asked.png
-rclick 400 300
+# the page stays open: the game runs on, and no message of the month comes over it. The first departures are at the
+# start of the next month; the caravan of player 2 is on its way a month later
+mpwait 1700
+click 300 111
 wait 5
-# past the first day of a month: the caravans would have left
-mpwait 2600
-# a message of the month may be open: closed first
-rclick 400 300
-wait 5
-key 5
+screenshot build/automation/trade3-host-on-the-way.png
+# months later (mpwait counts the ticks from the start), the caravans of player 2 have arrived: marble to player 1
+# (the closest pair of map 1 for three players, four to five months on the road), iron to player 3 (a month more)
+mpwait 6400
+screenshot build/automation/trade3-host-delivered.png
+click 408 111
 wait 5
 screenshot build/automation/trade3-host-reasons.png
-click 575 81
-wait 5
-screenshot build/automation/trade3-host-reasons-2.png
 mpcheck
 wait 300
 quit

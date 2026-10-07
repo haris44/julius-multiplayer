@@ -61,9 +61,19 @@ screenshot build/automation/ui-host-empire.png
 click 328 51
 wait 5
 screenshot build/automation/ui-host-stocks.png
+# the tab of player 2: propose the route, buy marble; a month later the column "On the way" says why nothing left
+# (player 2 has no marble), in the small font, within its column (T5.7, T5.6)
+click 220 51
+wait 5
+click 510 21
+wait 10
+click 490 297
+wait 5
+speed 500
+mpwait 1700
+screenshot build/automation/ui-host-reasons.png
 key Escape
 wait 2
-mpwait 300
 mpcheck
 # keep the game running a little so that the client reaches its own check
 wait 200

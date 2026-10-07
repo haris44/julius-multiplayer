@@ -11,10 +11,10 @@ DATA_DIR=${C3_DATA_DIR:-$ROOT/../donnees-c3}
 . tools/mp-autosave-guard.sh
 mp_keep_autosave
 mkdir -p build/automation
-tools/run-automation.sh test/automation/mp-ui-host.txt 240 > build/automation/mp-ui-host.log 2>&1 &
+tools/run-automation.sh test/automation/mp-ui-host.txt 400 > build/automation/mp-ui-host.log 2>&1 &
 HOST=$!
 sleep 2
-tools/run-automation.sh test/automation/mp-ui-client.txt 240 > build/automation/mp-ui-client.log 2>&1
+tools/run-automation.sh test/automation/mp-ui-client.txt 400 > build/automation/mp-ui-client.log 2>&1
 CLIENT_STATUS=$?
 wait $HOST
 HOST_STATUS=$?
@@ -23,8 +23,8 @@ grep -h -E "mpcheck|automation\] .*(fail|timed|stopped)" build/automation/mp-ui-
 rm -f "$DATA_DIR"/mp-session-* "$DATA_DIR"/mp-desync-*
 mp_restore_autosave
 MISSING=0
-for shot in host-lobby host-city host-farms host-raw host-imperial host-ratings host-stocks \
-    client-lobby client-farms client-raw client-options client-ratings client-trade; do
+for shot in host-lobby host-city host-farms host-raw host-imperial host-ratings host-stocks host-reasons \
+    client-lobby client-farms client-raw client-options client-ratings client-trade client-reasons; do
     [ -s "build/automation/ui-$shot.png" ] || { echo "missing screenshot ui-$shot.png"; MISSING=1; }
 done
 if [ $HOST_STATUS -ne 0 ] || [ $CLIENT_STATUS -ne 0 ] || [ $MISSING -ne 0 ]; then

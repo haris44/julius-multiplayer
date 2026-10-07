@@ -410,6 +410,8 @@ foreach(players 2 3 4)
     add_test(NAME mp_trade_every_player_${players}_players COMMAND simtool tradegame brugle-massilia-start.sav ${players})
     add_test(NAME mp_trade_every_player_map2_${players}_players COMMAND simtool --map 2 tradegame brugle-massilia-start.sav ${players})
 endforeach()
+# T5.7: the game that tools/mp-trade3-test.sh hosts in the real game (three players, a warehouse each, goods to sell)
+add_test(NAME mp_trade3_save COMMAND simtool tradesave brugle-massilia-start.sav mp-trade3-ctest.mpsav)
 # T5.7: a first warehouse of the buyer on a road of its own does not stop the caravans to his other warehouses
 add_test(NAME mp_trade_warehouse_apart COMMAND simtool tradewarehouse brugle-massilia-start.sav 3)
 add_test(NAME mp_trade_warehouse_apart_map2 COMMAND simtool --map 2 tradewarehouse brugle-massilia-start.sav 2)

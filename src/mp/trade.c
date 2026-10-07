@@ -626,6 +626,11 @@ static void deliver(figure *f)
         building_warehouses_add_resource(resource, loads - stored);
     }
     f->loads_sold_or_carrying = 0;
+    // in the log of every computer: the caravans that arrive, for the tests in the real game and the next trials
+    char text[100];
+    snprintf(text, sizeof(text), "player %d to player %d, resource %d: %d of %d loads delivered for %d Dn",
+        seller + 1, buyer + 1, resource, stored, loads, stored * price);
+    log_info("Trade between players:", text, 0);
     if (buyer == mp_session_local_player_id()) {
         tell_delivery(seller, resource, stored, stored * price);
     }

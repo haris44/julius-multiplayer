@@ -186,6 +186,8 @@ static int usage(void)
     printf("  simtool traderesume SAVE               a game saved while caravans travel goes on the same\n");
     printf("  simtool tradegame SAVE [PLAYERS [DRAW]]  every player sells to every other in a game started as from the\n");
     printf("                                         lobby: a caravan every month for each resource bought (T5.7)\n");
+    printf("  simtool tradesave SAVE OUT             writes the game of tools/mp-trade3-test.sh: three players, a\n");
+    printf("                                         warehouse each, marble and iron to sell for player 2\n");
     printf("  simtool tradewarehouse SAVE [PLAYERS [DRAW]]  a first warehouse apart does not stop the caravans\n");
     printf("  simtool tradestatus SAVE [PLAYERS [DRAW]]  why no caravan leaves, as the trade page shows it\n");
     printf("  simtool caesarstate SAVE               laurels and wrath of Caesar: in the checksum, saved, resumed\n");
@@ -5387,6 +5389,51 @@ static int command_tradegame(const char *file, int num_players, unsigned int see
     return failures ? 1 : 0;
 }
 
+// The game of tools/mp-trade3-test.sh (T5.7, T5.6): three players on map 1, started as from the lobby (easy), each
+// with a warehouse at the end of a road of his own joined to the main road of Caesar; player 2 has 16 loads of marble
+// and 16 of iron to sell, players 1 and 3 keep theirs. Written to OUT, which the real game hosts from the lobby: the
+// players open their routes and buy by clicks, and the caravans of player 2 must leave and arrive in the real game.
+static int command_tradesave(const char *file, const char *out)
+{
+    if (!start_tradegame(file, 3, 0, "save")) {
+        return 2;
+    }
+    int failures = 0;
+#define CHECK(condition, text) do { int ok_ = (condition); printf("%-70s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
+    int warehouses[3] = { 0 };
+    for (int p = 0; p < 3; p++) {
+        warehouses[p] = build_warehouse_off_main_road(p, 1);
+    }
+    CHECK(warehouses[0] && warehouses[1] && warehouses[2], "every player has a warehouse joined to the main road");
+    run_trace(50, 50, 0, 0); // the warehouses come into use, their road networks are known
+    if (warehouses[1]) {
+        set_stock(1, warehouses[1], RESOURCE_MARBLE, 16);
+        set_stock(1, warehouses[1], RESOURCE_IRON, 16);
+    }
+    // players 1 and 3 keep what they receive (they sell nothing below 40 loads), as the script buys in a ring: the
+    // pages show the stock delivered instead of passing it on
+    for (int p = 0; p < 3; p += 2) {
+        city_action(p, MP_ACTION_CHANGE_EXPORT_OVER, RESOURCE_MARBLE, 40, 0);
+        city_action(p, MP_ACTION_CHANGE_EXPORT_OVER, RESOURCE_IRON, 40, 0);
+    }
+    player_context_switch(2);
+    int kept = city_resource_export_over(RESOURCE_IRON);
+    player_context_switch(0);
+    CHECK(stock_of(1, RESOURCE_MARBLE) == 16 && stock_of(1, RESOURCE_IRON) == 16 &&
+        city_resource_export_over(RESOURCE_MARBLE) == 40 && kept == 40,
+        "player 2 has 16 loads of marble and 16 of iron, players 1 and 3 keep 40");
+    CHECK(mp_savegame_write(out), "the game is written");
+    uint64_t written = mp_checksum_state();
+    CHECK(mp_savegame_read(out) && mp_checksum_state() == written && stock_of(1, RESOURCE_MARBLE) == 16 &&
+        player_context_num_players() == 3, "and reads back the same, for three players");
+    player_context_switch(0);
+    player_context_set_num_players(1);
+#undef CHECK
+    printf("%s\n", failures ? "FAILED: the game of mp-trade3-test.sh was not written" :
+        "Written: the game of mp-trade3-test.sh");
+    return failures ? 1 : 0;
+}
+
 // A buyer whose first warehouse stands on a road of its own, not joined to the main road (a quarter not yet joined,
 // a harbour), and whose second one is joined to it: the caravans go to the second (T5.7)
 static int command_tradewarehouse(const char *file, int num_players, unsigned int seed)
@@ -8459,6 +8506,8 @@ int main(int argc, char **argv)
         result = command_tradeconservation(file);
     } else if (strcmp(command, "tradegame") == 0) {
         result = command_tradegame(file, argc > 3 ? atoi(argv[3]) : 3, argc > 4 ? (unsigned int) atoi(argv[4]) : 0);
+    } else if (strcmp(command, "tradesave") == 0) {
+        result = argc > 3 ? command_tradesave(file, argv[3]) : usage();
     } else if (strcmp(command, "tradewarehouse") == 0) {
         result = command_tradewarehouse(file, argc > 3 ? atoi(argv[3]) : 3, argc > 4 ? (unsigned int) atoi(argv[4]) : 0);
     } else if (strcmp(command, "tradestatus") == 0) {

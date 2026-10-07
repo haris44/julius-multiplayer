@@ -800,6 +800,13 @@ Les journaux de l'essai ne sont pas sur le Mac de développement : diagnostic pa
   vrai jeu la ligne de la route et son bouton se dessinaient l'un sur l'autre (redessinés quand l'état change). Tests
   `mp_trade_every_player_*`, `mp_trade_warehouse_apart*`, `mp_trade_purchase_state`, `tools/mp-trade3-test.sh`
   (trois vrais jeux depuis le salon, routes et achats par clics). Protocole 20 (21 avec T5.8).
+  *Dans le vrai jeu* (intégration T5.5 à T5.8) : `tools/mp-trade3-test.sh` faisait ses captures « raisons » sur une
+  fiche du terrain (le clic droit dans la ville l'ouvrait, puis la touche 5 ne faisait rien) et ne voyait partir aucune
+  caravane (personne n'avait rien à vendre). Désormais l'hôte charge depuis le menu principal une partie à trois écrite
+  par `simtool tradesave` (un entrepôt relié par joueur, marbre et fer chez J2), la page reste ouverte, et le script
+  vérifie dans le journal des trois machines que les caravanes de J2 partent et livrent, payées, 8 marbres à J1 et
+  8 fers à J3 (16 de chaque arrivés à la fin, vus sur les captures), sans désynchronisation. `mp-ui-test.sh` montre
+  aussi la raison (« sans stock ») en 640 × 480 et 1024 × 736.
 - [x] **T5.8** L'aqueduc de César ne doit pas suivre la route de si près.
   *Fait* (D-078) : le dernier tronçon courait à 4 cases de la route principale de la cité ; il est maintenant à
   8 rangées (`AQUEDUCT_ROAD_GAP`, `src/mp/mapgen.c`), sur les 4 cartes préparées. Test d'abord : `simtool preparedmap`

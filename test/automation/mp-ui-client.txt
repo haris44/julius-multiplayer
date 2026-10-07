@@ -50,8 +50,16 @@ screenshot build/automation/ui-client-ratings.png
 key 5
 wait 5
 screenshot build/automation/ui-client-trade.png
+# the route to player 1 proposed, marble bought from him (1024 x 736: the page at 192, 128); a month later the column
+# "On the way" says why nothing left (T5.7, T5.6)
+click 702 149
+wait 10
+click 682 425
+wait 5
+speed 500
+mpwait 1700
+screenshot build/automation/ui-client-reasons.png
 key Escape
 wait 2
-mpwait 300
 mpcheck
 quit

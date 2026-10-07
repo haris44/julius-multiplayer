@@ -1220,7 +1220,9 @@
 - Tests : `mp_trade_every_player_*` (2, 3, 4 joueurs, deux cartes : chaque joueur achète à chacun, une livraison
   chaque mois une fois les premières arrivées), `mp_trade_warehouse_apart*`, `mp_trade_purchase_state` ;
   `tools/mp-trade3-test.sh` (trois vrais jeux depuis le salon, routes et achats par clics, les six achats examinés
-  au même mois sur les trois machines, page lisible). Vérifiés rouges avec l'ancien `mp/trade.c`.
+  au même mois sur les trois machines, page lisible ; depuis l'intégration de T5.5 à T5.8, partie écrite par
+  `simtool tradesave` où J2 a de quoi vendre : ses caravanes partent et livrent J1 et J3 dans le vrai jeu, ligne
+  « … loads delivered » du journal de chaque machine). Vérifiés rouges avec l'ancien `mp/trade.c`.
   - une caravane par mois même si la précédente roule encore (plutôt qu'une à la fois, D-048) ;
   - les trajets de 3 à 7 mois sur les grandes cartes : des caravanes plus rapides (question déjà posée par D-048) ?
   - la nourriture rangée dans les greniers ne se vend pas (comme à l'empire dans l'original) : la vendre aussi aux

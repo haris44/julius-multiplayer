@@ -1,6 +1,7 @@
 # Real game, network game of three players from the lobby (a client; see tools/mp-trade3-test.sh, which runs it for
-# both clients): on the trade page, propose a route to the two other players, buy marble from the first and iron from
-# the second, by clicks only; a month later the page tells why no caravan left (T5.7)
+# both clients): the game hosted is the one written by "simtool tradesave". On the trade page (T5.6), propose a route
+# to the two other players, buy marble from the first and iron from the second, by clicks only (T5.7); the page stays
+# open while the caravans of player 2 travel
 wait 10
 click 400 500
 wait 10
@@ -10,32 +11,29 @@ wait 150
 click 530 174
 wait 5
 mpwait 0
-# Caesar's letter at the start of the game (doc/mp/CESAR.md §11): read, then closed
+# Caesar's letter, if any: closed
 wait 3
 key Return
 wait 2
-speed 300
-mpwait 300
+speed 500
+mpwait 200
+# the trade advisor (800 x 600: the page at 80, 60), on the tab of the first other player: propose the route, buy
+# marble; then the tab of the second other player: propose the route, buy iron
 key 5
 wait 5
-click 600 104
+click 590 81
 wait 20
-click 598 357
+click 570 357
 wait 20
-click 575 81
+click 408 111
 wait 10
-click 600 104
+click 590 81
 wait 20
-click 598 303
+click 570 301
 wait 10
 screenshot build/automation/trade3-CLIENT-asked.png
-rclick 400 300
-wait 5
-mpwait 2600
-# a message of the month may be open: closed first
-rclick 400 300
-wait 5
-key 5
+mpwait 6400
+click 300 111
 wait 5
 screenshot build/automation/trade3-CLIENT-reasons.png
 mpcheck

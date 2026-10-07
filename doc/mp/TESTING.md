@@ -83,6 +83,8 @@ MAPGEN_PICTURE=carte.ppm ./simtool preparedmap SAVE 2 10   # ... et son image (s
 ./simtool tradegame SAVE 3 [TIRAGE]         # partie lancée comme depuis le salon : chacun vend à chacun, une caravane
                                             # par mois et par ressource achetée (T5.7) ; tradewarehouse : un premier
                                             # entrepôt à part ne bloque rien ; tradestatus : pourquoi rien ne part
+./simtool tradesave SAVE SORTIE.mpsav       # écrit la partie de tools/mp-trade3-test.sh (3 joueurs, un entrepôt
+                                            # chacun, marbre et fer à vendre chez le joueur 2)
 ./simtool caravans SAVE                     # caravanes entre joueurs ; tradeconservation, traderesume :
                                             # conservation, reprise
 ./simtool importprice SAVE                  # prix de Rome et portorium (D-060) ; empiresells : l'empire vend
@@ -255,11 +257,15 @@ Bon à savoir :
   trois joueurs, Stocks), monte un prix à quatre chiffres et prend les captures `trade4-*.png` : aucun texte ne doit
   en recouvrir un autre (T5.6). La langue est celle des données du jeu ; pour l'anglais, forcer temporairement
   `translation_load(LANGUAGE_ENGLISH)` dans `src/game/game.c`, sans commiter.
-- `tools/mp-trade3-test.sh` : trois vrais jeux depuis le salon (hôte et deux clients, partie pour 3) ; sur la page du
-  commerce, chacun propose la route aux deux autres et achète du marbre au premier, du fer au second, par clics.
-  Vérifie que les six achats sont examinés au même départ mensuel sur les trois machines (lignes « Trade between
-  players » du journal), sans désynchronisation ; captures `trade3-*.png` (ligne de la route lisible, raison dans la
-  colonne « En route ») (T5.7).
+- `tools/mp-trade3-test.sh` : trois vrais jeux depuis le salon (hôte et deux clients). L'hôte charge, depuis le menu
+  principal, la partie écrite par `simtool tradesave` (carte 1 pour 3, un entrepôt par joueur au bout d'une route
+  reliée à la grande route, 16 marbres et 16 fers chez le joueur 2), qui ouvre le salon ; il l'héberge. Sur la page
+  du commerce, chacun propose la route aux deux autres et achète du marbre au premier, du fer au second, par clics ;
+  la page reste ouverte pendant que la partie tourne (un clic droit dans la ville ouvrirait la fiche du terrain).
+  Vérifie dans le journal des trois machines, sans désynchronisation : les six achats examinés, des caravanes du
+  joueur 2 parties, le marbre livré au joueur 1 et le fer au joueur 3 (lignes « Trade between players: … loads
+  delivered »), et les autres achats sans rien à vendre. Captures `trade3-*.png` : achats, marbre en route, livré,
+  raisons dans la colonne « En route » (T5.7, T5.6).
 - `tools/mp-ui-test.sh` : hôte en 640 × 480 et client en 1024 × 768 (l'écran factice le ramène à 1024 × 736),
   depuis le salon ; captures `build/automation/ui-*.png` des fenêtres revues par T4 (voir le tableau ci-dessous).
 - `tools/mp-war-test.sh` : hôte en 640 × 480 et client en 1024 × 768 ; l'hôte déclare une guerre brutale depuis le
@@ -279,7 +285,7 @@ coordonnées ; la barre latérale reste collée au bord droit (bouton industrie 
 | `tools/mp-lobby-test.sh` | salon hôte et client (partie trouvée, salle d'attente), partie à deux sans désynchronisation |
 | `tools/mp-trade-test.sh` | page du commerce (onglet d'un joueur, route proposée, onglet Empire avec prix de Rome et portorium, onglet Stocks avec une limite), achat, alerte de prix |
 | `tools/mp-trade4-test.sh` | page du commerce à quatre joueurs (cinq onglets) et prix à quatre chiffres, sans texte superposé |
-| `tools/mp-trade3-test.sh` | partie à trois depuis le salon : routes proposées et achats par clics entre les trois joueurs, départs mensuels examinés partout, raison affichée quand rien ne part (T5.7) |
+| `tools/mp-trade3-test.sh` | partie à trois chargée depuis le menu principal (`simtool tradesave`) : routes et achats par clics entre les trois joueurs, caravanes du joueur 2 parties et arrivées chez les joueurs 1 et 3, raison affichée quand rien ne part (T5.7) |
 | `tools/mp-real-test.sh` | partie en réseau sans salon (`--mp-host`), constructions et conseillers pendant le jeu |
 | `tools/mp-sweep-test.sh` | partie en réseau seule (cité de `brugle-lugdunum.sav`, ou la carte préparée avec `MP_SWEEP_ARGS=--mp-generate`) : `windowsweep`, avant et après `angrygod` |
 | `tools/mp-menus-test.sh` | trois joueurs (`--mp-host`, cités de `brugle-lugdunum.sav`) : `windowsweep` des trois en même temps, puis de chacun seul, partie qui continue sans désynchronisation |
