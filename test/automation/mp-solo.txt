@@ -62,3 +62,9 @@ screenshot build/automation/mp-solo-imperial.png
 key Escape
 wait 2
 mpinfo
+# alone, the trade advisor (key 5) shows the multiplayer page with its stock tab only (T4.5, D-070)
+key 5
+wait 5
+screenshot build/automation/mp-solo-trade.png
+key Escape
+wait 2

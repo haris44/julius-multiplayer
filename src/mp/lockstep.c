@@ -23,7 +23,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define PROTOCOL_VERSION 16 // 3: the rules of the game travel with the welcome message; 4: territories; 5: fog;
+#define PROTOCOL_VERSION 17 // 3: the rules of the game travel with the welcome message; 4: territories; 5: fog;
                             // 6: one forest map, games alone (D-044); 7: missions at the start (D-045);
                             // 8: a caravan per resource, the empire the dearer source (D-048);
                             // 9: wide places in messages, the missionary goes to the nearest walkable tile;
@@ -33,7 +33,8 @@
                             // 14: two players inland on the map for 4, food of the plan, build commands checked
                             // against the permissions of the city (T4.15, D-065);
                             // 15: the price of Rome and the portorium, the empire always sells (D-060);
-                            // 16: the prepared map in the rules, a second map for 2 and for 4 players (T4.14)
+                            // 16: the prepared map in the rules, a second map for 2 and for 4 players (T4.14);
+                            // 17: stock limits of the trade, a command and a piece of the state (T4.5, D-070)
 #define TURN_TICKS 4
 #define TURN_DELAY 2
 #define HISTORY 256

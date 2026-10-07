@@ -59,6 +59,37 @@ const mp_price_alert *mp_trade_price_alert(int index);
 void mp_trade_clear_price_alerts(void);
 
 /**
+ * Highest stock limit a city may set (T4.5)
+ */
+#define MP_TRADE_MAX_BUY_LIMIT 400
+
+/**
+ * Stock of the resource at which a city stops buying it, from the empire and from the other players (T4.5, D-070):
+ * nothing is bought once its warehouses hold that many loads. 0: no limit of its own (the original rule of the
+ * empire, and no limit between players). Always 0 in a classic game.
+ */
+int mp_trade_buy_limit(int player_id, int resource);
+
+/**
+ * The current city raises or lowers its stock limit of the resource, between 0 and MP_TRADE_MAX_BUY_LIMIT
+ * (command of its player; nothing in a classic game)
+ */
+void mp_trade_change_buy_limit(int resource, int delta);
+
+/**
+ * The stock limit of the current city for imports from the empire (empire/empire.c), or 0 for the original rule
+ */
+int mp_trade_empire_buy_limit(int resource);
+
+/**
+ * The stock limits of every city: a piece of the multiplayer saved game, in the checksum. An older game has none:
+ * mp_trade_reset_bounds gives it no limit.
+ */
+void mp_trade_reset_bounds(void);
+void mp_trade_save_bounds(buffer *buf);
+void mp_trade_load_bounds(buffer *buf);
+
+/**
  * Trade routes: open when both players proposed them (D-019)
  */
 int mp_trade_route_is_open(int a, int b);
@@ -71,8 +102,8 @@ void mp_trade_propose_route(int other, int propose);
 
 /**
  * Monthly: the current city sends caravans to each player it trades with, one per resource that player buys from it,
- * each carrying up to 8 loads he can pay for, beyond its export threshold and unless it stockpiles it; the buyer is
- * told of every delivery
+ * each carrying up to 8 loads he can pay for, beyond its export threshold and unless it stockpiles it, and no more
+ * than what his stock limit leaves room for; the buyer is told of every delivery
  */
 void mp_trade_dispatch_caravans(void);
 

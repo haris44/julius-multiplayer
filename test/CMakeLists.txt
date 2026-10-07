@@ -388,6 +388,9 @@ add_test(NAME mp_trade_empire_always_sells COMMAND simtool empiresells brugle-ma
 # Each player trades with the empire on his own: nothing of it leaks to another player (T4.12, D-061)
 add_test(NAME mp_trade_empire_isolation COMMAND simtool tradeisolation brugle-massilia-start.sav)
 add_test(NAME mp_trade_resume COMMAND simtool traderesume brugle-massilia-start.sav)
+# Stock minimum and maximum: a buyer stops buying from players and the empire at his limit, a seller keeps his
+# threshold; network commands, saved, an older game loads with no limit (T4.5, D-070)
+add_test(NAME mp_trade_bounds COMMAND simtool tradebounds brugle-massilia-start.sav)
 # Caesar the judge (M9.1, D-050): laurels and wrath in the checksum, saved and resumed, none in a classic game
 add_test(NAME mp_caesar_state COMMAND simtool caesarstate brugle-massilia-start.sav)
 # Monthly laurels of the five notes, ranks, the first city to the score wins (M9.2 provisional, M9.5, D-053)

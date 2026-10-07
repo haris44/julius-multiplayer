@@ -334,9 +334,15 @@ le note « à valider ».
   *Fait (première partie, avec T4.12)* : l'empire vend toujours, même ce qu'un joueur vend moins cher et même quand
   ce joueur n'en a plus (fin de la règle D-048). Test `mp_trade_empire_always_sells`. *Reste* : la hausse des prix
   quand un joueur arrête le commerce. Trois propositions dans D-066, *à valider*.
-- [ ] **T4.5** Page du commerce : un **stock minimum et maximum** dans les entrepôts, pour l'import et pour
+- [~] **T4.5** Page du commerce : un **stock minimum et maximum** dans les entrepôts, pour l'import et pour
   l'export. Pour mémoire : l'original a un seuil d'export, et Julius des réglages par entrepôt.
   **?** Les deux bornes valent-elles pour l'empire et pour les joueurs ?
+  *Fait* (D-070, **à valider**) : par ressource et par cité, « vendre au-dessus de N » (le seuil d'export de
+  l'original) et « acheter jusqu'à M » (0 = sans), pour l'empire et pour les joueurs. M est une commande réseau
+  (`MP_ACTION_CHANGE_BUY_LIMIT`) et une pièce de la sauvegarde (`mp_trade_bounds`). Onglet « Stocks » de la page du
+  commerce, aussi en partie seule. Test `mp_trade_bounds` : l'acheteur s'arrête à M chez un joueur et chez l'empire,
+  le vendeur garde N, deux machines à la même somme de contrôle, bornes sauvegardées, ancienne partie chargée sans
+  borne, classique sans borne.
 - [~] **T4.6** **Statistiques et décisions** : trouver une manière propre de faire évoluer ces vues. On voudra des
   statistiques et un commerce plus fin, sans surcharger l'écran.
   - Proposer d'abord des maquettes (pages de design à regarder ensemble), avant tout code.
