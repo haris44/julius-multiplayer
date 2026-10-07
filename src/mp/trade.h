@@ -102,10 +102,33 @@ void mp_trade_propose_route(int other, int propose);
 
 /**
  * Monthly: the current city sends caravans to each player it trades with, one per resource that player buys from it,
- * each carrying up to 8 loads he can pay for, beyond its export threshold and unless it stockpiles it, and no more
- * than what his stock limit leaves room for; the buyer is told of every delivery
+ * even while those of the previous months are on their way (T5.7), each carrying up to 8 loads he can pay for and
+ * store (what is on the way counted as spent and stored), beyond its export threshold and unless it stockpiles it,
+ * and no more than what his stock limit leaves room for, to a warehouse of his on a road network one of its
+ * warehouses is on; the buyer is told of every delivery
  */
 void mp_trade_dispatch_caravans(void);
+
+/**
+ * What became of a purchase at the last monthly departure of the caravans (T5.7)
+ */
+typedef enum {
+    MP_TRADE_PURCHASE_UNKNOWN = 0, /**< not looked at since the start of the game or since it was loaded */
+    MP_TRADE_PURCHASE_SENT, /**< a caravan left */
+    MP_TRADE_PURCHASE_NO_STOCK, /**< the seller has none above his export threshold, or stockpiles it */
+    MP_TRADE_PURCHASE_NO_WAREHOUSE, /**< no warehouse of the buyer with a road takes the resource */
+    MP_TRADE_PURCHASE_NO_ROAD, /**< no road joins a warehouse of the seller to one of those of the buyer */
+    MP_TRADE_PURCHASE_NO_ROOM, /**< the warehouses of the buyer are full, counting what is already on its way */
+    MP_TRADE_PURCHASE_NO_MONEY, /**< the buyer cannot pay a single load, counting what is already on its way */
+    MP_TRADE_PURCHASE_LIMIT /**< the buyer reached his stock limit (T4.5) */
+} mp_trade_purchase;
+
+/**
+ * What became of the purchase of the resource by the buyer from the seller at the last departure of the caravans:
+ * display only (trade page, log of the game), never read by the simulation
+ * @return One of mp_trade_purchase
+ */
+int mp_trade_purchase_state(int seller, int buyer, int resource);
 
 /**
  * The player who sells the resource to the current city cheaper than the empire does (portorium included), over an

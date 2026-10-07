@@ -1,0 +1,57 @@
+# Real game, network game of three players from the lobby (host, player 1; see tools/mp-trade3-test.sh): on the trade
+# page, each player proposes a route to the two others and buys marble from the first and iron from the second, by
+# clicks only. A month later the page tells why no caravan left: nobody has any to sell yet (T5.7)
+wait 10
+click 400 500
+wait 10
+# main menu: Multiplayer
+click 400 172
+wait 10
+# a new game for three players (the + of the number of players), then Host
+click 180 170
+wait 2
+click 300 350
+wait 2
+click 240 466
+# the two clients find the game and join; then the host starts it with the same button
+mpplayers 3
+wait 5
+click 240 466
+mpwait 0
+# Caesar's letter at the start of the game (doc/mp/CESAR.md §11): read, then closed
+wait 3
+key Return
+wait 2
+speed 300
+mpwait 300
+# the trade advisor, on the tab of the first other player: propose the route, buy marble
+key 5
+wait 5
+click 600 104
+wait 20
+click 598 357
+wait 20
+# the tab of the second other player: propose the route, buy iron
+click 575 81
+wait 10
+click 600 104
+wait 20
+click 598 303
+wait 10
+screenshot build/automation/trade3-host-asked.png
+rclick 400 300
+wait 5
+# past the first day of a month: the caravans would have left
+mpwait 2600
+# a message of the month may be open: closed first
+rclick 400 300
+wait 5
+key 5
+wait 5
+screenshot build/automation/trade3-host-reasons.png
+click 575 81
+wait 5
+screenshot build/automation/trade3-host-reasons-2.png
+mpcheck
+wait 300
+quit

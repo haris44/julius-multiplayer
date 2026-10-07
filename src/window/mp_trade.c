@@ -76,7 +76,19 @@ static struct {
     int route_button; // -1 on the stock tab
     int first_row_button;
     int buttons_per_row;
+    int route_shown; // the route status and button drawn on the panel, which only the background clears (T5.7)
 } data;
+
+static int route_status_text(void);
+
+// what the route line shows: its status and whether the button proposes or withdraws
+static int route_state(void)
+{
+    if (data.partner == STOCK_TAB) {
+        return -1;
+    }
+    return route_status_text() * 2 + mp_trade_route_is_proposed(mp_session_local_player_id(), data.partner);
+}
 
 static int local_player(void)
 {
@@ -150,6 +162,7 @@ int window_mp_trade_draw_background(void)
 {
     city_resource_determine_available();
     init_buttons();
+    data.route_shown = route_state();
     outer_panel_draw(0, 0, 40, ADVISOR_HEIGHT);
     image_draw(image_group(GROUP_ADVISOR_ICONS) + 4, 10, 10);
     lang_text_draw(54, 0, 60, 12, FONT_LARGE_BLACK);
@@ -243,7 +256,21 @@ static void draw_bounds(int resource, int y, int index)
     draw_arrows(index + 2, X_LIMIT, y, limit, limit > 0 ? 0 : translation_for(TR_MP_TRADE_NO_LIMIT));
 }
 
-// the selected player: my price to him, his price to me, whether I buy from him, what his caravans bring me
+static int purchase_reason_text(int state)
+{
+    switch (state) {
+        case MP_TRADE_PURCHASE_NO_STOCK: return TR_MP_PURCHASE_NO_STOCK;
+        case MP_TRADE_PURCHASE_NO_WAREHOUSE: return TR_MP_PURCHASE_NO_WAREHOUSE;
+        case MP_TRADE_PURCHASE_NO_ROAD: return TR_MP_PURCHASE_NO_ROAD;
+        case MP_TRADE_PURCHASE_NO_ROOM: return TR_MP_PURCHASE_NO_ROOM;
+        case MP_TRADE_PURCHASE_NO_MONEY: return TR_MP_PURCHASE_NO_MONEY;
+        case MP_TRADE_PURCHASE_LIMIT: return TR_MP_PURCHASE_LIMIT;
+        default: return 0;
+    }
+}
+
+// the selected player: my price to him, his price to me, whether I buy from him, what his caravans bring me, or why
+// none left this month
 static void draw_partner(int resource, int y, int index, int cheaper_player)
 {
     int me = local_player();
@@ -261,6 +288,12 @@ static void draw_partner(int resource, int y, int index, int cheaper_player)
     int loads = mp_trade_loads_on_the_way(data.partner, me, resource);
     if (loads > 0) {
         text_draw_number_centered(loads, X_ON_THE_WAY, y + 3, 50, FONT_NORMAL_WHITE);
+    } else if (mp_trade_buys_from(me, data.partner, resource) && mp_trade_route_is_open(me, data.partner)) {
+        // why no caravan left at the start of the month (T5.7)
+        int reason = purchase_reason_text(mp_trade_purchase_state(data.partner, me, resource));
+        if (reason) {
+            text_draw_centered(translation_for(reason), X_ON_THE_WAY - 8, y + 4, 66, FONT_SMALL_PLAIN, COLOR_WHITE);
+        }
     }
 }
 
@@ -298,6 +331,11 @@ static void draw_headers(void)
 void window_mp_trade_draw_foreground(void)
 {
     int me = local_player();
+    if (route_state() != data.route_shown) {
+        // the route was proposed, opened or closed, here or by the other player, while the page is open: its line
+        // is on the panel, drawn with the background; drawing the new one over the old one mixed both (T5.7)
+        window_invalidate();
+    }
 
     // tabs of the other players and the stock tab, the route with the selected player
     int button = 0;
