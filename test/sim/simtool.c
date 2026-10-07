@@ -4722,12 +4722,26 @@ static int command_idempotence(const char *file, int ticks, int step)
 // T4.16, D-072: is the game more restrictive than the original? The same small city is built by commands on the
 // same land, played two years, and measured, under classic rules and under the multiplayer rules, at two
 // difficulties. A difference that neither the difficulty, nor the money, nor the zone rule explains is a bug.
+//
+// The city has its water as a player gets it: a reservoir at the source (beside the aqueduct of Caesar, inland; beside
+// the sea, on the coast), an aqueduct to a second reservoir near the plan, three fountains that serve the houses
+// (restrict_build_water); the services of the plan are wells, a market with a granary kept full, a temple,
+// a prefecture and an engineer; the jobs (workshops, hospitals) outnumber the people who can work, so that a lack of
+// workers is there to be compared (restrict_build_extra_workshops).
+//
+// Limit: only the "alone" pair compares a really classic game with a multiplayer one. With four cities on the map,
+// game_rules_multiplayer_map() is true even under classic rules (several cities: separate water ranges, build
+// permissions), so the "classic" four-player series only differs from the multiplayer one by the zone rule and
+// is_multiplayer. In the classic alone game the aqueduct of Caesar carries no water (it is a feature of the
+// multiplayer map): the source is a pond beside the same reservoir, the water of the original rules.
 // ---------------------------------------------------------------------------------------------------------------
 
 #define RESTRICT_MONTHS 24
 #define RESTRICT_TICKS_PER_MONTH 800 // 16 days of 50 ticks
+#define RESTRICT_EXTRA_MONTH 2       // the month the extra workshops are built: the zone of a multiplayer city has grown
 #define RESTRICT_FUNDS 100000        // the same treasury for every variant: money explains nothing here
-#define RESTRICT_WANTED 57           // 44 houses, 5 wells, granary, market, temple, prefecture, engineers, 3 workshops
+#define RESTRICT_WANTED 63           // 44 houses, 5 wells, granary, market, temple, prefecture, engineers, 4 workshops,
+                                     // 2 reservoirs, 3 fountains (the extra workshops come on top, see restrict_result)
 
 typedef struct {
     int built;             // buildings of the plan the commands put on the land (farms and mission not included)
@@ -4744,6 +4758,12 @@ typedef struct {
     int culture, prosperity, peace, favor;
     int spent, treasury;
     int zone;              // clear tiles of the zone of the city (multiplayer rules only)
+    int fountain, well;    // inhabited houses served by a fountain (reservoir range), by a well
+    int extra;             // workshops beyond the plan that fit on the free land around it, so that jobs outnumber workers
+    int reservoirs, reservoirs_watered; // reservoirs built (the source and the one beside the plan), with water at the end
+    int reservoir_id[2];
+    int fountain_count;    // fountains of the plan that were built
+    int origin_x, origin_y; // the block of the plan
 } restrict_result;
 
 typedef struct {
@@ -4780,6 +4800,8 @@ static int restrict_area_clear(int x, int y, int width, int height)
 
 // the plan occupies a block of RESTRICT_SIZE x RESTRICT_SIZE tiles: the clear block nearest to the city center
 #define RESTRICT_SIZE 13
+// clear tiles around the block: the room of the extra workshops (3 tiles) against its roads
+#define RESTRICT_MARGIN 1
 
 static int restrict_find_origin(int cx, int cy, int max_distance, int *ox, int *oy)
 {
@@ -4788,7 +4810,8 @@ static int restrict_find_origin(int cx, int cy, int max_distance, int *ox, int *
         for (int y = y0 - d; y <= y0 + d; y++) {
             for (int x = x0 - d; x <= x0 + d; x++) {
                 int dx = x > x0 ? x - x0 : x0 - x, dy = y > y0 ? y - y0 : y0 - y;
-                if ((dx > dy ? dx : dy) == d && restrict_area_clear(x - 1, y - 1, RESTRICT_SIZE + 2, RESTRICT_SIZE + 2)) {
+                if ((dx > dy ? dx : dy) == d && restrict_area_clear(x - RESTRICT_MARGIN, y - RESTRICT_MARGIN, RESTRICT_SIZE + 2 * RESTRICT_MARGIN,
+                        RESTRICT_SIZE + 2 * RESTRICT_MARGIN)) {
                     *ox = x;
                     *oy = y;
                     return 1;
@@ -4839,11 +4862,202 @@ static int restrict_place(int player_id, int type, int x, int y)
 {
     int ok = build_as(player_id, type, x, y, x, y);
     if (!ok) {
-        // the only reason in these games: the tile is out of the zone of the player (a farm 20 tiles from the houses)
+        // in a multiplayer game, a tile out of the zone of the player or partly in the zone of another one
         printf("    player %d: type %d at (%d, %d) was not built (zone owner: player %d, 0 nobody)\n", player_id + 1, type, x, y,
             mp_territory_is_active() ? mp_territory_owner(map_grid_offset(x, y)) + 1 : 0);
     }
     return ok;
+}
+
+// the nearest clear 3x3 place for a reservoir (given by its center) that satisfies `fits`, tried in order of distance
+// from (from_x, from_y), skipping the places already tried
+#define RESTRICT_MAX_TRIES 24
+typedef int (*restrict_site_test)(int cx, int cy, const void *context);
+
+static int restrict_find_site(int from_x, int from_y, int range, restrict_site_test fits, const void *context,
+    int tried[][2], int *num_tried, int *rx, int *ry)
+{
+    int best = 1 << 30;
+    for (int y = from_y - range; y <= from_y + range; y++) {
+        for (int x = from_x - range; x <= from_x + range; x++) {
+            int distance = (x > from_x ? x - from_x : from_x - x) + (y > from_y ? y - from_y : from_y - y);
+            if (distance >= best || !restrict_area_clear(x - 1, y - 1, 3, 3) || !fits(x, y, context)) {
+                continue;
+            }
+            int again = 0;
+            for (int i = 0; i < *num_tried; i++) {
+                again |= tried[i][0] == x && tried[i][1] == y;
+            }
+            if (!again) {
+                best = distance;
+                *rx = x;
+                *ry = y;
+            }
+        }
+    }
+    if (best == 1 << 30 || *num_tried >= RESTRICT_MAX_TRIES) {
+        return 0;
+    }
+    tried[*num_tried][0] = *rx;
+    tried[*num_tried][1] = *ry;
+    (*num_tried)++;
+    return 1;
+}
+
+// the source: a reservoir next to the end of the aqueduct of Caesar (inland player), or beside the sea (coastal player)
+static int restrict_fits_sea(int cx, int cy, const void *context)
+{
+    (void) context;
+    return map_terrain_exists_tile_in_area_with_type(cx - 2, cy - 2, 5, TERRAIN_WATER);
+}
+
+static int restrict_fits_aqueduct(int cx, int cy, const void *context)
+{
+    const int *end = context;
+    int dx = cx > end[0] ? cx - end[0] : end[0] - cx, dy = cy > end[1] ? cy - end[1] : end[1] - cy;
+    return (dx == 2 && dy == 0) || (dx == 0 && dy == 2);
+}
+
+// the second reservoir: beside the plan, outside it, with every fountain inside its range (10 tiles around it)
+typedef struct {
+    int ox, oy;
+} restrict_plan_site;
+
+static int restrict_fits_plan(int cx, int cy, const void *context)
+{
+    const restrict_plan_site *plan = context;
+    int apart_x = cx + 1 < plan->ox - 1 || cx - 1 > plan->ox + RESTRICT_SIZE;
+    int apart_y = cy + 1 < plan->oy - 1 || cy - 1 > plan->oy + RESTRICT_SIZE;
+    if (!apart_x && !apart_y) {
+        return 0;
+    }
+    const int fountain_x[3] = { 1, 6, 10 };
+    for (int i = 0; i < 3; i++) {
+        int dx = plan->ox + fountain_x[i] > cx ? plan->ox + fountain_x[i] - cx : cx - plan->ox - fountain_x[i];
+        int dy = plan->oy + 6 > cy ? plan->oy + 6 - cy : cy - plan->oy - 6;
+        if (dx > 11 || dy > 11) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+static int restrict_reservoir_at(int x, int y)
+{
+    return building_get(map_building_at(map_grid_offset(x, y)))->type == BUILDING_RESERVOIR;
+}
+
+// water for the plan, as a player does it: a reservoir at the source, an aqueduct to a second reservoir beside the
+// plan, three fountains on the service row. The reservoirs of Caesar (no, the aqueduct of Caesar) feed the inland ones
+static int restrict_build_water(int player_id, int ox, int oy, restrict_result *r)
+{
+    int source_x = -1, source_y = -1, tried[RESTRICT_MAX_TRIES][2], num_tried = 0;
+    int end[2];
+    int inland = mp_mapgen_caesar_aqueduct_end(player_id, &end[0], &end[1]);
+    int found = inland ?
+        restrict_find_site(end[0], end[1], 3, restrict_fits_aqueduct, end, tried, &num_tried, &source_x, &source_y) :
+        restrict_find_site(ox + RESTRICT_SIZE / 2, oy + RESTRICT_SIZE / 2, 45, restrict_fits_sea, 0, tried, &num_tried,
+            &source_x, &source_y);
+    if (!found) {
+        printf("    player %d: no place for the reservoir of the source\n", player_id + 1);
+        return 0;
+    }
+    if (!build_as(player_id, BUILDING_DRAGGABLE_RESERVOIR, source_x, source_y, source_x, source_y) ||
+        !restrict_reservoir_at(source_x, source_y)) {
+        printf("    player %d: the reservoir of the source at (%d, %d) was not built (zone owner: player %d)\n",
+            player_id + 1, source_x, source_y,
+            mp_territory_is_active() ? mp_territory_owner(map_grid_offset(source_x, source_y)) + 1 : 0);
+        return 0;
+    }
+    r->reservoir_id[r->reservoirs++] = map_building_at(map_grid_offset(source_x, source_y));
+    if (inland && !game_rules_multiplayer_map()) {
+        // the aqueduct of Caesar is a feature of the multiplayer map: a classic game has none that carries water. The
+        // classic source of the same place is a pond beside the reservoir, the water of the original rules
+        for (int d = 0; d < 5; d++) {
+            int x = source_x - 2 + d, y = source_y - 2;
+            if (restrict_area_clear(x, y, 1, 1)) {
+                map_terrain_add(map_grid_offset(x, y), TERRAIN_WATER);
+                map_routing_update_land();
+                break;
+            }
+        }
+    }
+    restrict_plan_site plan = { ox, oy };
+    int num_tried_plan = 0, plan_tried[RESTRICT_MAX_TRIES][2], x, y;
+    while (restrict_find_site(source_x, source_y, 60, restrict_fits_plan, &plan, plan_tried, &num_tried_plan, &x, &y)) {
+        mp_command drag = { .type = MP_COMMAND_BUILD, .player_id = player_id,
+            .args = { BUILDING_DRAGGABLE_RESERVOIR, 0, source_x, source_y, x, y, 0, 0 } };
+        mp_command_execute(&drag);
+        if (restrict_reservoir_at(x, y)) {
+            r->reservoir_id[r->reservoirs++] = map_building_at(map_grid_offset(x, y));
+            break;
+        }
+    }
+    if (r->reservoirs < 2) {
+        printf("    player %d: no reservoir beside the plan could be joined to the source at (%d, %d)\n", player_id + 1,
+            source_x, source_y);
+        return 0;
+    }
+    static const int fountain_x[3] = { 1, 6, 10 };
+    for (int i = 0; i < 3; i++) {
+        r->fountain_count += restrict_place(player_id, BUILDING_FOUNTAIN, ox + fountain_x[i], oy + 6);
+    }
+    return 1;
+}
+
+// two wheat farms on meadow, each joined to the loop by a road. The food of the first months comes from the
+// granary, which the test fills: the farms are slow
+static void restrict_build_farms(int player_id, int ox, int oy, restrict_result *r)
+{
+    int fx = -1, fy = -1;
+    for (int i = 0; i < 2; i++) {
+        int x, y;
+        if (!restrict_find_farm(ox, oy, fx, fy, &x, &y)) {
+            break;
+        }
+        if (restrict_place(player_id, BUILDING_WHEAT_FARM, x, y)) {
+            r->farms++;
+            fx = x;
+            fy = y;
+            // a road from the side of the farm that faces the loop, to the nearest tile of the loop
+            int to_x = x + 1 < ox ? ox : x + 1 > ox + 12 ? ox + 12 : x + 1;
+            int to_y = y + 1 < oy ? oy : y + 1 > oy + 10 ? oy + 10 : y + 1;
+            int from_x = x + 1 < ox ? x + 3 : x + 1 > ox + 12 ? x - 1 : x + 1;
+            int from_y = y + 1 < oy ? y + 3 : y + 1 > oy + 10 ? y - 1 : y + 1;
+            if (from_x == x + 1 && from_y == y + 1) {
+                continue; // the farm is on the block: cannot be (the block is clear and the farm is outside)
+            }
+            restrict_road(player_id, from_x, from_y, to_x, to_y);
+        }
+    }
+}
+
+// the plan has four workshops on its south row: more fit on the free land against the roads of the loop
+// (the block is clear by one tile around it only, so every place is checked), so that the jobs outnumber the people
+// who can work and a lack of workers can show up
+static void restrict_build_extra_workshops(int player_id, int ox, int oy, restrict_result *r)
+{
+    static const int KINDS[4] = { BUILDING_POTTERY_WORKSHOP, BUILDING_HOSPITAL, BUILDING_FURNITURE_WORKSHOP,
+        BUILDING_WEAPONS_WORKSHOP };
+    int number = 0;
+    for (int side = 0; side < 2; side++) {
+        for (int row = 0; row < 4; row++) {
+            int x = side ? ox + 13 : ox - 3, y = oy + 3 * row;
+            if (restrict_area_clear(x, y, 3, 3) && restrict_place(player_id, KINDS[number++ % 4], x, y)) {
+                r->extra++;
+            }
+        }
+    }
+    // and a second row of workshops to the south, 6 tiles from the houses, on a road of its own (the workshops
+    // pull the desirability of the houses near them down: the houses must still be able to grow)
+    restrict_road(player_id, ox, oy + 10, ox, oy + 14);
+    restrict_road(player_id, ox, oy + 14, ox + 12, oy + 14);
+    for (int column = 0; column < 4; column++) {
+        int x = ox + 3 * column, y = oy + 15;
+        if (restrict_area_clear(x, y, 3, 3) && restrict_place(player_id, KINDS[number++ % 4], x, y)) {
+            r->extra++;
+        }
+    }
 }
 
 // the plan, in coordinates of the block (0, 0) to (12, 12): roads every three tiles with two rows of houses
@@ -4895,41 +5109,28 @@ static int restrict_build_city(int player_id, int cx, int cy, int max_distance, 
     restrict_place(player_id, BUILDING_POTTERY_WORKSHOP, ox + 1, oy + 11);
     restrict_place(player_id, BUILDING_FURNITURE_WORKSHOP, ox + 4, oy + 11);
     restrict_place(player_id, BUILDING_WEAPONS_WORKSHOP, ox + 7, oy + 11);
-    // two wheat farms on meadow, each joined to the loop by a road. The food of the first months comes from the
-    // granary, which the test fills: the farms are slow
-    int fx = -1, fy = -1;
-    for (int i = 0; i < 2; i++) {
-        int x, y;
-        if (!restrict_find_farm(ox, oy, fx, fy, &x, &y)) {
-            break;
-        }
-        if (restrict_place(player_id, BUILDING_WHEAT_FARM, x, y)) {
-            r->farms++;
-            fx = x;
-            fy = y;
-            // a road from the side of the farm that faces the loop, to the nearest tile of the loop
-            int to_x = x + 1 < ox ? ox : x + 1 > ox + 12 ? ox + 12 : x + 1;
-            int to_y = y + 1 < oy ? oy : y + 1 > oy + 10 ? oy + 10 : y + 1;
-            int from_x = x + 1 < ox ? x + 3 : x + 1 > ox + 12 ? x - 1 : x + 1;
-            int from_y = y + 1 < oy ? y + 3 : y + 1 > oy + 10 ? y - 1 : y + 1;
-            if (from_x == x + 1 && from_y == y + 1) {
-                continue; // the farm is on the block: cannot be (the block is clear and the farm is outside)
-            }
-            restrict_road(player_id, from_x, from_y, to_x, to_y);
-        }
-    }
+    restrict_place(player_id, BUILDING_POTTERY_WORKSHOP, ox + 10, oy + 11);
+    restrict_build_water(player_id, ox, oy, r);
+    r->origin_x = ox;
+    r->origin_y = oy;
     return 1;
 }
 
-static void restrict_stock_granary(int player_id, int amount)
+// the granary of the city now in context holds `amount` of wheat
+static void restrict_refill_granary(int amount)
 {
-    player_context_switch(player_id);
     for (int i = BUILDING_FIRST; i < BUILDING_END; i++) {
         building *b = building_get(i);
         if (b->state == BUILDING_STATE_IN_USE && b->type == BUILDING_GRANARY) {
             b->data.granary.resource_stored[RESOURCE_WHEAT] = amount;
         }
     }
+}
+
+static void restrict_stock_granary(int player_id, int amount)
+{
+    player_context_switch(player_id);
+    restrict_refill_granary(amount);
     player_context_switch(0);
 }
 
@@ -4997,11 +5198,18 @@ static void restrict_measure(int player_id, restrict_result *r)
         r->level_sum += b->type - BUILDING_HOUSE_VACANT_LOT;
         desirability += b->desirability;
         r->water += b->has_water_access || b->has_well_access;
+        r->fountain += b->has_water_access != 0;
+        r->well += b->has_well_access != 0;
         r->food += b->data.house.num_foods > 0;
         r->religion += b->data.house.num_gods > 0;
         r->entertainment += b->data.house.entertainment > 0;
         r->education += b->data.house.education > 0;
         r->health += b->data.house.health > 0;
+    }
+    for (int i = 0; i < 2; i++) {
+        building *reservoir = building_get(r->reservoir_id[i]);
+        r->reservoirs_watered += r->reservoir_id[i] && reservoir->type == BUILDING_RESERVOIR &&
+            reservoir->state == BUILDING_STATE_IN_USE && reservoir->has_water_access;
     }
     r->desirability = r->inhabited ? (int) (10 * desirability / r->inhabited) : 0;
     r->workers_available = city_data.labor.workers_available;
@@ -5093,6 +5301,22 @@ static int restrict_play(const char *file, const restrict_setup *setup, restrict
     setting_reset_speeds(500, setting_scroll_speed());
     for (int tick = 1; tick <= RESTRICT_MONTHS * RESTRICT_TICKS_PER_MONTH; tick++) {
         run_one_tick();
+        if (tick == RESTRICT_EXTRA_MONTH * RESTRICT_TICKS_PER_MONTH) {
+            // by now the first houses are lived in: their zone reaches the land around the plan, where the farms and
+            // the extra workshops go (at the start of a multiplayer game the zone is that of the mission post only)
+            for (int p = 0; p < setup->num_players; p++) {
+                if (setup->only < 0 || p == setup->only) {
+                    restrict_build_farms(p, results[p].origin_x, results[p].origin_y, &results[p]);
+                    restrict_build_extra_workshops(p, results[p].origin_x, results[p].origin_y, &results[p]);
+                }
+            }
+            map_road_network_update_grid();
+            for (int p = 0; p < setup->num_players; p++) {
+                player_context_switch(p);
+                map_road_network_update_largest();
+            }
+            player_context_switch(0);
+        }
         for (int p = 0; p < setup->num_players; p++) {
             player_context_switch(p);
             if (game_time_tick() == 24) { // after the migration of the day
@@ -5100,7 +5324,18 @@ static int restrict_play(const char *file, const restrict_setup *setup, restrict
                 results[p].emigrated += city_data.migration.emigrated_today;
                 results[p].refused += city_data.migration.refused_immigrants_today;
             }
+            // no fire and no collapse: they are chance, and one fire in one city and not in the other (the random
+            // numbers do not stay the same once a farm is out of the zone) would overshadow what is measured. No
+            // engineer reaches the reservoirs and the aqueduct, far from the plan, in any case
+            for (int i = BUILDING_FIRST; i < BUILDING_END; i++) {
+                building *b = building_get(i);
+                b->fire_risk = 0;
+                b->damage_risk = 0;
+            }
             if (tick % RESTRICT_TICKS_PER_MONTH == 0) {
+                // the granary is refilled each month: the farms are slow and the people must not starve for the
+                // houses to climb (what is measured is the reach of the services, not the harvest)
+                restrict_refill_granary(3200);
                 int population = city_population();
                 if (getenv("RESTRICT_TRACE")) {
                     printf("  month %d player %d: population %d, sentiment %d, unemployed %d, lack %d, favor %d\n",
@@ -5123,7 +5358,13 @@ static int restrict_play(const char *file, const restrict_setup *setup, restrict
     for (int p = 0; p < setup->num_players; p++) {
         restrict_result keep = results[p];
         memset(&results[p], 0, sizeof(restrict_result));
+        memcpy(results[p].reservoir_id, keep.reservoir_id, sizeof(keep.reservoir_id));
         restrict_measure(p, &results[p]);
+        results[p].reservoirs = keep.reservoirs;
+        results[p].fountain_count = keep.fountain_count;
+        results[p].extra = keep.extra;
+        results[p].origin_x = keep.origin_x;
+        results[p].origin_y = keep.origin_y;
         results[p].built = keep.built;
         results[p].farms = keep.farms;
         results[p].peak = keep.peak;
@@ -5161,16 +5402,16 @@ static int restrict_starting_funds(const char *file, int multiplayer, int diffic
 
 static void restrict_print_header(void)
 {
-    printf("%-22s %4s %4s %7s %5s %5s %4s %4s %4s %4s %4s %4s %4s %4s %4s %4s %4s %5s %5s %5s %4s %4s\n", "variant", "blds",
-        "pop", "p6/p12", "hous", "level", "wat", "food", "rel", "mkt", "tem", "pre", "eng", "staf", "mwrk", "lack", "idle",
+    printf("%-22s %4s %5s %4s %7s %5s %5s %4s %4s %4s %4s %4s %4s %4s %4s %4s %4s %4s %4s %5s %5s %5s %4s %4s\n", "variant", "blds", "fm+ex",
+        "pop", "p6/p12", "hous", "level", "wat", "fnt", "food", "rel", "mkt", "tem", "pre", "eng", "staf", "mwrk", "lack", "idle",
         "desir", "immig", "emig", "sent", "pct");
 }
 
 static void restrict_print(const char *label, const restrict_result *r)
 {
-    printf("%-22s %4d %4d %3d/%-3d %2d/%-2d %5d %4d %4d %4d %4d %4d %4d %4d %4d %4d %4d %4d %5d %5d %5d %4d %4d\n", label,
-        r->built, r->population, r->population_month6, r->population_year1, r->inhabited, r->houses, r->inhabited ? 10 * r->level_sum / r->inhabited : 0,
-        r->water, r->food, r->religion, r->cover_market, r->cover_temple, r->cover_prefecture, r->cover_engineers,
+    printf("%-22s %4d %2d+%-2d %4d %3d/%-3d %2d/%-2d %5d %4d %4d %4d %4d %4d %4d %4d %4d %4d %4d %4d %4d %5d %5d %5d %4d %4d\n", label,
+        r->built, r->farms, r->extra, r->population, r->population_month6, r->population_year1, r->inhabited, r->houses, r->inhabited ? 10 * r->level_sum / r->inhabited : 0,
+        r->water, r->fountain, r->food, r->religion, r->cover_market, r->cover_temple, r->cover_prefecture, r->cover_engineers,
         r->staffed, r->mission_workers, r->shortage, r->workers_available - r->staffed - r->mission_workers,
         r->desirability, r->immigrated, r->emigrated, r->sentiment, r->migration_percentage);
 }
@@ -5187,22 +5428,29 @@ static int restrict_alike(const char *what, const restrict_result *a, const rest
 {
     int level_a = a->inhabited ? 10 * a->level_sum / a->inhabited : 0;
     int level_b = b->inhabited ? 10 * b->level_sum / b->inhabited : 0;
+    // the zone rule leaves a farm or a workshop out of one of the two cities now and then: a place on the border of the
+    // zone of a neighbour. Each missing building is a few jobs
+    int gap = (a->farms > b->farms ? a->farms - b->farms : b->farms - a->farms) +
+        (a->extra > b->extra ? a->extra - b->extra : b->extra - a->extra);
     int ok = a->built == b->built &&
         restrict_close(a->population, b->population, 8, 6) &&               // the people
         restrict_close(a->inhabited, b->inhabited, 15, 1) &&                 // the houses that are lived in
         restrict_close(level_a, level_b, 15, 3) &&                           // how far they evolved
         restrict_close(a->water, b->water, 15, 1) && restrict_close(a->food, b->food, 15, 1) &&
         restrict_close(a->religion, b->religion, 15, 1) &&                   // the houses served
+        restrict_close(a->fountain, b->fountain, 15, 1) && restrict_close(a->well, b->well, 15, 1) &&
+        a->reservoirs_watered == b->reservoirs_watered &&                    // the reach of the water
         restrict_close(a->cover_market, b->cover_market, 10, 10) &&          // the reach of the buildings
         restrict_close(a->cover_temple, b->cover_temple, 10, 10) &&
         restrict_close(a->cover_prefecture, b->cover_prefecture, 10, 10) &&
         restrict_close(a->cover_engineers, b->cover_engineers, 10, 10) &&
-        restrict_close(a->staffed, b->staffed, 8, 6) && a->shortage == b->shortage && // the workers
+        restrict_close(a->staffed, b->staffed, 8, 6) && restrict_close(a->shortage, b->shortage, 15, 12 + 12 * gap) && // the workers
         restrict_close(a->workers_available - a->staffed - a->mission_workers,
             b->workers_available - b->staffed - b->mission_workers, 25, 8) &&
         restrict_close(a->desirability, b->desirability, 15, 15) &&          // the land
         restrict_close(a->immigrated, b->immigrated, 10, 20) &&              // the newcomers
-        a->sentiment == b->sentiment && a->migration_percentage == b->migration_percentage;
+        restrict_close(a->sentiment, b->sentiment, 0, 3 * gap) &&
+        restrict_close(a->migration_percentage, b->migration_percentage, 0, 25 * gap);
     if (!ok) {
         printf("  DIFFERENT: %s\n", what);
     }
@@ -5210,9 +5458,10 @@ static int restrict_alike(const char *what, const restrict_result *a, const rest
 }
 
 // A: classic rules, a city alone; B: multiplayer rules, a city alone; C, D: the same with four cities on the map
-// for four; E: multiplayer rules, four cities on the map but only one builds. Prints the table, checks that A and B,
-// C and D, D and E are alike (the zone rule and the mission post excepted: the mission post of the prepared map is
-// removed from the classic cities, the farms outside the zone are not built, and that is all they differ by)
+// for four (C still runs the multiplayer-map code: water ranges of several cities, build permissions); E: multiplayer
+// rules, four cities on the map but only one builds. Prints the table, checks that A and B, C and D, D and E are
+// alike (the zone rule and the mission post excepted: the mission post of the prepared map is removed from the
+// classic cities, and a building on the border of a neighbour's zone is not built, which is all they differ by)
 static int command_restrictiveness(const char *file)
 {
     static const char *NAMES[] = { "very easy", "easy", "normal", "hard", "very hard" };
@@ -5291,20 +5540,19 @@ static int command_restrictiveness(const char *file)
                 failures += !restrict_alike(label, &four[1][p], &only[p]);
             }
         }
-        // the whole plan stands, nobody lacks workers (the plan asks for about 75 of the 100 that the people
-        // provide), and the difficulty is the only difference between the two sets of numbers: the sentiment of
-        // its table and the migration that follows
-        int expected_sentiment = difficulty == DIFFICULTY_EASY ? 70 : 50;
-        int expected_migration = difficulty == DIFFICULTY_EASY ? 75 : 50;
+        // the whole plan stands, the water reaches the houses by the fountains, the jobs outnumber the people who
+        // can work (so that a lack of workers is there to be compared). The sentiment and the migration are not
+        // fixed by the difficulty here: a lack of workers moves them, as in the original; classic and multiplayer
+        // are compared with each other above
         const restrict_result *every[10] = { &alone[0][0], &alone[1][0], &four[0][0], &four[0][1], &four[0][2],
             &four[0][3], &four[1][0], &four[1][1], &four[1][2], &four[1][3] };
         for (int i = 0; i < 10; i++) {
             const restrict_result *r = every[i];
-            if (r->built != RESTRICT_WANTED || r->shortage != 0 || r->sentiment != expected_sentiment ||
-                r->migration_percentage != expected_migration || r->population < 150) {
-                printf("  DIFFERENT: %s, city %d of 10: %d buildings of %d, lack %d, sentiment %d, migration %d, "
-                    "population %d\n", NAMES[difficulty], i + 1, r->built, RESTRICT_WANTED, r->shortage, r->sentiment,
-                    r->migration_percentage, r->population);
+            if (r->built != RESTRICT_WANTED || r->reservoirs != 2 || r->reservoirs_watered != 2 ||
+                r->fountain_count != 3 || r->fountain <= 0 || r->shortage <= 0 || r->population < 150) {
+                printf("  DIFFERENT: %s, city %d of 10: %d buildings of %d, %d reservoirs with water of %d, %d fountains of 3 "
+                    "serving %d houses, lack %d, population %d\n", NAMES[difficulty], i + 1, r->built, RESTRICT_WANTED,
+                    r->reservoirs_watered, r->reservoirs, r->fountain_count, r->fountain, r->shortage, r->population);
                 failures++;
             }
         }

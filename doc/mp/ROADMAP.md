@@ -521,7 +521,7 @@ le note « à valider ».
     joueurs des terres à 3 et 4, pas de bois dans les terres, autorisations) ; `mp_prepared_map_*_players`
     (autorisations identiques après écriture et lecture de la carte, menu et commande : porcs refusés sur la côte et
     permis dans les terres, fruits l'inverse ; les deux joueurs des terres ont l'eau de César dans leur réservoir).
-- [x] **T4.16** **Le jeu paraît plus restrictif qu'en classique** (Alexandre : distance d'effet des bâtiments,
+- [~] **T4.16** **Le jeu paraît plus restrictif qu'en classique** (Alexandre : distance d'effet des bâtiments,
   emplacement des habitations, manque de main-d'œuvre ; « peut-être lié à la difficulté en difficile par
   défaut »).
   *Lu dans le code* : rien en multijoueur ne touche la portée des promeneurs, l'embauche ni la migration ; les
@@ -532,16 +532,25 @@ le note « à valider ».
   *À faire* : ne pas toucher aux règles intérieures (I2) ; « facile » par défaut (T4.4) ; puis **mesurer** : la
   même petite cité bâtie par script sur une carte classique et sur la carte préparée, même difficulté, comparer
   population, employés et couverture après deux ans. Un écart serait un bug à chercher, pas une règle à desserrer.
-  *Fait* (D-072) : `simtool restrictiveness` bâtit par commandes la même petite cité (57 bâtiments : maisons, boucle de
-  routes, puits, grenier, marché, temple, préfecture, ingénieur, ateliers, fermes) et la joue deux ans, en facile et en
-  difficile, en classique et en multijoueur, seule et à 4 joueurs, et à 4 avec un seul bâtisseur. **Pas de bug** :
-  population, maisons, niveau, couverture (eau, nourriture, religion, portée du marché, du temple, de la préfecture
-  et des ingénieurs), employés, chômeurs, désirabilité, immigrants et moral sont identiques entre classique et
-  multijoueur. Écarts expliqués : difficulté (facile : 12 000 Dn, moral 70, migration 75 % ; difficile : 6 000 Dn, 50,
-  50 % ; à 6 mois 257 contre 239 habitants), zone (une ferme de J3 refusée à plus de 20 cases, 1 % d'écart), mission
-  de départ (20 employés en classique, aucun en multijoueur : plus de bras libres), terrain de chaque emplacement.
-  Seule, multijoueur, facile : 255 habitants, 11 maisons, 64 employés, 0 manque, 56 chômeurs, moral 70 (classique :
-  identique). Test `mp_restrictiveness` (garde contre toute régression : deux fautes volontaires sont vues).
+  *Fait* (D-072) : `simtool restrictiveness` bâtit par commandes la même petite cité (63 bâtiments : maisons, boucle de
+  routes, puits, grenier, marché, temple, préfecture, ingénieur, ateliers, **réservoirs et fontaines** alimentés par
+  l'aqueduc de César ou la mer) puis, au mois 2, 2 fermes et 7 à 9 ateliers ou hôpitaux (plus d'emplois que de bras).
+  Elle la joue deux ans, en facile et en difficile, en classique et en multijoueur, seule et à 4 joueurs, et à 4 avec
+  un seul bâtisseur. **Pas de bug** : population, maisons, niveau, couverture (fontaines, puits, nourriture, religion,
+  portée du marché, du temple, de la préfecture et des ingénieurs), employés, manque de bras, désirabilité,
+  immigrants et moral sont identiques entre classique et multijoueur (seule : 434 habitants à 24 mois, 14 maisons de
+  niveau 2,2, 13 servies par les fontaines, 7 emplois vides, moral 96 en facile ; 246 contre 274 habitants à 6 mois
+  en difficile). Écarts expliqués : difficulté (12 000 Dn et moral 70 contre 6 000 Dn et 50), zone (un atelier de J3
+  à cheval sur la zone d'un voisin), mission de départ (20 employés en classique, aucun en multijoueur : plus de bras
+  libres), terrain de chaque emplacement. Test `mp_restrictiveness` : deux fautes volontaires sont vues (portée des
+  fontaines du multijoueur supprimée ; 40 % de bras en moins).
+  **Limites, à reprendre** : (1) la série dite « classique » à 4 joueurs passe déjà par le code de la carte
+  multijoueur (`game_rules_multiplayer_map()` vrai dès 2 cités) : seule la série « seule » compare une vraie partie
+  classique ; (2) le « classique » est la **carte préparée jouée avec les règles classiques**, pas une carte classique
+  libre (toutes les sauvegardes de `test/data` sont de grandes cités) : les données du scénario Massilia, le climat
+  nordique forcé, la désirabilité de la forêt et la mission de départ ne sont pas comparés. *Suite* : vider un coin
+  d'une sauvegarde de mission classique par commandes et y rejouer le plan. (3) Le manque de main-d'œuvre par
+  rétrécissement de la zone n'est pas mesuré (*à valider*).
 - [x] **T4.17** **Circulation des marchandises sur les grandes cartes** (Alexandre : « la circulation des
   marchands n'est pas altérée pour toi ? »). *Lu dans le code* : charretiers, marchés (40 cases, comme l'original),
   entrepôts et greniers travaillent chacun dans sa cité, sans changement ; chaque cité a bien son propre point

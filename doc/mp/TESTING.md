@@ -77,7 +77,7 @@ MAPGEN_PICTURE=carte.ppm ./simtool preparedmap SAVE 2 10   # ... et son image (s
 ./simtool longroutes SAVE                   # carte à 4 : chemins les plus longs, caravane entre les joueurs les plus éloignés, mer
 ./simtool menuowner SAVE                    # le menu de construction du joueur local ignore ce que font les autres
 ./simtool restrictiveness SAVE              # la même petite cité jouée 2 ans en classique et en multijoueur (seule, à 4), facile et
-                                            # difficile : tableau des chiffres, échoue si une règle multijoueur les change (D-072) ;
+                                            # difficile, avec réservoirs et fontaines : tableau des chiffres, échoue si une règle multijoueur les change (D-072) ;
                                             # RESTRICT_TRACE=1 : population, moral et chômage chaque mois
 ./simtool caravans SAVE                     # caravanes entre joueurs ; tradeconservation, traderesume :
                                             # conservation, reprise
