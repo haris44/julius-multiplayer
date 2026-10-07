@@ -4813,6 +4813,27 @@ static int command_tradebounds(const char *file)
     CHECK(remove_saved_piece(saved, "mp_trade_bounds"), "(the bounds taken out of the saved game)");
     CHECK(mp_savegame_read(saved) && mp_trade_buy_limit(0, RESOURCE_MARBLE) == 0 && marble_of(0) == 20,
         "an older saved game loads, with no limit");
+    // a caravan already on its way when the buyer lowers his limit: on arrival he takes only what stays under it, the
+    // rest goes back to the seller, and no load is lost
+    if (!mp_savegame_read(start)) {
+        printf("Unable to read the saved game\n");
+        return 2;
+    }
+    for (int i = 0; i < 400 && in_transit(RESOURCE_MARBLE) == 0; i++) {
+        run_trace(10, 10, 0, 0);
+    }
+    int on_the_way = in_transit(RESOURCE_MARBLE);
+    printf("a caravan carries %d loads of marble; player 1 then limits his stock to 3\n", on_the_way);
+    CHECK(on_the_way > 3 && marble_of(0) == 0, "a caravan is on its way, the buyer has no marble yet");
+    city_action(0, MP_ACTION_CHANGE_BUY_LIMIT, RESOURCE_MARBLE, 3, 0);
+    for (int i = 0; i < 400 && in_transit(RESOURCE_MARBLE) > 0; i++) {
+        run_trace(10, 10, 0, 0);
+    }
+    printf("after the arrival: player 1 has %d marble, player 2 has %d\n", marble_of(0), marble_of(1));
+    CHECK(in_transit(RESOURCE_MARBLE) == 0 && marble_of(0) == 3,
+        "on arrival he takes only what stays under his limit of 3");
+    CHECK(marble_of(1) == 13 && marble_of(0) + marble_of(1) == 16, "the rest went back to the seller, nothing is lost");
+
     remove(saved);
     remove(start);
 
