@@ -239,6 +239,9 @@ static translation_string all_strings[] = {
     {TR_MP_LETTER_PROMOTION_3, " laurels, and I shall make you my heir."},
     {TR_MP_LETTER_PROMOTION_ENDLESS, ". Carry on."},
     {TR_MP_LETTER_SIGNATURE, "Caesar"},
+    {TR_MP_MAP_CHOICE_1, "Map 1"},
+    {TR_MP_MAP_CHOICE_2, "Map 2"},
+    {TR_MP_MAP_CHOICE_RANDOM, "Random map"},
 };
 
 void translation_english(const translation_string **strings, int *num_strings)

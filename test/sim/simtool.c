@@ -101,7 +101,8 @@ static struct {
     int local_difficulty; // -1: keep the c3.inf value
     int local_gods;       // -1: keep the c3.inf value
     int multiplayer;      // apply the default multiplayer rules after each load
-} options = { -1, -1, 0 };
+    int prepared_map;     // the prepared map the commands play on (--map N: N - 1), map 1 by default (T4.14)
+} options = { -1, -1, 0, 0 };
 
 static int usage(void)
 {
@@ -110,6 +111,7 @@ static int usage(void)
     printf("  --difficulty N    local difficulty setting (0 very easy .. 4 very hard), as if set in c3.inf\n");
     printf("  --gods 0|1        local gods setting, as if set in c3.inf\n");
     printf("  --mp              play with the default multiplayer rules instead of the local settings\n");
+    printf("  --map N           the prepared map of the commands that use one (1 by default, T4.14)\n");
     printf("Commands:\n");
     printf("  simtool checksum SAVE                  checksum of a loaded saved game\n");
     printf("  simtool run SAVE TICKS OUTPUT          runs TICKS ticks and writes the saved game OUTPUT\n");
@@ -147,11 +149,13 @@ static int usage(void)
     printf("                                         the aqueduct of Caesar is cut, fills again when mended\n");
     printf("  simtool inlandwater SAVE PLAYERS       prepared map: the aqueduct of Caesar waters the player inland\n");
     printf("                                         whichever arrival point he draws (players 2 to 4 too)\n");
-    printf("  simtool longroutes SAVE                prepared map for 4: paths between the cities within the limit of\n");
+    printf("  simtool longroutes SAVE [PLAYERS]      prepared map (for 4 by default): paths between the cities under\n");
+    printf("                                         400 steps, within the limit of\n");
     printf("                                         a figure, a caravan between the farthest players arrives,\n");
     printf("                                         a ship sails a sea as large as the grid\n");
     printf("  simtool farinvasion SAVE              prepared map for 4: an enemy army from the edge farthest from a\n");
     printf("                                         city finds its way over the land and reaches it\n");
+    printf("  simtool mapchoice SAVE                 the lobby chooses map 1, map 2 or one drawn by lot (T4.14)\n");
     printf("  simtool menuowner SAVE                prepared map: the build menu of the local player keeps his\n");
     printf("                                         materials when another player opens a route with the empire\n");
     printf("  simtool caravans SAVE                 a caravan of player 2 brings marble to player 1, who pays\n");
@@ -215,6 +219,17 @@ static int load(const char *file)
         game_rules_set_multiplayer(&rules);
     }
     return 1;
+}
+
+// the prepared map chosen by --map (map 1 by default): every test of the prepared maps runs on each of them (T4.14)
+static int create_prepared(const char *file, int num_players, unsigned int placement_seed)
+{
+    return mp_mapgen_create_prepared_map(file, num_players, options.prepared_map, placement_seed);
+}
+
+static int prepared_size(int num_players)
+{
+    return mp_mapgen_prepared_map_size(options.prepared_map, num_players);
 }
 
 static void apply_local_settings(void)
@@ -585,13 +600,14 @@ static int same_lobby_rules(const game_rules_settings *a, const game_rules_setti
 {
     return a->difficulty == b->difficulty && a->gods_enabled == b->gods_enabled &&
         a->ai_invasions == b->ai_invasions && a->fog_of_war == b->fog_of_war &&
-        a->end_condition == b->end_condition && a->caesar_score == b->caesar_score;
+        a->end_condition == b->end_condition && a->caesar_score == b->caesar_score &&
+        a->prepared_map == b->prepared_map;
 }
 
 static void print_lobby_rules(const char *label, const game_rules_settings *r)
 {
-    printf("%s: difficulty %d gods %d invasions %d fog %d end %d score %d\n", label, r->difficulty, r->gods_enabled,
-        r->ai_invasions, r->fog_of_war, r->end_condition, r->caesar_score);
+    printf("%s: difficulty %d gods %d invasions %d fog %d end %d score %d map %d\n", label, r->difficulty,
+        r->gods_enabled, r->ai_invasions, r->fog_of_war, r->end_condition, r->caesar_score, r->prepared_map);
 }
 
 // The host changes every rule of the lobby after "Host", once the players are there, then starts the game
@@ -602,23 +618,26 @@ static void change_every_lobby_rule(void)
     mp_lobby_change_rule(MP_LOBBY_RULE_END);
     mp_lobby_change_rule(MP_LOBBY_RULE_INVASIONS);
     mp_lobby_change_rule(MP_LOBBY_RULE_FOG);
+    mp_lobby_change_rule(MP_LOBBY_RULE_MAP);
 }
 
 static int every_lobby_rule_differs(const game_rules_settings *a, const game_rules_settings *b)
 {
     return a->difficulty != b->difficulty && a->gods_enabled != b->gods_enabled &&
-        a->ai_invasions != b->ai_invasions && a->fog_of_war != b->fog_of_war && a->caesar_score != b->caesar_score;
+        a->ai_invasions != b->ai_invasions && a->fog_of_war != b->fog_of_war && a->caesar_score != b->caesar_score &&
+        a->prepared_map != b->prepared_map;
 }
 
 static int command_mpnode(int argc, char **argv)
 {
     // argv: mpnode host PORT PLAYERS SAVE TICKS [cities] | mpnode join ADDRESS PORT TICKS
     int is_host = argc >= 7 && strcmp(argv[2], "host") == 0;
-    int cities = 0, generate = 0, lobby_rules = 0;
+    int cities = 0, generate = 0, lobby_rules = 0, map2 = 0;
     for (int i = 7; i < argc; i++) {
         cities |= strcmp(argv[i], "cities") == 0;
         generate |= strcmp(argv[i], "generate") == 0;
         lobby_rules |= strcmp(argv[i], "rules") == 0;
+        map2 |= strcmp(argv[i], "map2") == 0; // 'map2' (T4.14): the host plays the generated map on map 2
     }
     int is_join = argc >= 6 && strcmp(argv[2], "join") == 0;
     if (!is_host && !is_join) {
@@ -648,6 +667,12 @@ static int command_mpnode(int argc, char **argv)
         mp_lobby_rules_init();
         mp_lobby_rules_settings(&rules_at_host);
         mp_lockstep_set_rules(&rules_at_host);
+    }
+    if (map2 && is_host) {
+        game_rules_settings rules;
+        game_rules_default_multiplayer_settings(&rules);
+        rules.prepared_map = GAME_MAP_2;
+        mp_lockstep_set_rules(&rules);
     }
     time_t pause_start = 0, pause_seen_at = 0;
     int paused_seen = 0, ticks_while_paused = 0, tick_at_pause = -1;
@@ -769,6 +794,8 @@ static int command_mpnode(int argc, char **argv)
     }
     printf("tick %d checksum %016" PRIx64 "\n", start_tick >= 0 ? game_time_absolute_tick() - start_tick : -1,
         mp_checksum_state());
+    // the prepared map of the game, the same for every player (T4.14)
+    printf("map %d, %d tiles wide\n", game_rules_multiplayer_settings()->prepared_map + 1, map_grid_width());
     printf("pause seen: %d, ticks run while paused: %d\n", paused_seen, ticks_while_paused);
     int result = mp_lockstep_get_state() == MP_LOCKSTEP_RUNNING && start_tick >= 0 &&
         game_time_absolute_tick() - start_tick == ticks;
@@ -1542,17 +1569,156 @@ static int command_lobbyrules(const char *file)
     return result;
 }
 
+// A game hosted alone on a new map with this choice of map and this seed of the lobby: the map it is played on, -1
+// when it does not start
+static int hosted_map(const char *file, int choice, unsigned int seed, int *width)
+{
+    const int port = 27450;
+    player_context_switch(0);
+    player_context_set_num_players(1); // the template is a game of one city
+    game_rules_settings rules;
+    mp_lobby_rules_settings(&rules);
+    rules.prepared_map = choice;
+    mp_lockstep_set_rules(&rules);
+    if (!mp_lockstep_host(port, 1, file, 1)) {
+        printf("FAILED: %s\n", mp_lockstep_status());
+        return -1;
+    }
+    mp_lockstep_set_generated_map(1, seed);
+    mp_lockstep_set_manual_start(1);
+    mp_lobby_start_game();
+    for (int frame = 0; frame < 100 && mp_lockstep_get_state() == MP_LOCKSTEP_WAITING_FOR_PLAYERS; frame++) {
+        mp_lockstep_poll();
+    }
+    int map = mp_lockstep_get_state() == MP_LOCKSTEP_RUNNING ? game_rules_multiplayer_settings()->prepared_map : -1;
+    *width = map_grid_width();
+    mp_lockstep_stop();
+    char name[64];
+    snprintf(name, sizeof(name), "mp-session-%d-p0.mpsav", port);
+    remove(name);
+    player_context_switch(0);
+    player_context_set_num_players(1);
+    return map;
+}
+
+// T4.14: the lobby chooses the prepared map, map 1, map 2 or one drawn by lot with the seed of the lobby; the draw
+// gives the same map for the same seed, the game keeps the map it is played on, and the two maps are different
+static int command_mapchoice(const char *file)
+{
+    int failures = 0;
+#define CHECK(condition, text) do { int ok_ = (condition); printf("%-70s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
+    game_rules_settings defaults, lobby;
+    game_rules_default_multiplayer_settings(&defaults);
+    mp_lobby_rules_init();
+    mp_lobby_rules_settings(&lobby);
+    CHECK(defaults.prepared_map == GAME_MAP_1, "the default rules (tests, command line) keep map 1");
+    CHECK(lobby.prepared_map == GAME_MAP_RANDOM, "the lobby proposes a map drawn by lot");
+    int cycle[3];
+    for (int i = 0; i < 3; i++) {
+        mp_lobby_change_rule(MP_LOBBY_RULE_MAP);
+        mp_lobby_rules_settings(&lobby);
+        cycle[i] = lobby.prepared_map;
+    }
+    CHECK(cycle[0] == GAME_MAP_1 && cycle[1] == GAME_MAP_2 && cycle[2] == GAME_MAP_RANDOM,
+        "the rule goes from map 1 to map 2, then to a map drawn by lot");
+
+    int fixed = 1, same = 1, drawn[MP_MAPGEN_NUM_PREPARED_MAPS] = { 0 };
+    for (unsigned int seed = 0; seed <= 40; seed++) {
+        fixed &= mp_mapgen_choose_prepared_map(GAME_MAP_1, seed) == 0 && mp_mapgen_choose_prepared_map(GAME_MAP_2, seed) == 1;
+        int map = mp_mapgen_choose_prepared_map(GAME_MAP_RANDOM, seed);
+        same &= map == mp_mapgen_choose_prepared_map(GAME_MAP_RANDOM, seed);
+        if (map >= 0 && map < MP_MAPGEN_NUM_PREPARED_MAPS && seed > 0) {
+            drawn[map]++;
+        }
+    }
+    printf("maps drawn by lot with the seeds 1 to 40: map 1 %d times, map 2 %d times\n", drawn[0], drawn[1]);
+    CHECK(fixed, "a map chosen in the lobby is the one played");
+    CHECK(same, "the same seed draws the same map");
+    CHECK(drawn[0] >= 10 && drawn[1] >= 10, "both maps are drawn");
+    CHECK(mp_mapgen_choose_prepared_map(GAME_MAP_RANDOM, 0) == 0, "seed 0 keeps map 1 (tests)");
+
+    // the two maps differ: size, sea and bridge, place of every city
+    for (int players = 2; players <= 4; players += 2) {
+        int size[2], bridge[2], north[2], cx[2][4], cy[2][4];
+        for (int map = 0; map < 2; map++) {
+            player_context_switch(0);
+            player_context_set_num_players(1);
+            if (!mp_mapgen_create_prepared_map(file, players, map, 0)) {
+                printf("Unable to create the prepared map %d for %d players\n", map + 1, players);
+                return 2;
+            }
+            size[map] = map_grid_width();
+            int south;
+            mp_mapgen_caesar_bridge(&bridge[map], &north[map], &south);
+            for (int p = 0; p < players; p++) {
+                mp_mapgen_city_center(p, &cx[map][p], &cy[map][p]);
+            }
+        }
+        int cities_differ = 1;
+        for (int p = 0; p < players; p++) {
+            cities_differ &= cx[0][p] != cx[1][p] || cy[0][p] != cy[1][p];
+        }
+        printf("%d players: map 1 %d tiles wide, bridge at (%d, %d); map 2 %d tiles wide, bridge at (%d, %d)\n",
+            players, size[0], bridge[0], north[0], size[1], bridge[1], north[1]);
+        CHECK(cities_differ && (bridge[0] != bridge[1] || north[0] != north[1]),
+            players == 2 ? "map 2 for 2 players has other places and another sea" :
+            "map 2 for 4 players has other places and another sea");
+        CHECK(mp_mapgen_prepared_map_size(1, players) == size[1], "the size of map 2 is known before it is made");
+    }
+
+    // the map travels with the rules of the game, saved and read back
+    player_context_switch(0);
+    player_context_set_num_players(1);
+    if (!mp_mapgen_create_prepared_map(file, 2, 1, 0)) {
+        printf("Unable to create the prepared map 2\n");
+        return 2;
+    }
+    game_rules_settings rules;
+    game_rules_default_multiplayer_settings(&rules);
+    rules.territories = 1;
+    rules.prepared_map = GAME_MAP_2;
+    game_rules_set_multiplayer(&rules);
+    const char *map_file = "mapchoice.mpmap";
+    int written = mp_savegame_write(map_file);
+    rules.prepared_map = GAME_MAP_1;
+    game_rules_set_multiplayer(&rules);
+    int read = written && mp_savegame_read(map_file);
+    remove(map_file);
+    CHECK(read && game_rules_multiplayer_settings()->prepared_map == GAME_MAP_2, "a saved game keeps its map");
+
+    // hosted with a map drawn by lot, the game is played on the map of the draw, which its rules keep
+    for (unsigned int seed = 1; seed <= 2; seed++) {
+        int expected = mp_mapgen_choose_prepared_map(GAME_MAP_RANDOM, seed);
+        int width = 0;
+        int map = hosted_map(file, GAME_MAP_RANDOM, seed, &width);
+        printf("hosted with a map drawn by lot, seed %u: map %d, %d tiles wide (drawn: map %d)\n", seed, map + 1,
+            width, expected + 1);
+        CHECK(map == expected && width == mp_mapgen_prepared_map_size(expected, 1),
+            "the game is played on the map drawn, and keeps it in its rules");
+    }
+    int width = 0;
+    CHECK(hosted_map(file, GAME_MAP_2, 1, &width) == 1 && width == mp_mapgen_prepared_map_size(1, 1),
+        "hosted with map 2, the game is played on map 2");
+    player_context_switch(0);
+    player_context_set_num_players(1);
+#undef CHECK
+    printf("%s\n", failures ? "DIFFERENT: the lobby does not choose the map as planned" :
+        "Identical: the lobby chooses the map as planned");
+    return failures ? 1 : 0;
+}
+
 // K-review-fixes: a host sends the lobby of a player some rules; NUMBERS are the ten integers of the message
 static int send_raw_rules(int socket, const int *numbers)
 {
-    uint8_t payload[4 + 1 + 10 * 4];
+    uint8_t payload[4 + 1 + 11 * 4];
     buffer buf;
     buffer_init(&buf, payload, sizeof(payload));
-    buffer_write_i32(&buf, 1 + 10 * 4);
+    buffer_write_i32(&buf, 1 + 11 * 4);
     buffer_write_u8(&buf, 10); // MSG_RULES of mp/lockstep.c
     for (int i = 0; i < 10; i++) {
         buffer_write_i32(&buf, numbers[i]);
     }
+    buffer_write_i32(&buf, GAME_MAP_1); // the prepared map (T4.14)
     return net_send(socket, payload, buf.index);
 }
 
@@ -1638,7 +1804,7 @@ static int command_badrules(int port)
     }
     // welcome messages with rules out of their bounds, then with a player index or a number of players out of
     // theirs: the player leaves before reading the game
-    const int welcome_rules[11] = { GAME_MODE_MULTIPLAYER, DIFFICULTY_EASY, 1, 0, 0, 1, 0, 10, 1, 1, 1000 };
+    const int welcome_rules[12] = { GAME_MODE_MULTIPLAYER, DIFFICULTY_EASY, 1, 0, 0, 1, 0, 10, 1, 1, 1000, GAME_MAP_1 };
     const struct { int player; int players; int difficulty; const char *what; } welcomes[] = {
         { 1, 2, 42, "difficulty 42" },
         { -1, 2, DIFFICULTY_EASY, "player -1" },
@@ -1678,7 +1844,7 @@ static int command_badrules(int port)
         buffer_write_u8(&buf, 1); // separate cities
         buffer_write_u32(&buf, 0);
         buffer_write_u32(&buf, 0);
-        for (int i = 0; i < 11; i++) {
+        for (int i = 0; i < 12; i++) {
             buffer_write_i32(&buf, i == 1 ? welcomes[w].difficulty : welcome_rules[i]);
         }
         buffer_write_i32(&buf, 4); // save size
@@ -2049,6 +2215,10 @@ static void write_map_picture(const char *filename, int size, int scale)
             if (t & TERRAIN_ROAD) {
                 int caesar = map_owner_get_claimed(offset) == MAP_OWNER_CAESAR;
                 c[0] = caesar ? 240 : 140; c[1] = caesar ? 240 : 110; c[2] = caesar ? 240 : 80;
+            } else if (t & TERRAIN_AQUEDUCT) {
+                c[0] = 120; c[1] = 230; c[2] = 250;
+            } else if (t & TERRAIN_BUILDING) {
+                c[0] = 200; c[1] = 60; c[2] = 60;
             } else if (t & TERRAIN_WATER) {
                 c[0] = 50; c[1] = 90; c[2] = 200;
             } else if (t & TERRAIN_ROCK) {
@@ -2103,12 +2273,13 @@ static int count_unreachable_land(int size)
     return unreachable;
 }
 
+// tiles of this terrain around a place, on the map only: the grid around it holds what the template left there
 static int count_terrain_near(int cx, int cy, int radius, int terrain)
 {
     int count = 0;
     for (int y = cy - radius; y <= cy + radius; y++) {
         for (int x = cx - radius; x <= cx + radius; x++) {
-            count += map_terrain_is(map_grid_offset(x, y), terrain) ? 1 : 0;
+            count += map_grid_is_inside(x, y, 1) && map_terrain_is(map_grid_offset(x, y), terrain) ? 1 : 0;
         }
     }
     return count;
@@ -2253,15 +2424,20 @@ static int farms_follow_plan(int player_id)
 // aqueduct of Caesar, the others on the coast, permissions that match, the same map every time, cities that grow
 static int command_preparedmap(const char *file, int num_players, int ticks)
 {
-    if (!mp_mapgen_create_prepared(file, num_players, 0)) {
+    if (!create_prepared(file, num_players, 0)) {
         printf("Unable to create the prepared map\n");
         return 2;
     }
-    int size = mp_mapgen_prepared_size(num_players);
+    int size = prepared_size(num_players);
+    printf("prepared map %d for %d players: %d tiles wide\n", options.prepared_map + 1, num_players, size);
     if (getenv("MAPGEN_PICTURE")) {
         write_map_picture(getenv("MAPGEN_PICTURE"), size, 3);
     }
     int failures = 0;
+    if (map_grid_width() != size || map_grid_height() != size) {
+        printf("  the map is %d by %d tiles\n", map_grid_width(), map_grid_height());
+        failures++;
+    }
     int unreachable = count_unreachable_land(size);
     printf("land out of reach of the main road: %d tiles\n", unreachable);
     failures += unreachable != 0;
@@ -2397,7 +2573,7 @@ static int command_preparedmap(const char *file, int num_players, int ticks)
     uint64_t first = mp_checksum_state();
     player_context_switch(0);
     player_context_set_num_players(1);
-    if (!mp_mapgen_create_prepared(file, num_players, 0) || mp_checksum_state() != first) {
+    if (!create_prepared(file, num_players, 0) || mp_checksum_state() != first) {
         printf("DIFFERENT: the prepared map changed between two creations\n");
         return 1;
     }
@@ -2429,12 +2605,9 @@ static int command_preparedmap(const char *file, int num_players, int ticks)
         fed_players++;
         int cx, cy;
         mp_mapgen_city_center(p, &cx, &cy);
-        int ex, ey;
-        mp_mapgen_entry_point(p, &ex, &ey);
-        int west = ex == 0; // the west branch runs along a row, the north one along a column; its end touches
-                            // the middle of a side of the reservoir
-        int x = west ? ax - 2 : ax;
-        int y = west ? ay : ay - 2;
+        // the aqueduct of Caesar comes from the east along a row, on every prepared map: a reservoir west of its end
+        int x = ax - 2;
+        int y = ay;
         mp_command fed = { .type = MP_COMMAND_BUILD, .player_id = p, .args = { BUILDING_DRAGGABLE_RESERVOIR, 0, x, y, x, y, 0, 0 } };
         mp_command_execute(&fed);
         mp_command dry = { .type = MP_COMMAND_BUILD, .player_id = p, .args = { BUILDING_DRAGGABLE_RESERVOIR, 0, cx - 6, cy - 6, cx - 6, cy - 6, 0, 0 } };
@@ -2489,7 +2662,7 @@ static int reservoir_at(int x, int y, int *level)
 // 270 days; joined again, it fills in about 54 days
 static int command_reservoirlevel(const char *file)
 {
-    if (!mp_mapgen_create_prepared(file, 2, 0)) {
+    if (!create_prepared(file, 2, 0)) {
         printf("Unable to create the prepared map\n");
         return 2;
     }
@@ -2555,7 +2728,7 @@ static int command_drying(const char *file, int num_players)
     // territories, alone too; no enemy army comes to destroy the reservoir
     char map_file[64];
     snprintf(map_file, sizeof(map_file), "drying-%d.mpmap", num_players);
-    if (!mp_mapgen_create_prepared(file, num_players, 0) || !mp_savegame_write(map_file) ||
+    if (!create_prepared(file, num_players, 0) || !mp_savegame_write(map_file) ||
         !mp_savegame_read(map_file)) {
         printf("Unable to create the prepared map\n");
         return 2;
@@ -2566,7 +2739,7 @@ static int command_drying(const char *file, int num_players)
     rules.territories = 1;
     rules.ai_invasions = 0;
     game_rules_set_multiplayer(&rules);
-    int size = mp_mapgen_prepared_size(num_players);
+    int size = prepared_size(num_players);
     int failures = 0;
     int ponds = count_ponds(size);
     printf("water away from the sea: %d tiles\n", ponds);
@@ -2676,7 +2849,7 @@ static int inland_water_game(const char *file, int num_players, int seed, int p,
     snprintf(map_file, sizeof(map_file), "inlandwater-%d-%d.mpmap", num_players, p);
     player_context_switch(0);
     player_context_set_num_players(1);
-    if (!mp_mapgen_create_prepared(file, num_players, seed) || !mp_savegame_write(map_file) ||
+    if (!create_prepared(file, num_players, seed) || !mp_savegame_write(map_file) ||
         !mp_savegame_read(map_file)) {
         printf("Unable to create the prepared map\n");
         return -1;
@@ -2878,7 +3051,7 @@ static int command_inlandwater(const char *file, int num_players)
         for (; seed <= 60; seed++) {
             player_context_switch(0);
             player_context_set_num_players(1);
-            if (mp_mapgen_create_prepared(file, num_players, seed) && !mp_mapgen_slot_is_coastal(p)) {
+            if (create_prepared(file, num_players, seed) && !mp_mapgen_slot_is_coastal(p)) {
                 break;
             }
         }
@@ -2919,7 +3092,7 @@ static int build_as(int player_id, int type, int x1, int y1, int x2, int y2)
 // houses push it further; the other player builds nothing there but roads
 static int command_territory(const char *file)
 {
-    if (!mp_mapgen_create_prepared(file, 2, 0)) {
+    if (!create_prepared(file, 2, 0)) {
         printf("Unable to create the prepared map\n");
         return 2;
     }
@@ -2975,7 +3148,7 @@ static figure *first_missionary(int player_id)
 // missions and missionaries (MT.2, MT.3, D-037)
 static int command_missions(const char *file)
 {
-    if (!mp_mapgen_create_prepared(file, 2, 0)) {
+    if (!create_prepared(file, 2, 0)) {
         printf("Unable to create the prepared map\n");
         return 2;
     }
@@ -3052,7 +3225,7 @@ static int command_missions(const char *file)
 // buildings left outside the zone collapse after three months, unless a mission covers them again (MT.4, D-036)
 static int command_outside(const char *file)
 {
-    if (!mp_mapgen_create_prepared(file, 2, 0)) {
+    if (!create_prepared(file, 2, 0)) {
         printf("Unable to create the prepared map\n");
         return 2;
     }
@@ -3111,7 +3284,7 @@ static int walk_missionary(figure *m, int x, int y)
 // the missionary crosses the bridge of Caesar to the other shore (reported by Alexandre, 2026-10-06)
 static int command_missionarybridge(const char *file)
 {
-    if (!mp_mapgen_create_prepared(file, 2, 0)) {
+    if (!create_prepared(file, 2, 0)) {
         printf("Unable to create the prepared map\n");
         return 2;
     }
@@ -3171,7 +3344,7 @@ static int command_placement(const char *file)
         for (unsigned int seed = 1; seed <= 12; seed++) {
             player_context_switch(0);
             player_context_set_num_players(1);
-            if (!mp_mapgen_create_prepared(file, num_players, seed)) {
+            if (!create_prepared(file, num_players, seed)) {
                 printf("Unable to create the prepared map\n");
                 return 2;
             }
@@ -3223,10 +3396,10 @@ static int command_placement(const char *file)
     }
     player_context_switch(0);
     player_context_set_num_players(1);
-    CHECK(mp_mapgen_create_prepared(file, 2, 0) && !mp_mapgen_slot_is_coastal(0), "seed 0 keeps the plan (tests)");
+    CHECK(create_prepared(file, 2, 0) && !mp_mapgen_slot_is_coastal(0), "seed 0 keeps the plan (tests)");
     player_context_switch(0);
     player_context_set_num_players(1);
-    CHECK(mp_mapgen_create_prepared(file, 4, 0) && !mp_mapgen_slot_is_coastal(0) && mp_mapgen_slot_is_coastal(1) &&
+    CHECK(create_prepared(file, 4, 0) && !mp_mapgen_slot_is_coastal(0) && mp_mapgen_slot_is_coastal(1) &&
         !mp_mapgen_slot_is_coastal(2) && mp_mapgen_slot_is_coastal(3), "seed 0 keeps the plan for 4 (tests)");
     player_context_switch(0);
     player_context_set_num_players(1);
@@ -3240,7 +3413,7 @@ static int command_placement(const char *file)
 // game, but they are fewer, and no clearing is shut in by them
 static int command_reachable(const char *file, int num_players)
 {
-    if (!mp_mapgen_create_prepared(file, num_players, 0)) {
+    if (!create_prepared(file, num_players, 0)) {
         printf("Unable to create the prepared map\n");
         return 2;
     }
@@ -3284,7 +3457,7 @@ static int command_reachable(const char *file, int num_players)
 // fog of war (MB.1, D-038): what player 1 discovers and sees
 static int command_fog(const char *file)
 {
-    if (!mp_mapgen_create_prepared(file, 2, 0)) {
+    if (!create_prepared(file, 2, 0)) {
         printf("Unable to create the prepared map\n");
         return 2;
     }
@@ -3345,8 +3518,9 @@ static int command_inspect(const char *file)
         return 2;
     }
     int num_players = player_context_num_players();
-    printf("%d players, map %d x %d, climate %d, territories %d, fog %d\n", num_players, map_data.width,
-        map_data.height, scenario_property_climate(), game_rules_territories(), game_rules_fog_of_war());
+    printf("%d players, map %d x %d, climate %d, territories %d, fog %d, prepared map %d\n", num_players,
+        map_data.width, map_data.height, scenario_property_climate(), game_rules_territories(), game_rules_fog_of_war(),
+        game_rules_multiplayer_settings()->prepared_map + 1);
     int zone[PLAYER_CONTEXT_MAX_PLAYERS + 1] = { 0 };
     int water = 0;
     for (int y = 0; y < map_data.height; y++) {
@@ -3404,7 +3578,7 @@ static int command_terrain(const char *file, int num_players, int x0, int y0, in
 {
     size_t length = strlen(file);
     int is_save = length > 6 && strcmp(file + length - 6, ".mpsav") == 0;
-    if (is_save ? !mp_savegame_read(file) : !mp_mapgen_create_prepared(file, num_players, 0)) {
+    if (is_save ? !mp_savegame_read(file) : !create_prepared(file, num_players, 0)) {
         printf("Unable to create the prepared map\n");
         return 2;
     }
@@ -3455,11 +3629,11 @@ static int stock_of(int player_id, int resource);
 static int treasury_of(int player_id);
 
 // long trips on the large map (T4.17, D-064): between the cities the paths of the walkers stay within what a figure
-// can store (500 steps), a caravan between the two farthest players arrives, and a ship can sail the whole sea of a
-// map as large as the grid
-static int command_longroutes(const char *file)
+// can store (500 steps), and under 400 steps on every prepared map (T4.14, D-064); a caravan between the two farthest
+// players arrives, and a ship can sail the whole sea of a map as large as the grid
+static int command_longroutes(const char *file, int num_players)
 {
-    if (!mp_mapgen_create_prepared(file, 4, 0)) {
+    if (num_players < 2 || num_players > 4 || !create_prepared(file, num_players, 0)) {
         printf("Unable to create the prepared map\n");
         return 2;
     }
@@ -3470,13 +3644,14 @@ static int command_longroutes(const char *file)
     int failures = 0;
 #define CHECK(condition, text) do { int ok_ = (condition); printf("%-70s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
     int cx[4], cy[4];
-    for (int p = 0; p < 4; p++) {
+    for (int p = 0; p < num_players; p++) {
         mp_mapgen_city_center(p, &cx[p], &cy[p]);
     }
+    printf("prepared map %d for %d players\n", options.prepared_map + 1, num_players);
     static uint8_t path[2000];
     int far_a = 0, far_b = 1, far_length = 0, longest_land = 0, all_paths = 1;
-    for (int a = 0; a < 4; a++) {
-        for (int b = a + 1; b < 4; b++) {
+    for (int a = 0; a < num_players; a++) {
+        for (int b = a + 1; b < num_players; b++) {
             int road = map_routing_citizen_can_travel_over_road_garden(cx[a], cy[a], cx[b], cy[b]) ?
                 map_routing_get_path(path, cx[a], cy[a], cx[b], cy[b], 8) : 0;
             int land = map_routing_citizen_can_travel_over_land(cx[a], cy[a], cx[b], cy[b]) ?
@@ -3493,6 +3668,8 @@ static int command_longroutes(const char *file)
     }
     CHECK(all_paths, "a path joins every pair of cities, by the roads and over the land");
     CHECK(far_length < 500 && longest_land < 500, "the longest path of the map is within the 500 steps of a figure");
+    // a margin under the limit of a figure, which a new map must keep (D-064)
+    CHECK(far_length < 400 && longest_land < 400, "the longest path of the map is under 400 steps");
     printf("farthest by the roads: players %d and %d, %d steps (longest over the land: %d)\n", far_a + 1, far_b + 1,
         far_length, longest_land);
 
@@ -3739,7 +3916,7 @@ static void print_menu_raw(const char *when, int mask)
 // city on every computer, leaves it as it is; the player's own route refreshes it
 static int command_menuowner(const char *file)
 {
-    if (!mp_mapgen_create_prepared(file, 2, 0)) {
+    if (!create_prepared(file, 2, 0)) {
         printf("Unable to create the prepared map\n");
         return 2;
     }
@@ -3810,7 +3987,7 @@ static int command_menuowner(const char *file)
 
 static int command_notrade(const char *file)
 {
-    int refused = !mp_mapgen_create_prepared(file, 2, 0) && mp_mapgen_lacks_trade_routes();
+    int refused = !create_prepared(file, 2, 0) && mp_mapgen_lacks_trade_routes();
     player_context_switch(0);
     player_context_set_num_players(1);
     printf("%s\n", refused ? "Identical: the map without trade by land and by sea is refused" :
@@ -3852,7 +4029,7 @@ static int command_tradecities(const char *file)
 // game still apply; a classic game keeps the buying and selling prices of the original
 static int command_importprice(const char *file)
 {
-    if (!mp_mapgen_create_prepared(file, 2, 0)) {
+    if (!create_prepared(file, 2, 0)) {
         printf("Unable to create the prepared map\n");
         return 2;
     }
@@ -3929,7 +4106,7 @@ static int fire_message_place(void)
 // a disaster far on a large map keeps its place: the button of the message goes to it (Alexandre, 2026-10-06)
 static int command_messagelocation(const char *file)
 {
-    if (!mp_mapgen_create_prepared(file, 4, 0)) {
+    if (!create_prepared(file, 4, 0)) {
         printf("Unable to create the prepared map\n");
         return 2;
     }
@@ -3959,7 +4136,7 @@ static int command_messagelocation(const char *file)
 // prices between players (M8.3, D-043): a price per resource and buyer, a notice to the buyer when it changes
 static int command_tradeprices(const char *file)
 {
-    if (!mp_mapgen_create_prepared(file, 3, 0)) {
+    if (!create_prepared(file, 3, 0)) {
         printf("Unable to create the prepared map\n");
         return 2;
     }
@@ -4123,7 +4300,7 @@ static void setup_trade(int marble, int iron, int open_route)
 
 static int start_trade_game(const char *file)
 {
-    if (!mp_mapgen_create_prepared(file, 2, 0)) {
+    if (!create_prepared(file, 2, 0)) {
         printf("Unable to create the prepared map\n");
         return 0;
     }
@@ -5357,6 +5534,10 @@ int main(int argc, char **argv)
         } else if (strcmp(argv[first], "--gods") == 0 && first + 1 < argc) {
             options.local_gods = atoi(argv[first + 1]);
             first += 2;
+        } else if (strcmp(argv[first], "--map") == 0 && first + 1 < argc &&
+            atoi(argv[first + 1]) >= 1 && atoi(argv[first + 1]) <= MP_MAPGEN_NUM_PREPARED_MAPS) {
+            options.prepared_map = atoi(argv[first + 1]) - 1;
+            first += 2;
         } else {
             return usage();
         }
@@ -5429,8 +5610,10 @@ int main(int argc, char **argv)
         result = command_inlandwater(file, atoi(argv[3]));
     } else if (strcmp(command, "farinvasion") == 0) {
         result = command_farinvasion(file);
+    } else if (strcmp(command, "mapchoice") == 0) {
+        result = command_mapchoice(file);
     } else if (strcmp(command, "longroutes") == 0) {
-        result = command_longroutes(file);
+        result = command_longroutes(file, argc > 3 ? atoi(argv[3]) : 4);
     } else if (strcmp(command, "menuowner") == 0) {
         result = command_menuowner(file);
     } else if (strcmp(command, "caravans") == 0) {

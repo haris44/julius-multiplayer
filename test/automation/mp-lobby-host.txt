@@ -8,6 +8,9 @@ wait 10
 # first map of the list, then Host
 click 180 170
 wait 2
+# map 1: the lobby proposes a map drawn by lot (T4.14)
+click 338 418
+wait 2
 click 240 466
 # the client finds the game and joins; then the host starts it with the same button
 mpplayers 2

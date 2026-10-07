@@ -967,6 +967,34 @@
   chaque rive, chacun avec son réservoir ; distances au pont dans CESAR §7.6.
 - Classique : inchangé (rien de tout cela n'existe hors des cartes multijoueur).
 
+### D-069 — Deux cartes préparées de plus ; le salon choisit la carte, au hasard par défaut (T4.14, précise D-047, D-062)
+- 2026-10-07 · **adoptée provisoirement**, **à valider** par Alexandre (« tu me généreras 2 cartes de plus »)
+- **Carte 2 pour 2 joueurs** (220 cases) : le bras de mer traverse la carte en diagonale, du nord-ouest au sud-est.
+  Les deux joueurs vivent au sud-ouest de la mer (même rive, D-047). Le joueur des terres est dans le coin sud-ouest,
+  à plus de 45 cases de l'eau ; son réservoir de César est sur la côte, au nord-est de lui. Le joueur de la côte est
+  sur le rivage, au sud ; il arrive par le bord sud (les autres arrivent par l'ouest ou l'est). Le pont de César mène
+  au nord-est sauvage, la moitié de la carte, avec un peu moins de bois (16,5 % de la carte).
+- **Carte 2 pour 3 ou 4 joueurs** (240 cases) : un bras de mer sinueux au sud. Les deux joueurs des terres sont sur la
+  grande rive nord, reliés par une route de César de l'ouest à l'est ; les deux côtiers sur la rive sud. Il y a donc
+  toujours deux joueurs sur chaque rive (D-047), mais les deux joueurs des terres sont sur la même rive, avec chacun son
+  réservoir de César sur la côte nord (D-068 : un aqueduc ne traverse pas la mer). À 3, le côtier du sud-est manque.
+- **Mêmes règles que la carte 1** (D-055, D-062, D-065) : matières et nourriture du plan, pas d'étang, pont de César,
+  routes de César jusqu'à chaque joueur, point de pêche et navires de l'empire pour les côtiers, emplacements tirés au
+  sort (graine 0 : ordre du plan). Les chemins les plus longs restent sous 400 pas (D-064) : 117 pas à 2, 241 à 4.
+- **Le salon choisit la carte** : « Carte 1 », « Carte 2 » ou « Carte au hasard ». C'est une règle de la partie
+  (`prepared_map`), comme la difficulté : sauvegardée, envoyée avec le message d'accueil et avec les règles du salon
+  (T4.11, protocole 16). Les parties sauvegardées avant se lisent comme jouées sur la carte 1.
+- **Au hasard** : l'hôte tire la carte avec la graine du salon (celle qui tire les emplacements, par un autre calcul).
+  La même graine donne toujours la même carte. Les règles de la partie gardent la carte tirée, et les clients
+  reçoivent la carte toute faite dans la sauvegarde : tous jouent sur la même.
+- **Par défaut** : « Carte au hasard » dans le salon. Les règles par défaut des tests et de la ligne de commande
+  (`--mp-host`, `tools/play-mp.sh`) gardent la carte 1, comme la difficulté (D-063).
+- *À valider* :
+  - le choix par défaut, au hasard ;
+  - les deux nouvelles cartes elles-mêmes (formes, places des joueurs, taille) ;
+  - sur la carte 2 pour 2, le joueur de la côte arrive par le bord sud, et non par l'ouest ou l'est.
+- Classique : inchangé (rien de tout cela hors des cartes multijoueur).
+
 ### D-073 — Une partie reprise garde ses règles ; corrections de la revue (T4.2, T4.9, T4.10, T4.11, T4.12, T4.17)
 - 2026-10-07 · **adoptée provisoirement** (corrections de la revue, sans Alexandre)
 - **Une partie reprise d'une sauvegarde multijoueur (`.mpsav`) garde les règles enregistrées** : difficulté, dieux,

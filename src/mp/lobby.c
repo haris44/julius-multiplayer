@@ -8,6 +8,7 @@ static const int END_SCORES[] = { 500, 1000, 1500, 2000, 0 };
 #define NUM_END_CHOICES 5
 #define DEFAULT_END_CHOICE 1
 #define NUM_DIFFICULTIES 5
+#define NUM_MAP_CHOICES 3 // map 1, map 2, drawn by lot (game_map_choice)
 
 static struct {
     int initialized;
@@ -16,6 +17,7 @@ static struct {
     int end_choice;
     int ai_invasions;
     int fog_of_war;
+    int map_choice;
     game_rules_settings shown;
 } data;
 
@@ -33,6 +35,8 @@ void mp_lobby_rules_init(void)
     data.end_choice = DEFAULT_END_CHOICE;
     data.ai_invasions = rules.ai_invasions;
     data.fog_of_war = rules.fog_of_war;
+    // a map drawn by lot (T4.14, D-069, to be confirmed): the default rules of the tests keep map 1
+    data.map_choice = GAME_MAP_RANDOM;
 }
 
 int mp_lobby_rules_editable(void)
@@ -50,6 +54,7 @@ void mp_lobby_rules_settings(game_rules_settings *settings)
     settings->gods_enabled = data.gods;
     settings->ai_invasions = data.ai_invasions;
     settings->fog_of_war = data.fog_of_war;
+    settings->prepared_map = data.map_choice;
     settings->end_condition = END_SCORES[data.end_choice] ? GAME_END_CAESAR : GAME_END_NONE;
     if (END_SCORES[data.end_choice]) {
         settings->caesar_score = END_SCORES[data.end_choice];
@@ -77,6 +82,9 @@ void mp_lobby_change_rule(mp_lobby_rule rule)
             break;
         case MP_LOBBY_RULE_FOG:
             data.fog_of_war = !data.fog_of_war;
+            break;
+        case MP_LOBBY_RULE_MAP:
+            data.map_choice = (data.map_choice + 1) % NUM_MAP_CHOICES;
             break;
     }
     if (mp_lockstep_get_state() == MP_LOCKSTEP_WAITING_FOR_PLAYERS && mp_lockstep_is_host()) {

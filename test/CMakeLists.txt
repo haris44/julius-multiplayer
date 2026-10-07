@@ -313,7 +313,11 @@ endforeach()
 # player inland, the same map every time, cities that grow; three players play on the map for four
 foreach(players 2 3 4)
     add_test(NAME mp_prepared_map_${players}_players COMMAND simtool preparedmap brugle-massilia-start.sav ${players} 4000)
+    # T4.14: the same rules on the prepared map 2
+    add_test(NAME mp_prepared_map2_${players}_players COMMAND simtool --map 2 preparedmap brugle-massilia-start.sav ${players} 4000)
 endforeach()
+# T4.14: the lobby chooses map 1, map 2 or one drawn by lot; the game keeps the map it is played on
+add_test(NAME mp_prepared_map_choice COMMAND simtool mapchoice brugle-massilia-start.sav)
 
 # Reservoirs hold water (ME.1, D-035): cut off, a reservoir empties in about 270 days; joined again, it fills
 add_test(NAME mp_reservoir_level COMMAND simtool reservoirlevel brugle-massilia-start.sav)
@@ -321,11 +325,13 @@ add_test(NAME mp_reservoir_level COMMAND simtool reservoirlevel brugle-massilia-
 # up when it is cut and fills again when it is mended; alone on the map too
 foreach(players 1 2 4)
     add_test(NAME mp_prepared_map_drying_${players}_players COMMAND simtool drying brugle-massilia-start.sav ${players})
+    add_test(NAME mp_prepared_map2_drying_${players}_players COMMAND simtool --map 2 drying brugle-massilia-start.sav ${players})
 endforeach()
 
 # The aqueduct of Caesar waters the player inland wherever his arrival point is drawn, players 2 to 4 included (T4.9)
 foreach(players 2 3 4)
     add_test(NAME mp_caesar_aqueduct_${players}_players COMMAND simtool inlandwater brugle-massilia-start.sav ${players})
+    add_test(NAME mp_caesar_aqueduct_map2_${players}_players COMMAND simtool --map 2 inlandwater brugle-massilia-start.sav ${players})
 endforeach()
 
 # The build menu is the one of the local player: a route opened by another player does not change it (T4.13, D-061)
@@ -336,6 +342,11 @@ add_test(NAME mp_build_menu_owner COMMAND simtool menuowner brugle-massilia-star
 add_test(NAME mp_long_routes COMMAND simtool longroutes brugle-massilia-start.sav)
 # K-review-fixes (T4.17): an enemy army from the edge farthest from a city finds its way over the land and reaches it
 add_test(NAME mp_far_invasion COMMAND simtool farinvasion brugle-massilia-start.sav)
+# T4.14: every prepared map keeps its longest path under 400 steps (D-064)
+add_test(NAME mp_long_routes_2_players COMMAND simtool longroutes brugle-massilia-start.sav 2)
+foreach(players 2 4)
+    add_test(NAME mp_long_routes_map2_${players}_players COMMAND simtool --map 2 longroutes brugle-massilia-start.sav ${players})
+endforeach()
 
 # Territories (MT.1, D-036): build only in one's zone, which follows the settled buildings and the missions
 add_test(NAME mp_territory COMMAND simtool territory brugle-massilia-start.sav)
@@ -347,12 +358,15 @@ add_test(NAME mp_outside_territory COMMAND simtool outside brugle-massilia-start
 add_test(NAME mp_fog_of_war COMMAND simtool fog brugle-massilia-start.sav)
 # The missionary crosses the bridge of Caesar (Alexandre, 2026-10-06)
 add_test(NAME mp_missionary_bridge COMMAND simtool missionarybridge brugle-massilia-start.sav)
+add_test(NAME mp_missionary_bridge_map2 COMMAND simtool --map 2 missionarybridge brugle-massilia-start.sav)
 # The players draw their arrival points by lot (D-052); two players inland on the map for 4, food and materials of
 # the plan, no timber inland (D-062, T4.15)
 add_test(NAME mp_prepared_map_placement COMMAND simtool placement brugle-massilia-start.sav)
+add_test(NAME mp_prepared_map2_placement COMMAND simtool --map 2 placement brugle-massilia-start.sav)
 # We go everywhere (D-052): fewer woods, which stay impassable, and no clearing shut in by them
 foreach(players 2 4)
     add_test(NAME mp_prepared_map_reachable_${players}_players COMMAND simtool reachable brugle-massilia-start.sav ${players})
+    add_test(NAME mp_prepared_map2_reachable_${players}_players COMMAND simtool --map 2 reachable brugle-massilia-start.sav ${players})
 endforeach()
 # The message of a disaster far on a large map goes to it (Alexandre, 2026-10-06)
 add_test(NAME mp_message_location COMMAND simtool messagelocation brugle-massilia-start.sav)
@@ -390,6 +404,8 @@ foreach(players 2 4)
 endforeach()
 if(NOT WIN32)
     add_test(NAME mp_lan_generated_map COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/sim/lan_test.sh $<TARGET_FILE:simtool> 27441 3 brugle-massilia-start.sav 600 generate)
-    set_tests_properties(mp_lan_generated_map PROPERTIES TIMEOUT 120)
+    # T4.14: three players on the prepared map 2 chosen in the lobby
+    add_test(NAME mp_lan_generated_map2 COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/sim/lan_test.sh $<TARGET_FILE:simtool> 27451 3 brugle-massilia-start.sav 600 generate map2)
+    set_tests_properties(mp_lan_generated_map mp_lan_generated_map2 PROPERTIES TIMEOUT 120)
 endif()
 

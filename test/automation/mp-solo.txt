@@ -10,6 +10,9 @@ click 180 170
 wait 2
 click 268 350
 wait 2
+# map 1: the lobby proposes a map drawn by lot (T4.14)
+click 338 418
+wait 2
 screenshot build/automation/mp-solo-lobby.png
 click 240 466
 wait 5

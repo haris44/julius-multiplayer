@@ -336,9 +336,10 @@ int mp_mapgen_create(const char *template_file, int num_players, int size, unsig
     return 1;
 }
 
-// prepared multiplayer maps (D-033, D-047, D-062): one fixed plan for 2 players and one for 4. A great arm of the sea
-// crosses the map from the west edge to the east edge; on the map for 2 both players live on its south shore, on the
-// map for 4 two players live on each shore, joined by the main road of Caesar over his bridge. The players of the
+// prepared multiplayer maps (D-033, D-047, D-062): two maps (T4.14, D-069), each with one fixed plan for 2 players
+// and one for 4. A great arm of the sea crosses the map from the west edge to the east edge; on the maps for 2 both
+// players live on the same shore, on the maps for 4 two players live on each shore, joined by the main road of Caesar
+// over his bridge. The players of the
 // rocks live far from the sea and get no water but the aqueduct of Caesar, one reservoir of his on the nearest coast
 // for each of them; the others live on the coast, where the ships of their empire come along the sea. No pond
 // anywhere: the sea is the only water of the map, so that cutting the aqueduct of Caesar dries the cities of the rocks
@@ -378,6 +379,7 @@ struct map_layout {
     int num_sea_points;
     int sea_x[MAX_SEA_POINTS]; // middle line of the arm of the sea, from the west edge to the east edge
     int sea_y[MAX_SEA_POINTS];
+    int woods_threshold; // 0: WOODS_THRESHOLD; higher on a map whose wild land is larger, for as much forest
 };
 
 // what the plan gives or refuses to each arrival point: the permissions of its city. Pig farms and wharves both give
@@ -432,6 +434,55 @@ static const map_layout LAYOUT_4 = {
     5,
     { 0, 60, 130, 200, 259 },
     { 140, 138, 132, 130, 128 }
+};
+
+// map 2 for two players (T4.14): the arm of the sea runs diagonally from the north-west to the south-east and both
+// players live south-west of it. The player of the rocks (iron, marble, olives, pigs) is in the south-west corner,
+// his reservoir of Caesar on the coast north-east of him; the player of the coast (timber, clay, vines, fruit, fish)
+// is on the shore in the south, his arrival point on the south edge. The main road of Caesar runs along the row of
+// each city and crosses the sea to the wild north-east
+static const map_layout LAYOUT_2_MAP2 = {
+    220,
+    {
+        { { RESOURCE_WHEAT, RESOURCE_VEGETABLES, RESOURCE_MEAT, RESOURCE_IRON, RESOURCE_MARBLE, RESOURCE_OLIVES },
+            75, 1, 45, 180, 0, 180, { 2, 0, 3, 1 } },
+        { { RESOURCE_WHEAT, RESOURCE_VEGETABLES, RESOURCE_FRUIT, RESOURCE_TIMBER, RESOURCE_CLAY, RESOURCE_VINES },
+            0, 0, 140, 156, 150, 219, { 2, 3, 0, 1 } },
+    },
+    5,
+    {
+        { 0, 180, 100, 180 }, { 100, 156, 100, 180 }, { 100, 156, 150, 156 }, { 150, 156, 150, 219 },
+        { 90, 40, 90, 180 }
+    },
+    4,
+    4,
+    { 0, 70, 140, 219 },
+    { 40, 80, 130, 182 },
+    170 // the wild north-east is half of the map: fewer woods there
+};
+
+// map 2 for four players (T4.14): a winding arm of the sea in the south. The two players of the rocks live on the
+// wide north shore, joined by a main road from the west edge to the east edge (iron, marble, pigs; olives in the
+// west, vines in the east), each with his reservoir of Caesar on the coast south-east of him; the two players of the
+// coast live on the south shore (timber, clay, fruit, fish). Three players leave the south-east free (D-062)
+static const map_layout LAYOUT_4_MAP2 = {
+    240,
+    {
+        { { RESOURCE_WHEAT, RESOURCE_VEGETABLES, RESOURCE_MEAT, RESOURCE_IRON, RESOURCE_MARBLE, RESOURCE_OLIVES },
+            95, -1, 55, 90, 0, 90, { 0, 2, 1, 3 } },
+        { { RESOURCE_WHEAT, RESOURCE_VEGETABLES, RESOURCE_FRUIT, RESOURCE_TIMBER, RESOURCE_CLAY },
+            0, 0, 70, 204, 0, 204, { 2, 3, 0, 1 } },
+        { { RESOURCE_WHEAT, RESOURCE_VEGETABLES, RESOURCE_MEAT, RESOURCE_IRON, RESOURCE_MARBLE, RESOURCE_VINES },
+            215, -1, 175, 90, 239, 90, { 1, 3, 0, 2 } },
+        { { RESOURCE_WHEAT, RESOURCE_VEGETABLES, RESOURCE_FRUIT, RESOURCE_TIMBER, RESOURCE_CLAY },
+            0, 0, 180, 208, 239, 208, { 3, 2, 1, 0 } },
+    },
+    4,
+    { { 0, 90, 239, 90 }, { 0, 204, 120, 204 }, { 120, 208, 239, 208 }, { 120, 90, 120, 208 } },
+    3,
+    5,
+    { 0, 60, 120, 180, 239 },
+    { 168, 180, 166, 182, 170 }
 };
 
 // the arrival point of a player: the plan numbers them, a draw at the start of the game gives them out
@@ -536,7 +587,8 @@ static int prepared_terrain(int x, int y)
     // far from every city, forests with clearings, thicker further away, and no pond (D-055); near the cities,
     // nothing that one player may exploit and another not (D-044)
     int wild = distance_to_nearest_city(x, y) - WILD_DISTANCE;
-    if (wild > 0 && soft_noise(x, y, 1) > WOODS_THRESHOLD - (wild < 20 ? wild : 20)) {
+    int threshold = data.layout->woods_threshold ? data.layout->woods_threshold : WOODS_THRESHOLD;
+    if (wild > 0 && soft_noise(x, y, 1) > threshold - (wild < 20 ? wild : 20)) {
         return TERRAIN_TREE;
     }
     return soft_noise(x, y, 3) > 150 ? TERRAIN_MEADOW : 0;
@@ -967,9 +1019,45 @@ void mp_mapgen_caesar_bridge(int *x, int *y_north, int *y_south)
     *y_south = data.prepared ? data.sea_bottom[*x] : -1;
 }
 
+// the prepared maps (T4.14, D-069): for each, its plan for 2 players and its plan for 3 or 4
+static const map_layout *const PREPARED_LAYOUTS[MP_MAPGEN_NUM_PREPARED_MAPS][2] = {
+    { &LAYOUT_2, &LAYOUT_4 },
+    { &LAYOUT_2_MAP2, &LAYOUT_4_MAP2 },
+};
+
+static const map_layout *prepared_layout(int map, int num_players)
+{
+    if (map < 0 || map >= MP_MAPGEN_NUM_PREPARED_MAPS) {
+        return 0;
+    }
+    return PREPARED_LAYOUTS[map][num_players <= 2 ? 0 : 1];
+}
+
+int mp_mapgen_prepared_map_size(int map, int num_players)
+{
+    const map_layout *layout = prepared_layout(map, num_players);
+    return layout ? layout->size : 0;
+}
+
 int mp_mapgen_prepared_size(int num_players)
 {
-    return num_players <= 2 ? LAYOUT_2.size : LAYOUT_4.size;
+    return mp_mapgen_prepared_map_size(0, num_players);
+}
+
+int mp_mapgen_choose_prepared_map(int choice, unsigned int seed)
+{
+    if (choice >= 0 && choice < MP_MAPGEN_NUM_PREPARED_MAPS) {
+        return choice;
+    }
+    if (!seed) {
+        return 0; // the tests keep map 1
+    }
+    // a draw of its own from the seed of the lobby, which also draws the arrival points
+    unsigned int h = seed * 0x9e3779b1u;
+    h ^= h >> 15;
+    h *= 0x2c1b3c6du;
+    h ^= h >> 12;
+    return (int) ((h >> 8) % MP_MAPGEN_NUM_PREPARED_MAPS);
 }
 
 static int lacks_trade_routes;
@@ -1012,12 +1100,17 @@ const char *mp_mapgen_prepared_template(void)
 
 int mp_mapgen_create_prepared(const char *template_file, int num_players, unsigned int placement_seed)
 {
+    return mp_mapgen_create_prepared_map(template_file, num_players, 0, placement_seed);
+}
+
+int mp_mapgen_create_prepared_map(const char *template_file, int num_players, int map, unsigned int placement_seed)
+{
     lacks_trade_routes = 0;
-    if (num_players < 1 || num_players > MP_MAPGEN_MAX_PLAYERS) {
+    if (num_players < 1 || num_players > MP_MAPGEN_MAX_PLAYERS || !prepared_layout(map, num_players)) {
         return 0;
     }
     data.seed = PREPARED_SEED;
-    data.layout = num_players <= 2 ? &LAYOUT_2 : &LAYOUT_4;
+    data.layout = prepared_layout(map, num_players);
     data.size = data.layout->size;
     // three players play on the map for four, one arrival point stays free
     data.num_players = num_players <= 2 ? 2 : 4;

@@ -23,6 +23,13 @@ typedef enum {
     GAME_END_CAESAR = 2  /**< The first city to reach the score of laurels wins (doc/mp/CESAR.md §4.3, D-053) */
 } game_end_condition;
 
+/** Prepared map of a new multiplayer game, chosen in the lobby (doc/mp/DECISIONS.md D-069) */
+typedef enum {
+    GAME_MAP_1 = 0,      /**< The first prepared maps (D-047, D-062); also those of games saved before the choice */
+    GAME_MAP_2 = 1,      /**< The second prepared maps (T4.14) */
+    GAME_MAP_RANDOM = 2  /**< Drawn by lot with the seed of the lobby; the game then keeps the map drawn */
+} game_map_choice;
+
 typedef struct {
     int difficulty; /**< One of the set_difficulty values of game/settings.h */
     int gods_enabled;
@@ -34,6 +41,7 @@ typedef struct {
     int territories;       /**< Players build only in their zone (prepared maps, doc/mp/DECISIONS.md D-036) */
     int fog_of_war;        /**< Players see only what they discovered (doc/mp/DECISIONS.md D-038) */
     int caesar_score;      /**< Laurels that win a GAME_END_CAESAR game (0: the default score) */
+    int prepared_map;      /**< game_map_choice of a new game; once it started, the map it is played on */
 } game_rules_settings;
 
 /**
