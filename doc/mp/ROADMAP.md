@@ -721,9 +721,19 @@ le note « à valider ».
 ## T5 — Deuxième essai à plusieurs (2026-10-07)
 Essai d'Alexandre : 3 joueurs, 3 Mac, réseau local filaire stable, version de la nuit (`95190c7f`, protocole 19).
 Les journaux de l'essai ne sont pas sur le Mac de développement : diagnostic par le code et des parties simulées.
-- [ ] **T5.1** Vérifier que J2, J3 et J4 ne jouent pas en difficile (« voir si les J2/J3/J4 ne sont pas en mode
-  difficile »).
-- [ ] **T5.2** Aligner les salaires de Rome pour tous les joueurs.
+- [x] **T5.1** Vérifier que J2, J3 et J4 ne jouent pas en difficile (« voir si les J2/J3/J4 ne sont pas en mode
+  difficile »). *Fait* (D-076) : le bug était réel et touchait **toutes** les cités. Charger le modèle de carte remet le
+  jeu en mode classique, donc la difficulté du réglage local de l'hôte : le trésor et la faveur de départ (copiés dans
+  chaque cité) étaient ceux de ce réglage, pas ceux du salon. Reproduit par `mp_lan_start_easy` (salon facile, hôte
+  très difficile : 2 250 Dn au lieu de 6 000, faveur 40 au lieu de 60). Corrigé : la génération (et la composition de
+  copies) remet les règles du salon et recalcule fonds et faveur. Le reste (sentiment, loups, armées) se calculait déjà
+  par `game_rules_difficulty()`. Tests `mp_lan_start_easy`, `mp_lan_start_hard`, `mp_lan_start_easy_saved_template`,
+  `mp_lan_start_easy_cities_map` : 3 joueurs en réseau, mêmes valeurs sur l'hôte et les clients.
+- [x] **T5.2** Aligner les salaires de Rome pour tous les joueurs. *Fait* (D-076, à valider) : les cités héritaient du
+  rang du modèle de carte (rang 5 : 20 Dn par mois au départ) et chacun choisissait son salaire. Maintenant même départ
+  pour tous (rang 0, salaire 0, épargne 0) et Rome verse à chacun le salaire de son rang de lauriers, même table, sans
+  choix. Tests `mp_salaries` (rangs 0, 1, 3 payés 0, 2, 8 Dn), `mp_lan_start_*` (départ identique malgré un modèle de
+  rang 5), `mp_caesar_gifts` mis à jour.
 - [ ] **T5.3** Désynchronisation au tour 18954, puis impossible de reprendre la partie (« on était peut-être tous les
   3 dans les menus à ce moment-là »).
 - [ ] **T5.4** Impossible de charger une partie sauvegardée.

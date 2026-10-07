@@ -1133,3 +1133,39 @@
 - **Pont de César** (CESAR §7.6, précise D-068) : distances au pont recalculées pour chaque emplacement de la carte à
   4 refaite ; comme au §7.2, seules les légions de l'agresseur sur la terre de César comptent dans la colère.
 - Classique : inchangé.
+
+### D-076 — Les cités démarrent à la difficulté du salon ; Rome verse à chacun le salaire de son rang (T5.1, T5.2, précise D-063, D-067)
+- 2026-10-07 · **adoptée provisoirement** (retour du deuxième essai à 3 joueurs : « voir si J2/J3/J4 ne sont pas en
+  difficile », « aligner les salaires de Rome pour tous les joueurs »)
+- **Cause (T5.1)** : charger un modèle de carte (`.map`) ou une partie sauvegardée remet le jeu en mode classique
+  (`game_rules_set_classic`), donc la difficulté du **réglage local de l'hôte** (« difficile » par défaut). La
+  génération de la carte, qui se fait à ce moment-là, calculait avec ce réglage les **fonds de départ** (le trésor,
+  `difficulty_adjust_money`) et la **faveur de départ** ; les cités des joueurs 2 à 4 sont des copies de la première,
+  donc **toutes** les cités partaient à la difficulté de l'hôte, quelle que soit celle du salon. Tout le reste
+  (sentiment de base, loups, taille des armées, prêt de secours) se calcule en cours de partie par
+  `game_rules_difficulty()` et suit bien les règles de la partie, sur chaque machine. Les clients reçoivent la sauvegarde
+  de l'hôte : ils ont ses valeurs, et la difficulté affichée en ville est celle des règles (D-063).
+- **Correction** : `prepare_template` (génération) garde les règles actives avant le chargement et les remet après,
+  puis recalcule les fonds et la faveur de la première cité ; l'hôte règle les règles du salon (`game_rules_set_multiplayer`)
+  avant de générer la carte. Même chose dans la composition de copies d'une carte du jeu libre (`host_compose_cities`).
+  Une partie reprise d'une sauvegarde de partie (`.sav`) garde son trésor et sa faveur : seules les nouvelles cités
+  prennent la difficulté du salon.
+- **Salaire (T5.2)** : une cité héritait du **rang du modèle de carte** (par exemple 5, soit 20 Dn par mois jusqu'au
+  premier changement de mois) ou de la campagne, et chacun pouvait choisir un salaire différent sous le plafond de son
+  rang. Règle provisoire : **chaque joueur démarre avec le même rang 0, le même salaire 0 et la même épargne 0, puis
+  Rome lui verse chaque mois le salaire de son rang de lauriers, la même table pour tous** (0, 2, 5, 8, 12, 20, 30, 40,
+  60, 80, 100 Dn). Il n'y a plus de salaire à choisir : le bouton du conseiller impérial n'ouvre plus la fenêtre, et la
+  commande `MP_ACTION_SET_SALARY` (protocole inchangé) ramène simplement le salaire à celui du rang. Le rang de
+  l'original (`player_rank`) suit le rang de lauriers, pour que la faveur de l'original ne retire rien.
+- **Tests** : `mp_lan_start_easy`, `mp_lan_start_hard`, `mp_lan_start_easy_saved_template`,
+  `mp_lan_start_easy_cities_map` (3 joueurs en réseau, difficulté du salon à l'opposé du réglage de l'hôte, modèle de
+  carte de rang 5 et de 3 000 Dn : trésor, faveur, rang, salaire, épargne, sentiment, ennemis et loups de chaque cité,
+  identiques sur l'hôte et les clients, ports 27540 à 27543) et `mp_salaries` (3 joueurs de rangs 0, 1 et 3 payés 0, 2
+  et 8 Dn, un rang gagné ou perdu change le salaire le mois suivant).
+- *À valider* :
+  - plus de choix du salaire en multijoueur (Rome verse toujours celui du rang) : faut-il laisser choisir un salaire
+    plus bas ?
+  - au rang 0 le salaire est nul, donc **pas d'épargne** ni de cadeau avant le rang 1 (déjà noté en D-067) : épargne de
+    départ ?
+  - une partie reprise d'une ancienne `.mpsav` garde les rangs et salaires qu'elle avait.
+- Classique : inchangé.

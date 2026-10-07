@@ -1,5 +1,7 @@
 #include "lockstep.h"
 
+#include "city/data.h"
+#include "city/emperor.h"
 #include "core/buffer.h"
 #include "core/dir.h"
 #include "core/io.h"
@@ -432,6 +434,8 @@ static int host_generate_map(void)
     // The seed of the lobby also draws the arrival points
     int map = mp_mapgen_choose_prepared_map(data.rules.prepared_map, data.map_seed);
     data.rules.prepared_map = map;
+    // the cities start with the funds and the favor of the difficulty of the lobby, not of this computer (T5.1)
+    game_rules_set_multiplayer(&data.rules);
     if (!mp_mapgen_create_prepared_map(data.saved_game, data.num_players, map, data.map_seed)) {
         return 0;
     }
@@ -456,8 +460,17 @@ static int host_compose_cities(void)
     } else {
         loaded = game_file_load_saved_game(data.saved_game);
     }
-    if (!loaded ||
-        !mp_compose_separate_cities(data.num_players, MP_COMPOSE_CITY_GAP)) {
+    if (!loaded) {
+        return 0;
+    }
+    // loading put the game back in classic mode, at the difficulty of this computer: the cities, copies of this one,
+    // start with the rules of the lobby, and every player with the same rank, salary and savings (T5.1, T5.2, D-076)
+    game_rules_set_multiplayer(&data.rules);
+    if (is_scenario(data.saved_game)) {
+        city_data_init_scenario();
+    }
+    city_emperor_init_multiplayer(is_scenario(data.saved_game));
+    if (!mp_compose_separate_cities(data.num_players, MP_COMPOSE_CITY_GAP)) {
         return 0;
     }
     // players may build between their cities and join them (D-018)

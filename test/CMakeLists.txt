@@ -406,6 +406,8 @@ add_test(NAME mp_caesar_state COMMAND simtool caesarstate brugle-massilia-start.
 add_test(NAME mp_caesar_laurels COMMAND simtool caesarlaurels valentia57.sav)
 # Gifts, salary and donations to Caesar are network commands; a gift gives laurels, one counted a year (T4.2, D-067)
 add_test(NAME mp_caesar_gifts COMMAND simtool caesargifts brugle-massilia-start.sav)
+# T5.2 (D-076): Rome pays every player the salary of his rank; the same start for everybody
+add_test(NAME mp_salaries COMMAND simtool salaries brugle-massilia-start.sav)
 # Monthly history of the laurels of each city, for the ratings advisor: gain, trend, saved (T4.1, D-071)
 add_test(NAME mp_caesar_history COMMAND simtool caesarhistory brugle-massilia-start.sav)
 
@@ -420,6 +422,15 @@ if(NOT WIN32)
     add_test(NAME mp_lan_generated_map COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/sim/lan_test.sh $<TARGET_FILE:simtool> 27441 3 brugle-massilia-start.sav 600 generate)
     # T4.14: three players on the prepared map 2 chosen in the lobby
     add_test(NAME mp_lan_generated_map2 COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/sim/lan_test.sh $<TARGET_FILE:simtool> 27451 3 brugle-massilia-start.sav 600 generate map2)
-    set_tests_properties(mp_lan_generated_map mp_lan_generated_map2 PROPERTIES TIMEOUT 120)
+    # T5.1, T5.2: three players on a generated map; the cities start with the funds, favor, rank, salary and savings of
+    # the difficulty of the lobby and of everybody, on the host and on the clients, whatever the settings of the
+    # computers and the rank of the template (a free map with rank 5 and funds 3000, or a saved game)
+    add_test(NAME mp_lan_start_easy COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/sim/lan_test.sh $<TARGET_FILE:simtool> 27540 3 brugle-massilia-start.sav 200 generate difficulty-easy map-template)
+    add_test(NAME mp_lan_start_hard COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/sim/lan_test.sh $<TARGET_FILE:simtool> 27541 3 brugle-massilia-start.sav 200 generate difficulty-hard map-template)
+    add_test(NAME mp_lan_start_easy_saved_template COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/sim/lan_test.sh $<TARGET_FILE:simtool> 27542 3 brugle-massilia-start.sav 200 generate difficulty-easy)
+    # the same for separate copies of a free map of the game (not a generated map)
+    add_test(NAME mp_lan_start_easy_cities_map COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/sim/lan_test.sh $<TARGET_FILE:simtool> 27543 3 brugle-massilia-start.sav 200 cities difficulty-easy map-template)
+    set_tests_properties(mp_lan_generated_map mp_lan_generated_map2 mp_lan_start_easy mp_lan_start_hard
+        mp_lan_start_easy_saved_template mp_lan_start_easy_cities_map PROPERTIES TIMEOUT 120)
 endif()
 

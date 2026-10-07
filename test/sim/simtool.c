@@ -22,6 +22,8 @@
 #include "city/population.h"
 #include "city/ratings.h"
 #include "scenario/data.h"
+#include "scenario/editor.h"
+#include "scenario/empire.h"
 #include "scenario/editor_map.h"
 #include "scenario/invasion.h"
 #include "scenario/property.h"
@@ -202,6 +204,8 @@ static int usage(void)
     printf("  simtool badrules PORT                  a player refuses rules of the host out of their bounds\n");
     printf("  simtool attacksource SAVE SOURCE TICKS attacks of SOURCE (army, uprising, mars) come in a classic\n");
     printf("                                         game and with AI invasions on, none with them off\n");
+    printf("  simtool salaries SAVE                  three players: Rome pays each the salary of his rank, the same\n"
+           "                                         start and table for everybody (T5.2)\n");
     printf("  simtool caesarfree SAVE TICKS          Caesar (requests, anger, salary...) acts in a classic game\n");
     printf("                                         and not in a multiplayer game\n");
     printf("  simtool mpresume SAVE TICKS MORE       twin cities: saving after TICKS (.mpsav), then loading it and\n");
@@ -650,6 +654,54 @@ static int every_lobby_rule_differs(const game_rules_settings *a, const game_rul
         a->prepared_map != b->prepared_map;
 }
 
+// T5.1, T5.2: what each city starts with, as every machine of the network sees it
+static void set_local_difficulty(int difficulty);
+
+static void count_trade_cities(int *land, int *sea);
+static int check_start_cities(int expected_difficulty, int from_map)
+{
+    int ok = 1;
+    int local = player_context_current();
+    if (game_rules_difficulty() != expected_difficulty) {
+        printf("WRONG: the game is played at difficulty %d, not %d\n", game_rules_difficulty(), expected_difficulty);
+        ok = 0;
+    }
+    printf("start difficulty %d\n", game_rules_difficulty());
+    // what the difficulty decides while playing: the base sentiment, the size of the armies, the bite of the wolves
+    int easy = expected_difficulty == DIFFICULTY_EASY;
+    printf("sentiment %d, enemies %d%%, wolf attack %d\n", difficulty_sentiment(), difficulty_adjust_enemies(100),
+        difficulty_adjust_wolf_attack(8));
+    if (difficulty_sentiment() != (easy ? 70 : 50) || difficulty_adjust_enemies(100) != (easy ? 60 : 100) ||
+        difficulty_adjust_wolf_attack(8) != (easy ? 4 : 8)) {
+        printf("WRONG: the sentiment, enemies or wolves are not those of the difficulty of the game\n");
+        ok = 0;
+    }
+    for (int p = 0; p < player_context_num_players(); p++) {
+        player_context_switch(p);
+        int funds = difficulty_adjust_money(scenario_initial_funds());
+        printf("start city %d: treasury %d favor %d savings %d salary rank %d amount %d rank %d\n", p,
+            city_finance_treasury(), city_rating_favor(), city_emperor_personal_savings(),
+            city_emperor_salary_rank(), city_emperor_salary_amount(), city_emperor_rank());
+        if (city_finance_treasury() != funds) {
+            printf("WRONG: city %d starts with %d denarii, the funds of the scenario at this difficulty are %d\n", p,
+                city_finance_treasury(), funds);
+            ok = 0;
+        }
+        if (from_map && city_rating_favor() != difficulty_starting_favor()) {
+            printf("WRONG: city %d starts with favor %d, not %d\n", p, city_rating_favor(),
+                difficulty_starting_favor());
+            ok = 0;
+        }
+        if (city_emperor_personal_savings() || city_emperor_salary_rank() || city_emperor_salary_amount() ||
+            city_emperor_rank()) {
+            printf("WRONG: city %d does not start with the rank, salary and savings of everybody\n", p);
+            ok = 0;
+        }
+    }
+    player_context_switch(local);
+    return ok;
+}
+
 static int command_mpnode(int argc, char **argv)
 {
     // argv: mpnode host PORT PLAYERS SAVE TICKS [cities] | mpnode join ADDRESS PORT TICKS
@@ -664,6 +716,51 @@ static int command_mpnode(int argc, char **argv)
     int is_join = argc >= 6 && strcmp(argv[2], "join") == 0;
     if (!is_host && !is_join) {
         return usage();
+    }
+    // 'difficulty-easy' / 'difficulty-hard' (T5.1, T5.2): the lobby sets this difficulty on a host whose own setting is
+    // the other end of the scale and on clients whose setting is "normal"; the template of the host ('blank') is a free
+    // map with a rank and funds of its own. Every city of every machine must start with the values of the game rules
+    int expected_difficulty = -1;
+    for (int i = 6; i < argc; i++) {
+        if (strcmp(argv[i], "difficulty-easy") == 0) {
+            expected_difficulty = DIFFICULTY_EASY;
+        } else if (strcmp(argv[i], "difficulty-hard") == 0) {
+            expected_difficulty = DIFFICULTY_HARD;
+        }
+    }
+    int map_template = 0; // 'map-template': the saved game becomes a free map (rank 5, funds 3000) for the host
+    for (int i = 6; i < argc; i++) {
+        map_template |= strcmp(argv[i], "map-template") == 0;
+    }
+    char template_file[64] = "";
+    if (map_template && is_host) {
+        snprintf(template_file, sizeof(template_file), "mp-template-%s.map", argv[3]);
+        if (!game_file_load_saved_game(argv[5])) {
+            printf("FAILED: cannot load %s\n", argv[5]);
+            return 1;
+        }
+        scenario_editor_set_player_rank(5);
+        scenario_editor_set_initial_funds(3000);
+        // the empire of a free map is one of the empires of the game, which must trade by land and by sea
+        for (int empire = 0; empire < 40; empire++) {
+            int land, sea;
+            empire_load(1, scenario_empire_id());
+            empire_init_scenario();
+            count_trade_cities(&land, &sea);
+            if (land > 0 && sea > 0) {
+                break;
+            }
+            scenario_editor_change_empire(1);
+        }
+        if (!game_file_editor_write_scenario(template_file)) {
+            printf("FAILED: cannot write the template\n");
+            return 1;
+        }
+        argv[5] = template_file;
+    }
+    if (expected_difficulty >= 0) {
+        set_local_difficulty(is_host ? (expected_difficulty == DIFFICULTY_EASY ? DIFFICULTY_VERY_HARD :
+            DIFFICULTY_VERY_EASY) : DIFFICULTY_NORMAL);
     }
     int ticks = atoi(is_host ? argv[6] : argv[5]);
     int cheat = is_join && argc >= 7 && strcmp(argv[6], "desync") == 0;
@@ -691,10 +788,15 @@ static int command_mpnode(int argc, char **argv)
         mp_lobby_rules_settings(&rules_at_host);
         mp_lockstep_set_rules(&rules_at_host);
     }
-    if (map2 && is_host) {
+    if ((map2 || expected_difficulty >= 0) && is_host) {
         game_rules_settings rules;
         game_rules_default_multiplayer_settings(&rules);
-        rules.prepared_map = GAME_MAP_2;
+        if (map2) {
+            rules.prepared_map = GAME_MAP_2;
+        }
+        if (expected_difficulty >= 0) {
+            rules.difficulty = expected_difficulty;
+        }
         mp_lockstep_set_rules(&rules);
     }
     time_t pause_start = 0, pause_seen_at = 0;
@@ -715,6 +817,7 @@ static int command_mpnode(int argc, char **argv)
     time_t deadline = time(0) + 120;
     int start_tick = -1;
     int start_tax = 0;
+    int start_cities_wrong = 0;
     int last_played = -1;
     while (time(0) < deadline) {
         mp_lockstep_state state = mp_lockstep_get_state();
@@ -741,6 +844,9 @@ static int command_mpnode(int argc, char **argv)
             start_tick = mp_lockstep_base_tick();
             mp_lockstep_set_tick_limit(ticks);
             start_tax = city_finance_tax_percentage();
+            if (expected_difficulty >= 0 && !check_start_cities(expected_difficulty, map_template)) {
+                start_cities_wrong = 1;
+            }
         }
         int before = game_time_absolute_tick();
         if (start_tick >= 0) {
@@ -826,7 +932,7 @@ static int command_mpnode(int argc, char **argv)
     printf("map %d, %d tiles wide\n", game_rules_multiplayer_settings()->prepared_map + 1, map_grid_width());
     printf("pause seen: %d, ticks run while paused: %d\n", paused_seen, ticks_while_paused);
     int result = mp_lockstep_get_state() == MP_LOCKSTEP_RUNNING && start_tick >= 0 &&
-        game_time_absolute_tick() - start_tick == ticks;
+        game_time_absolute_tick() - start_tick == ticks && !start_cities_wrong;
     if (player_context_num_players() > 1) {
         // separate cities: the interface shows the local city, and every player changed only its own taxes
         int local = mp_session_local_player_id();
@@ -5219,13 +5325,13 @@ static int play_gifts(int verify)
     city_action(0, MP_ACTION_SEND_GIFT, -1, 0, 0);
     CHECK(savings_of(0) == savings, "an unknown size of gift is refused");
 
-    // the salary is limited by the rank (3 at 300 laurels), and takes effect for him only
+    // Rome pays the salary of the rank (3 at 300 laurels), whatever the command asks (D-076), to him only
     int rank_of_1 = salary_rank_of(1);
     CHECK(mp_caesar_rank(0) == 3, "player 1 is of rank 3");
     city_action(0, MP_ACTION_SET_SALARY, 5, 0, 0);
-    CHECK(salary_rank_of(0) != 5, "a salary above the rank is refused");
-    city_action(0, MP_ACTION_SET_SALARY, 3, 0, 0);
-    CHECK(salary_rank_of(0) == 3 && salary_amount_of(0) == 8, "the salary of his rank, 8 denarii, is accepted");
+    CHECK(salary_rank_of(0) == 3 && salary_amount_of(0) == 8, "a salary above the rank is not paid: the rank's, 8 denarii");
+    city_action(0, MP_ACTION_SET_SALARY, 0, 0, 0);
+    CHECK(salary_rank_of(0) == 3 && salary_amount_of(0) == 8, "nor a lower one: Rome pays the salary of the rank");
     city_action(0, MP_ACTION_SET_SALARY, 11, 0, 0);
     city_action(0, MP_ACTION_SET_SALARY, -1, 0, 0);
     CHECK(salary_rank_of(0) == 3, "no such rank, no change");
@@ -5291,6 +5397,75 @@ static void write_old_caesar_state(buffer *buf, int version)
             buffer_write_i32(buf, p + 1); // waiting time of the gifts
         }
     }
+}
+
+// T5.2 (D-076): Rome pays every player the salary of his rank, from the same table; every city starts with the same
+// rank, salary and savings; nobody chooses a salary. Three players, one of each laurels.
+static int command_salaries(const char *file)
+{
+    static const int LAURELS_TENTHS[3] = { 0, 1000, 3000 }; // rank 0, 1 and 3
+    static const int SALARY_OF_RANK[11] = { 0, 2, 5, 8, 12, 20, 30, 40, 60, 80, 100 };
+    if (!create_prepared(file, 3, 0)) {
+        printf("Unable to create the prepared map\n");
+        return 2;
+    }
+    game_rules_settings rules;
+    game_rules_default_multiplayer_settings(&rules);
+    rules.ai_invasions = 0;
+    game_rules_set_multiplayer(&rules);
+    int failures = 0;
+#define CHECK(condition, text) do { int ok_ = (condition); printf("%-62s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
+    int same_start = 1;
+    for (int p = 0; p < 3; p++) {
+        player_context_switch(p);
+        same_start &= city_emperor_rank() == 0 && city_emperor_salary_rank() == 0 && city_emperor_salary_amount() == 0 &&
+            city_emperor_personal_savings() == 0;
+    }
+    player_context_switch(0);
+    CHECK(same_start, "the three cities start with no rank, no salary and no savings");
+    for (int p = 0; p < 3; p++) {
+        mp_caesar_add_laurels(p, MP_LAURELS_PROSPERITY, LAURELS_TENTHS[p]);
+    }
+    // nobody chooses: asking for the highest salary, or for none, changes nothing
+    city_action(0, MP_ACTION_SET_SALARY, 10, 0, 0);
+    city_action(1, MP_ACTION_SET_SALARY, 10, 0, 0);
+    city_action(2, MP_ACTION_SET_SALARY, 0, 0, 0);
+    CHECK(salary_rank_of(0) == 0 && salary_rank_of(1) == 1 && salary_rank_of(2) == 3,
+        "at once, each salary is the one of the rank, whatever was asked");
+    int treasury[3];
+    for (int p = 0; p < 3; p++) {
+        treasury[p] = treasury_of(p);
+    }
+    run_to_next_month_fast();
+    int paid = 1, favor_untouched = 1;
+    for (int p = 0; p < 3; p++) {
+        int rank = mp_caesar_rank(p);
+        paid &= rank == (p == 0 ? 0 : p == 1 ? 1 : 3) && salary_rank_of(p) == rank &&
+            salary_amount_of(p) == SALARY_OF_RANK[rank] && savings_of(p) == SALARY_OF_RANK[rank];
+        printf("player %d: rank %d, salary %d, savings %d\n", p + 1, rank, salary_amount_of(p), savings_of(p));
+        player_context_switch(p);
+        // the favor of the original game finds the salary right for the rank: no penalty
+        favor_untouched &= city_emperor_rank() == rank && city_data.ratings.favor_salary_penalty == 0;
+        player_context_switch(0);
+    }
+    CHECK(paid, "every player is paid the salary of his rank, 0, 2 and 8 denarii");
+    CHECK(favor_untouched, "and the rank of the original follows, with no penalty of favor");
+    // the salary comes out of the treasury of the one who gets it
+    int taxes_only = 1;
+    for (int p = 0; p < 3; p++) {
+        taxes_only &= treasury_of(p) <= treasury[p];
+    }
+    CHECK(taxes_only, "the salary is taken from the treasury of each player");
+    // one more month: the savings add up; a rank gained or lost changes the salary the month after
+    mp_caesar_add_laurels(0, MP_LAURELS_PROSPERITY, 1000);
+    mp_caesar_add_laurels(2, MP_LAURELS_PROSPERITY, -3000);
+    run_to_next_month_fast();
+    CHECK(salary_amount_of(0) == 2 && savings_of(0) == 2 && salary_amount_of(1) == 2 && savings_of(1) == 4 &&
+        salary_amount_of(2) == 0 && savings_of(2) == 8, "a rank gained or lost changes the salary the month after");
+#undef CHECK
+    printf("%s\n", failures ? "DIFFERENT: Rome does not pay everybody the salary of his rank" :
+        "Identical: Rome pays everybody the salary of his rank");
+    return failures ? 1 : 0;
 }
 
 // Gifts, salary and donations to Caesar are network commands (T4.2, D-067): they act in the city of the sender,
@@ -7163,6 +7338,8 @@ int main(int argc, char **argv)
         result = command_caesarstate(file);
     } else if (strcmp(command, "caesarlaurels") == 0) {
         result = command_caesarlaurels(file);
+    } else if (strcmp(command, "salaries") == 0) {
+        result = command_salaries(file);
     } else if (strcmp(command, "caesargifts") == 0) {
         result = command_caesargifts(file);
     } else if (strcmp(command, "caesarhistory") == 0) {

@@ -11,10 +11,17 @@
 # With 'rules': the host changes every rule of the lobby once the players are there, then starts the game; every
 # player must play with the changed rules, which the clients saw in their lobby (T4.11).
 # With 'map2' (and 'generate'): the host chooses the prepared map 2; every player must play on it (T4.14).
+# With 'difficulty-easy' or 'difficulty-hard' (and 'generate'; with 'map-template' the host's template is a free map made of SAVE, rank 5 and funds 3000):
+# the host's lobby sets that difficulty while the settings of the computers are other ones; every city of every
+# computer must start with the funds, favor, rank, salary and savings of that difficulty and of everybody (T5.1, T5.2).
 SIMTOOL=$1; PORT=$2; PLAYERS=$3; SAVE=$4; TICKS=$5; MODE=$6
 CITIES=""
 MAP2=""
+DIFF=""
+MAPT=""
 for arg in "$@"; do
+    [ "$arg" = "map-template" ] && MAPT="map-template"
+    case "$arg" in difficulty-easy|difficulty-hard) DIFF="$arg" ;; esac
     [ "$arg" = "cities" ] && CITIES="cities"
     [ "$arg" = "generate" ] && CITIES="generate"
     [ "$arg" = "map2" ] && MAP2="map2"
@@ -22,12 +29,14 @@ done
 [ "$MODE" = "cities" ] && MODE=""
 [ "$MODE" = "generate" ] && MODE=""
 [ "$MODE" = "map2" ] && MODE=""
+[ "$MODE" = "difficulty-easy" ] && MODE=""
+[ "$MODE" = "difficulty-hard" ] && MODE=""
 DIR=$(mktemp -d)
 HOST_ARGS=""
 [ "$MODE" = "desync" ] && HOST_ARGS="expect-desync"
 [ "$MODE" = "baddata" ] && HOST_ARGS="expect-reject"
 [ "$MODE" = "rules" ] && HOST_ARGS="rules"
-"$SIMTOOL" mpnode host "$PORT" "$PLAYERS" "$SAVE" "$TICKS" $CITIES $MAP2 $HOST_ARGS > "$DIR/host.log" 2>&1 &
+"$SIMTOOL" mpnode host "$PORT" "$PLAYERS" "$SAVE" "$TICKS" $CITIES $MAP2 $DIFF $MAPT $HOST_ARGS > "$DIR/host.log" 2>&1 &
 HOST=$!
 sleep 0.3
 PIDS=""
@@ -40,7 +49,7 @@ while [ $i -lt "$PLAYERS" ]; do
     [ "$MODE" = "leave" ] && [ $i -eq $((PLAYERS - 1)) ] && CLIENT_MODE="leave"
     [ "$MODE" = "baddata" ] && CLIENT_MODE="baddata"
     [ "$MODE" = "rules" ] && CLIENT_MODE="rules"
-    "$SIMTOOL" mpnode join 127.0.0.1 "$PORT" "$TICKS" $CLIENT_MODE > "$DIR/client$i.log" 2>&1 &
+    "$SIMTOOL" mpnode join 127.0.0.1 "$PORT" "$TICKS" $CLIENT_MODE $DIFF $MAPT > "$DIR/client$i.log" 2>&1 &
     PIDS="$PIDS $!"
     i=$((i + 1))
 done
@@ -74,9 +83,19 @@ if [ -n "$MAP2" ]; then
     DIFFERENT=$(grep -h "^map " "$DIR"/*.log | sort -u | wc -l | tr -d ' ')
     [ "$SEEN" = "$PLAYERS" ] && [ "$DIFFERENT" = "1" ] || { echo "The players do not all play on map 2, $WIDTH tiles wide"; FAILED=1; }
 fi
+if [ -n "$DIFF" ]; then
+    # one line per city, the same on every computer; and the difficulty of the lobby everywhere
+    EXPECTED=3
+    [ "$DIFF" = "difficulty-easy" ] && EXPECTED=1
+    SEEN=$(grep -h "^start city " "$DIR"/*.log | wc -l | tr -d ' ')
+    DIFFERENT=$(grep -h "^start city " "$DIR"/*.log | sort -u | wc -l | tr -d ' ')
+    [ "$SEEN" = "$((PLAYERS * PLAYERS))" ] && [ "$DIFFERENT" = "$PLAYERS" ] || { echo "The cities do not start the same on every computer"; FAILED=1; }
+    SEEN=$(grep -h "^start difficulty $EXPECTED\$" "$DIR"/*.log | wc -l | tr -d ' ')
+    [ "$SEEN" = "$PLAYERS" ] || { echo "The players do not all play at the difficulty of the lobby"; FAILED=1; }
+fi
 if [ "$MODE" != "desync" ] && [ "$MODE" != "baddata" ]; then
     COUNT=$(grep -h "checksum" "$DIR"/*.log | awk '{print $4}' | sort -u | wc -l | tr -d ' ')
     [ "$COUNT" = "1" ] || { echo "Final checksums differ"; FAILED=1; }
 fi
-rm -rf "$DIR" mp-session-"$PORT"-p*.sav mp-session-"$PORT"-p*.mpsav mp-desync-"$PORT"-*.sav mp-desync-"$PORT"-*.mpsav
+rm -rf "$DIR" mp-template-"$PORT".map mp-session-"$PORT"-p*.sav mp-session-"$PORT"-p*.mpsav mp-desync-"$PORT"-*.sav mp-desync-"$PORT"-*.mpsav
 exit $FAILED

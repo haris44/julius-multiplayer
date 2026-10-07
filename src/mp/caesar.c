@@ -128,10 +128,8 @@ void mp_caesar_limit_salary(void)
     if (!mp_caesar_is_active()) {
         return;
     }
-    // the amount is always the one of the table for the rank chosen, never above the rank of the city
-    int rank = city_emperor_salary_rank();
-    int limit = mp_caesar_salary_rank_limit(player_context_current_player);
-    city_emperor_set_salary_rank(rank > limit ? limit : rank);
+    // Rome pays the salary of the rank of the city, from the same table for every player (D-076)
+    city_emperor_set_paid_rank(mp_caesar_salary_rank_limit(player_context_current_player));
 }
 
 // ---------- the notes of the current city (CESAR §5) ----------

@@ -5,6 +5,7 @@
 #include "core/dir.h"
 #include "core/image.h"
 #include "city/data.h"
+#include "city/emperor.h"
 #include "city/map.h"
 #include "figure/enemy_army.h"
 #include "figure/figure.h"
@@ -13,6 +14,7 @@
 #include "figuretype/animal.h"
 #include "game/file.h"
 #include "game/player_context.h"
+#include "game/rules.h"
 #include "map/aqueduct.h"
 #include "map/bridge.h"
 #include "map/building.h"
@@ -236,16 +238,26 @@ static int prepare_template(const char *template_file, int size)
     if (is_map) {
         scenario_set_custom(2);
     }
+    // loading a map or a saved game puts the game back in classic mode, with the difficulty of this computer: the rules
+    // of the game (the lobby's) are set again afterwards, for everything the difficulty decides (T5.1, D-076)
+    int multiplayer = game_rules_is_multiplayer();
+    game_rules_settings rules = *game_rules_multiplayer_settings();
     if (!(is_map ? game_file_start_scenario(template_file) : game_file_load_saved_game(template_file)) ||
         player_context_num_players() != 1) {
         return 0;
+    }
+    if (multiplayer) {
+        game_rules_set_multiplayer(&rules);
     }
     remove_scenario_entities();
     if (!is_map) {
         // a saved game as template: the cities start empty, with the funds of its scenario
         city_data_init();
-        city_data_init_scenario();
     }
+    // the funds and the favor at the difficulty of the rules, and for every player the same rank, salary and savings
+    // (the template and the campaign would give theirs); the cities below are copies of this one
+    city_data_init_scenario();
+    city_emperor_init_multiplayer(1);
     // the map is centred on the grid, as classic maps are: the camera limits and the minimap expect it
     int x0 = map_data.start_offset % GRID_SIZE;
     int y0 = map_data.start_offset / GRID_SIZE;

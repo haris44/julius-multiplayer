@@ -14,6 +14,18 @@ typedef struct {
 
 void city_emperor_init_scenario(int rank);
 
+/**
+ * Multiplayer (D-076): the start of a city, the same for every player whatever the template or the campaign gave:
+ * no rank, no salary, no savings. With `new_city`, also the favor of the difficulty of the game rules
+ */
+void city_emperor_init_multiplayer(int new_city);
+
+/**
+ * Multiplayer (D-076): Rome pays the salary of this rank, the same table for every player, and the favor of the
+ * original game finds a salary that is right for the rank
+ */
+void city_emperor_set_paid_rank(int rank);
+
 void city_emperor_update(void);
 
 void city_emperor_init_selected_gift(void);

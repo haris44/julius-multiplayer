@@ -238,7 +238,7 @@ static translation_string all_strings[] = {
     {TR_MP_CAESAR_LAURELS_SOON, "Fêtes et campagnes : bientôt"},
     {TR_MP_GIFT_COUNTS_NOW, "Un cadeau compte maintenant : +4, +7 ou +10 lauriers. Un seul par an."},
     {TR_MP_GIFT_NEXT_COUNTS, "Le prochain cadeau qui rapporte des lauriers : dans "},
-    {TR_MP_SALARY_LIMIT, "Votre rang limite votre salaire : les rangs plus élevés s'obtiennent avec des lauriers."},
+    {TR_MP_SALARY_LIMIT, "Rome vous verse le salaire de votre rang, comme à chaque joueur : les rangs plus élevés s'obtiennent avec des lauriers."},
     {TR_MP_RANKING, "Classement"},
     {TR_MP_RATINGS_LAST_MONTH, "Le mois dernier : "},
     {TR_MP_RATINGS_DECIMAL, ","},
