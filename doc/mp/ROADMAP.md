@@ -406,6 +406,10 @@ le note « à valider ».
   commerce, aussi en partie seule. Test `mp_trade_bounds` : l'acheteur s'arrête à M chez un joueur et chez l'empire,
   le vendeur garde N, deux machines à la même somme de contrôle, bornes sauvegardées, ancienne partie chargée sans
   borne, classique sans borne.
+  *Q2-ui-640* : les boutons de 16 px de la page (prix, bornes, « non », statut) n'avaient ni bord droit ni bord bas
+  (`button_border_draw` ne dessine que le coin haut-gauche sur un seul bloc) : un cadre dessiné, jaune au survol. La
+  bannière de la partie (T4.1) ne dépasse plus la vue (sans la barre latérale) : sans « Multijoueur - joueur N », puis
+  sans l'unité de la cible, puis sans la cible. Capture `ui-host-city.png` ajoutée à `tools/mp-ui-test.sh`.
 - [~] **T4.6** **Statistiques et décisions** : trouver une manière propre de faire évoluer ces vues. On voudra des
   statistiques et un commerce plus fin, sans surcharger l'écran.
   - Proposer d'abord des maquettes (pages de design à regarder ensemble), avant tout code.

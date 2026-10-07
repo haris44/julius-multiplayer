@@ -1,5 +1,6 @@
 #include "mp_status.h"
 
+#include "city/view.h"
 #include "core/encoding.h"
 #include "core/string.h"
 #include "graphics/graphics.h"
@@ -90,11 +91,14 @@ void widget_mp_status_draw(void)
         }
     }
     uint8_t target[64] = { 0 };
+    int target_width = 0;
+    int target_short_length = 0; // the target without its unit
     if (state == MP_LOCKSTEP_RUNNING && game_rules_end_condition() == GAME_END_CAESAR) {
         string_copy(translation_for(TR_MP_BANNER_TARGET), target, 40);
         string_from_int(target + string_length(target), game_rules_caesar_score(), 0);
-        string_copy(translation_for(TR_MP_LAURELS), target + string_length(target), 60 - string_length(target));
-        scores_width += text_get_width(target, FONT_NORMAL_PLAIN) + 12;
+        target_short_length = string_length(target);
+        string_copy(translation_for(TR_MP_LAURELS), target + target_short_length, 60 - target_short_length);
+        target_width = text_get_width(target, FONT_NORMAL_PLAIN) + 12;
     }
     uint8_t paused[32];
     int paused_width = 0;
@@ -102,11 +106,33 @@ void widget_mp_status_draw(void)
         encoding_from_utf8("PAUSE", paused, sizeof(paused));
         paused_width = text_get_width(paused, FONT_NORMAL_PLAIN) + 12;
     }
+    if (state == MP_LOCKSTEP_RUNNING) {
+        // never under the sidebar, whose width depends on the screen: first without the "Multiplayer - player N"
+        // reminder (the colors of the laurels tell who we are), then the target without its unit, then without the
+        // target
+        int ignored, available;
+        city_view_get_viewport(&ignored, &ignored, &available, &ignored);
+        available -= 4;
+        if (width + scores_width + target_width + paused_width > available) {
+            width = 8;
+        }
+        if (width + scores_width + target_width + paused_width > available && target_short_length) {
+            target[target_short_length] = 0;
+            target_width = text_get_width(target, FONT_NORMAL_PLAIN) + 12;
+        }
+        if (width + scores_width + target_width + paused_width > available) {
+            target[0] = 0;
+            target_width = 0;
+        }
+        scores_width += target_width;
+    }
     int x = state == MP_LOCKSTEP_RUNNING ? 4 : (screen_width() - width) / 2;
     // during the game, at the bottom of the view: the warnings of the game use the top
     int banner_y = state == MP_LOCKSTEP_RUNNING ? screen_height() - BANNER_HEIGHT - 4 : BANNER_Y;
     graphics_fill_rect(x, banner_y, width + scores_width + paused_width, BANNER_HEIGHT, COLOR_BLACK);
-    text_draw(encoded, x + 8, banner_y + 6, FONT_NORMAL_PLAIN, color);
+    if (width > 8) {
+        text_draw(encoded, x + 8, banner_y + 6, FONT_NORMAL_PLAIN, color);
+    }
     int x_score = x + width;
     if (scores_width) {
         for (int p = 0; p < num_players; p++) {

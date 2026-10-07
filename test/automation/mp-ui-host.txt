@@ -27,6 +27,8 @@ wait 3
 key Return
 wait 2
 mpwait 100
+# the plain city view: the banner of the game must stay clear of the sidebar (T4.1)
+screenshot build/automation/ui-host-city.png
 # industry, then the farms and the raw materials of this place (D-064, D-069): inland or on the coast
 click 608 422
 wait 3
