@@ -2588,8 +2588,8 @@ static int command_preparedmap(const char *file, int num_players, int ticks)
         return 1;
     }
     // as in a network game, the map goes through a file
-    char map_file[64];
-    snprintf(map_file, sizeof(map_file), "prepared-%d.mpmap", num_players);
+    char map_file[64]; // one file per test and map: ctest runs them in parallel
+    snprintf(map_file, sizeof(map_file), "prepared-%d-%d.mpmap", options.prepared_map + 1, num_players);
     if (!mp_savegame_write(map_file) || !mp_savegame_read(map_file)) {
         printf("Unable to write and read the map\n");
         return 2;
@@ -2737,7 +2737,7 @@ static int command_drying(const char *file, int num_players)
     // as a game prepared by the lobby: the map goes through a file, then the rules of the game come, with
     // territories, alone too; no enemy army comes to destroy the reservoir
     char map_file[64];
-    snprintf(map_file, sizeof(map_file), "drying-%d.mpmap", num_players);
+    snprintf(map_file, sizeof(map_file), "drying-%d-%d.mpmap", options.prepared_map + 1, num_players);
     if (!create_prepared(file, num_players, 0) || !mp_savegame_write(map_file) ||
         !mp_savegame_read(map_file)) {
         printf("Unable to create the prepared map\n");
@@ -2856,7 +2856,7 @@ static int own_reservoir_with_aqueduct(int player_id, int cx, int cy, int *ax, i
 static int inland_water_game(const char *file, int num_players, int seed, int p, uint64_t *checksum)
 {
     char map_file[64];
-    snprintf(map_file, sizeof(map_file), "inlandwater-%d-%d.mpmap", num_players, p);
+    snprintf(map_file, sizeof(map_file), "inlandwater-%d-%d-%d.mpmap", options.prepared_map + 1, num_players, p);
     player_context_switch(0);
     player_context_set_num_players(1);
     if (!create_prepared(file, num_players, seed) || !mp_savegame_write(map_file) ||
