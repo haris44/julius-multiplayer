@@ -13,9 +13,11 @@
 
 #include <string.h>
 
-#define STATE_VERSION 3 // 2: notes, remainders of the laurels of the city, ranks; 3: waiting time of the gifts
+#define STATE_VERSION 4 // 2: notes, remainders of the laurels of the city, ranks; 3: waiting time of the gifts;
+                        // 4: monthly history of the laurels (T4.1)
 #define MAX_LETTERS 8
 #define HIGHEST_HOUSE_LEVEL 19
+#define TREND_MONTHS 3
 
 static const int NOTE_WEIGHTS[MP_NOTE_MAX] = {
     MP_CAESAR_WEIGHT_PROSPERITY,
@@ -33,6 +35,8 @@ static struct {
     int remainders[PLAYER_CONTEXT_MAX_PLAYERS][MP_NOTE_MAX]; // hundredths of a tenth not yet given
     int ranks[PLAYER_CONTEXT_MAX_PLAYERS];
     int gift_cooldown[PLAYER_CONTEXT_MAX_PLAYERS]; // months before the next gift counts
+    int history_months[PLAYER_CONTEXT_MAX_PLAYERS];
+    int history[PLAYER_CONTEXT_MAX_PLAYERS][MP_CAESAR_HISTORY_MONTHS]; // laurels at the monthly records, last first
 } data;
 
 // display state of this computer, never saved
@@ -206,6 +210,25 @@ int mp_caesar_rank(int player_id)
     return is_player(player_id) ? rank_of_laurels(mp_caesar_laurels(player_id)) : 0;
 }
 
+int mp_caesar_esteem_goal(int player_id)
+{
+    if (game_rules_end_condition() == GAME_END_CAESAR) {
+        return game_rules_caesar_score();
+    }
+    int rank = mp_caesar_rank(player_id);
+    return mp_caesar_rank_laurels(rank < MP_CAESAR_NUM_RANKS - 1 ? rank + 1 : rank);
+}
+
+int mp_caesar_esteem(int player_id)
+{
+    int goal = mp_caesar_esteem_goal(player_id);
+    if (goal <= 0) {
+        return 0;
+    }
+    // laurels in tenths, the goal in whole laurels
+    return clamp_note((int) (10LL * mp_caesar_laurels(player_id) / goal));
+}
+
 static int ranks_before(int a, int b)
 {
     int laurels_a = mp_caesar_laurels(a), laurels_b = mp_caesar_laurels(b);
@@ -234,6 +257,68 @@ int mp_caesar_ranking(int *players)
     return count;
 }
 
+// ---------- monthly history of the laurels (T4.1, D-071) ----------
+
+// the laurels of the current city at the end of its month, the oldest record dropped when the history is full
+static void record_history(int player_id)
+{
+    int *history = data.history[player_id];
+    memmove(&history[1], &history[0], (MP_CAESAR_HISTORY_MONTHS - 1) * sizeof(int));
+    history[0] = mp_caesar_laurels(player_id);
+    if (data.history_months[player_id] < MP_CAESAR_HISTORY_MONTHS) {
+        data.history_months[player_id]++;
+    }
+}
+
+int mp_caesar_history_months(int player_id)
+{
+    return is_player(player_id) ? data.history_months[player_id] : 0;
+}
+
+int mp_caesar_history(int player_id, int months_ago)
+{
+    if (months_ago < 0 || months_ago >= mp_caesar_history_months(player_id)) {
+        return 0;
+    }
+    return data.history[player_id][months_ago];
+}
+
+int mp_caesar_laurels_gained(int player_id, int months)
+{
+    int count = mp_caesar_history_months(player_id);
+    if (months > count - 1) {
+        months = count - 1;
+    }
+    if (months <= 0) {
+        return 0;
+    }
+    return data.history[player_id][0] - data.history[player_id][months];
+}
+
+mp_caesar_trend mp_caesar_laurels_trend(int player_id)
+{
+    // two windows of up to three months each: the last ones, and the ones before
+    int months = (mp_caesar_history_months(player_id) - 1) / 2;
+    if (months > TREND_MONTHS) {
+        months = TREND_MONTHS;
+    }
+    if (months <= 0) {
+        return MP_CAESAR_TREND_STEADY;
+    }
+    int recent = mp_caesar_history(player_id, 0) - mp_caesar_history(player_id, months);
+    int before = mp_caesar_history(player_id, months) - mp_caesar_history(player_id, 2 * months);
+    int margin = (before < 0 ? -before : before) / 10; // a tenth of the gain before
+    if (margin < 10 * months) {
+        margin = 10 * months; // a laurel a month
+    }
+    if (recent > before + margin) {
+        return MP_CAESAR_TREND_UP;
+    } else if (recent < before - margin) {
+        return MP_CAESAR_TREND_DOWN;
+    }
+    return MP_CAESAR_TREND_STEADY;
+}
+
 void mp_caesar_update_city_month(void)
 {
     if (!mp_caesar_is_active()) {
@@ -255,6 +340,7 @@ void mp_caesar_update_city_month(void)
         mp_caesar_add_letter(MP_CAESAR_LETTER_PROMOTION, rank);
     }
     data.ranks[p] = rank;
+    record_history(p);
 }
 
 // ---------- wrath ----------
@@ -357,6 +443,32 @@ void mp_caesar_save_state(buffer *buf)
     write_table(buf, &data.remainders[0][0], PLAYER_CONTEXT_MAX_PLAYERS * MP_NOTE_MAX);
     write_table(buf, data.ranks, PLAYER_CONTEXT_MAX_PLAYERS);
     write_table(buf, data.gift_cooldown, PLAYER_CONTEXT_MAX_PLAYERS);
+    buffer_write_i32(buf, MP_CAESAR_HISTORY_MONTHS);
+    write_table(buf, data.history_months, PLAYER_CONTEXT_MAX_PLAYERS);
+    write_table(buf, &data.history[0][0], PLAYER_CONTEXT_MAX_PLAYERS * MP_CAESAR_HISTORY_MONTHS);
+}
+
+// a history of another length: the most recent records that fit
+static void load_history(buffer *buf)
+{
+    int months = buffer_read_i32(buf);
+    if (months < 0) {
+        return;
+    }
+    read_table(buf, data.history_months, PLAYER_CONTEXT_MAX_PLAYERS);
+    for (int p = 0; p < PLAYER_CONTEXT_MAX_PLAYERS; p++) {
+        for (int i = 0; i < months; i++) {
+            int value = buffer_read_i32(buf);
+            if (i < MP_CAESAR_HISTORY_MONTHS) {
+                data.history[p][i] = value;
+            }
+        }
+        if (data.history_months[p] < 0) {
+            data.history_months[p] = 0;
+        } else if (data.history_months[p] > MP_CAESAR_HISTORY_MONTHS || data.history_months[p] > months) {
+            data.history_months[p] = months < MP_CAESAR_HISTORY_MONTHS ? months : MP_CAESAR_HISTORY_MONTHS;
+        }
+    }
 }
 
 void mp_caesar_load_state(buffer *buf)
@@ -379,6 +491,9 @@ void mp_caesar_load_state(buffer *buf)
         read_table(buf, data.ranks, PLAYER_CONTEXT_MAX_PLAYERS);
         if (version >= 3) {
             read_table(buf, data.gift_cooldown, PLAYER_CONTEXT_MAX_PLAYERS);
+        }
+        if (version >= 4) {
+            load_history(buf);
         }
     } else {
         for (int p = 0; p < PLAYER_CONTEXT_MAX_PLAYERS; p++) {

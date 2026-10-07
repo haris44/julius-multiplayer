@@ -1027,6 +1027,40 @@
   plus simple à lire. La fiche de ressource de MAQUETTES §7 pourra les reprendre plus tard.
 - Classique : inchangé (la borne M vaut toujours 0, la commande ne fait rien, la page d'origine reste).
 
+### D-071 — L'estime de César, ce sont les lauriers : le quatrième pilier les montre (T4.1)
+- 2026-10-07 · **à valider** (proposition de Claude, demande d'Alexandre : « regrouper les lauriers et l'estime de
+  César déjà existante, pour un seul système plus simple ») · précise D-026, D-057, D-067
+- **Constat** : deux compteurs. La faveur d'origine (0 à 100) est figée et cachée en multijoueur (D-026, D-067), mais
+  elle restait visible dans l'évaluation de la cité (4e pilier), sur les drapeaux et l'infobulle du sénat, et dans la
+  barre latérale. Les lauriers, eux, s'additionnent sans plafond et donnent la victoire.
+- **Deux façons de les fondre** (ROADMAP T4.1) :
+  1. l'estime devient un niveau de César (0 à 100), qui bouge avec les actions, et les lauriers s'accumulent chaque
+     mois selon ce niveau. Deux compteurs liés : plus dur à lire, et tout l'équilibrage de CESAR §4 est à refaire ;
+  2. **proposé** : un seul système, les lauriers. L'« estime » montrée au joueur n'est qu'une **lecture** des
+     lauriers : lauriers / score du salon × 100. Sans score (partie sans fin), rapportés au rang suivant. Aucune règle
+     ne change.
+- **À l'écran, en multijoueur** (le classique ne change pas) :
+  - évaluation de la cité : le 4e pilier s'appelle « Lauriers ». Sa hauteur est l'estime, son nombre les lauriers,
+    et « X requis » le score (ou le rang suivant). Cliqué, il dit les lauriers gagnés le mois dernier (au dixième),
+    la tendance (en hausse, stable, en baisse), la place de la cité dans la province, et ce qui rapporte des
+    lauriers ;
+  - son infobulle d'origine parle de faveur : elle disparaît en multijoueur (les infobulles des conseillers ne se
+    traduisent pas) ;
+  - sénat (drapeau de la faveur, infobulle) et barre latérale (« Lauriers », avec le score à atteindre) : les
+    lauriers aussi ;
+  - rien d'autre ne montrait la faveur : le conseiller impérial a déjà sa page des lauriers, le conseiller en chef et
+    la barre du haut ne la montrent pas, la fenêtre de fin de mission ne s'ouvre jamais en multijoueur.
+- **Les trois autres piliers restent ceux d'origine** : culture et prospérité sont aussi deux des cinq notes de
+  César. La paix ne rapporte pas de lauriers ; elle reste, car elle dit toujours l'état de la cité.
+- **Historique** : chaque cité note ses lauriers à la fin de chacun de ses mois, les 12 derniers sont gardés
+  (`mp_caesar`, `STATE_VERSION` 4, protocole 16 ; les anciennes parties se chargent, sans historique). Gain du
+  mois : l'écart entre les deux derniers bilans, cadeaux compris. Tendance : les 3 derniers mois contre les 3
+  d'avant, « stable » à un laurier par mois ou un dixième près. Cet historique pourra nourrir les Annales (T4.6).
+  - la lecture 2 (l'estime = les lauriers rapportés au score) plutôt que la 1 ;
+  - garder le pilier de la paix, ou le remplacer par une note de César (commerce ou habitat) ;
+  - sans score, la hauteur rapportée au rang suivant retombe à chaque nouveau rang. Autre choix : la rapporter aux
+    1 000 lauriers de base.
+
 ### D-073 — Une partie reprise garde ses règles ; corrections de la revue (T4.2, T4.9, T4.10, T4.11, T4.12, T4.17)
 - 2026-10-07 · **adoptée provisoirement** (corrections de la revue, sans Alexandre)
 - **Une partie reprise d'une sauvegarde multijoueur (`.mpsav`) garde les règles enregistrées** : difficulté, dieux,

@@ -16,6 +16,7 @@
 #include "graphics/image.h"
 #include "graphics/window.h"
 #include "map/building.h"
+#include "mp/caesar.h"
 #include "mp/colors.h"
 #include "mp/fog.h"
 #include "mp/session.h"
@@ -259,7 +260,9 @@ static void draw_senate_rating_flags(const building *b, int x, int y, color_t co
         image_draw_masked(image_id + 1, x + 138, y + 44 - city_rating_culture() / 2, color_mask);
         image_draw_masked(image_id + 2, x + 168, y + 36 - city_rating_prosperity() / 2, color_mask);
         image_draw_masked(image_id + 3, x + 198, y + 27 - city_rating_peace() / 2, color_mask);
-        image_draw_masked(image_id + 4, x + 228, y + 19 - city_rating_favor() / 2, color_mask);
+        // multiplayer: the flag of the favor shows the esteem of Caesar, the laurels (D-071)
+        int favor = mp_caesar_is_active() ? mp_caesar_esteem(mp_session_local_player_id()) : city_rating_favor();
+        image_draw_masked(image_id + 4, x + 228, y + 19 - favor / 2, color_mask);
         // unemployed
         image_id = image_group(GROUP_FIGURE_HOMELESS);
         int unemployment_pct = city_labor_unemployment_percentage_for_senate();

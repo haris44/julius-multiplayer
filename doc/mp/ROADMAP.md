@@ -305,13 +305,20 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
 Notées le 2026-10-06 en fin de journée. Travail de nuit à partir de 23 h 45, avec ce qu'Alexandre ajoutera pendant
 la session de test du soir. Les questions marquées **?** se tranchent ce soir ; sinon je tranche provisoirement et
 le note « à valider ».
-- [ ] **T4.1** César dans l'**évaluation de la cité** (conseiller des notes, les piliers de marbre) : y montrer
+- [~] **T4.1** César dans l'**évaluation de la cité** (conseiller des notes, les piliers de marbre) : y montrer
   l'évolution, puis les lauriers ; **regrouper les lauriers et l'estime de César** déjà existante, pour un seul
   système plus simple (Alexandre : « à voir ce qui est possible de faire pour que ce soit plus simple »).
   **?** Comment fondre un compteur cumulé (les lauriers, sans plafond) et une jauge de 0 à 100 (l'estime) :
   - l'estime devient le niveau de César envers la cité, et les lauriers s'accumulent chaque mois selon ce niveau ;
   - ou le pilier « Estime » montre les lauriers rapportés au score.
   Les autres piliers (culture, prospérité, paix) sont-ils gardés ?
+  *Fait* (lecture proposée, **à valider**, D-071) : l'estime de César, ce sont les lauriers. En multijoueur, le 4e
+  pilier devient « Lauriers » : hauteur = lauriers rapportés au score (sans score, au rang suivant), nombre = lauriers.
+  Cliqué, il dit le gain du mois dernier, la tendance, la place dans la province et ce qui rapporte des lauriers.
+  Culture, prospérité et paix restent ceux d'origine. Plus aucune faveur affichée en multijoueur : drapeau et
+  infobulle du sénat, barre latérale montrent aussi les lauriers. Historique des 12 derniers mois par cité dans
+  `mp_caesar` (version 4, protocole 16). Test `mp_caesar_history` (gain, tendance, estime, sauvegarde, deux machines,
+  ancienne sauvegarde, classique) ; capture `test/automation/caesar-ratings.txt`.
 - [x] **T4.2** **Cadeaux à César** : ils comptent dans son estime (avec T4.1). Ils doivent passer par des
   commandes réseau (aujourd'hui, les boutons sont cachés en multijoueur, D-057).
   *Fait* (D-067) : cadeau, salaire et don sont des commandes réseau (`MP_ACTION_SEND_GIFT`, `SET_SALARY`,
