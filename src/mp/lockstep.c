@@ -115,6 +115,20 @@ static void set_status(const char *text)
     log_info("Multiplayer:", data.status, 0);
 }
 
+// Host, before the start: how many players are still awaited, kept up to date as they join
+static void set_waiting_status(void)
+{
+    char text[128];
+    int missing = data.num_players - mp_lockstep_connected_players();
+    if (missing > 0) {
+        snprintf(text, sizeof(text), "En attente de %d joueur(s) sur le port %d", missing, data.port);
+    } else {
+        snprintf(text, sizeof(text), "%s", data.manual_start ? "Tous les joueurs sont là : lancez la partie" :
+            "Tous les joueurs sont là");
+    }
+    set_status(text);
+}
+
 // ---------- messages ----------
 
 static int send_message(int socket, const uint8_t *payload, int size)
@@ -589,6 +603,7 @@ static void handle_message(int from, uint8_t *payload, int size)
             } else {
                 data.accepted[from] = 1;
                 send_rules(from);
+                set_waiting_status();
             }
         } else if (type == MSG_COMMAND) {
             mp_command command;
@@ -740,6 +755,9 @@ void mp_lockstep_set_generated_map(int generate, unsigned int seed)
 void mp_lockstep_set_manual_start(int manual)
 {
     data.manual_start = manual;
+    if (data.is_host && data.state == MP_LOCKSTEP_WAITING_FOR_PLAYERS) {
+        set_waiting_status(); // alone, the host is told to start
+    }
 }
 
 void mp_lockstep_start_game(void)
@@ -818,9 +836,7 @@ int mp_lockstep_host(int port, int num_players, const char *saved_game, int sepa
         }
     }
     data.state = MP_LOCKSTEP_WAITING_FOR_PLAYERS;
-    char text[64];
-    snprintf(text, sizeof(text), "En attente de %d joueur(s) sur le port %d", num_players - 1, port);
-    set_status(text);
+    set_waiting_status();
     return 1;
 }
 

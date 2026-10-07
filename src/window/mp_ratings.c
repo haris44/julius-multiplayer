@@ -1,8 +1,10 @@
 #include "mp_ratings.h"
 
+#include "core/lang.h"
 #include "core/string.h"
 #include "game/player_context.h"
 #include "game/rules.h"
+#include "graphics/color.h"
 #include "graphics/lang_text.h"
 #include "graphics/text.h"
 #include "mp/caesar.h"
@@ -32,9 +34,16 @@ void window_mp_ratings_draw_pillar_text(int x, int width)
     int player_id = mp_session_local_player_id();
     text_draw_centered(translation_for(TR_MP_NOTES_LAURELS), x, 294, width, FONT_NORMAL_BLACK, 0);
     text_draw_number_centered(mp_caesar_laurels(player_id) / 10, x, 309, width - 10, FONT_LARGE_BLACK);
-    // the laurels to reach, as the goals of the other pillars
-    int goal_width = text_draw_number(mp_caesar_esteem_goal(player_id), '@', " ", x + 5, 334, FONT_NORMAL_BLACK);
-    lang_text_draw(53, 5, x + 5 + goal_width, 334, FONT_NORMAL_BLACK);
+    // the laurels to reach, as the goals of the other pillars; "1000 Required" is wider than the pillar box: smaller
+    uint8_t goal[64];
+    int length = string_from_int(goal, mp_caesar_esteem_goal(player_id), 0);
+    goal[length++] = ' ';
+    string_copy(lang_get_string(53, 5), goal + length, (int) sizeof(goal) - length);
+    if (text_get_width(goal, FONT_NORMAL_BLACK) <= width - 10) {
+        text_draw(goal, x + 5, 334, FONT_NORMAL_BLACK, 0);
+    } else {
+        text_draw_centered(goal, x, 335, width, FONT_SMALL_PLAIN, COLOR_BLACK);
+    }
 }
 
 static void append(uint8_t *text, const uint8_t *part)

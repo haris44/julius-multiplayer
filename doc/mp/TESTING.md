@@ -163,7 +163,29 @@ Bon à savoir :
   joueurs (`build/automation/trade-window.png`) ; le client achète le marbre (`trade-client-buys.png`), l'hôte en
   monte le prix et le client voit l'alerte plein écran (`price-alert.png`, puis `price-alert-trade.png` après « Voir
   le commerce »).
+- `tools/mp-ui-test.sh` : hôte en 640 × 480 et client en 1024 × 768 (l'écran factice le ramène à 1024 × 736),
+  depuis le salon ; captures `build/automation/ui-*.png` des fenêtres revues par T4 (voir le tableau ci-dessous).
 - `test/automation/display.txt` : les options d'affichage (plus grande fenêtre qui tient sur l'écran).
+
+Taille de l'écran dans un script : `key F7` (640 × 480), `key F8` (800 × 600, la taille par défaut), `key F9`
+(1024 × 768). Les fenêtres de 640 × 480 (salon, conseillers) sont centrées : à 1024 × 736, ajouter 192 et 128 à leurs
+coordonnées ; la barre latérale reste collée au bord droit (bouton industrie : x = largeur − 32, y = 422).
+
+**Qui couvre quoi** (tous lancés par `tools/serial.sh`, passe du 2026-10-07 : tous verts) :
+
+| Script | Couvre |
+|--------|--------|
+| `tools/mp-solo-test.sh` | salon à 1 joueur (règles, carte), lettre de César, mission et zone, missionnaire, pont, bandeau des lauriers, conseiller impérial et page du commerce seule (onglet Stocks) en 800 × 600 |
+| `tools/mp-lobby-test.sh` | salon hôte et client (partie trouvée, salle d'attente), partie à deux sans désynchronisation |
+| `tools/mp-trade-test.sh` | page du commerce (prix de Rome, portorium, onglet d'un joueur), achat, alerte de prix, onglet Stocks avec une limite |
+| `tools/mp-real-test.sh` | partie en réseau sans salon (`--mp-host`), constructions et conseillers pendant le jeu |
+| `tools/mp-ui-test.sh` | salon du client avec les règles de l'hôte (carte 1, difficulté changée), menus fermes et matières premières d'un joueur des terres et d'un joueur de la côte, menu Options sans Difficulté, conseiller impérial, évaluation (pilier des lauriers), commerce et Stocks, en 640 × 480 et 1024 × 736 |
+| `caesar-advisor.txt`, `caesar-gifts.txt`, `caesar-ratings.txt` | César dans une grande cité (`rules mp`) : lettre de rang, conseiller impérial, cadeau, don, salaire, pilier des lauriers |
+| `smoke.txt`, `run.txt`, `build-road.txt`, `display.txt` | classique : menu, chargement, boucle du jeu, route à la souris, options d'affichage |
+
+Pour relire les textes anglais, forcer temporairement `LANGUAGE_ENGLISH` dans `translation_load`
+(`src/translation/translation.c`), sans le committer : les textes du jeu d'origine restent en français, ceux du
+multijoueur passent en anglais.
 
 Sur macOS, le vrai jeu écrit aussi `julius-log.txt` dans le dossier des données (pas pendant l'automatisation) :
 c'est là qu'on lit ce qui s'est passé chez Alexandre sans ouvrir de fenêtre.

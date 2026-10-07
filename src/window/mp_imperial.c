@@ -21,7 +21,7 @@
 #define NOTE_VALUE_X 322
 #define NOTE_LAURELS_X 360
 #define RANKING_X 420
-#define RANKING_LAURELS_X 560
+#define RANKING_LAURELS_X 568
 #define FIRST_ROW_Y 122
 #define ROW_HEIGHT 22
 
@@ -136,9 +136,11 @@ static void draw_ranking(int local_player)
         name[length++] = ' ';
         string_copy(translation_for(TR_MP_PLAYER), name + length, 40);
         string_from_int(name + string_length(name), p + 1, 0);
-        text_draw(name, RANKING_X, y, FONT_NORMAL_PLAIN, mp_colors_player(p));
+        int width = text_draw(name, RANKING_X, y, FONT_NORMAL_PLAIN, mp_colors_player(p));
         if (p == local_player) {
-            text_draw(translation_for(TR_MP_YOU), RANKING_X, y + 12, FONT_SMALL_PLAIN, COLOR_FONT_LIGHT_GRAY);
+            // on the same line: below the name, it would cover the next player
+            text_draw(translation_for(TR_MP_YOU), RANKING_X + width + 4, y + 1, FONT_SMALL_PLAIN,
+                COLOR_FONT_LIGHT_GRAY);
         }
         text_draw_number(mp_caesar_laurels(p) / 10, 0, "", RANKING_LAURELS_X, y, FONT_NORMAL_WHITE);
     }

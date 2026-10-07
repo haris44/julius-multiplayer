@@ -2615,7 +2615,7 @@ static int command_preparedmap(const char *file, int num_players, int ticks)
         return 1;
     }
     // as in a network game, the map goes through a file
-    char map_file[64];
+    char map_file[64]; // one file per test and map: ctest runs them in parallel
     snprintf(map_file, sizeof(map_file), "prepared-%d-%d.mpmap", options.prepared_map + 1, num_players);
     if (!mp_savegame_write(map_file) || !mp_savegame_read(map_file)) {
         printf("Unable to write and read the map\n");
