@@ -21,11 +21,16 @@ essayées.
 
 ## La partie en bref
 
-- Une carte préparée pour 2 joueurs, une autre pour 3 ou 4. Un grand bras de mer la traverse d'ouest en est. La
-  route de César relie tout le monde et franchit la mer par un pont. Les emplacements sont tirés au sort à chaque
-  partie.
-- Chaque emplacement a son caractère : le joueur des terres a la pierre (fer, marbre) mais vit loin de l'eau ; les
-  joueurs de la côte ont leurs docks et leurs quais de pêche. Personne ne peut tout produire.
+- Deux cartes préparées pour 2 joueurs, et deux pour 3 ou 4. L'hôte choisit dans le salon « Carte 1 », « Carte 2 »
+  ou « Carte au hasard » (par défaut). Un bras de mer traverse chaque carte. La route de César relie tout le monde et
+  franchit la mer par un pont. Les emplacements sont tirés au sort à chaque partie.
+- Deux sortes d'emplacements :
+  - **les terres** : le fer et le marbre (pas de bois), les porcs. Ces joueurs vivent loin de l'eau ;
+  - **la côte** : le bois, l'argile, la pêche et les fruits, avec les docks et les quais de pêche ;
+  - le blé et les légumes pour tous. À 2 joueurs, les olives vont aux terres et les vignes à la côte ; à 4, les
+    olives à un joueur des terres, les vignes à l'autre.
+- À 2 joueurs, un joueur des terres et un de la côte. À 4, deux de chaque. À 3, une place de la côte reste libre.
+  Personne ne peut tout produire.
 - On peut aussi jouer seul, pour découvrir la carte et ses règles.
 
 ## Missions et zone de construction
@@ -46,8 +51,8 @@ essayées.
 
 ## L'eau et l'aqueduc de César
 
-- La seule eau de la carte est le bras de mer. Le joueur des terres en vit loin : seul l'aqueduc de César, qui part
-  d'un réservoir sur la côte, l'alimente.
+- La seule eau de la carte est le bras de mer. Les joueurs des terres en vivent loin : seul l'aqueduc de César les
+  alimente, depuis un réservoir de César sur la côte, un par joueur des terres.
 - Les routes de César sont indestructibles. Son aqueduc l'est aussi, tant que la guerre n'existe pas : ensuite, les
   soldats pourront le couper. Privé de sa source, un réservoir garde son eau environ 5 minutes, puis les fontaines
   s'assèchent.
@@ -56,27 +61,44 @@ essayées.
 
 - Chaque joueur n'a le droit d'exploiter que certaines ressources : il faut commercer pour le reste, avec l'empire
   ou avec les autres joueurs.
-- Le conseiller au commerce réunit sur une page l'empire et les joueurs : stocks, prix, achats et chargements en
-  route.
+- Chaque ressource a un **prix de Rome**, celui du jeu d'origine. **L'empire vend toujours**, mais avec le
+  **portorium**, une douane de 50 % : on lui achète au prix de Rome + 50 %, on lui vend au prix de Rome − 50 %. Le
+  marbre, à 200 à Rome, s'achète 300 à l'empire et se vend 100.
+- Chacun commerce avec l'empire pour lui seul : ses routes, ses achats et ses ventes ne changent rien chez les
+  autres.
+- Entre joueurs, pas de douane. Chacun part du prix de Rome, puis fixe ses prix de vente comme il veut, joueur par
+  joueur. Un changement de prix déclenche une alerte chez l'acheteur.
 - Une route entre deux joueurs s'ouvre quand les deux l'ont proposée. Chaque mois, le vendeur envoie une caravane
   par ressource achetée, 8 chargements au plus. L'acheteur paie à l'arrivée ce qui entre dans ses entrepôts.
-- Chacun fixe ses prix de vente, joueur par joueur. Un changement de prix déclenche une alerte chez l'acheteur.
-- L'empire vend 50 % plus cher. Il ne vend pas non plus une ressource qu'on achète moins cher à un joueur, même
-  quand ce joueur n'en a plus : assécher le stock d'un rival fait partie du jeu.
+- Le conseiller au commerce réunit sur une page l'empire et les joueurs : stocks, prix de Rome, prix payés et reçus,
+  achats et chargements en route. La source la moins chère est en vert.
+- Son onglet « Stocks » règle, pour chaque ressource, un stock minimum et un stock maximum, valables pour l'empire et
+  pour les joueurs : « vendre au-dessus de » (la cité garde ce stock et ne vend rien en dessous) et « acheter
+  jusqu'à » (plus aucun achat dès que le stock l'atteint).
 
 ## César juge
 
 - Chaque mois, César donne des lauriers à chaque cité selon cinq notes : prospérité, commerce, habitat, culture et
   éducation, grandeur.
+- Les **cadeaux à César** rapportent aussi des lauriers : 4, 7 ou 10 selon leur taille, un seul compté par an. Ils
+  se paient sur l'épargne personnelle, que remplit le salaire du gouverneur ; le salaire ne peut pas dépasser son
+  rang.
 - La première cité qui atteint le score choisi dans le salon (1 000 lauriers par défaut) devient son héritière et
   gagne la partie.
-- Le conseiller impérial montre les notes, les lauriers, le rang et le classement. César écrit à chaque nouveau
-  rang.
+- Le conseiller impérial montre les notes, les lauriers, le rang et le classement, avec les boutons du cadeau, du
+  salaire et du don à la cité. César écrit à chaque nouveau rang.
+- Dans l'évaluation de la cité, le quatrième pilier est celui des **lauriers** : sa hauteur dit où l'on en est du
+  score. Un clic donne les lauriers du mois dernier, la tendance et la place dans la province. L'ancienne faveur de
+  César n'est plus affichée.
 
-## Autres réglages
+## Le salon et les règles
 
-- Brouillard de guerre, en option dans le salon : on ne voit que ce qu'on a découvert.
-- Pause pour tout le monde (touche P). La partie se sauvegarde et se reprend depuis le salon.
+- L'hôte règle la partie jusqu'au lancement : carte, difficulté (« facile » par défaut), dieux, fin de partie,
+  invasions de l'IA, brouillard de guerre. Les autres joueurs voient ses réglages, tenus à jour, sans pouvoir les
+  changer. En partie, la difficulté est la même pour tous.
+- « Invasions IA : non » coupe toutes les attaques de l'IA, Mars compris. Les révoltes de gladiateurs restent.
+- Brouillard de guerre, en option : on ne voit que ce qu'on a découvert.
+- Pause pour tout le monde (touche P). La partie se sauvegarde et se reprend depuis le salon, avec ses règles.
 
 ## À venir
 
@@ -85,7 +107,8 @@ essayées.
   tous : des joueurs trop belliqueux s'attirent une expédition punitive.
 - **Trois troupes, trois coûts** : légionnaires payés en armes, javeliniers renforcés et payés en bois (réservé aux
   joueurs de la côte), cavaliers gratuits et rapides.
-- Dons, fêtes et campagnes de César qui rapportent des lauriers, et ses demandes adressées à toute la province.
+- Fêtes et campagnes de César qui rapportent des lauriers, et ses demandes adressées à toute la province.
+- La hausse des prix de l'empire quand un joueur arrête le commerce.
 
 La feuille de route complète est dans [doc/mp/ROADMAP.md](doc/mp/ROADMAP.md).
 

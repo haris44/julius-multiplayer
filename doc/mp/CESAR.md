@@ -12,7 +12,7 @@
 - Les lauriers viennent de deux sources, qui **s'additionnent** :
   - les **lauriers de la cité**, gagnés chaque mois d'après cinq notes : prospérité, commerce, habitat, culture et
     éducation, grandeur ;
-  - les **lauriers de César**, gagnés en le **servant** (dons, fêtes, troupes prêtées à ses campagnes, demandes
+  - les **lauriers de César**, gagnés en le **servant** (cadeaux, fêtes, troupes prêtées à ses campagnes, demandes
     honorées, guerres justes) et perdus par l'agression.
 - La guerre entre joueurs est permise, mais César la regarde : une **jauge de colère commune** monte avec la
   **durée** et la **puissance** des guerres. Au maximum, ses légions frappent **toutes** les cités, et le fautif
@@ -47,7 +47,7 @@ D'où vient chaque critère dans le plan :
 | Se développer « plus » | Note **Grandeur** (§5.5) |
 | Prête ses troupes | Lauriers de César : **campagnes** (§6.3) |
 | Nombreuses fêtes | Lauriers de César : **fêtes** (§6.2) |
-| Dons à César | Lauriers de César : **dons** (§6.1) |
+| Dons à César | Lauriers de César : **cadeaux** (§6.1) |
 | Guerre pour de bonnes raisons | **Motifs** de guerre (§7.1) : triomphes, pas de pénalité, colère réduite |
 | Trop belliqueux : armée de César | **Colère de César** (§7.2 à §7.4) |
 
@@ -58,7 +58,7 @@ D'où vient chaque critère dans le plan :
    notes d'origine**, équilibrées par les auteurs du jeu.
 2. **Rendements décroissants partout.** Chaque note sature : doubler son commerce ne double pas la note. Chaque
    action envers César a un plafond par période. On ne gagne pas en poussant un seul levier.
-3. **L'argent ne fait pas gagner.** Dons et fêtes rapportent au plus 22 lauriers par an, environ un cinquième de ce
+3. **L'argent ne fait pas gagner.** Cadeaux et fêtes rapportent au plus 22 lauriers par an, environ un cinquième de ce
    que rapporte une belle cité. Le reste des lauriers de César se gagne en le **servant** : troupes, demandes
    honorées, guerres justes.
 4. **La guerre est un scalpel, pas une massue.** Son coût en colère croît avec le **carré** de la durée et de la
@@ -70,7 +70,7 @@ D'où vient chaque critère dans le plan :
    zéro, les premières années rapportent peu : l'avance prise au début reste rattrapable.
 7. **Lisible.** Un seul compteur de victoire, les lauriers, additionné et détaillé par source. Chaque joueur voit
    ce que vaut chaque action et sa part de la colère. Une règle qu'on ne voit pas ne s'équilibre pas.
-8. **Jouable seul** (Alexandre essaie chaque version seul) : notes, dons, fêtes, campagnes et lauriers marchent à une
+8. **Jouable seul** (Alexandre essaie chaque version seul) : notes, cadeaux, fêtes, campagnes et lauriers marchent à une
    cité ; la colère reste à zéro sans adversaire, et `simtool` la teste.
 9. **Déterministe et réglable.** Tout est entier, calculé dans la simulation, sauvegardé, et passe par des
    commandes. Les réglages sont réunis dans une seule table (`mp/caesar_rules.h`), recopiée dans DESIGN.
@@ -84,7 +84,7 @@ caravane met environ 45 jours à traverser la carte pour 2.
 ```
           état de la cité                        actions envers César
   ┌──────────────────────────────┐     ┌──────────────────────────────────────┐
-  │ Prospérité  Commerce  Habitat │     │ dons, fêtes, troupes, demandes,       │
+  │ Prospérité  Commerce  Habitat │     │ cadeaux, fêtes, troupes, demandes,    │
   │ Culture-éducation   Grandeur  │     │ guerres justes  /  agressions          │
   └──────────────┬───────────────┘     └──────────────────┬───────────────────┘
                  │ chaque mois                              │ à chaque action
@@ -105,8 +105,13 @@ caravane met environ 45 jours à traverser la carte pour 2.
 | Colère | **commune** | guerres (durée, puissance, dégâts), décrue en paix | menace sur tous |
 | Belligérance | par cité | sa part de la colère | qui paie quand César frappe |
 
-La **faveur** d'origine (0 à 100) n'est plus utilisée en multijoueur : elle reste figée et cachée, comme aujourd'hui
-(D-026). Tout ce qu'elle mesurait devient des lauriers.
+La **faveur** d'origine (0 à 100) n'est plus utilisée en multijoueur : elle reste figée et cachée (D-026), et n'est
+plus affichée nulle part (D-071). Tout ce qu'elle mesurait devient des lauriers.
+
+**L'estime de César, ce sont les lauriers** (D-071, *à valider*) : il n'y a pas de second compteur. L'« estime »
+montrée au joueur est une **lecture** des lauriers, de 0 à 100 : lauriers / score du salon × 100, ou, sans score
+(partie sans fin), lauriers rapportés au rang suivant. Aucune règle ne la lit. Elle donne la hauteur du 4e pilier de
+l'évaluation de la cité (§11).
 
 ## 4. Les lauriers
 
@@ -135,11 +140,11 @@ Chaque note rapporte des lauriers en proportion de sa valeur. Une note tenue à 
 
 Détail en §6 et §7. Un gouverneur assidu gagne environ 40 lauriers de César par an :
 - deux fêtes comptées (12) ;
-- un don (10) ;
+- un cadeau (10) ;
 - sa part des campagnes (environ 17 par an en moyenne).
 
 Les lauriers de César font donc environ un tiers du total, comme dans la liste d'Alexandre, où la moitié des critères
-concerne le service de César. La part achetée par l'argent (dons et fêtes) reste vers un cinquième.
+concerne le service de César. La part achetée par l'argent (cadeaux et fêtes) reste vers un cinquième.
 
 ### 4.3 Fin de partie et verdict
 
@@ -220,7 +225,7 @@ Chaque action rapporte un nombre fixe de lauriers, affiché à côté du bouton 
 | Action | Lauriers | Limite |
 |--------|----------|--------|
 | Fête petite / grande / somptueuse (§6.2) | +2 / +4 / +6 | une seule fête comptée tous les 6 mois : 12 par an au plus |
-| Don modeste / généreux / somptueux (§6.1) | +4 / +7 / +10 | un seul don compté tous les 12 mois : 10 par an au plus |
+| Cadeau modeste / généreux / somptueux (§6.1) | +4 / +7 / +10 | un seul cadeau compté tous les 12 mois : 10 par an au plus |
 | Campagne de César gagnée (§6.3) | jusqu'à +60, selon sa part de la force | — |
 | Campagne perdue, troupes envoyées | jusqu'à +15, selon sa part | — |
 | Campagne : rien envoyé alors qu'on a des légions | −10 | — |
@@ -236,16 +241,28 @@ Chaque action rapporte un nombre fixe de lauriers, affiché à côté du bouton 
   suivant. C'est ce qui fait des « nombreuses fêtes » une habitude à tenir, sans jauge à surveiller.
 - Ces actions donnent des lauriers en multijoueur, et plus de faveur : la faveur d'origine reste figée et cachée.
 
-### 6.1 Dons, salaire et épargne
-- On reprend les mécanismes d'origine. Le gouverneur touche chaque mois un **salaire** selon son rang (0, 2, 5, 8,
-  12, 20, 30, 40, 60, 80 ou 100 Dn), prélevé sur le trésor de la cité et versé à son **épargne personnelle**. Les
-  **dons** puisent dans cette épargne et coûtent épargne / 8 + 20 (modeste), épargne / 4 + 50 (généreux) ou
-  épargne / 2 + 100 (somptueux).
-- Un seul don compte tous les 12 mois. Il remplace l'usure d'origine, plus difficile à lire.
-- Le **rang** monte avec les lauriers (§4.3) et fixe le salaire maximal : on ne peut pas choisir un salaire
-  au-dessus de son rang. C'est plus simple que la pénalité d'origine.
-- **Choix pour le joueur** : se payer pour donner, c'est prendre de l'argent à la cité (constructions, commerce)
+### 6.1 Cadeaux, salaire et épargne (D-067, fait)
+- **Trois commandes réseau**, appliquées dans la cité de l'expéditeur avec le code d'origine (`city/emperor.c`) :
+  `MP_ACTION_SEND_GIFT` (cadeau à César), `MP_ACTION_SET_SALARY` (salaire), `MP_ACTION_DONATE` (don à la cité). Les
+  boutons du conseiller impérial reviennent en multijoueur. La taille du cadeau et le montant du don choisis dans la
+  fenêtre restent un état de la fenêtre, jamais de la simulation.
+- **Salaire** : le gouverneur touche chaque mois un salaire selon son rang (0, 2, 5, 8, 12, 20, 30, 40, 60, 80 ou
+  100 Dn), prélevé sur le trésor de la cité et versé à son **épargne personnelle**. Il ne peut pas dépasser le
+  **rang** (§4.3) : la commande refuse un rang plus haut, et le salaire retombe au rang le mois suivant si la cité
+  perd des lauriers. C'est plus simple que la pénalité d'origine.
+- **Cadeau à César** : payé sur l'épargne, au coût d'origine : épargne / 8 + 20 (modeste), épargne / 4 + 50
+  (généreux) ou épargne / 2 + 100 (somptueux). Il rapporte 4, 7 ou 10 lauriers de cadeaux.
+  - **Un seul cadeau compte tous les 12 mois** : un cadeau envoyé pendant l'attente est payé et ne rapporte rien. La
+    fenêtre dit dans combien de mois le prochain comptera. L'attente est un compteur de mois par joueur dans
+    `mp_caesar`. Elle remplace l'usure d'origine, plus difficile à lire.
+  - Le cadeau ne touche ni à la faveur d'origine, ni au compteur des mois depuis le dernier cadeau, ni à la pénalité
+    des cadeaux répétés (D-073).
+- **Don à la cité** : de l'épargne vers le trésor, plafonné à l'épargne. Il ne rapporte pas de lauriers.
+- **Choix pour le joueur** : se payer pour offrir, c'est prendre de l'argent à la cité (constructions, commerce)
   pour quelques lauriers. C'est un vrai arbitrage, sans bonne réponse évidente.
+- *À valider* (D-067) : au rang 0, le salaire est de 0 ; il n'y a donc pas d'épargne avant le rang 1 (100 lauriers
+  pour un score de 1 000), ni de cadeau possible au début, sauf épargne de départ de la carte. Faut-il une épargne
+  de départ ou un salaire plus tôt ?
 
 ### 6.2 Fêtes
 - Les fêtes d'origine gardent leur coût, qui suit la population : population / 20 + 10 pour une petite fête, / 10 + 20
@@ -475,7 +492,7 @@ Chaque mois, chaque guerre en cours ajoute à la jauge :
 
 ## 8. Les deux chemins vers la victoire
 
-**Le bâtisseur courtisan.** Il développe les cinq notes et sert César : deux fêtes par an, un don annuel, des troupes
+**Le bâtisseur courtisan.** Il développe les cinq notes et sert César : deux fêtes par an, un cadeau annuel, des troupes
 à chaque campagne.
 - Résultat : des notes autour de 65 en fin de partie, et environ 40 lauriers de César par an. C'est le chemin
   « normal ».
@@ -502,7 +519,7 @@ Chaque mois, chaque guerre en cours ajoute à la jauge :
 |---------|-----------|
 | Deux joueurs se renvoient les mêmes marchandises pour gonfler le commerce | flux nets par paire et par ressource, au prix de référence (§5.2) |
 | Prix de vente absurde entre complices | volume compté au prix de référence de l'empire |
-| Acheter des lauriers avec l'épargne | un don compté par an (10 lauriers au plus), salaire limité par le rang |
+| Acheter des lauriers avec l'épargne | un cadeau compté par an (10 lauriers au plus), salaire limité par le rang |
 | Fêtes à la chaîne | une fête comptée tous les 6 mois |
 | Fêtes très bon marché en début de partie (leur coût suit la population) | plafond par semestre ; si la télémétrie montre qu'elles pèsent trop au début, les points suivront la population |
 | Le dernier déclenche exprès la colère pour faire perdre tout le monde | le fautif perd 25 % de ses lauriers : la manœuvre le fait plonger plus que les autres |
@@ -540,7 +557,7 @@ colère, seuils. Chaque changement de réglage est noté dans DECISIONS avec la 
 - **Trajectoires** : faire avancer ces cités plusieurs années (autopilot) et tracer les notes et les lauriers. Le gain
   doit croître avec le développement, sans palier qui enferme.
 - **Duels scriptés** : deux cités copiées sur une carte préparée (déjà possible avec `gotocity`). On les pilote par
-  commandes (dons, fêtes, déclaration, envoi d'une légion vers un bâtiment) :
+  commandes (cadeaux, fêtes, déclaration, envoi d'une légion vers un bâtiment) :
   - frappe ciblée contre bâtisseur ;
   - guerre totale ;
   - campagne de César avec et sans troupes.
@@ -551,7 +568,7 @@ colère, seuils. Chaque changement de réglage est noté dans DECISIONS avec la 
   voulu échoue :
   - « frappe ciblée type : colère < 30 » ;
   - « guerre totale type : expédition » ;
-  - « dons et fêtes au maximum : moins de 25 % des lauriers d'une bonne cité sur 10 ans » ;
+  - « cadeaux et fêtes au maximum : moins de 25 % des lauriers d'une bonne cité sur 10 ans » ;
   - « rapport des pertes victime / agresseur entre 3 et 5 ».
 
 ### 10.4 Télémétrie des vraies parties
@@ -563,7 +580,7 @@ colère, seuils. Chaque changement de réglage est noté dans DECISIONS avec la 
 
 ### 10.5 Critères chiffrés d'une partie équilibrée
 - Aucune note ne fait plus de 30 % des lauriers du vainqueur.
-- Les lauriers de César font de 20 à 40 % du total du vainqueur, dont moins de la moitié en dons et fêtes.
+- Les lauriers de César font de 20 à 40 % du total du vainqueur, dont moins de la moitié en cadeaux et fêtes.
 - Le joueur en tête quand le premier atteint la moitié du score gagne dans 60 à 75 % des cas : l'avance compte,
   mais le retour reste possible.
 - Une partie à 2 joueurs déclenche une expédition punitive dans moins d'une partie sur trois, quand les deux
@@ -574,8 +591,15 @@ colère, seuils. Chaque changement de réglage est noté dans DECISIONS avec la 
 - **Conseiller impérial** (fenêtre d'origine, contenu multijoueur) :
   - lauriers (de la cité, de César, total) et rang ;
   - les cinq notes, avec barres et conseils à la manière du conseiller des notes ;
-  - salaire et épargne, dons, et la date où la prochaine fête et le prochain don compteront ;
+  - salaire, épargne, cadeau et don à la cité (D-067), et la date où la prochaine fête et le prochain cadeau
+    compteront ;
   - campagne en cours ; demande en cours, avec ce que chacun a envoyé.
+- **Évaluation de la cité** (D-071, fait, *à valider*) : le 4e pilier s'appelle « Lauriers ». Sa hauteur est
+  l'estime (§3), son nombre les lauriers, et « X requis » le score (ou le rang suivant). Cliqué, il dit les lauriers
+  gagnés le mois dernier, la tendance (3 derniers mois contre les 3 d'avant), la place dans la province et ce qui
+  rapporte des lauriers. Culture, prospérité et paix restent les piliers d'origine. L'historique : les lauriers de
+  chaque cité à la fin de ses 12 derniers mois, dans `mp_caesar`.
+- **Sénat et barre latérale** : les lauriers à la place de la faveur (drapeau, infobulle, score à atteindre).
 - **Bandeau multijoueur** (en bas à gauche) : les lauriers remplacent le score, et une **jauge de colère** colorée
   est toujours visible.
 - **Lettres de César** : messages en plein écran, comme l'alerte de prix, pour l'avertissement, l'ultimatum,
@@ -597,8 +621,8 @@ Les jalons de [ROADMAP.md](ROADMAP.md) suivent cet ordre :
 
 Pièges relevés dans le code d'origine (code-map/07), à traiter dans ces jalons :
 - **Faveur** : on ne rallume pas sa mise à jour d'origine. En partie libre, elle la remettrait à 50 chaque mois
-  (`scenario_is_open_play`). Le don en multijoueur passe par une commande de `mp/caesar` qui garde le coût d'origine
-  (`city/emperor.c`) et donne des lauriers au lieu de faveur.
+  (`scenario_is_open_play`). Le cadeau en multijoueur passe par la commande `MP_ACTION_SEND_GIFT`, qui garde le
+  coût d'origine (`city/emperor.c`) et donne des lauriers (`mp_caesar_gift_sent`) au lieu de faveur (D-067, D-073).
 - **Dette** : la pénalité de dette tourne encore en multijoueur (`city/emperor.c` `update_debt_state`), mais
   seulement sur la faveur figée : sans effet. Si une dette doit coûter des lauriers, ce sera une règle explicite.
 - **Batailles lointaines et demandes** : elles viennent des données du scénario, vides sur les cartes préparées.

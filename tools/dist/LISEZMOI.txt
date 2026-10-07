@@ -64,10 +64,14 @@ Le pare-feu de chaque ordinateur doit laisser passer le jeu (ports 27400 en TCP 
 
 - Menu principal, « Multijoueur ».
 - Celui qui héberge choisit « Nouvelle partie (forêt) » (ou une partie sauvegardée à reprendre), le nombre de
-  joueurs et les règles, puis clique sur « Héberger ». La carte dépend du nombre de joueurs : une carte pour 1 ou
-  2 joueurs, une pour 3 ou 4. On peut aussi jouer seul (1 joueur) pour découvrir la carte et ses règles.
+  joueurs et les règles, puis clique sur « Héberger ». Il y a deux cartes pour 1 ou 2 joueurs, et deux pour 3 ou
+  4 : l'hôte choisit « Carte 1 », « Carte 2 » ou « Carte au hasard » (par défaut). La difficulté proposée est
+  « facile ». On peut aussi jouer seul (1 joueur) pour découvrir la carte et ses règles.
 - Les autres voient la partie apparaître dans « Parties trouvées sur le réseau » et cliquent dessus (ou tapent
   l'adresse affichée chez l'hôte, puis « Rejoindre »).
+- L'hôte peut changer les règles jusqu'à « Lancer la partie ». Les autres voient ses réglages, tenus à jour, sans
+  pouvoir les changer : la difficulté est la même pour tous. « Invasions IA : non » coupe toutes les attaques de
+  l'IA, Mars compris ; les révoltes de gladiateurs restent. Une partie reprise garde les règles de sa sauvegarde.
 - Quand tout le monde est là, l'hôte clique sur « Lancer la partie ».
 
 En jeu : chacun a sa cité, ses finances et ses conseillers. Le bandeau en bas à gauche rappelle votre numéro de
@@ -77,8 +81,12 @@ Enregistrer » sauvegarde la partie pour la reprendre plus tard depuis le salon.
 César juge les cités. Chaque mois, il donne à chacune des lauriers selon cinq notes : prospérité, commerce,
 habitat, culture et éducation, grandeur. La première cité qui atteint le score choisi dans le salon (1 000
 lauriers par défaut) devient son héritière et gagne la partie. Le conseiller impérial (touche 3) montre vos notes,
-vos lauriers, votre rang et le classement ; César vous écrit à chaque nouveau rang. Fêtes, dons et campagnes de
-César rapporteront aussi des lauriers dans une prochaine version.
+vos lauriers, votre rang et le classement ; César vous écrit à chaque nouveau rang. On y envoie aussi des cadeaux
+à César : ils rapportent 4, 7 ou 10 lauriers selon leur taille, un seul compté par an. Ils se paient sur votre
+épargne personnelle, que remplit votre salaire ; le salaire ne peut pas dépasser votre rang. Dans l'évaluation de
+la cité (touche 4), le quatrième pilier montre vos lauriers : sa hauteur dit où vous en êtes du score, et un clic
+donne les lauriers du mois dernier, la tendance et votre place. Fêtes et campagnes de César rapporteront aussi des
+lauriers dans une prochaine version.
 
 Les règles propres au multijoueur :
 - Vous commencez avec votre mission, déjà bâtie au bord de la route de César, et la zone de 20 cases qu'elle vous
@@ -98,15 +106,23 @@ Les règles propres au multijoueur :
   l'arrivée ce qui trouve place dans ses entrepôts, le reste repart. Chaque livraison est annoncée. Quand un
   joueur change le prix d'une ressource que vous lui achetez, une alerte en plein écran vous donne l'ancien et le
   nouveau prix ; « Voir le commerce » ouvre le conseiller sur son onglet.
-- Acheter à l'empire coûte 50 % de plus. L'empire ne vous vend pas ce que vous achetez à un joueur moins cher
-  (le fournisseur est en vert) : même si ce joueur n'en a plus. Assécher le stock d'un rival fait
-  partie du jeu ; pour revenir à l'empire, cessez d'acheter à ce joueur.
-- Un grand bras de mer traverse la carte d'ouest en est. À deux joueurs, les deux vivent sur la rive sud ; à
-  quatre, deux sur chaque rive, reliés par la route et le pont de César. Les emplacements sont tirés au sort à
-  chaque partie. Les bois ne se traversent pas, mais aucun coin de terre n'est enfermé : on va partout. Les joueurs de la côte y bâtissent leurs
-  docks (les navires de l'empire arrivent par le bord de la carte le plus proche) et leurs quais de pêche. Le joueur
-  de la pierre (fer, marbre et bois) vit loin de l'eau : seul l'aqueduc de César, qui part d'un réservoir sur la
-  côte, l'alimente.
+- Chaque ressource a un prix de Rome, celui du jeu d'origine. L'empire vend toujours, mais avec le portorium, une
+  douane de 50 % : vous lui achetez au prix de Rome + 50 % et lui vendez au prix de Rome - 50 % (marbre : 200 à
+  Rome, 300 à l'achat, 100 à la vente). Votre commerce avec l'empire n'appartient qu'à vous : vos routes, vos achats
+  et vos ventes ne changent rien chez les autres. Entre joueurs, pas de douane : chacun part du prix de Rome et
+  fixe ensuite ses prix comme il veut. La source la moins chère est en vert.
+- L'onglet « Stocks » du conseiller au commerce règle, pour chaque ressource, un stock minimum et un stock maximum,
+  pour l'empire comme pour les joueurs : « vendre au-dessus de » (vous gardez ce stock et ne vendez rien en
+  dessous) et « acheter jusqu'à » (plus aucun achat dès que votre stock l'atteint ; « sans » : pas de limite
+  entre joueurs, la limite d'origine avec l'empire).
+- Un bras de mer traverse chaque carte, franchi par la route et le pont de César. Les emplacements sont tirés au
+  sort à chaque partie. Les bois ne se traversent pas, mais aucun coin de terre n'est enfermé : on va partout.
+- Deux sortes d'emplacements. Les joueurs des terres ont le fer et le marbre (pas de bois) et les porcs ; ils vivent
+  loin de l'eau : seul l'aqueduc de César, qui part d'un réservoir de César sur la côte, les alimente. Les joueurs
+  de la côte ont le bois, l'argile, la pêche et les fruits ; ils y bâtissent leurs docks (les navires de l'empire
+  arrivent par le bord de la carte le plus proche) et leurs quais de pêche. Blé et légumes pour tous. À 2 joueurs,
+  un joueur des terres (avec les olives) et un de la côte (avec les vignes) ; à 4, deux de chaque, les olives à un
+  joueur des terres et les vignes à l'autre ; à 3, une place de la côte reste libre.
   En multijoueur, un réservoir coupé de sa source garde son eau environ 5 minutes.
 - Brouillard de guerre (option du salon) : on ne voit que ce qu'on a découvert.
 

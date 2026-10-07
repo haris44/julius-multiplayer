@@ -49,6 +49,11 @@
   - En mode classique, ses accesseurs renvoient les réglages locaux (`c3.inf`, `julius.ini`), donc rien ne change.
   - En multijoueur, ils renvoient les valeurs choisies dans le salon. Ainsi un `c3.inf` local ne peut plus
     désynchroniser : une difficulté « très facile » sur une seule machine fait échouer 14 tests de parité sur 16.
+    `tools/check-determinism.sh` refuse toute autre lecture des réglages locaux que les règles remplacent
+    (difficulté, dieux, correctifs, D-073).
+  - Les règles sont écrites dans la pièce `mp_header` du `.mpsav`, avec la taille de la carte et le nombre de
+    joueurs. Elles comprennent aussi la carte préparée (`prepared_map`, D-069), les invasions de l'IA, le brouillard,
+    les territoires et la fin de partie (score de César).
 
 ## 3. Moteur multi-cités
 
@@ -202,8 +207,22 @@ réseau et à trouver par dichotomie le premier tick fautif dans les tests.
 - Désynchronisation : sommes de contrôle différentes. On met le jeu en pause, chaque pair écrit une sauvegarde
   multijoueur, puis on les compare avec l'outil `compare`.
 - **Salon** : l'hôte choisit la carte et les règles, les clients rejoignent par découverte UDP sur le réseau local
-  ou par adresse IP. On vérifie les versions et les sommes de contrôle des données. Tous démarrent par le même
+  ou par adresse IP. On vérifie les versions (`PROTOCOL_VERSION` de `mp/lockstep.c`, 18 depuis T4.1 ; il change à
+  chaque changement de l'état ou des messages) et les sommes de contrôle des données. Tous démarrent par le même
   chemin déterministe (remise à zéro de l'état caché, chargement de la carte, application des règles).
+- **Règles du salon** (D-063, D-069, D-073) :
+  - les réglages affichés sont un état de l'interface (`mp/lobby`) : carte (« Carte 1 », « Carte 2 », « Carte au
+    hasard », par défaut au hasard), difficulté (« facile » par défaut), dieux, fin, invasions de l'IA, brouillard ;
+  - l'hôte peut les changer jusqu'au lancement. Chaque changement passe par `mp_lockstep_set_rules` et part chez
+    les clients (message `MSG_RULES`), qui les affichent sans pouvoir les changer. « Lancer la partie » les relit
+    (`mp_lobby_start_game`). Les règles partent aussi avec l'accueil (`MSG_WELCOME`) ;
+  - reçues du réseau, elles sont vérifiées (`game_rules_settings_valid`) : hors bornes, elles sont ignorées dans le
+    salon, et l'accueil est refusé ;
+  - « Carte au hasard » : l'hôte tire la carte avec la graine du salon (`mp_mapgen_choose_prepared_map`). La règle
+    garde la carte tirée, et les clients reçoivent la carte toute faite dans la sauvegarde ;
+  - une partie reprise d'un `.mpsav` garde les règles de sa pièce `mp_header` : le salon les montre grisées
+    (`mp_lobby_rules_editable`). Une carte `.mpmap` garde ses territoires ; le reste vient du salon ;
+  - les règles par défaut des tests et de la ligne de commande (`--mp-host`) restent en difficile, sur la carte 1.
 - Vitesse et pause sont des commandes de l'hôte. En cas de déconnexion, le jeu se met en pause et l'hôte peut
   continuer sans le joueur parti. La cité de ce joueur reste figée ou est retirée : à décider plus tard.
 - Implémentation : une petite couche `src/platform/net*.c` (sockets POSIX et Winsock), sans nouvelle dépendance.
@@ -225,6 +244,18 @@ réseau et à trouver par dichotomie le premier tick fautif dans les tests.
 > `GAME_END_CAESAR` (`mp/endgame`) s'arrête quand une cité atteint `caesar_score` (règles du salon). Interface :
 > `window/mp_imperial` (conseiller impérial), `window/mp_caesar_letter` (lettres, état d'affichage non sauvegardé),
 > bandeau `widget/mp_status`.
+>
+> Depuis D-067 : cadeau, salaire et don à la cité sont trois commandes (`MP_ACTION_SEND_GIFT`, `MP_ACTION_SET_SALARY`,
+> `MP_ACTION_DONATE`), appliquées dans la cité de l'expéditeur avec le code d'origine (`city/emperor.c`). La taille du
+> cadeau et le montant du don choisis dans la fenêtre restent un état de la fenêtre. `mp_caesar_gift_sent` donne les
+> lauriers du cadeau et lance l'attente de 12 mois (compteur par joueur dans `mp_caesar`, version 3) ; la faveur
+> d'origine n'est jamais touchée (D-073). Le salaire est de nouveau versé, au plus le rang : la commande refuse un
+> rang plus haut, et `mp_caesar_limit_salary` le rabaisse chaque mois (`city/finance.c`).
+>
+> Depuis D-071 : l'estime de César n'est qu'une lecture des lauriers (`mp_caesar_esteem` : lauriers rapportés au
+> score, ou au rang suivant sans score). `mp_caesar` garde les lauriers de chaque cité à la fin de ses 12 derniers
+> mois (version 4), d'où le gain du mois et la tendance. Le 4e pilier de l'évaluation (`window/mp_ratings`), le sénat
+> et la barre latérale montrent les lauriers ; la faveur n'est plus affichée en multijoueur.
 
 ### 5.1 Interventions de César neutralisées (liste complète : code-map/04 §3)
 
@@ -234,7 +265,6 @@ Désactivées quand `game_rules.mode == MP` :
 - colère et invasions de César ;
 - batailles lointaines et service de l'empire ;
 - changement d'empereur ;
-- cadeaux, salaire, épargne et dons ;
 - rangs et promotions ;
 - victoire et renvoi de la campagne ;
 - blé fourni par Rome.
@@ -249,9 +279,12 @@ Conservés, car ils relèvent de l'économie ou de la vie interne de la cité :
 - révolte des gladiateurs ;
 - épidémies ;
 - règle du trésor à −5 000 (plus de construction possible) ;
-- tribut annuel et prêt de secours (D-026 ; la dette fait encore baisser la faveur, `city/emperor.c` `update_debt_state`).
+- tribut annuel et prêt de secours (D-026 ; la dette fait encore baisser la faveur, `city/emperor.c` `update_debt_state`) ;
+- cadeaux, salaire, épargne et don à la cité, par commandes (D-067), avec des lauriers au lieu de faveur ;
+  boutons du conseiller impérial visibles.
 
-Impact assumé (H2) : sans salaire du gouverneur, l'économie des cités est un peu plus facile.
+Impact assumé (H2) : le salaire du gouverneur, de nouveau versé (D-067), est limité par le rang ; au rang 0, il
+est nul.
 
 ### 5.2 Arrivée des joueurs
 
@@ -260,8 +293,9 @@ de sortie de sa cité :
 - les immigrants et les caravanes des villes de l'empire y arrivent ;
 - la règle de la « route de Rome » s'y rapporte.
 
-Il porte aussi les **autorisations d'exploiter** du joueur (§6.2). L'arrivée des navires est propre à chaque cité
-(point d'entrée de la rivière par cité) : sur les cartes préparées, le bout du bras de mer le plus proche.
+Les **autorisations d'exploiter** du joueur sont dans l'empire de sa cité (§6.2). L'arrivée des navires est propre à
+chaque cité (point d'entrée de la rivière par cité) : sur les cartes préparées, le bout du bras de mer le plus
+proche.
 
 ### 5.3 Entités neutres
 
@@ -278,38 +312,66 @@ Les conditions de fin se choisissent dans le salon :
 - **conquête** : est éliminé le joueur qui a perdu son sénat ou toute sa population ;
 - **score à durée limitée** : le score combine population, culture, prospérité et paix.
 
-## 6. Commerce et autorisations (exigences E3 et E12) — principes, détails au jalon M8
+## 6. Commerce et autorisations (exigences E3 et E12)
 
-### 6.1 Routes commerciales (D-019)
+### 6.1 Commerce avec l'empire (D-019, D-060, D-061, D-066)
 
-- Le commerce avec les villes de l'empire est conservé, avec un état de route **par joueur** : ouverture,
-  quotas, marchands. Les prix sont communs au monde. Les marchands de l'empire arrivent au point d'arrivée de la
-  cité.
-- Commerce entre joueurs : il faut qu'une **route construite** relie les deux cités. Elle peut traverser la carte
-  et emprunter les routes d'autres joueurs. La route commerciale s'ouvre par une commande acceptée des deux côtés.
-- Les **caravanes** partent de la cité exportatrice, ne marchent que **sur les routes**, achètent et vendent dans
-  les entrepôts de l'autre cité selon ses réglages d'import et d'export, puis reviennent. Elles réutilisent la
-  logique de `figure_trade_caravan_action` (code-map/04 §1.4).
-- **Interception** : une caravane est un civil, attaquable par les soldats ennemis, et sa cargaison est perdue. Si
-  la route est coupée ou murée, plus de caravane.
-- Argent : l'exportateur encaisse le prix de vente, l'importateur paie le prix d'achat. Les quotas s'appliquent par
-  route et par an.
+- **Chaque cité a son empire**, sauvegardé avec elle : routes ouvertes, quotas, marchands, achats et ventes. Rien ne
+  passe d'une cité à l'autre (D-061, test `mp_trade_empire_isolation`). Les marchands et navires de l'empire arrivent
+  au point d'arrivée de la cité.
+- **Prix de Rome** : un seul prix par ressource, le prix d'achat de base de l'original, avec les variations du
+  scénario. C'est un état de chaque cité (`empire/trade_prices`).
+- **Portorium** : 50 % du prix de Rome, arrondi vers le bas (`trade_price_duty`). En multijoueur, `trade_price_buy`
+  rend Rome + portorium et `trade_price_sell` Rome − portorium : marchands aux entrepôts, recettes et dépenses,
+  fenêtre des prix. Le classique garde ses deux prix d'origine (taux 0).
+- **L'empire vend toujours** : la règle D-048, qui le faisait s'effacer devant un joueur moins cher, est retirée.
+- **Hausse des prix quand un joueur arrête le commerce** (T4.3) : pas codée. Les trois propositions de D-066 font
+  toutes du portorium un état de chaque cité, sauvegardé et changé par les commandes déjà en place (route, prix).
 
-### 6.2 Autorisations d'exploiter (D-020)
+### 6.2 Autorisations d'exploiter (D-020, D-061, D-062, D-065)
 
-- Chaque point d'arrivée porte une liste d'**autorisations** : matières premières que le joueur a le droit
-  d'extraire ou de cultiver (blé, légumes, fruits, olives, vigne, viande, argile, bois, fer, marbre).
-- La règle d'origine (`empire_can_produce_resource`, menu de construction) est évaluée dans le contexte de la
-  cité. Un atelier est donc aussi constructible si une route commerciale ouverte, avec l'empire ou un joueur,
-  fournit sa matière première.
-- Autorisations **complémentaires** entre joueurs, avec des gisements présents sur le terrain de chacun.
-- **Armes** : stratégiques, car les casernes en consomment une par légionnaire. Seule une partie des joueurs peut
-  extraire le fer et forger, les autres doivent acheter ou conquérir. L'empire en vend peu.
+- Les autorisations sont celles de l'original : « notre cité » de l'empire produit telle ressource
+  (`empire_city_set_our_production_allowed`). Chaque cité ayant son empire, elles sont sauvegardées avec elle, et
+  les clients les reçoivent dans la sauvegarde. Pas de nouvel état.
+- Le **plan de la carte** les fixe, nourriture comprise (§8) :
+  - terres : fer, marbre, porcs (pas de bois) ;
+  - côte : bois, argile, fruits ; la pêche par les quais ;
+  - tous : blé et légumes ; olives et vignes réparties selon la carte.
+  L'autorisation « viande » ne commande que les porcs : les quais n'en dépendent pas (règle d'origine).
+- **Le menu de construction** est celui du joueur local : `building_menu_update` ne fait rien dans la cité d'un
+  autre joueur (`mp_session_is_other_players_city`). Une commande d'un autre joueur ne change donc pas ce que voit
+  le joueur local.
+- **Les commandes de construction vérifient l'autorisation** comme le menu (`mp_permissions_may_build`) : une ferme,
+  une carrière, une mine, une glaisière ou un chantier de bois interdit à la cité est refusé, sur une carte
+  multijoueur seulement (`game_rules_multiplayer_map`). Les ateliers ne sont pas vérifiés : le menu les règle seul,
+  et une route de l'empire qui fournit leur matière les ouvre toujours (règle d'origine, *à valider*, D-061, D-065).
+- **Armes** : stratégiques, car les casernes en consomment une par légionnaire. Seuls les joueurs des terres
+  extraient le fer ; les autres doivent acheter ou conquérir.
 - **Bois** (D-058) : les javeliniers, renforcés en multijoueur, coûtent un chargement de bois, que seuls les
   joueurs côtiers extraient. Les cavaliers restent gratuits. Trois troupes, trois coûts : armes (joueur des
   terres), bois (côtiers), rien (cavaliers, rapides et plus faibles).
 - Équilibrage (M10) : on mesure par des parties simulées sans tête le temps nécessaire à chaque joueur pour
   aligner une légion, et on règle prix, quotas, gisements et fonds de départ.
+
+### 6.3 Commerce entre joueurs (D-019, D-043, D-070)
+
+- Il faut qu'une **route construite** relie les deux cités. Elle peut traverser la carte et emprunter les routes
+  d'autres joueurs. La route commerciale s'ouvre quand les deux l'ont proposée (`MP_ACTION_PROPOSE_ROUTE`).
+- **Prix** : chaque vendeur fixe un prix par ressource et par acheteur (`MP_ACTION_SET_SELL_PRICE`), le prix de Rome
+  par défaut, sans portorium. Chaque acheteur dit à qui il achète quoi (`MP_ACTION_SET_BUYS_FROM`). Prix, achats et
+  propositions sont dans l'état de chaque cité (`mp/trade`, écrit par `game/extra_state.c`). L'alerte de prix chez
+  l'acheteur est un état d'affichage, jamais sauvegardé.
+- **Caravanes** : chaque mois, une par ressource achetée, 8 chargements au plus, dans la limite de ce que l'acheteur
+  peut payer. Elles ne marchent que sur les routes et reprennent `figure_trade_caravan_action` (code-map/04 §1.4).
+  L'acheteur paie à l'arrivée ce qui entre dans ses entrepôts ; le reste repart chez le vendeur.
+- **Bornes de stock**, par ressource et par cité, pour l'empire et pour les joueurs (D-070) :
+  - « vendre au-dessus de N » : le seuil d'export de l'original (`MP_ACTION_CHANGE_EXPORT_OVER`) ;
+  - « acheter jusqu'à M » : `MP_ACTION_CHANGE_BUY_LIMIT`, de 0 (sans) à 400, dans la pièce commune
+    `mp_trade_bounds` du `.mpsav` (facultative : une partie plus ancienne se charge sans borne). Entre joueurs, la
+    caravane part avec au plus la place laissée sous M, chargements en route compris. Avec l'empire, M remplace la
+    limite automatique de l'original (`mp_trade_empire_buy_limit`, lu par `empire/empire.c`).
+- **Interception** (M10) : une caravane est un civil, attaquable par les soldats ennemis, et sa cargaison est
+  perdue. Si la route est coupée ou murée, plus de caravane.
 
 ## 7. Guerre entre joueurs (exigence E4) — principes, détails au jalon M9
 
@@ -355,10 +417,18 @@ attendant Alexandre : la **terre de César**.
 
 ## 8. Cartes multijoueur
 
-- Le jeu se joue sur **deux cartes préparées** (D-033, D-044, D-047), recalculées à chaque partie par `mp/mapgen`
-  (`mp_mapgen_create_prepared`) : jamais de fichier de carte dans le dépôt (I4). Une pour 1 ou 2 joueurs (200
-  cases), une pour 3 ou 4 (260 cases). Chacune suit un **plan fixe** (`map_layout`) : villes, points d'arrivée sur
-  les bords ouest et est, routes de César, tracé du bras de mer qui traverse la carte, réservoirs de César. Le reste
+- Le jeu se joue sur **des cartes préparées** (D-033, D-044, D-047, D-069), recalculées à chaque partie par
+  `mp/mapgen` (`mp_mapgen_create_prepared`) : jamais de fichier de carte dans le dépôt (I4). Deux cartes, chacune
+  en deux tailles (`PREPARED_LAYOUTS`) :
+
+  | Carte | 1 ou 2 joueurs | 3 ou 4 joueurs |
+  |-------|----------------|----------------|
+  | Carte 1 | 200 cases, bras de mer d'ouest en est | 260 cases, deux joueurs sur chaque rive |
+  | Carte 2 | 220 cases, bras de mer en diagonale | 240 cases, terres au nord, côte au sud |
+
+  La règle `prepared_map` choisit la carte (salon, §4) ; le nombre de joueurs choisit la taille. Chaque carte suit
+  un **plan fixe** (`map_layout`) : villes, points d'arrivée sur les bords, routes de César, tracé du bras de mer,
+  pont et réservoirs de César. Les chemins les plus longs restent sous 400 pas (`MAX_PATH` 500, D-064). Le reste
   (forêts, clairières, prés, côtes irrégulières) vient d'un bruit déterministe à graine fixe : la même carte
   sur tous les ordinateurs, l'hôte l'envoie de toute façon. Les bois couvrent 14 à 18 % de la carte et restent
   infranchissables ; aucune clairière n'est enfermée par eux (D-052). Aucun étang : la mer est la seule eau
@@ -369,8 +439,10 @@ attendant Alexandre : la **terre de César**.
   les autorisations de production de sa cité, sauvegardées avec elle. Les joueurs des terres (fer, marbre, porcs ;
   un seul à 2, deux à 3 et 4) n'ont pas d'eau, seulement l'aqueduc de César, un réservoir de César par joueur sur la
   côte la plus proche : le couper assèche sa ville (D-055). Les autres (bois, argile, fruits, pêche) ont leur côte
-  dans leur zone de départ. Les commandes de construction refusent, comme le menu, une ferme ou une matière que la
-  cité ne peut pas produire.
+  dans leur zone de départ. À 3 joueurs, la place laissée libre est sur la côte. Les commandes de construction
+  refusent, comme le menu, une ferme ou une matière que la cité ne peut pas produire (§6.2).
+- La première mission est gratuite et construite d'office ; chaque mission de plus coûte 30 chargements de marbre
+  (`MP_MISSION_MARBLE_LOADS`, D-067).
 - Le modèle (`mp_mapgen_prepared_template`, Lindum d'abord) ne donne que l'empire, l'année et les fonds ; le climat
   est toujours celui du nord.
 - La carte passe par un `.mpsav` (`mp/savegame`), le même format qu'une partie en cours : les clients la reçoivent
@@ -396,7 +468,8 @@ attendant Alexandre : la **terre de César**.
   - sur la minicarte ;
   - sur une marque portée par les bâtiments et les soldats des autres joueurs.
 - Un tableau des scores résume population, notes et trésor.
-- Les écrans et indicateurs de César sont masqués. Les nouveaux textes sont traduits (le français d'abord, via
+- La faveur de César n'est plus montrée ; les lauriers la remplacent (conseiller impérial, 4e pilier de
+  l'évaluation, sénat, barre latérale, §5). Les nouveaux textes sont traduits (le français d'abord, via
   `src/translation/`).
 
 ## 10. Formats de fichiers
@@ -407,6 +480,13 @@ attendant Alexandre : la **terre de César**.
 | `.mpsav` (sauvegarde multijoueur) | en-tête (signature, version), règles, joueurs, monde (grilles au pas de la carte, calendrier, générateur du monde, empire, entités neutres), puis une section par cité (`city_data` avec champs élargis, `city_extra`, générateur complet, tranches) ; compression par parties, avec erreur explicite si une partie est trop grosse |
 | `.mpmap` (carte multijoueur) | en-tête, taille, grilles, points d'arrivée avec leurs autorisations, données de scénario « monde » |
 | `.mprec` (enregistrement) | sauvegarde de départ + journal `(tick, joueur, séquence, commande)` : rejeu et débogage |
+
+Pièces communes du `.mpsav` (`mp_savegame_visit`), toutes dans la somme de contrôle : `mp_header` (taille de la
+carte, nombre de joueurs, règles), `owner_grid`, `mp_endgame`, `mp_caesar` (lauriers, colère, attente des cadeaux,
+historique des lauriers ; version 4), `mp_trade_bounds` (bornes « acheter jusqu'à », facultative), `caesar_buildings`,
+`territory_grid`, `fog_grid`. Puis, pour chaque cité : son état d'origine (empire, prix de Rome, autorisations
+compris) et son état multijoueur (`game/extra_state.c` : prix et achats entre joueurs, routes proposées…). Une pièce
+plus récente qui manque à une ancienne partie se charge vide (sans borne, sans attente, sans historique).
 
 ## 11. Organisation du code
 

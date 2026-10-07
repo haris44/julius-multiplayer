@@ -305,6 +305,62 @@ multi-cités. Prérequis : M2.1 à M2.4 et M2.8.
 Notées le 2026-10-06 en fin de journée. Travail de nuit à partir de 23 h 45, avec ce qu'Alexandre ajoutera pendant
 la session de test du soir. Les questions marquées **?** se tranchent ce soir ; sinon je tranche provisoirement et
 le note « à valider ».
+
+**État au 2026-10-07** (après la nuit et la revue) :
+
+| Tâche | Sujet | État | Décisions |
+|-------|-------|------|-----------|
+| T4.1 | Lauriers dans l'évaluation de la cité, estime = lauriers | fait, à valider | D-071 |
+| T4.2 | Cadeaux à César par commandes | fait | D-067, D-073 |
+| T4.3 | L'empire vend toujours ; hausse des prix à l'arrêt du commerce | en partie : l'empire vend toujours ; la hausse n'est pas faite (A, B ou C à choisir) | D-060, D-066 |
+| T4.4 | « Facile » par défaut | fait | D-063 |
+| T4.5 | Stock minimum et maximum du commerce | fait, à valider | D-070 |
+| T4.6 | Statistiques : maquettes | maquettes faites, à valider ; pas de code | MAQUETTES.md |
+| T4.7 | Mission de plus : 30 marbres | fait | D-067 |
+| T4.8 | Pont de César dans la guerre | plan fait, à valider ; code avec M10 | D-068, D-073 |
+| T4.9 | Eau de César pour J2 à J4 | fait | D-064, D-073 |
+| T4.10 | Difficulté du salon pour toute la partie | fait | D-063, D-073 |
+| T4.11 | Règles du salon synchronisées ; invasions coupées | fait (partie reprise : à valider) | D-063, D-073 |
+| T4.12 | Prix de Rome et portorium | fait | D-060, D-061, D-066 |
+| T4.13 | Menu de construction du joueur local | fait | D-061, D-064 |
+| T4.14 | Deux cartes de plus, choix dans le salon | fait, à valider | D-069 |
+| T4.15 | Nourriture du plan, plus de bois dans les terres | fait | D-062, D-065 |
+| T4.16 | Le jeu paraît plus restrictif | mesuré : pas de bug ; à valider | D-072 |
+| T4.17 | Chemins sur les grandes cartes | fait | D-064, D-073 |
+
+**Questions « à valider » pour Alexandre**, par thème :
+- **Commerce**
+  - Prix de Rome = prix d'achat de base de l'original (marbre 200) ? (D-060, D-066)
+  - Hausse des prix quand un joueur arrête le commerce : A (route fermée, portorium de la victime à 100 % pendant
+    12 mois), B (embargo par ressource) ou C (Rome punit le fautif) ? Préférence : A. (D-066, T4.3)
+  - Le portorium s'applique aussi en partie seule ? (D-066)
+  - Un achat à un autre joueur n'ouvre pas d'atelier ; les commandes ne vérifient pas les ateliers. (D-061, D-065)
+  - « Acheter jusqu'à M » remplace la limite automatique de l'empire (plutôt que le plus petit des deux) ? Un pas
+    de 4 chargements par clic ? Une seule paire de bornes par ressource, pas par partenaire ? (D-070)
+  - La page du commerce multijoueur aussi en partie seule (revoit D-051) ? (D-070)
+- **Cartes**
+  - « Carte au hasard » par défaut ? Les deux nouvelles cartes (formes, places, tailles) ? Sur la carte 2 pour 2, le
+    côtier arrive par le bord sud ? (D-069)
+  - Répartition hors nourriture : olives à un joueur des terres, vignes à l'autre à 4 ; olives aux terres et vignes
+    à la côte à 2. (D-062)
+  - Rapprocher le point d'entrée de chaque joueur, si le début de partie paraît lent (route d'entrée de 48 à 63
+    cases à 4) ? (D-072)
+- **Salon et règles**
+  - Réglages modifiables jusqu'au lancement, plutôt que figés après « Héberger » ? (D-063)
+  - La ligne de commande (`tools/play-mp.sh`) passe-t-elle aussi en facile ? (D-063)
+  - Une partie reprise garde ses règles : le salon ne peut plus rien changer. Une carte `.mpmap` garde ses
+    territoires. (D-073)
+- **César**
+  - L'estime = les lauriers rapportés au score (lecture 2) ; garder le pilier de la paix ou le remplacer par une note
+    de César ; sans score, hauteur rapportée au rang suivant ou aux 1 000 lauriers ? (D-071)
+  - Au rang 0, le salaire est nul : pas d'épargne ni de cadeau au début. Une épargne de départ ou un salaire plus
+    tôt ? (D-067)
+  - Pont de César : la terre de César (option 1 sur 3) ? (D-068)
+- **Statistiques** : les sept questions de [MAQUETTES.md](MAQUETTES.md) §10 (option, premières statistiques, ce
+  qu'on voit des autres, durée, unités, nom). (T4.6)
+- **Gêne ressentie** : si le jeu paraît encore restrictif en facile, où et quand (une capture) ? Le rétrécissement
+  de la zone d'une cité sans bras n'est pas mesuré. (D-072)
+
 - [~] **T4.1** César dans l'**évaluation de la cité** (conseiller des notes, les piliers de marbre) : y montrer
   l'évolution, puis les lauriers ; **regrouper les lauriers et l'estime de César** déjà existante, pour un seul
   système plus simple (Alexandre : « à voir ce qui est possible de faire pour que ce soit plus simple »).
@@ -317,7 +373,7 @@ le note « à valider ».
   Cliqué, il dit le gain du mois dernier, la tendance, la place dans la province et ce qui rapporte des lauriers.
   Culture, prospérité et paix restent ceux d'origine. Plus aucune faveur affichée en multijoueur : drapeau et
   infobulle du sénat, barre latérale montrent aussi les lauriers. Historique des 12 derniers mois par cité dans
-  `mp_caesar` (version 4, protocole 16). Test `mp_caesar_history` (gain, tendance, estime, sauvegarde, deux machines,
+  `mp_caesar` (version 4, protocole 18). Test `mp_caesar_history` (gain, tendance, estime, sauvegarde, deux machines,
   ancienne sauvegarde, classique) ; capture `test/automation/caesar-ratings.txt`.
 - [x] **T4.2** **Cadeaux à César** : ils comptent dans son estime (avec T4.1). Ils doivent passer par des
   commandes réseau (aujourd'hui, les boutons sont cachés en multijoueur, D-057).
@@ -335,12 +391,12 @@ le note « à valider ».
     cette ressource à la victime ;
   - ou un joueur qui ferme sa route avec un autre ?
   Plus cher de combien, et pendant combien de temps ?
-- [x] **T4.4** Le multijoueur proposé en **facile** par défaut (salon).
-  *Fait* : le salon propose « facile » (`mp_lobby_rules_init`, nouveau module `mp/lobby.c`, D-063). Les règles par
-  défaut des tests restent en difficile, aucun test n'a changé. Test `mp_lobby_rules`.
   *Fait (première partie, avec T4.12)* : l'empire vend toujours, même ce qu'un joueur vend moins cher et même quand
   ce joueur n'en a plus (fin de la règle D-048). Test `mp_trade_empire_always_sells`. *Reste* : la hausse des prix
   quand un joueur arrête le commerce. Trois propositions dans D-066, *à valider*.
+- [x] **T4.4** Le multijoueur proposé en **facile** par défaut (salon).
+  *Fait* : le salon propose « facile » (`mp_lobby_rules_init`, nouveau module `mp/lobby.c`, D-063). Les règles par
+  défaut des tests restent en difficile, aucun test n'a changé. Test `mp_lobby_rules`.
 - [~] **T4.5** Page du commerce : un **stock minimum et maximum** dans les entrepôts, pour l'import et pour
   l'export. Pour mémoire : l'original a un seuil d'export, et Julius des réglages par entrepôt.
   **?** Les deux bornes valent-elles pour l'empire et pour les joueurs ?
@@ -362,13 +418,12 @@ le note « à valider ».
   télémétrie de M9.9. Sept questions pour Alexandre (§10). Pas de code, donc pas de test.
 - [x] **T4.7** **Une mission supplémentaire coûte 30 chargements de marbre** (4 aujourd'hui), pour éviter les
   extensions trop sauvages. Pas de changement pour la première, gratuite tant qu'on n'a pas de terre.
-- [~] **T4.8** Plan de la guerre : réfléchir à l'**impact du pont de César**, seul passage terrestre entre les deux
   *Fait* : `MP_MISSION_MARBLE_LOADS` passe à 30 (D-067). La première mission reste gratuite. Textes du salon
   (message de construction), README et LISEZMOI mis à jour. Test `mp_missions` : 29 chargements ne suffisent pas,
   30 sont prélevés.
+- [~] **T4.8** Plan de la guerre : réfléchir à l'**impact du pont de César**, seul passage terrestre entre les deux
   rives à 4 joueurs, donc un endroit très stratégique. Peut-on le bloquer, le tenir, le couper ? Que fait César
   si un joueur le ferme ? Va dans CESAR.md §7 et DESIGN §7 avant M10.
-- [x] **T4.9** **Bug : l'aqueduc de César ne donne pas d'eau à J2, J3, J4** (essai du soir). *Diagnostic* : l'eau de
   *Fait* (plan écrit, **à valider**, D-068) : [CESAR.md](CESAR.md) §7.6 et DESIGN §7.1. Ce qui passe par le pont
   (caravanes entre rives, missionnaire, armées ; ni l'eau, ni l'étranger, ni les campagnes). Trois options ; proposé :
   la **terre de César**, 15 cases autour du pont où rien ne se bâtit, pont ouvert à tous en paix, tenu par les
@@ -379,6 +434,7 @@ le note « à valider ».
   *Fait (revue, D-073)* : CESAR §7.6 recalcule les distances au pont pour chaque emplacement de la carte à 4 refaite
   (côte 82 et 85 cases par la route, terres 136 et 139) ; seules les légions de l'**agresseur** sur la terre de César
   comptent dans la colère, comme au §7.2.
+- [x] **T4.9** **Bug : l'aqueduc de César ne donne pas d'eau à J2, J3, J4** (essai du soir). *Diagnostic* : l'eau de
   chaque cité se calcule l'une après l'autre (`map_water_supply_update_reservoir_fountain_of_city`, tick 27), mais
   l'état « aqueduc en eau » de la grille n'est remis à zéro qu'au tour de la première cité. Au tour des suivantes,
   `fill_aqueducts_from_offset` saute les cases déjà en eau (`!map_aqueduct_at`) : la propagation depuis le réservoir
@@ -481,7 +537,6 @@ le note « à valider ».
   *À faire* : un seul prix par ressource (`empire/trade_prices`), le portorium à 50 % à l'achat et à la vente à
   l'empire (confirmé par Alexandre), le prix de Rome par défaut entre joueurs, la page du commerce qui montre
   prix de Rome, douane et prix payé. Tests : prix payés et reçus avec l'empire, prix par défaut entre joueurs.
-- [x] **T4.13** **Bug : le joueur côtier perd l'argile et reçoit le fer et le marbre** (essai du soir : « les
   *Fait* (D-066) :
   - un seul prix par ressource, le **prix de Rome** (prix d'achat de base de l'original, les variations du jeu
     s'appliquent) ; le portorium vaut 50 % de ce prix (`empire/trade_prices`, multijoueur seulement) ;
@@ -497,6 +552,7 @@ le note « à valider ».
     avec l'empire ne bouge pas d'un octet), `mp_trade_empire_always_sells` (T4.3). Capture : `tools/mp-trade-test.sh`.
   *Fait (revue, D-073)* : `mp_trade_prices` vérifie une vraie livraison entre joueurs, payée au prix du vendeur par
   l'un et à l'autre, sans portorium ; l'aide de `simtool` est à jour (`empiresells`, `tradeisolation`).
+- [x] **T4.13** **Bug : le joueur côtier perd l'argile et reçoit le fer et le marbre** (essai du soir : « les
   ressources ne sont plus les bonnes entre le joueur terrestre et le joueur côtier »).
   *Diagnostic* : les permissions de chaque cité sont justes, dans la carte et dans la sauvegarde. Le menu de
   construction est un état de l'interface, unique, recalculé par `building_menu_update` dans la cité courante.
@@ -600,7 +656,7 @@ le note « à valider ».
   fontaines du multijoueur supprimée ; 40 % de bras en moins).
   *Deuxième passe* : le même plan est aussi bâti sur du **terrain libre d'une vraie carte classique** (`blank` : carte
   libre faite par le test, dans ctest ; `Lugdunum`, `Londinium`, `Cyrene`, `Valentia`, `Lindum` de `donnees-c3`, lancées
-  à la main). Chiffres à 24 mois, en tableau (détail dans D-072) :
+  à la main). Chiffres à 24 mois, en tableau (détail dans TESTING §2 ter) :
 
   | Cité | Difficulté | Pop. à 6 mois | Pop. à 24 mois | Employés | Emplois vides |
   |------|------------|---------------|----------------|----------|---------------|

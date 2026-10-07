@@ -77,7 +77,7 @@ MAPGEN_PICTURE=carte.ppm ./simtool preparedmap SAVE 2 10   # ... et son image (s
 ./simtool longroutes SAVE                   # carte à 4 : chemins les plus longs, caravane entre les joueurs les plus éloignés, mer
 ./simtool menuowner SAVE                    # le menu de construction du joueur local ignore ce que font les autres
 ./simtool restrictiveness SAVE blank [CARTE.map ...]  # la même petite cité jouée 2 ans en classique et en multijoueur (seule, à 4), facile et
-                                            # difficile, avec réservoirs et fontaines : tableau des chiffres, échoue si une règle multijoueur les change (D-072) ;
+                                            # difficile, avec réservoirs et fontaines : tableau des chiffres, échoue si une règle multijoueur les change (§2 ter) ;
                                             # blank : carte libre classique faite par le test ; CARTE.map : une carte du jeu, à la main
                                             # (donnees-c3, jamais dans le dépôt) ; RESTRICT_TRACE=1 : population, moral et chômage chaque mois
 ./simtool caravans SAVE                     # caravanes entre joueurs ; tradeconservation, traderesume :
@@ -92,6 +92,76 @@ MAPGEN_PICTURE=carte.ppm ./simtool preparedmap SAVE 2 10   # ... et son image (s
 Pour voir César dans une vraie cité (lettre d'un nouveau rang, conseiller impérial) :
 `tools/run-automation.sh test/automation/caesar-advisor.txt 180`. Le pilier des lauriers de l'évaluation de la cité :
 `tools/serial.sh tools/run-automation.sh test/automation/caesar-ratings.txt 180`.
+
+## 2 ter. Mesure de la restriction : `simtool restrictiveness` (D-072)
+
+Elle répond à « le multijoueur est-il plus restrictif que le classique ? » (T4.16). Décision et conclusion : D-072.
+
+**Le plan**, bâti par commandes sur le même terrain, puis joué deux ans (19 200 ticks) :
+- 63 bâtiments (1 600 à 1 700 Dn) : une boucle de routes, 44 cases de maisons en deux bandes, 5 puits, grenier,
+  marché, temple de Cérès, préfecture, bureau d'ingénieur, 4 ateliers ;
+- l'eau comme un joueur l'obtient : un réservoir à la source (au bout de l'aqueduc de César dans les terres, contre la
+  mer sur la côte), un aqueduc jusqu'à un second réservoir, trois fontaines. C'est la portée des fontaines et des
+  réservoirs du multijoueur (`src/map/water_supply.c`) qui est mesurée ;
+- au mois 2, quand la zone a grandi : 2 fermes de blé et 7 à 9 ateliers ou hôpitaux, pour avoir plus d'emplois que de
+  bras ;
+- pour que le hasard ne noie pas la mesure : grenier rempli chaque mois, ni incendie ni effondrement, ni dieux, ni
+  armées, ni demandes de César, 100 000 Dn ; la mission de départ retirée des cités classiques (20 employés) ; la
+  faveur mise à celle de la difficulté.
+
+**Les séries**, en facile et en difficile :
+1. classique, une cité seule sur la carte préparée. La seule vraie partie classique sur cette carte ; son eau vient
+   d'un étang à côté du même réservoir (l'aqueduc de César n'existe qu'en multijoueur) ;
+2. multijoueur, une cité seule (la partie d'Alexandre) ;
+3. classique et multijoueur à 4 joueurs. Attention : à plusieurs cités, la série « classique » passe déjà par le code
+   de la carte multijoueur (`game_rules_multiplayer_map()`) ; elle ne diffère que par la zone ;
+4. multijoueur à 4 où un seul joueur bâtit ;
+5. le même plan sur du terrain libre d'une vraie carte classique, règles et scénario d'origine :
+   `simtool restrictiveness SAVE blank [CARTE.map ...]`. `blank` est une carte libre faite par le test (80 × 80, un
+   lac), dans ctest. Les cartes du jeu (`Lugdunum`, `Londinium`, `Cyrene`, `Valentia`, `Lindum` de `donnees-c3`) se
+   lancent à la main, jamais copiées dans le dépôt (I4). Corinthus, Toletum et Tarraco n'ont pas de bloc dégagé
+   accessible près de l'entrée. `RESTRICT_TRACE=1` affiche population, moral et chômage chaque mois.
+
+**Résultats sur la carte préparée** (niveau : 0 petite tente, 1 grande tente, 2 petite cabane ; « manque » : emplois
+que personne ne peut occuper ; seule la cité J3 diffère entre classique et multijoueur) :
+
+| Cité | Pop. 6 / 12 / 24 mois | Maisons | Niveau | Fontaine / nourr. | Employés | Manque | Moral | Migration |
+|------|----------------------|---------|--------|-------------------|----------|--------|-------|-----------|
+| Seule, facile, classique = multijoueur | 274 / 426 / 434 | 14 | 2,2 | 13 / 13 | 189 | 7 | 96 | 100 % |
+| Seule, difficile, classique = multijoueur | 246 / 424 / 434 | 14 | 2,2 | 13 / 13 | 190 | 6 | 95 | 100 % |
+| À 4, facile, J1 | 236 / 334 / 334 | 20 | 0,9 | 17 / 6 | 142 | 44 | 100 | 100 % |
+| À 4, facile, J2 | 207 / 316 / 334 | 20 | 0,9 | 17 / 4 | 145 | 1 | 82 | 100 % |
+| À 4, facile, J3 (classique ; MP) | 207 / 353 / 380 | 17 | 1,5 | 16 / 9 | 162 | 44 ; 34 | 78 | 100 % |
+| À 4, facile, J4 | 179 / 338 / 372 | 17 | 1,2 | 16 / 6 | 156 | 40 | 78 | 100 % |
+| À 4, difficile, J1 à J4 | 222 / 333 / 334 ; 191 / 310 / 334 ; 199 / 347 / 380 ; 173 / 329 / 372 | 17 à 20 | 0,9 à 1,5 | 16–17 / 4–9 | 142 à 162 | 44 ; 1 ; 44 (MP 35) ; 39 | 86 ; 62 ; 64 ; 60 | 100 ; 75 ; 75 ; 50 % |
+
+**Résultats sur les cartes classiques** (règles d'origine, une cité seule ; facile ; difficile) :
+
+| Carte | Pop. 6 / 12 / 24 mois | Niveau | Fontaine | Employés | Manque | Remarque |
+|-------|----------------------|--------|----------|----------|--------|----------|
+| Carte libre du test (`blank`) | 306 / 306 / 306 ; 306 / 308 / 308 | 0,6 / 0,7 | 18 | 133 / 141 | 83 / 45 | lac, terrain plat |
+| Lugdunum | 342 / 281 / 246 ; 328 / 322 / 236 | 1,2 / 1,0 | 14 | 76 | 0 (39 sans emploi) | bloc au bord de la carte : pas de place pour les ateliers, des chômeurs partent |
+| Londinium | 286 / 318 / 333 ; 253 / 318 / 333 | 1,0 | 17 | 142 | 44 / 46 | étang |
+| Cyrene | 327 / 340 / 340 ; 315 / 382 / 382 | 1,0 / 1,5 | 14 / 11 | 144 / 163 | 52 / 33 | |
+| Valentia | 302 / 406 / 406 ; 267 / 399 / 406 | 1,4 | 16 | 172 | 14 | étang |
+| Lindum | 198 / 255 / 266 ; 196 / 253 / 266 | 0,3 | 19 | 120 | 96 / 95 | forêt, désirabilité −11,6 : maisons restées en tentes |
+
+**Ce qui explique les écarts** : la difficulté (fonds 6 000 Dn contre 12 000, moral de base 50 contre 70) ; la zone
+(une version précédente bâtissait les fermes au jour 0, avant que la zone grandisse : J3 avait 278 habitants à 12 mois
+en multijoueur, 304 en classique) ; le
+terrain (désirabilité moyenne des maisons −0,8 seule, −4,5 à −7,8 à 4, −3,5 à −8,6 sur les cartes d'origine ; les
+arbres ne comptent pas dans la désirabilité, ils obligent seulement à défricher). Aucune maison ne dépasse la petite
+cabane : le plan n'a ni école, ni bains, ni seconde nourriture.
+
+**Les gardes** du test `mp_restrictiveness` :
+- classique contre multijoueur, même carte : population, maisons, niveau, couverture, employés, manque de bras,
+  désirabilité, immigration et moral à une tolérance de 8 à 25 % près selon la mesure ; plan bâti en entier, eau
+  dans les deux réservoirs, plus d'emplois que de bras. Vérifiée par deux fautes volontaires, retirées ensuite :
+  portée des fontaines et réservoirs multijoueur supprimée (434 habitants contre 358, vu) ; 40 % de bras en moins en
+  multijoueur seul (vu) ;
+- sur `blank` : le plan tient en entier et son eau coule ; aucune cité multijoueur n'a moins de 85 % de la
+  population et des employés, ou 20 points de moins de maisons servies par l'eau, que la plus faible cité classique.
+  Pas de faute volontaire pour cette seconde garde.
 
 ## 3. Pilotage du vrai jeu : `--automation` (captures d'écran)
 
