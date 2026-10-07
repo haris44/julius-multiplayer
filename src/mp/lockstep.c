@@ -308,7 +308,9 @@ static void desync(int turn)
     } else {
         game_file_write_saved_game(filename);
     }
-    set_status(TR_MP_STATUS_DESYNC, turn, filename);
+    log_info("Multiplayer: state at the desynchronisation written to", filename, 0);
+    // the game goes on from the last monthly saved game, which the lobby lists (T5.3)
+    set_status(TR_MP_STATUS_DESYNC, turn, MP_LOCKSTEP_AUTOSAVE);
 }
 
 // Host: compares every client checksum known for this turn with its own
@@ -1029,6 +1031,28 @@ void mp_lockstep_after_tick(void)
             set_status(TR_MP_STATUS_HOST_LOST);
         }
     }
+}
+
+int mp_lockstep_autosave(void)
+{
+    // the cities of a network game, saved as the File menu does: written aside then renamed, as two games on one
+    // computer (tests) or a slow disk must never leave half a file under the name the lobby lists
+    if (data.state != MP_LOCKSTEP_RUNNING || !mp_savegame_is_needed()) {
+        return 0;
+    }
+    char temporary[64];
+    snprintf(temporary, sizeof(temporary), "mp-autosave-%d-p%d.tmp", data.port, data.local_player);
+    if (!mp_savegame_write(temporary)) {
+        remove(temporary);
+        return 0;
+    }
+    remove(MP_LOCKSTEP_AUTOSAVE); // a rename does not replace a file on Windows
+    if (rename(temporary, MP_LOCKSTEP_AUTOSAVE) != 0) {
+        remove(temporary);
+        log_error("Multiplayer: unable to write the monthly saved game", MP_LOCKSTEP_AUTOSAVE, 0);
+        return 0;
+    }
+    return 1;
 }
 
 void mp_lockstep_set_tick_limit(int ticks_in_game)

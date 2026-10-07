@@ -119,7 +119,8 @@ static void advance_month(void)
     city_festival_update();
     mp_caesar_update_city_month(); // no-op in a classic game
     tutorial_on_month_tick();
-    if (setting_monthly_autosave() && player_context_num_players() == 1) {
+    // a network game saves itself every month (game/game.c, T5.3)
+    if (setting_monthly_autosave() && player_context_num_players() == 1 && !mp_session_is_networked()) {
         game_file_write_saved_game("autosave.sav");
     }
 }

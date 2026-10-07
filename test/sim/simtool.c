@@ -617,6 +617,25 @@ static void mpnode_play(int tick_in_game)
     }
 }
 
+// Scripted player of the save-and-resume test (T5.4): trade with the next player (prices, purchases, route, limits
+// of the stocks), so that the saved game holds a state of the trade between players
+static void mpnode_trade(int tick_in_game)
+{
+    int player = mp_session_local_player_id();
+    int other = (player + 1) % player_context_num_players();
+    if (other == player) {
+        return;
+    }
+    switch (tick_in_game - player) {
+        case 20: mp_action_set_sell_price(other, RESOURCE_MARBLE, 120 + 10 * player); break;
+        case 24: mp_action_set_buys_from(other, RESOURCE_TIMBER, 1); break;
+        case 28: mp_action_propose_route(other, 1); break;
+        case 32: mp_action_change_buy_limit(RESOURCE_POTTERY, 2 + player); break;
+        case 36: mp_action_change_export_over(RESOURCE_WINE, 1 + player); break;
+        default: break;
+    }
+}
+
 // T4.11: the rules chosen in the lobby, as a player sees them
 static int same_lobby_rules(const game_rules_settings *a, const game_rules_settings *b)
 {
@@ -650,16 +669,34 @@ static int every_lobby_rule_differs(const game_rules_settings *a, const game_rul
         a->prepared_map != b->prepared_map;
 }
 
+// the state of the trade between players, which every player of a game must see the same (T5.4)
+static void print_trade_state(const char *when)
+{
+    int n = player_context_num_players();
+    for (int p = 0; p < n; p++) {
+        int other = (p + 1) % n;
+        if (other == p) {
+            continue;
+        }
+        printf("trade of city %d (%s): marble price %d, buys timber %d, route %d, pottery limit %d\n", p, when,
+            mp_trade_price(p, other, RESOURCE_MARBLE), mp_trade_buys_from(p, other, RESOURCE_TIMBER),
+            mp_trade_route_is_proposed(p, other), mp_trade_buy_limit(p, RESOURCE_POTTERY));
+    }
+}
+
 static int command_mpnode(int argc, char **argv)
 {
     // argv: mpnode host PORT PLAYERS SAVE TICKS [cities] | mpnode join ADDRESS PORT TICKS
     int is_host = argc >= 7 && strcmp(argv[2], "host") == 0;
-    int cities = 0, generate = 0, lobby_rules = 0, map2 = 0;
-    for (int i = 7; i < argc; i++) {
-        cities |= strcmp(argv[i], "cities") == 0;
-        generate |= strcmp(argv[i], "generate") == 0;
-        lobby_rules |= strcmp(argv[i], "rules") == 0;
-        map2 |= strcmp(argv[i], "map2") == 0; // 'map2' (T4.14): the host plays the generated map on map 2
+    int cities = 0, generate = 0, lobby_rules = 0, map2 = 0, save_resume = 0;
+    for (int i = 6; i < argc; i++) {
+        cities |= i >= 7 && strcmp(argv[i], "cities") == 0;
+        generate |= i >= 7 && strcmp(argv[i], "generate") == 0;
+        lobby_rules |= i >= 7 && strcmp(argv[i], "rules") == 0;
+        map2 |= i >= 7 && strcmp(argv[i], "map2") == 0; // 'map2' (T4.14): the host plays the generated map on map 2
+        // 'saveresume' (T5.4): at the end, every player saves the game as the File menu does; the host then hosts
+        // that saved game as the lobby does, in the same process, and the clients join it again
+        save_resume |= strcmp(argv[i], "saveresume") == 0;
     }
     int is_join = argc >= 6 && strcmp(argv[2], "join") == 0;
     if (!is_host && !is_join) {
@@ -712,6 +749,9 @@ static int command_mpnode(int argc, char **argv)
         return 1;
     }
     setting_reset_speeds(500, setting_scroll_speed());
+    int session = 0;
+    int resumed_ok = 1;
+next_session:;
     time_t deadline = time(0) + 120;
     int start_tick = -1;
     int start_tax = 0;
@@ -773,6 +813,9 @@ static int command_mpnode(int argc, char **argv)
             // every tick passed since the last frame: a client catching up runs several in a frame
             for (int t = last_played + 1; t <= tick_in_game; t++) {
                 mpnode_play(t);
+                if (save_resume) {
+                    mpnode_trade(t);
+                }
                 if (cheat && t == ticks / 2) {
                     city_finance_change_tax_percentage(3); // changed on this computer only
                 }
@@ -820,8 +863,8 @@ static int command_mpnode(int argc, char **argv)
         mp_lockstep_stop();
         return 0;
     }
-    printf("tick %d checksum %016" PRIx64 "\n", start_tick >= 0 ? game_time_absolute_tick() - start_tick : -1,
-        mp_checksum_state());
+    printf("tick %d checksum %016" PRIx64 "%s\n", start_tick >= 0 ? game_time_absolute_tick() - start_tick : -1,
+        mp_checksum_state(), session ? " resumed" : "");
     // the prepared map of the game, the same for every player (T4.14)
     printf("map %d, %d tiles wide\n", game_rules_multiplayer_settings()->prepared_map + 1, map_grid_width());
     printf("pause seen: %d, ticks run while paused: %d\n", paused_seen, ticks_while_paused);
@@ -837,7 +880,8 @@ static int command_mpnode(int argc, char **argv)
         for (int p = 0; p < player_context_num_players(); p++) {
             player_context_switch(p);
             int tax = city_finance_tax_percentage();
-            int expected = p % 2 ? tax > start_tax : tax < start_tax;
+            // a resumed game starts with the taxes of the saved game, different in every city
+            int expected = session > 0 || (p % 2 ? tax > start_tax : tax < start_tax);
             printf("city %d: tax %d%% (start %d%%), treasury %d%s\n", p, tax, start_tax, city_finance_treasury(),
                 expected ? "" : " UNEXPECTED");
             result = result && expected;
@@ -887,8 +931,59 @@ static int command_mpnode(int argc, char **argv)
         printf("WRONG: %d ticks ran during the pause\n", ticks_while_paused);
         result = 0;
     }
+    if (save_resume && session == 0 && result) {
+        // T5.4: every player saves as the File menu does (a .sav name, written as .mpsav), the host hosts its saved
+        // game as the lobby does, the players who played join again; a player who did not play the first game
+        // (lan_test.sh) joins with a new process
+        char name[64];
+        snprintf(name, sizeof(name), "lan-save-%s-p%d.sav", is_host ? argv[3] : argv[4], mp_session_local_player_id());
+        int saved = game_file_write_saved_game(name);
+        snprintf(name, sizeof(name), "lan-save-%s-p%d.mpsav", is_host ? argv[3] : argv[4], mp_session_local_player_id());
+        printf("session 1 saved in %s: %s\n", name, saved ? "yes" : "NO");
+        print_trade_state("saved");
+        int was_host = is_host;
+        if (!was_host) {
+            usleep(1500 * 1000); // the host still verifies the last turns
+        }
+        mp_lockstep_stop();
+        if (!saved) {
+            return 1;
+        }
+        if (was_host) {
+            mp_lockstep_set_started_callback(0);
+            ok = mp_lockstep_host(atoi(argv[3]), atoi(argv[4]), name, 1);
+            if (ok) {
+                mp_lockstep_set_manual_start(1);
+                mp_lockstep_set_generated_map(0, 7);
+            }
+            // the lobby starts the game when every player is there
+            while (ok && mp_lockstep_get_state() == MP_LOCKSTEP_WAITING_FOR_PLAYERS && time(0) < deadline + 60) {
+                mp_lockstep_poll();
+                if (mp_lockstep_connected_players() == atoi(argv[4])) {
+                    mp_lobby_start_game();
+                }
+                usleep(1000);
+            }
+        } else {
+            usleep(1000 * 1000); // the host hosts again
+            ok = mp_lockstep_join(argv[3], atoi(argv[4]));
+        }
+        if (!ok) {
+            printf("FAILED to resume: %s\n", mp_lockstep_status());
+            return 1;
+        }
+        session = 1;
+        goto next_session;
+    }
+    if (player_context_num_players() > 1) {
+        print_trade_state("end");
+    }
+    if (save_resume) {
+        resumed_ok = session == 1;
+        printf("resumed game: %s\n", resumed_ok ? "played to its end" : "NOT RESUMED");
+    }
     mp_lockstep_stop();
-    return result ? 0 : 1;
+    return result && resumed_ok ? 0 : 1;
 }
 
 static int command_relocequiv(const char *file, int ticks, int stride, int dx, int dy)

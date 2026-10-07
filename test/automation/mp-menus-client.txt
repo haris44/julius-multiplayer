@@ -1,0 +1,19 @@
+# Real game, network game of 3 players, a client (see tools/mp-menus-test.sh, T5.3)
+mpwait 0
+wait 3
+key Return
+wait 2
+speed 300
+mpwait 200
+log all three players in the menus
+windowsweep
+mpwait 1000
+log this client in the menus
+windowsweep
+key 7
+wait 30
+key Escape
+mpwait 1400
+mpcheck
+wait 60
+quit

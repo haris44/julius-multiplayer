@@ -11,23 +11,29 @@
 # With 'rules': the host changes every rule of the lobby once the players are there, then starts the game; every
 # player must play with the changed rules, which the clients saw in their lobby (T4.11).
 # With 'map2' (and 'generate'): the host chooses the prepared map 2; every player must play on it (T4.14).
+# With 'saveresume' (T5.4): the players also trade; at the end every player saves the game as the File menu does, the
+# host hosts its saved game as the lobby does (same process), the other players join it again, except the last one,
+# replaced by a new process; the resumed game must run TICKS more ticks with the same checksums everywhere.
 SIMTOOL=$1; PORT=$2; PLAYERS=$3; SAVE=$4; TICKS=$5; MODE=$6
 CITIES=""
 MAP2=""
+RESUME=""
 for arg in "$@"; do
     [ "$arg" = "cities" ] && CITIES="cities"
     [ "$arg" = "generate" ] && CITIES="generate"
     [ "$arg" = "map2" ] && MAP2="map2"
+    [ "$arg" = "saveresume" ] && RESUME="saveresume"
 done
 [ "$MODE" = "cities" ] && MODE=""
 [ "$MODE" = "generate" ] && MODE=""
 [ "$MODE" = "map2" ] && MODE=""
+[ "$MODE" = "saveresume" ] && MODE=""
 DIR=$(mktemp -d)
 HOST_ARGS=""
 [ "$MODE" = "desync" ] && HOST_ARGS="expect-desync"
 [ "$MODE" = "baddata" ] && HOST_ARGS="expect-reject"
 [ "$MODE" = "rules" ] && HOST_ARGS="rules"
-"$SIMTOOL" mpnode host "$PORT" "$PLAYERS" "$SAVE" "$TICKS" $CITIES $MAP2 $HOST_ARGS > "$DIR/host.log" 2>&1 &
+"$SIMTOOL" mpnode host "$PORT" "$PLAYERS" "$SAVE" "$TICKS" $CITIES $MAP2 $RESUME $HOST_ARGS > "$DIR/host.log" 2>&1 &
 HOST=$!
 sleep 0.3
 PIDS=""
@@ -40,11 +46,22 @@ while [ $i -lt "$PLAYERS" ]; do
     [ "$MODE" = "leave" ] && [ $i -eq $((PLAYERS - 1)) ] && CLIENT_MODE="leave"
     [ "$MODE" = "baddata" ] && CLIENT_MODE="baddata"
     [ "$MODE" = "rules" ] && CLIENT_MODE="rules"
+    # the last client plays only the first game: a new process replaces it in the resumed game
+    [ -n "$RESUME" ] && [ $i -lt $((PLAYERS - 1)) ] && CLIENT_MODE="saveresume"
     "$SIMTOOL" mpnode join 127.0.0.1 "$PORT" "$TICKS" $CLIENT_MODE > "$DIR/client$i.log" 2>&1 &
-    PIDS="$PIDS $!"
+    LAST=$!
+    PIDS="$PIDS $LAST"
     i=$((i + 1))
 done
-FAILED=0
+LAST_FAILED=0
+if [ -n "$RESUME" ]; then
+    # the last client ends with the first game, then a new process joins the resumed game
+    PIDS=$(echo "$PIDS" | sed "s/ $LAST\$//")
+    wait $LAST || LAST_FAILED=1
+    "$SIMTOOL" mpnode join 127.0.0.1 "$PORT" "$TICKS" > "$DIR/new-client.log" 2>&1 &
+    PIDS="$PIDS $!"
+fi
+FAILED=$LAST_FAILED
 wait $HOST || FAILED=1
 for pid in $PIDS; do
     wait "$pid" || FAILED=1
@@ -72,11 +89,26 @@ if [ -n "$MAP2" ]; then
     [ "$PLAYERS" -le 2 ] && WIDTH=220
     SEEN=$(grep -h "^map 2, $WIDTH tiles wide\$" "$DIR"/*.log | wc -l | tr -d ' ')
     DIFFERENT=$(grep -h "^map " "$DIR"/*.log | sort -u | wc -l | tr -d ' ')
-    [ "$SEEN" = "$PLAYERS" ] && [ "$DIFFERENT" = "1" ] || { echo "The players do not all play on map 2, $WIDTH tiles wide"; FAILED=1; }
+    # (a saved and resumed game prints its map twice)
+    [ "$SEEN" -ge "$PLAYERS" ] && [ "$DIFFERENT" = "1" ] || { echo "The players do not all play on map 2, $WIDTH tiles wide"; FAILED=1; }
 fi
-if [ "$MODE" != "desync" ] && [ "$MODE" != "baddata" ]; then
+if [ -n "$RESUME" ]; then
+    # the first game and the resumed one: each with the same final checksum for every player
+    # (the new process plays only the resumed game)
+    mv "$DIR/new-client.log" "$DIR/new-client.txt"
+    COUNT=$(grep -h "^tick .* checksum" "$DIR"/*.log | grep -v resumed | awk '{print $4}' | sort -u | wc -l | tr -d ' ')
+    [ "$COUNT" = "1" ] || { echo "Final checksums of the first game differ"; FAILED=1; }
+    RESUMED=$( (grep -h "^tick .* checksum .* resumed" "$DIR"/*.log; grep -h "^tick .* checksum" "$DIR/new-client.txt") )
+    COUNT=$(echo "$RESUMED" | awk '{print $4}' | sort -u | wc -l | tr -d ' ')
+    SEEN=$(echo "$RESUMED" | grep -c checksum | tr -d ' ')
+    [ "$COUNT" = "1" ] && [ "$SEEN" = "$PLAYERS" ] || { echo "The resumed game did not end the same for every player"; FAILED=1; }
+    # the trade between players, as every player of the resumed game sees it at its end
+    DIFFERENT=$(grep -h "^trade of city .* (end)" "$DIR"/host.log "$DIR"/new-client.txt | sort | uniq -c | awk '{print $1}' | sort -u | tr -d ' \n')
+    [ "$DIFFERENT" = "2" ] || { echo "The players do not see the same trade"; FAILED=1; }
+elif [ "$MODE" != "desync" ] && [ "$MODE" != "baddata" ]; then
     COUNT=$(grep -h "checksum" "$DIR"/*.log | awk '{print $4}' | sort -u | wc -l | tr -d ' ')
     [ "$COUNT" = "1" ] || { echo "Final checksums differ"; FAILED=1; }
 fi
-rm -rf "$DIR" mp-session-"$PORT"-p*.sav mp-session-"$PORT"-p*.mpsav mp-desync-"$PORT"-*.sav mp-desync-"$PORT"-*.mpsav
+rm -rf "$DIR" mp-session-"$PORT"-p*.sav mp-session-"$PORT"-p*.mpsav mp-desync-"$PORT"-*.sav mp-desync-"$PORT"-*.mpsav \
+    lan-save-"$PORT"-p*.mpsav mp-autosave-"$PORT"-p*.tmp
 exit $FAILED

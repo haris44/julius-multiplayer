@@ -28,6 +28,14 @@ typedef struct {
 const dir_listing *dir_find_files_with_extension(const char *extension);
 
 /**
+ * Adds the files with another extension to the last listing (the load dialog lists the classic and the multiplayer
+ * saved games together)
+ * @param extension Extension of the files to add
+ * @return Directory listing, sorted again
+ */
+const dir_listing *dir_append_files_with_extension(const char *extension);
+
+/**
  * Finds all subdirectories
  * @return Directory listing
  */

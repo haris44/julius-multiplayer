@@ -268,7 +268,7 @@ static translation_string all_strings[] = {
     {TR_MP_STATUS_RUNNING, "Game in progress"},
     {TR_MP_STATUS_HOST_LOST, "Connection to the host lost"},
     {TR_MP_STATUS_PLAYER_DISCONNECTED, "Player %d disconnected: their city goes on without them"},
-    {TR_MP_STATUS_DESYNC, "Out of sync at turn %d (state written to %s)"},
+    {TR_MP_STATUS_DESYNC, "Out of sync at turn %d: resume the game from the lobby (%s)"},
     {TR_MP_STATUS_MAP_NO_TRADE, "The chosen map does not trade by both land and sea: choose another one"},
     {TR_MP_STATUS_CANNOT_COMPOSE, "Unable to set up the cities of the players"},
     {TR_MP_STATUS_CANNOT_LOAD_START, "Unable to load the starting saved game"},
@@ -286,6 +286,9 @@ static translation_string all_strings[] = {
     {TR_MP_STATUS_CANNOT_OPEN_PORT, "Unable to open the network port"},
     {TR_MP_STATUS_CANNOT_JOIN, "Unable to reach the host"},
     {TR_MP_STATUS_CONNECTED, "Connected, waiting for the host to start the game"},
+    {TR_MP_SAVED_GAME_MARK, " (multiplayer)"},
+    {TR_MP_LOAD_IN_LOBBY_TITLE, "Network game"},
+    {TR_MP_LOAD_IN_LOBBY_MESSAGE, "Loading a game here would end it for every player. To resume a multiplayer game: File, New game, then Multiplayer; choose the saved game and host it."},
 };
 
 void translation_english(const translation_string **strings, int *num_strings)

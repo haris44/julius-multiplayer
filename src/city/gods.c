@@ -338,7 +338,8 @@ void city_gods_calculate_moods(int update_moods)
     }
 }
 
-int city_gods_calculate_least_happy(void)
+// the god with the most wrath, else the least happy one under 40, as 1 + god id (0: none)
+static int find_least_happy(void)
 {
     int max_god = 0;
     int max_wrath = 0;
@@ -349,8 +350,7 @@ int city_gods_calculate_least_happy(void)
         }
     }
     if (max_god > 0) {
-        city_data.religion.least_happy_god = max_god;
-        return 1;
+        return max_god;
     }
     int min_happiness = 40;
     for (int i = 0; i < MAX_GODS; i++) {
@@ -359,8 +359,18 @@ int city_gods_calculate_least_happy(void)
             min_happiness = city_data.religion.gods[i].happiness;
         }
     }
-    city_data.religion.least_happy_god = max_god;
-    return max_god > 0;
+    return max_god;
+}
+
+int city_gods_calculate_least_happy(void)
+{
+    city_data.religion.least_happy_god = find_least_happy();
+    return city_data.religion.least_happy_god > 0;
+}
+
+int city_gods_least_happy_now(void)
+{
+    return find_least_happy() - 1;
 }
 
 int city_god_happiness(int god_id)

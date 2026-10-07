@@ -204,10 +204,19 @@ répertoire courant (lancer depuis la racine du dépôt).
 | `mpplayers N` | partie en réseau, hôte : attend que N joueurs (hôte compris) soient connectés |
 | `mpwait N` | partie en réseau : attend qu'elle ait démarré et tourné N ticks ; échoue en cas de désynchronisation ou de déconnexion |
 | `mpcheck` | partie en réseau : écrit l'état et le nombre de tours vérifiés ; échoue si la partie ne tourne plus |
+| `mpwaitdesync` | partie en réseau : attend qu'elle s'arrête sur une désynchronisation (T5.3) |
+| `windowsweep` | ouvre et dessine, sans faire avancer la partie, chaque conseiller, onglet du commerce, fenêtre de dialogue, menu de construction, calque et fiche de bâtiment, de figure et de terrain ; échoue si l'une change l'état simulé (T5.3) |
+| `angrygod` | tests : un dieu en colère dans la cité locale, autre que le « moins content » qu'elle garde (change l'état de ce seul ordinateur : provoque une désynchronisation à plusieurs) |
+| `lobbylists NOM` / `lobbyselected NOM` | salon : échoue s'il ne liste pas le fichier NOM / si NOM n'est pas la partie choisie (T5.4) |
 | `log TEXTE` | écrit un repère dans le journal |
 | `quit` | quitte ; c'est aussi automatique en fin de script |
 
 Les réglages (`c3.inf`, `julius.ini`) ne sont **pas** sauvegardés à la sortie d'un run automatisé.
+
+Une partie en réseau se sauvegarde chaque mois dans le dossier des données (`autosave.mpsav`, D-074) : les scripts
+`tools/mp-*-test.sh` mettent de côté celle d'Alexandre avant de jouer et la remettent après
+(`tools/mp-autosave-guard.sh`). `text` donne le texte directement au jeu : un événement de texte poussé dans SDL fait
+planter SDL 2 sur SDL 3 (`sdl2-compat`). Le champ de nom de fichier refuse le point.
 
 Bon à savoir :
 - La souris démarre au centre de l'écran. En (0,0), la vue défilerait toute seule par les bords, ce qui gèle aussi la simulation.
@@ -249,6 +258,9 @@ coordonnées ; la barre latérale reste collée au bord droit (bouton industrie 
 | `tools/mp-lobby-test.sh` | salon hôte et client (partie trouvée, salle d'attente), partie à deux sans désynchronisation |
 | `tools/mp-trade-test.sh` | page du commerce (prix de Rome, portorium, onglet d'un joueur), achat, alerte de prix, onglet Stocks avec une limite |
 | `tools/mp-real-test.sh` | partie en réseau sans salon (`--mp-host`), constructions et conseillers pendant le jeu |
+| `tools/mp-sweep-test.sh` | partie en réseau seule (cité de `brugle-lugdunum.sav`, ou la carte préparée avec `MP_SWEEP_ARGS=--mp-generate`) : `windowsweep`, avant et après `angrygod` |
+| `tools/mp-menus-test.sh` | trois joueurs (`--mp-host`, cités de `brugle-lugdunum.sav`) : `windowsweep` des trois en même temps, puis de chacun seul, partie qui continue sans désynchronisation |
+| `tools/mp-resume-test.sh` | deux joueurs depuis le salon : « Sauvegarder » (un `.mpsav`), désynchronisation provoquée, « Fichier, Nouvelle partie », « Charger » qui ouvre le salon avec la partie choisie, `autosave.mpsav` listée, reprise hébergée et rejointe, sans désynchronisation |
 | `tools/mp-ui-test.sh` | salon du client avec les règles de l'hôte (carte 1, difficulté changée), menus fermes et matières premières d'un joueur des terres et d'un joueur de la côte, menu Options sans Difficulté, conseiller impérial, évaluation (pilier des lauriers), commerce et Stocks, en 640 × 480 et 1024 × 736 |
 | `caesar-advisor.txt`, `caesar-gifts.txt`, `caesar-ratings.txt` | César dans une grande cité (`rules mp`) : lettre de rang, conseiller impérial, cadeau, don, salaire, pilier des lauriers |
 | `smoke.txt`, `run.txt`, `build-road.txt`, `display.txt` | classique : menu, chargement, boucle du jeu, route à la souris, options d'affichage |
@@ -271,8 +283,13 @@ c'est là qu'on lit ce qui s'est passé chez Alexandre sans ouvrir de fenêtre.
   pendant que le jeu tourne. Constaté : 150 tours vérifiés, sans désynchronisation.
 - **À la main, pour Alexandre** : `tools/play-mp.sh [JOUEURS] [SAUVEGARDE]` ouvre une vraie fenêtre par joueur sur le
   Mac. Ne jamais le lancer soi-même.
-- En cas de désynchronisation, chaque machine écrit `mp-desync-pN-turnT.sav` dans le dossier des données : à comparer
-  avec `build/test/compare`.
+- En cas de désynchronisation, chaque machine écrit `mp-desync-PORT-pN-turnT.mpsav` dans le dossier des données
+  (son nom est dans le journal) : à comparer avec `simtool diffpieces` ou `build/test/compare`. La partie se reprend
+  depuis le salon par `autosave.mpsav`, la sauvegarde du début du mois (D-074).
+- **Sauvegarde et reprise** (T5.4, ctest) : `mp_lan_save_resume_3_players` et `mp_lan_save_resume_map2_2_players`
+  (`lan_test.sh … saveresume`) : les joueurs commercent, sauvegardent comme le menu Fichier, l'hôte héberge sa
+  sauvegarde comme le salon dans le même processus, les autres rejoignent, le dernier remplacé par un nouveau
+  processus ; mêmes sommes de contrôle et même commerce pour tous.
 
 ## 4. Tests à construire (voir ROADMAP)
 

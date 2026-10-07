@@ -7,6 +7,9 @@
 set -uo pipefail
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 cd "$ROOT"
+DATA_DIR=${C3_DATA_DIR:-$ROOT/../donnees-c3}
+. tools/mp-autosave-guard.sh
+mp_keep_autosave
 mkdir -p build/automation
 tools/run-automation.sh test/automation/mp-trade-host.txt 180 > build/automation/mp-trade-host.log 2>&1 &
 HOST=$!
@@ -17,8 +20,8 @@ wait $HOST
 HOST_STATUS=$?
 grep -h -E "mpcheck|automation\] .*(fail|timed|stopped)" build/automation/mp-trade-host.log \
     build/automation/mp-trade-client.log | sed -E 's/^.*(INFO|ERROR): //'
-DATA_DIR=${C3_DATA_DIR:-$ROOT/../donnees-c3}
 rm -f "$DATA_DIR"/mp-session-* "$DATA_DIR"/mp-desync-*
+mp_restore_autosave
 if [ $HOST_STATUS -ne 0 ] || [ $CLIENT_STATUS -ne 0 ] || [ ! -s build/automation/trade-window.png ] \
     || [ ! -s build/automation/price-alert.png ]; then
     echo "FAILED (host $HOST_STATUS, client $CLIENT_STATUS), logs in build/automation/mp-trade-*.log"

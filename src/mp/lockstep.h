@@ -24,7 +24,16 @@ typedef enum {
 } mp_lockstep_state;
 
 #define MP_LOCKSTEP_DEFAULT_PORT 27400
+// the monthly saved game of a network game, on every computer, which the lobby lists to resume it (T5.3, D-074)
+#define MP_LOCKSTEP_AUTOSAVE "autosave.mpsav"
 #define MP_LOCKSTEP_MAX_PLAYERS 4
+
+/**
+ * A running network game of separate cities saves itself as MP_LOCKSTEP_AUTOSAVE, on this computer (called at
+ * the start of every month: every computer writes the same game)
+ * @return 1 when written
+ */
+int mp_lockstep_autosave(void);
 
 /**
  * Hosts a game: waits for the other players, then starts from the saved game

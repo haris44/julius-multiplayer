@@ -724,9 +724,37 @@ Les journaux de l'essai ne sont pas sur le Mac de développement : diagnostic pa
 - [ ] **T5.1** Vérifier que J2, J3 et J4 ne jouent pas en difficile (« voir si les J2/J3/J4 ne sont pas en mode
   difficile »).
 - [ ] **T5.2** Aligner les salaires de Rome pour tous les joueurs.
-- [ ] **T5.3** Désynchronisation au tour 18954, puis impossible de reprendre la partie (« on était peut-être tous les
+- [x] **T5.3** Désynchronisation au tour 18954, puis impossible de reprendre la partie (« on était peut-être tous les
   3 dans les menus à ce moment-là »).
-- [ ] **T5.4** Impossible de charger une partie sauvegardée.
+  *Fait* (D-074) : **cause trouvée** : le conseiller religieux écrivait dans la cité le « dieu le moins content »,
+  que la simulation ne recalcule qu'en début de mois ; ouvert sur un seul ordinateur, il changeait l'état de cette
+  cité, d'où la désynchronisation. En réseau, il le calcule sans l'écrire. Les autres fenêtres sont passées au crible :
+  la commande d'automatisation `windowsweep` ouvre et dessine sans faire avancer la partie tous les conseillers, les
+  onglets du commerce et Stocks, les fenêtres de César (salaire, cadeau, don, lettre), la fête, les prix, l'empire,
+  les messages, les options, la sauvegarde, les résultats, les menus de construction et les calques, et la fiche de
+  chaque type de bâtiment (des joueurs et de César), des figures et du terrain : aucune autre n'écrit dans l'état
+  simulé. Tests : `tools/mp-sweep-test.sh` (vrai jeu, 142 fenêtres, avec un dieu en colère : échouait sur le
+  conseiller religieux avant le correctif ; aussi sur la carte préparée, `MP_SWEEP_ARGS=--mp-generate`) et
+  `tools/mp-menus-test.sh` (trois joueurs ouvrent toutes les fenêtres en même temps, puis chacun seul : 349 tours
+  vérifiés, sans désynchronisation). **Reprise** : après la désynchronisation, la partie restait « en cours » et le
+  salon refusait d'héberger et de rejoindre ; et il n'y avait pas de sauvegarde à reprendre à plusieurs. Désormais
+  « Fichier, Nouvelle partie » et le salon terminent la partie finie, chaque ordinateur sauvegarde la partie en réseau
+  au début de chaque mois (`autosave.mpsav`, listée par le salon), et le message de désynchronisation dit de
+  reprendre depuis le salon. Test `tools/mp-resume-test.sh` (vrai jeu, deux joueurs depuis le salon : désynchronisation
+  provoquée, retour au menu, reprise hébergée et rejointe depuis le salon, sans désynchronisation).
+- [x] **T5.4** Impossible de charger une partie sauvegardée.
+  *Fait* (D-074) : en multijoueur, « Sauvegarder » écrit un `.mpsav`, que la fenêtre « Charger » ne montrait pas
+  (elle ne liste que les `.sav`), et le salon restait bloqué après une partie (T5.3). « Charger » liste maintenant
+  aussi les parties multijoueur, « (multijoueur) », et en choisir une ouvre le salon avec cette partie et son nombre
+  de joueurs ; pendant une partie en réseau, « Charger » et « Rejouer la mission » sont retirés du menu Fichier ;
+  « Sauvegarder » montre les `.mpsav` ; le salon garde la partie choisie quand la liste change et lit les noms par
+  leur fin. Le chemin réseau marchait : `mp_lan_save_resume_3_players` (carte 1) et
+  `mp_lan_save_resume_map2_2_players` (carte 2) sauvegardent comme le menu Fichier, avec le commerce entre joueurs
+  (prix, achats, route, limites de stock), puis l'hôte héberge la sauvegarde comme le salon, dans le même processus,
+  les joueurs la rejoignent, l'un remplacé par un nouveau processus : mêmes sommes de contrôle partout. Bout en bout
+  dans le vrai jeu : `tools/mp-resume-test.sh` (« Sauvegarder », puis « Charger » depuis le menu principal, qui ouvre
+  le salon avec la partie choisie, puis « Héberger »). *À valider* : la sauvegarde de « Sauvegarder » n'est que sur
+  l'ordinateur qui l'a faite (c'est lui qui héberge la reprise) ; celle du mois est sur tous.
 - [ ] **T5.5** Pouvoir attaquer un autre joueur, même simplement (« nécessaire pour le commerce au démarrage »).
 - [ ] **T5.6** Simplifier la fenêtre du commerce ; attention aux textes qui se superposent.
 - [ ] **T5.7** Impossible de commercer entre joueurs : les caravanes ne circulent pas.

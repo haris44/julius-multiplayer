@@ -16,6 +16,7 @@
 #include "graphics/screen.h"
 #include "graphics/text.h"
 #include "graphics/window.h"
+#include "mp/lockstep.h"
 #include "scenario/property.h"
 #include "widget/city.h"
 #include "window/advisors.h"
@@ -103,6 +104,9 @@ static menu_bar_item menu[] = {
     {4, menu_advisors, 12},
 };
 
+static const int INDEX_FILE = 0;
+static const int INDEX_FILE_REPLAY_MAP = 1;
+static const int INDEX_FILE_LOAD_GAME = 2;
 static const int INDEX_OPTIONS = 1;
 static const int INDEX_HELP = 2;
 static const int INDEX_OPTIONS_DIFFICULTY = 3;
@@ -164,6 +168,10 @@ static void init(void)
     menu[INDEX_OPTIONS].items[0].hidden = system_is_fullscreen_only();
     // a multiplayer game keeps the difficulty and gods of its lobby, the same for every player (T4.10)
     menu[INDEX_OPTIONS].items[INDEX_OPTIONS_DIFFICULTY].hidden = game_rules_is_multiplayer();
+    // a multiplayer game is not replayed from its map; a network game that runs cannot load another game on one
+    // computer only: the lobby resumes a multiplayer game (T5.4, D-074)
+    menu[INDEX_FILE].items[INDEX_FILE_REPLAY_MAP].hidden = game_rules_is_multiplayer();
+    menu[INDEX_FILE].items[INDEX_FILE_LOAD_GAME].hidden = mp_lockstep_get_state() == MP_LOCKSTEP_RUNNING;
     set_text_for_autosave();
     set_text_for_tooltips();
     set_text_for_warnings();
@@ -378,6 +386,8 @@ int widget_top_menu_get_tooltip_text(tooltip_context *c)
 static void menu_file_new_game(int param)
 {
     clear_state();
+    // leaving a network game, running or over: the lobby can host or join again (T5.3)
+    mp_lockstep_stop();
     building_construction_clear_type();
     game_undo_disable();
     game_state_reset_overlay();

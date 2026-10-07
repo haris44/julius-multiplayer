@@ -1,0 +1,12 @@
+# Real game, network game of one player (see tools/mp-sweep-test.sh, T5.3): every window, advisor and information
+# panel is opened and drawn without a tick; none may change the simulated state ("windowsweep"). An angry god makes
+# the religion advisor compute another least happy god than the one the city holds.
+mpwait 0
+wait 3
+key Return
+wait 2
+mpwait 50
+windowsweep
+angrygod
+windowsweep
+quit

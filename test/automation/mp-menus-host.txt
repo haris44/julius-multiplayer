@@ -1,0 +1,23 @@
+# Real game, network game of 3 players, host (see tools/mp-menus-test.sh, T5.3). Every player opens every window,
+# advisor and information panel while the game runs ("windowsweep": the simulated state must not change), the three
+# at the same time, then each alone; the game must go on without desynchronisation.
+mpwait 0
+# Caesar's letter at the start of the game
+wait 3
+key Return
+wait 2
+speed 300
+mpwait 200
+log all three players in the menus
+windowsweep
+mpwait 600
+log the host alone in the menus
+windowsweep
+key 0
+wait 20
+key Escape
+mpwait 1400
+mpcheck
+# keep the game running a little so that the clients reach their own check
+wait 200
+quit

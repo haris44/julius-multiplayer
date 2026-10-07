@@ -421,5 +421,10 @@ if(NOT WIN32)
     # T4.14: three players on the prepared map 2 chosen in the lobby
     add_test(NAME mp_lan_generated_map2 COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/sim/lan_test.sh $<TARGET_FILE:simtool> 27451 3 brugle-massilia-start.sav 600 generate map2)
     set_tests_properties(mp_lan_generated_map mp_lan_generated_map2 PROPERTIES TIMEOUT 120)
+    # T5.4: a game saved by every player as the File menu does, then hosted again as the lobby does (same process),
+    # joined again by the players, one of them a new process: 3 players on map 1, 2 players on map 2
+    add_test(NAME mp_lan_save_resume_3_players COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/sim/lan_test.sh $<TARGET_FILE:simtool> 27522 3 brugle-massilia-start.sav 900 generate saveresume)
+    add_test(NAME mp_lan_save_resume_map2_2_players COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/sim/lan_test.sh $<TARGET_FILE:simtool> 27523 2 brugle-massilia-start.sav 900 generate map2 saveresume)
+    set_tests_properties(mp_lan_save_resume_3_players mp_lan_save_resume_map2_2_players PROPERTIES TIMEOUT 240)
 endif()
 

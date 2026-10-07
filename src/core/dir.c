@@ -72,6 +72,16 @@ const dir_listing *dir_find_files_with_extension(const char *extension)
     return &data.listing;
 }
 
+const dir_listing *dir_append_files_with_extension(const char *extension)
+{
+    if (data.max_files <= 0) {
+        clear_dir_listing();
+    }
+    platform_file_manager_list_directory_contents(0, TYPE_FILE, extension, add_to_listing);
+    qsort(data.listing.files, data.listing.num_files, sizeof(char*), compare_lower);
+    return &data.listing;
+}
+
 const dir_listing *dir_find_all_subdirectories(void)
 {
     clear_dir_listing();

@@ -7,6 +7,7 @@
 #include "core/time.h"
 #include "core/dir.h"
 #include "core/encoding.h"
+#include "core/file.h"
 #include "core/string.h"
 #include "figure/figure.h"
 #include "game/player_context.h"
@@ -32,6 +33,7 @@
 #include "mp/missionary.h"
 #include "mp/savegame.h"
 #include "mp/session.h"
+#include "platform/file_manager.h"
 #include "platform/net.h"
 #include "translation/translation.h"
 #include "widget/input_box.h"
@@ -43,7 +45,7 @@
 #include <string.h>
 
 #define MAX_FILES 200
-#define FILE_NAME_LENGTH 64
+#define FILE_NAME_LENGTH FILE_NAME_MAX
 #define FILES_IN_VIEW 10
 #define GAMES_IN_VIEW 6
 #define ADDRESS_LENGTH 40
@@ -126,35 +128,68 @@ static struct {
     int focus_game;
 } data;
 
+// the first entry starts a new game on the prepared map (D-044); the others are multiplayer games to resume
+#define NEW_GAME 0
+
 static input_box address_input = {336, 264, 18, 2, FONT_NORMAL_WHITE, 1, data.address, ADDRESS_LENGTH};
 
-static void add_files(const char *extension)
+static int has_suffix(const char *name, const char *suffix)
 {
-    const dir_listing *list = dir_find_files_with_extension(extension);
+    size_t length = strlen(name);
+    size_t suffix_length = strlen(suffix);
+    return length > suffix_length &&
+        platform_file_manager_compare_filename(name + length - suffix_length, suffix) == 0;
+}
+
+// the multiplayer games and maps: by the end of their name, which may hold other dots ("partie 7.10.mpsav": the
+// listing by extension reads from the first dot, T5.4)
+static void add_files(void)
+{
+    const dir_listing *list = dir_find_files_with_extension(0);
     for (int i = 0; i < list->num_files && data.num_files < MAX_FILES; i++) {
-        // files written by network games are not starting points
-        if (strncmp(list->files[i], "mp-", 3) == 0 || strncmp(list->files[i], "autosave", 8) == 0) {
+        // the files written by network games for themselves are not starting points; their monthly saved game is
+        // (autosave.mpsav, T5.3)
+        if (strncmp(list->files[i], "mp-", 3) == 0 || strlen(list->files[i]) >= FILE_NAME_LENGTH ||
+            (!has_suffix(list->files[i], ".mpsav") && !has_suffix(list->files[i], ".mpmap"))) {
             continue;
         }
         snprintf(data.files[data.num_files++], FILE_NAME_LENGTH, "%s", list->files[i]);
     }
 }
 
-// the first entry starts a new game on the prepared map (D-044); the others are multiplayer games to resume
-#define NEW_GAME 0
+// a multiplayer game goes on with as many players as it has cities
+static void set_players_of_selected_file(void)
+{
+    int cities = data.selected_file == NEW_GAME ? 0 : mp_savegame_num_players(data.files[data.selected_file]);
+    if (cities > 0) {
+        data.num_players = cities;
+    }
+}
 
 static void init(void)
 {
+    mp_lockstep_state state = mp_lockstep_get_state();
+    if (state == MP_LOCKSTEP_RUNNING || state == MP_LOCKSTEP_DESYNC || state == MP_LOCKSTEP_DISCONNECTED) {
+        // the game played before is over for this computer: the lobby hosts or joins again (T5.3)
+        mp_lockstep_stop();
+    }
+    char selected[FILE_NAME_LENGTH];
+    snprintf(selected, sizeof(selected), "%s", data.selected_file > NEW_GAME && data.selected_file < data.num_files ?
+        data.files[data.selected_file] : "");
     data.num_files = 1;
     data.files[NEW_GAME][0] = 0;
-    add_files("mpsav");
-    add_files("mpmap");
-    if (data.selected_file >= data.num_files) {
-        data.selected_file = 0;
+    add_files();
+    // the same file as before, where the list now has it (new saved games move it)
+    data.selected_file = NEW_GAME;
+    for (int i = 1; i < data.num_files && selected[0]; i++) {
+        if (strcmp(data.files[i], selected) == 0) {
+            data.selected_file = i;
+        }
     }
     if (data.num_players < 1) {
         data.num_players = 2;
     }
+    set_players_of_selected_file();
     mp_lobby_rules_init();
     scrollbar_init(&scrollbar, 0, data.num_files);
     net_local_address(data.local_address);
@@ -377,11 +412,7 @@ static void button_select_file(int index, int param2)
 {
     if (scrollbar.scroll_position + index < data.num_files) {
         data.selected_file = scrollbar.scroll_position + index;
-        // a multiplayer game goes on with as many players as it has cities
-        int cities = data.selected_file == NEW_GAME ? 0 : mp_savegame_num_players(data.files[data.selected_file]);
-        if (cities > 0) {
-            data.num_players = cities;
-        }
+        set_players_of_selected_file();
     }
 }
 
@@ -539,6 +570,49 @@ void window_mp_lobby_show_started_game(void)
         }
     }
     window_city_show();
+}
+
+static int select_file(const char *filename)
+{
+    for (int i = 1; i < data.num_files; i++) {
+        if (platform_file_manager_compare_filename(data.files[i], filename) == 0) {
+            data.selected_file = i;
+            set_players_of_selected_file();
+            if (data.selected_file >= scrollbar.scroll_position + FILES_IN_VIEW ||
+                data.selected_file < scrollbar.scroll_position) {
+                int last = data.num_files - FILES_IN_VIEW;
+                scrollbar_reset(&scrollbar, data.selected_file < last ? data.selected_file : last > 0 ? last : 0);
+            }
+            return 1;
+        }
+    }
+    return 0;
+}
+
+void window_mp_lobby_show_saved_game(const char *filename)
+{
+    window_mp_lobby_show();
+    select_file(filename);
+}
+
+int window_mp_lobby_lists_file(const char *filename)
+{
+    for (int i = 1; i < data.num_files; i++) {
+        if (platform_file_manager_compare_filename(data.files[i], filename) == 0) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+const char *window_mp_lobby_selected_file(void)
+{
+    return data.selected_file > NEW_GAME && data.selected_file < data.num_files ? data.files[data.selected_file] : "";
+}
+
+int window_mp_lobby_num_players(void)
+{
+    return data.num_players;
 }
 
 void window_mp_lobby_show(void)

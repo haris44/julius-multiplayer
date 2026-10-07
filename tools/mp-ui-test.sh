@@ -7,6 +7,9 @@
 set -uo pipefail
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 cd "$ROOT"
+DATA_DIR=${C3_DATA_DIR:-$ROOT/../donnees-c3}
+. tools/mp-autosave-guard.sh
+mp_keep_autosave
 mkdir -p build/automation
 tools/run-automation.sh test/automation/mp-ui-host.txt 240 > build/automation/mp-ui-host.log 2>&1 &
 HOST=$!
@@ -17,8 +20,8 @@ wait $HOST
 HOST_STATUS=$?
 grep -h -E "mpcheck|automation\] .*(fail|timed|stopped)" build/automation/mp-ui-host.log \
     build/automation/mp-ui-client.log | sed -E 's/^.*(INFO|ERROR): //'
-DATA_DIR=${C3_DATA_DIR:-$ROOT/../donnees-c3}
 rm -f "$DATA_DIR"/mp-session-* "$DATA_DIR"/mp-desync-*
+mp_restore_autosave
 MISSING=0
 for shot in host-lobby host-city host-farms host-raw host-imperial host-ratings host-stocks \
     client-lobby client-farms client-raw client-options client-ratings client-trade; do

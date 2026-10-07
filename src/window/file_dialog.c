@@ -20,11 +20,17 @@
 #include "graphics/text.h"
 #include "graphics/window.h"
 #include "input/input.h"
+#include "mp/lockstep.h"
+#include "mp/savegame.h"
 #include "platform/file_manager.h"
+#include "translation/translation.h"
 #include "widget/input_box.h"
 #include "window/city.h"
 #include "window/editor/map.h"
+#include "window/mp_lobby.h"
+#include "window/plain_message_dialog.h"
 
+#include <stdio.h>
 #include <string.h>
 
 #define NUM_FILES_IN_VIEW 12
@@ -58,7 +64,7 @@ static generic_button file_buttons[] = {
 static scrollbar_type scrollbar = {464, 120, 206, 320, NUM_FILES_IN_VIEW, on_scroll, 1};
 
 typedef struct {
-    char extension[4];
+    char extension[8];
     char last_loaded_file[FILE_NAME_MAX];
 } file_type_data;
 
@@ -80,6 +86,17 @@ static input_box file_name_input = {144, 80, 20, 2, FONT_NORMAL_WHITE, 0, data.t
 
 static file_type_data saved_game_data = {"sav"};
 static file_type_data scenario_data = {"map"};
+// the cities of a multiplayer game are saved in their own format, next to the classic saved games (T5.4, D-074)
+static file_type_data mp_saved_game_data = {"mpsav"};
+#define MP_SAVED_GAME_EXTENSION ".mpsav"
+
+static int is_mp_saved_game(const char *filename)
+{
+    size_t length = strlen(filename);
+    size_t extension = strlen(MP_SAVED_GAME_EXTENSION);
+    return length > extension &&
+        platform_file_manager_compare_filename(filename + length - extension, MP_SAVED_GAME_EXTENSION) == 0;
+}
 
 static int find_first_file_with_prefix(const char *prefix)
 {
@@ -123,6 +140,10 @@ static void init(file_type type, file_dialog_type dialog_type)
 {
     data.type = type;
     data.file_data = type == FILE_TYPE_SCENARIO ? &scenario_data : &saved_game_data;
+    if (type == FILE_TYPE_SAVED_GAME && dialog_type != FILE_DIALOG_LOAD && mp_savegame_is_needed()) {
+        // a multiplayer game is saved as .mpsav (game_file_write_saved_game): the dialog shows those
+        data.file_data = &mp_saved_game_data;
+    }
     data.dialog_type = dialog_type;
 
     data.message_not_exist_start_time = 0;
@@ -142,6 +163,10 @@ static void init(file_type type, file_dialog_type dialog_type)
     string_copy(data.typed_name, data.previously_seen_typed_name, FILE_NAME_MAX);
 
     data.file_list = dir_find_files_with_extension(data.file_data->extension);
+    if (type == FILE_TYPE_SAVED_GAME && dialog_type == FILE_DIALOG_LOAD) {
+        // the multiplayer saved games too: choosing one opens the lobby, which resumes it (T5.4)
+        data.file_list = dir_append_files_with_extension(mp_saved_game_data.extension);
+    }
     scrollbar_init(&scrollbar, 0, data.file_list->num_files);
     scroll_to_typed_text();
 
@@ -177,6 +202,11 @@ static void draw_foreground(void)
         }
         encoding_from_utf8(data.file_list->files[scrollbar.scroll_position + i], file, FILE_NAME_MAX);
         file_remove_extension(file);
+        if (data.dialog_type == FILE_DIALOG_LOAD && is_mp_saved_game(data.file_list->files[scrollbar.scroll_position + i])) {
+            // a classic and a multiplayer saved game may have the same name
+            int length = string_length(file);
+            string_copy(translation_for(TR_MP_SAVED_GAME_MARK), file + length, FILE_NAME_MAX - length);
+        }
         text_ellipsize(file, font, MAX_FILE_WINDOW_TEXT_WIDTH);
         text_draw(file, 160, 130 + 16 * i, font, 0);
     }
@@ -241,9 +271,18 @@ static const char *get_chosen_filename(void)
     }
 
     // We should use the typed name, which needs to be converted to UTF-8...
-    static char typed_file[FILE_NAME_MAX];
-    encoding_to_utf8(data.typed_name, typed_file, FILE_NAME_MAX, encoding_system_uses_decomposed());
-    file_append_extension(typed_file, data.file_data->extension);
+    static char typed_file[FILE_NAME_MAX + 8];
+    char name[FILE_NAME_MAX];
+    encoding_to_utf8(data.typed_name, name, FILE_NAME_MAX, encoding_system_uses_decomposed());
+    snprintf(typed_file, sizeof(typed_file), "%s.%s", name, data.file_data->extension);
+    if (data.dialog_type == FILE_DIALOG_LOAD && data.type == FILE_TYPE_SAVED_GAME &&
+        !file_exists(typed_file, NOT_LOCALIZED)) {
+        // a multiplayer saved game of that name
+        snprintf(typed_file, sizeof(typed_file), "%s.%s", name, mp_saved_game_data.extension);
+        if (!file_exists(typed_file, NOT_LOCALIZED)) {
+            snprintf(typed_file, sizeof(typed_file), "%s.%s", name, data.file_data->extension);
+        }
+    }
     return typed_file;
 }
 
@@ -262,7 +301,16 @@ static void button_ok_cancel(int is_ok, int param2)
         return;
     }
     if (data.dialog_type == FILE_DIALOG_LOAD) {
+        if (data.type == FILE_TYPE_SAVED_GAME && is_mp_saved_game(filename)) {
+            // the players of a multiplayer game must join it: the lobby resumes it, this game hosted (T5.4)
+            input_box_stop(&file_name_input);
+            strncpy(data.file_data->last_loaded_file, filename, FILE_NAME_MAX - 1);
+            window_mp_lobby_show_saved_game(filename);
+            return;
+        }
         if (data.type == FILE_TYPE_SAVED_GAME) {
+            // a network game that is over (out of sync, host lost) stops: the loaded game runs alone
+            mp_lockstep_stop();
             if (game_file_load_saved_game(filename)) {
                 input_box_stop(&file_name_input);
                 window_city_show();
@@ -326,6 +374,12 @@ static void button_select_file(int index, int param2)
 
 void window_file_dialog_show(file_type type, file_dialog_type dialog_type)
 {
+    if (type == FILE_TYPE_SAVED_GAME && dialog_type == FILE_DIALOG_LOAD &&
+        mp_lockstep_get_state() == MP_LOCKSTEP_RUNNING) {
+        // a network game runs: loading a game on this computer only would end it for everybody (T5.4)
+        window_plain_message_dialog_show(TR_MP_LOAD_IN_LOBBY_TITLE, TR_MP_LOAD_IN_LOBBY_MESSAGE);
+        return;
+    }
     window_type window = {
         WINDOW_FILE_DIALOG,
         window_draw_underlying_window,

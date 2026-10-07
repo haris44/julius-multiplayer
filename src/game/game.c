@@ -18,6 +18,7 @@
 #include "game/speed.h"
 #include "game/state.h"
 #include "game/tick.h"
+#include "game/time.h"
 #include "graphics/font.h"
 #include "graphics/video.h"
 #include "graphics/window.h"
@@ -187,17 +188,24 @@ static void run_multiplayer(void)
         }
     }
     int preview_suspended = 0;
+    int new_month = 0;
     for (int i = 0; i < num_ticks && mp_lockstep_can_run_tick(); i++) {
         if (!preview_suspended) {
             // the local construction preview is drawn on the shared map: never simulate with it
             building_construction_suspend_preview();
             preview_suspended = 1;
         }
+        int month = game_time_month();
         game_tick_run();
         mp_lockstep_after_tick();
+        new_month |= game_time_month() != month;
     }
     if (preview_suspended) {
         building_construction_resume_preview();
+    }
+    if (new_month) {
+        // every computer keeps the game of the start of the month, to resume it from the lobby (T5.3, D-074)
+        mp_lockstep_autosave();
     }
     mp_endgame_notify();
 }

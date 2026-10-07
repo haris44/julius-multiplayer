@@ -13,6 +13,8 @@
 #include "mp/checksum.h"
 #include "mp/lockstep.h"
 #include "window/city.h"
+#include "graphics/window.h"
+#include "window/mp_lobby.h"
 
 #include "SDL.h"
 #include "mp/compose.h"
@@ -25,6 +27,10 @@
 #include "map/data.h"
 #include "mp/missionary.h"
 #include "mp/territory.h"
+#include "platform/keyboard_input.h"
+#include "platform/window_sweep.h"
+#include "city/data_private.h"
+#include "city/gods.h"
 
 #include <inttypes.h>
 #include <stdio.h>
@@ -64,8 +70,6 @@ static struct {
     } run;
     struct {
         int active;
-        int started;
-        int start_tick;
         int target;
         int frames_left;
     } mpwait;
@@ -74,6 +78,10 @@ static struct {
         int target;
         int frames_left;
     } mpplayers;
+    struct {
+        int active;
+        int frames_left;
+    } mpdesync;
     char *script;
     char **lines;
     int num_lines;
@@ -380,9 +388,10 @@ static int execute(char *line)
         data.pending.modifiers = modifiers;
         return 1;
     } else if (strcmp(command, "text") == 0) {
+        // given to the game directly: pushing a text event crashes SDL 2 over SDL 3 (sdl2-compat)
         SDL_Event event = { .type = SDL_TEXTINPUT };
         snprintf(event.text.text, sizeof(event.text.text), "%s", rest);
-        SDL_PushEvent(&event);
+        platform_handle_text(&event.text);
         return 1;
     } else if (strcmp(command, "load") == 0) {
         const char *path = resolve_path(rest);
@@ -447,6 +456,27 @@ static int execute(char *line)
         data.mpplayers.target = n;
         data.mpplayers.frames_left = 60 * 60 * 3;
         return 1;
+    } else if (strcmp(command, "mpwaitdesync") == 0) {
+        // tests (T5.3): waits until the network game stops on a desynchronisation
+        data.mpdesync.active = 1;
+        data.mpdesync.frames_left = 60 * 60 * 3;
+        return 1;
+    } else if (strcmp(command, "lobbylists") == 0 || strcmp(command, "lobbyselected") == 0) {
+        // tests (T5.3, T5.4): the lobby lists this file among the games to host / has it chosen to be hosted
+        int selected = command[5] == 's';
+        if (!window_is(WINDOW_MP_LOBBY)) {
+            fail("not in the lobby:", command);
+            return 1;
+        }
+        if (selected ? strcmp(window_mp_lobby_selected_file(), rest) != 0 : !window_mp_lobby_lists_file(rest)) {
+            fail(selected ? "lobbyselected: the lobby has another file chosen:" : "lobbylists: not listed:",
+                selected ? window_mp_lobby_selected_file() : rest);
+            return 1;
+        }
+        char value[64];
+        snprintf(value, sizeof(value), "%d players", window_mp_lobby_num_players());
+        log_message(command, value);
+        return 0;
     } else if (strcmp(command, "gotocity") == 0) {
         // the view goes to the city of player N (1 = first), on a map of copied cities
         if (sscanf(rest, "%d", &n) != 1 || n < 1 || n > player_context_num_players()) {
@@ -546,6 +576,24 @@ static int execute(char *line)
             return 1;
         }
         return 0;
+    } else if (strcmp(command, "angrygod") == 0) {
+        // tests (T5.3): the local city gets an angry god other than the one it holds for the least happy, so that a
+        // window computing the least happy god changes the state; changes the local state only (one player)
+        int stored = city_god_least_happy();
+        int god = stored == GOD_MARS ? GOD_VENUS : GOD_MARS;
+        for (int i = 0; i < MAX_GODS; i++) {
+            city_data.religion.gods[i].wrath_bolts = i == god ? 30 : 0;
+        }
+        char value[64];
+        snprintf(value, sizeof(value), "least happy god held %d, angry god %d", stored, god);
+        log_message("angrygod:", value);
+        return 0;
+    } else if (strcmp(command, "windowsweep") == 0) {
+        // every window and advisor opened and drawn without a tick: none may change the simulated state (T5.3)
+        if (platform_window_sweep(log_message)) {
+            fail("windowsweep: windows changed the state of the simulation", 0);
+        }
+        return 1;
     } else if (strcmp(command, "pieces") == 0) {
         mp_checksum_state_pieces(log_piece_checksum, 0);
         return 0;
@@ -585,13 +633,22 @@ void platform_automation_before_frame(void)
         }
         data.mpplayers.active = 0;
     }
+    if (data.mpdesync.active) {
+        if (mp_lockstep_get_state() != MP_LOCKSTEP_DESYNC) {
+            mp_lockstep_state state = mp_lockstep_get_state();
+            if (--data.mpdesync.frames_left <= 0 || state == MP_LOCKSTEP_OFF || state == MP_LOCKSTEP_DISCONNECTED) {
+                fail("mpwaitdesync: no desynchronisation:", mp_lockstep_status());
+            }
+            return;
+        }
+        log_message("mpwaitdesync:", mp_lockstep_status());
+        data.mpdesync.active = 0;
+    }
     if (data.mpwait.active) {
         // ticks are counted from the start of the network game (the date may be negative: BC years)
-        if (mp_lockstep_get_state() == MP_LOCKSTEP_RUNNING && !data.mpwait.started) {
-            data.mpwait.started = 1;
-            data.mpwait.start_tick = game_time_absolute_tick();
-        }
-        int done = data.mpwait.started && game_time_absolute_tick() - data.mpwait.start_tick >= data.mpwait.target;
+        // (a script may play a second network game, resumed from the lobby: the ticks of the game running now)
+        int running = mp_lockstep_get_state() == MP_LOCKSTEP_RUNNING;
+        int done = running && game_time_absolute_tick() - mp_lockstep_base_tick() >= data.mpwait.target;
         if (!done) {
             int state = mp_lockstep_get_state();
             if (state == MP_LOCKSTEP_DESYNC || state == MP_LOCKSTEP_DISCONNECTED) {

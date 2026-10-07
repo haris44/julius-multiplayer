@@ -1,0 +1,94 @@
+# Real game, a network game of 2 players from the lobby, resumed after a desynchronisation (see
+# tools/mp-resume-test.sh, T5.3 and T5.4): host
+wait 10
+click 400 500
+wait 10
+# main menu: Multiplayer; a new game on map 1, hosted then started when the client is there
+click 400 172
+wait 10
+click 180 170
+wait 2
+click 338 418
+wait 2
+click 240 466
+mpplayers 2
+wait 5
+click 240 466
+mpwait 0
+# Caesar's letter
+wait 3
+key Return
+wait 2
+speed 300
+# past the first month: every computer writes the monthly saved game (autosave.mpsav)
+mpwait 900
+# the File menu saves the game, written as .mpsav (T5.4)
+log before save
+key ctrl+S
+wait 5
+log save dialog
+wait 5
+key Backspace
+key Backspace
+key Backspace
+key Backspace
+key Backspace
+key Backspace
+key Backspace
+key Backspace
+key Backspace
+key Backspace
+key Backspace
+key Backspace
+key Backspace
+key Backspace
+key Backspace
+key Backspace
+key Backspace
+key Backspace
+key Backspace
+key Backspace
+key Backspace
+key Backspace
+key Backspace
+key Backspace
+log typing
+text essai 710
+wait 2
+key Return
+wait 5
+log saved by the File menu
+# a change on this computer only: the players desynchronise (T5.3)
+angrygod
+mpwaitdesync
+wait 10
+# File, New game: the main menu; the network game is over for this computer
+click 20 10
+wait 5
+click 75 41
+wait 10
+# main menu: Load game; the multiplayer saved game opens the lobby, with that game chosen (T5.4)
+click 400 252
+wait 10
+log typing
+text essai 710
+wait 2
+key Return
+wait 10
+lobbyselected essai 710.mpsav
+lobbylists autosave.mpsav
+screenshot build/automation/mp-resume-lobby.png
+# Host, then Start when the client is there again
+click 240 466
+mpplayers 2
+wait 5
+click 240 466
+mpwait 0
+wait 3
+key Return
+wait 2
+mpwait 400
+screenshot build/automation/mp-resume-host.png
+mpcheck
+wait 120
+quit

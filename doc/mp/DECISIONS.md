@@ -1133,3 +1133,46 @@
 - **Pont de César** (CESAR §7.6, précise D-068) : distances au pont recalculées pour chaque emplacement de la carte à
   4 refaite ; comme au §7.2, seules les légions de l'agresseur sur la terre de César comptent dans la colère.
 - Classique : inchangé.
+
+### D-074 — Aucune fenêtre n'écrit dans la partie ; sauvegarde du mois et reprise par le salon (T5.3, T5.4)
+- 2026-10-07 · **adoptée provisoirement** (sans Alexandre)
+- **Cause trouvée de la désynchronisation** : le conseiller religieux recalculait, à chaque dessin, le « dieu le moins
+  content » et l'**écrivait dans la cité** (`city_gods_calculate_least_happy`). La simulation ne le recalcule qu'au
+  début du mois, et pas tous les mois : ouvert sur un seul ordinateur, le conseiller changeait l'état de cette cité,
+  et la somme de contrôle du tour suivant différait. C'était le seul calcul des conseillers oublié par M2.6. En réseau,
+  le conseiller le calcule pour lui seul (`city_gods_least_happy_now`, sans rien écrire) ; classique inchangé.
+- **Garde-fou** : la commande d'automatisation `windowsweep` ouvre et dessine, sans faire avancer la partie, chaque
+  conseiller, chaque onglet du commerce (dont Stocks), chaque fenêtre de dialogue (salaire, cadeau, don, fête, prix,
+  carte de l'empire, messages, options, sauvegarde, lettre de César, résultats), chaque menu de construction et de
+  calque, et la fiche de chaque type de bâtiment, de figure et de terrain, et vérifie que l'état simulé n'a pas changé.
+  `tools/mp-sweep-test.sh` (seul, avec un dieu en colère : échouait sans le correctif) et `tools/mp-menus-test.sh`
+  (trois joueurs dans les menus en même temps, puis chacun seul, sans désynchronisation).
+- **Pourquoi la partie ne reprenait pas** : après la désynchronisation, la partie restait « en cours » pour le jeu.
+  Le salon, rouvert, refusait alors d'héberger comme de rejoindre (il se croyait déjà dans une partie), et il n'y avait
+  rien à reprendre : à plusieurs, aucune sauvegarde automatique, et les états écrits à la désynchronisation
+  (`mp-desync-…`) sont cachés du salon. Désormais :
+  - « Fichier, Nouvelle partie » quitte la partie en réseau, et le salon, à son ouverture, termine une partie finie
+    (désynchronisée, hôte perdu) ou abandonnée : on peut héberger ou rejoindre aussitôt ;
+  - **chaque ordinateur sauvegarde la partie en réseau au début de chaque mois** (`autosave.mpsav`, écrit à côté puis
+    renommé), sans dépendre de l'option de sauvegarde automatique ; le salon la liste ; le message de
+    désynchronisation dit de reprendre la partie depuis le salon. *À valider* : tous les mois, toujours (le fichier
+    pèse quelques Mo), et le même nom pour toutes les parties (la dernière jouée).
+- **« Impossible de charger une partie sauvegardée »** : en multijoueur, « Sauvegarder » écrit un `.mpsav`, mais la
+  fenêtre « Charger » ne listait que les `.sav` (et « Sauvegarder » montrait les `.sav`, pas les parties
+  multijoueur). Et « Charger » pendant une partie en réseau aurait chargé une partie sur un seul ordinateur.
+  Désormais :
+  - « Charger » (menu principal ou partie finie) liste aussi les parties multijoueur, marquées « (multijoueur) » ; en
+    choisir une ouvre le salon avec cette partie choisie, et le nombre de joueurs de la sauvegarde : il reste à
+    cliquer sur « Héberger » ;
+  - pendant une partie en réseau, « Charger » et « Rejouer la mission » disparaissent du menu Fichier (le raccourci
+    explique qu'il faut reprendre la partie depuis le salon) ; « Sauvegarder » et « Supprimer » montrent les `.mpsav` ;
+  - le salon liste les parties par la fin de leur nom (un nom avec un point, renommé à la main, était ignoré), garde
+    la partie choisie quand la liste change, et en reprend le nombre de joueurs.
+  *Mesuré* : le chemin réseau lui-même marchait (`mp_lan_save_resume_3_players`, `mp_lan_save_resume_map2_2_players` :
+  sauvegarde par le chemin du menu Fichier, partie hébergée à nouveau comme par le salon dans le même processus, un
+  joueur remplacé par un nouveau processus, commerce entre joueurs dans la sauvegarde, carte 1 à 3 joueurs et carte 2
+  à 2) ; le blocage était dans l'interface. Test de bout en bout `tools/mp-resume-test.sh` (vrai jeu, deux joueurs).
+- **Limite** (*à valider*) : une sauvegarde faite par « Sauvegarder » n'existe que sur l'ordinateur qui l'a faite ;
+  c'est lui qui doit héberger la reprise. La sauvegarde du mois, elle, est sur tous les ordinateurs.
+- Protocole et formats inchangés. Classique : inchangé (le conseiller religieux, « Charger » et le salon y gardent
+  leur comportement, sauf la liste de « Charger », qui montre aussi les parties multijoueur).
