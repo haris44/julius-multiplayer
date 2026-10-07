@@ -355,6 +355,7 @@ static int purchase_reason_text(int state)
         case MP_TRADE_PURCHASE_NO_ROOM: return TR_MP_PURCHASE_NO_ROOM;
         case MP_TRADE_PURCHASE_NO_MONEY: return TR_MP_PURCHASE_NO_MONEY;
         case MP_TRADE_PURCHASE_LIMIT: return TR_MP_PURCHASE_LIMIT;
+        case MP_TRADE_PURCHASE_AT_WAR: return TR_MP_PURCHASE_AT_WAR;
         default: return 0;
     }
 }

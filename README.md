@@ -81,12 +81,12 @@ essayées.
 - Chaque mois, César donne des lauriers à chaque cité selon cinq notes : prospérité, commerce, habitat, culture et
   éducation, grandeur.
 - Les **cadeaux à César** rapportent aussi des lauriers : 4, 7 ou 10 selon leur taille, un seul compté par an. Ils
-  se paient sur l'épargne personnelle, que remplit le salaire du gouverneur ; le salaire ne peut pas dépasser son
-  rang.
+  se paient sur l'épargne personnelle, que remplit le salaire du gouverneur. Tout le monde part du même salaire,
+  nul au début, puis Rome paie à chacun le salaire de son rang de lauriers.
 - La première cité qui atteint le score choisi dans le salon (1 000 lauriers par défaut) devient son héritière et
   gagne la partie.
-- Le conseiller impérial montre les notes, les lauriers, le rang et le classement, avec les boutons du cadeau, du
-  salaire et du don à la cité. César écrit à chaque nouveau rang.
+- Le conseiller impérial montre les notes, les lauriers, le rang, le salaire et le classement, avec les boutons du
+  cadeau et du don à la cité. César écrit à chaque nouveau rang.
 - Dans l'évaluation de la cité, le quatrième pilier est celui des **lauriers** : sa hauteur dit où l'on en est du
   score. Un clic donne les lauriers du mois dernier, la tendance et la place dans la province. L'ancienne faveur de
   César n'est plus affichée.

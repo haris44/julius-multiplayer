@@ -6907,6 +6907,8 @@ static int command_war(const char *file)
     player_context_switch(0);
     war_run(40 * 50);
     CHECK(!caravan_of(1) && marble_of(1) == 8, "no caravan between players at war");
+    CHECK(mp_trade_purchase_state(1, 0, RESOURCE_MARBLE) == MP_TRADE_PURCHASE_AT_WAR,
+        "the trade page says the war is why nothing comes");
 
     // a caravan on its way when an honourable war is declared: nobody fights during the notice, yet it turns back and
     // brings its goods home; nothing is delivered nor paid

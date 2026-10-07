@@ -441,7 +441,7 @@ static void set_purchase_state(int seller, int buyer, int resource, int state)
         // in the log of every computer, for the players who wonder why nothing comes (T5.7)
         static const char *TEXTS[] = { "unknown", "a caravan leaves", "the seller has none to sell",
             "the buyer has no warehouse taking it", "no road joins their warehouses", "the buyer has no room left",
-            "the buyer cannot pay", "the buyer reached his stock limit" };
+            "the buyer cannot pay", "the buyer reached his stock limit", "the players are at war" };
         char text[100];
         snprintf(text, sizeof(text), "player %d to player %d, resource %d: %s", seller + 1, buyer + 1, resource,
             state >= 0 && state < (int) (sizeof(TEXTS) / sizeof(TEXTS[0])) ? TEXTS[state] : "?");
@@ -544,14 +544,23 @@ void mp_trade_dispatch_caravans(void)
     seller_view sv;
     int looked = 0;
     for (int buyer = 0; buyer < player_context_num_players(); buyer++) {
-        // no caravan between players at war (T5.5), nor during the notice of an honourable war
-        if (mp_trade_route_is_open(seller, buyer) && mp_war_status(seller, buyer) == MP_WAR_PEACE) {
-            if (!looked) {
-                look_at_seller(&sv);
-                looked = 1;
-            }
-            dispatch_to(buyer, &sv);
+        if (!mp_trade_route_is_open(seller, buyer)) {
+            continue;
         }
+        // no caravan between players at war (T5.5), nor during the notice of an honourable war: the trade page says why
+        if (mp_war_status(seller, buyer) != MP_WAR_PEACE) {
+            for (int resource = RESOURCE_NONE + 1; resource < RESOURCE_MAX; resource++) {
+                if (buys[buyer][seller][resource]) {
+                    set_purchase_state(seller, buyer, resource, MP_TRADE_PURCHASE_AT_WAR);
+                }
+            }
+            continue;
+        }
+        if (!looked) {
+            look_at_seller(&sv);
+            looked = 1;
+        }
+        dispatch_to(buyer, &sv);
     }
 }
 

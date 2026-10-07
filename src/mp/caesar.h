@@ -192,7 +192,7 @@ int mp_caesar_gift_cooldown(int player_id);
 int mp_caesar_gift_sent(int player_id, int size);
 
 /**
- * Highest salary rank of a city: its rank (CESAR §6.1)
+ * Salary rank Rome pays a city: the rank of its laurels, the same table for every player (D-076)
  */
 int mp_caesar_salary_rank_limit(int player_id);
 

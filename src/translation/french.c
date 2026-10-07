@@ -219,6 +219,7 @@ static translation_string all_strings[] = {
     {TR_MP_PURCHASE_NO_ROOM, "plein"},
     {TR_MP_PURCHASE_NO_MONEY, "sans argent"},
     {TR_MP_PURCHASE_LIMIT, "limite"},
+    {TR_MP_PURCHASE_AT_WAR, "guerre"},
     {TR_MP_TRADE_STOCK, "Stock"},
     {TR_MP_TRADE_STATUS, "Commerce"},
     {TR_MP_TRADE_PRICE, "Payé / reçu"},

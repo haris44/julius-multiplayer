@@ -120,7 +120,8 @@ typedef enum {
     MP_TRADE_PURCHASE_NO_ROAD, /**< no road joins a warehouse of the seller to one of those of the buyer */
     MP_TRADE_PURCHASE_NO_ROOM, /**< the warehouses of the buyer are full, counting what is already on its way */
     MP_TRADE_PURCHASE_NO_MONEY, /**< the buyer cannot pay a single load, counting what is already on its way */
-    MP_TRADE_PURCHASE_LIMIT /**< the buyer reached his stock limit (T4.5) */
+    MP_TRADE_PURCHASE_LIMIT, /**< the buyer reached his stock limit (T4.5) */
+    MP_TRADE_PURCHASE_AT_WAR /**< the two players are at war, or in the notice of a war (T5.5) */
 } mp_trade_purchase;
 
 /**
