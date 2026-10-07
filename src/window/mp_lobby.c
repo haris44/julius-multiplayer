@@ -239,10 +239,21 @@ static void draw_status(void)
     }
 }
 
+// the rules a player cannot change (those of the host, those of a resumed game) are drawn in grey (D-073)
+#define COLOR_READ_ONLY_RULE 0x7a7a7a
+
 // a rule under the mouse is white, unless it is a rule of the host, which a player who joined cannot change
 static font_t rule_font(int button, int editable)
 {
-    return editable && data.focus_action == button + 1 ? FONT_NORMAL_WHITE : FONT_NORMAL_BLACK;
+    if (!editable) {
+        return FONT_NORMAL_PLAIN;
+    }
+    return data.focus_action == button + 1 ? FONT_NORMAL_WHITE : FONT_NORMAL_BLACK;
+}
+
+static color_t rule_color(int editable)
+{
+    return editable ? 0 : COLOR_READ_ONLY_RULE;
 }
 
 static void draw_foreground(void)
@@ -261,31 +272,34 @@ static void draw_foreground(void)
     // a player who joined sees the rules of the host, and cannot change them (T4.11)
     const game_rules_settings *rules = mp_lobby_rules_shown();
     int editable = mp_lobby_rules_editable();
+    color_t color = rule_color(editable);
     font_t difficulty_font = rule_font(BUTTON_DIFFICULTY, editable);
-    width = text_draw(translation_for(TR_MP_DIFFICULTY), 16, 308, difficulty_font, 0);
-    text_draw(translation_for(TR_MP_DIFFICULTY_0 + rules->difficulty), 16 + width, 308, difficulty_font, 0);
+    width = text_draw(translation_for(TR_MP_DIFFICULTY), 16, 308, difficulty_font, color);
+    text_draw(translation_for(TR_MP_DIFFICULTY_0 + rules->difficulty), 16 + width, 308, difficulty_font, color);
     font_t gods_font = rule_font(BUTTON_GODS, editable);
-    width = text_draw(translation_for(TR_MP_GODS), 212, 308, gods_font, 0);
-    text_draw(translation_for(rules->gods_enabled ? TR_MP_YES : TR_MP_NO), 212 + width, 308, gods_font, 0);
+    width = text_draw(translation_for(TR_MP_GODS), 212, 308, gods_font, color);
+    text_draw(translation_for(rules->gods_enabled ? TR_MP_YES : TR_MP_NO), 212 + width, 308, gods_font, color);
     font_t end_font = rule_font(BUTTON_END, editable);
-    width = text_draw(translation_for(TR_MP_END), 16, 330, end_font, 0);
+    width = text_draw(translation_for(TR_MP_END), 16, 330, end_font, color);
     if (rules->end_condition == GAME_END_CAESAR) {
-        width += text_draw(translation_for(TR_MP_END_CAESAR), 16 + width, 330, end_font, 0);
-        width += text_draw_number(rules->caesar_score, 0, "", 16 + width, 330, end_font);
-        text_draw(translation_for(TR_MP_LAURELS), 16 + width, 330, end_font, 0);
+        width += text_draw(translation_for(TR_MP_END_CAESAR), 16 + width, 330, end_font, color);
+        // (a game saved before the score has 0: the default score)
+        width += text_draw_number_colored(game_rules_settings_caesar_score(rules), 0, "", 16 + width, 330, end_font,
+            color);
+        text_draw(translation_for(TR_MP_LAURELS), 16 + width, 330, end_font, color);
     } else {
-        text_draw(translation_for(TR_MP_END_NONE), 16 + width, 330, end_font, 0);
+        text_draw(translation_for(TR_MP_END_NONE), 16 + width, 330, end_font, color);
     }
     font_t invasions_font = rule_font(BUTTON_INVASIONS, editable);
-    width = text_draw(translation_for(TR_MP_INVASIONS), 16, 352, invasions_font, 0);
-    text_draw(translation_for(rules->ai_invasions ? TR_MP_YES : TR_MP_NO), 16 + width, 352, invasions_font, 0);
+    width = text_draw(translation_for(TR_MP_INVASIONS), 16, 352, invasions_font, color);
+    text_draw(translation_for(rules->ai_invasions ? TR_MP_YES : TR_MP_NO), 16 + width, 352, invasions_font, color);
     font_t fog_font = rule_font(BUTTON_FOG, editable);
-    width = text_draw(translation_for(TR_MP_FOG_OF_WAR), 16, 374, fog_font, 0);
-    text_draw(translation_for(rules->fog_of_war ? TR_MP_YES : TR_MP_NO), 16 + width, 374, fog_font, 0);
+    width = text_draw(translation_for(TR_MP_FOG_OF_WAR), 16, 374, fog_font, color);
+    text_draw(translation_for(rules->fog_of_war ? TR_MP_YES : TR_MP_NO), 16 + width, 374, fog_font, color);
     // the prepared map of a new game: map 1, map 2 or drawn by lot (T4.14)
     int map_choice = rules->prepared_map >= GAME_MAP_1 && rules->prepared_map <= GAME_MAP_RANDOM ?
         rules->prepared_map : GAME_MAP_RANDOM;
-    text_draw(translation_for(TR_MP_MAP_CHOICE_1 + map_choice), 194, 352, rule_font(BUTTON_MAP, editable), 0);
+    text_draw(translation_for(TR_MP_MAP_CHOICE_1 + map_choice), 194, 352, rule_font(BUTTON_MAP, editable), color);
     draw_button(&action_buttons[BUTTON_LESS], string_from_ascii("-"), data.focus_action == BUTTON_LESS + 1);
     draw_button(&action_buttons[BUTTON_MORE], string_from_ascii("+"), data.focus_action == BUTTON_MORE + 1);
     // once hosting, the same button starts the game when every player is there

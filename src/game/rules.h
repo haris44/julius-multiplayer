@@ -105,6 +105,12 @@ int game_rules_score_years(void);
 int game_rules_caesar_score(void);
 
 /**
+ * The score of a set of rules, with the meaning of the saved games: 0 (a game saved before the score of Caesar) is the
+ * default score. What a lobby or a window shows of rules that are not those of the game goes through this.
+ */
+int game_rules_settings_caesar_score(const game_rules_settings *settings);
+
+/**
  * Whether the rules of the multiplayer maps apply (water of Caesar, reservoirs that hold water, territories, fog,
  * missionaries): a game of several cities, or a prepared map played alone
  */

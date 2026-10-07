@@ -104,9 +104,14 @@ int game_rules_score_years(void)
     return data.multiplayer.score_years;
 }
 
+int game_rules_settings_caesar_score(const game_rules_settings *settings)
+{
+    return settings->caesar_score > 0 ? settings->caesar_score : MP_CAESAR_DEFAULT_SCORE;
+}
+
 int game_rules_caesar_score(void)
 {
-    return data.multiplayer.caesar_score > 0 ? data.multiplayer.caesar_score : MP_CAESAR_DEFAULT_SCORE;
+    return game_rules_settings_caesar_score(&data.multiplayer);
 }
 
 #define MAX_SCORE_YEARS 1000

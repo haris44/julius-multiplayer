@@ -2010,12 +2010,24 @@ static int command_resumerules(const char *file, int port, int header_size)
         printf("WRONG: the lobby does not show the rules of the saved game\n");
         result = 1;
     }
+    // the score the lobby shows: a game saved before the score has 0, which means the default score (D-073)
+    int shown_score = game_rules_settings_caesar_score(mp_lobby_rules_shown());
+    int expected_score = saved.caesar_score > 0 ? saved.caesar_score : MP_CAESAR_DEFAULT_SCORE;
+    printf("score shown by the lobby: %d (expected %d)\n", shown_score, expected_score);
+    if (shown_score != expected_score) {
+        printf("WRONG: the lobby does not show the score of the saved game\n");
+        result = 1;
+    }
     change_every_lobby_rule();
     mp_lobby_start_game();
     for (int frame = 0; frame < 100 && mp_lockstep_get_state() == MP_LOCKSTEP_WAITING_FOR_PLAYERS; frame++) {
         mp_lockstep_poll();
     }
     const game_rules_settings *game = game_rules_multiplayer_settings();
+    if (game_rules_caesar_score() != expected_score) {
+        printf("WRONG: the resumed game plays for %d laurels, not %d\n", game_rules_caesar_score(), expected_score);
+        result = 1;
+    }
     print_lobby_rules("game rules", game);
     printf("game territories %d, score years %d\n", game->territories, game->score_years);
     if (mp_lockstep_get_state() != MP_LOCKSTEP_RUNNING) {
