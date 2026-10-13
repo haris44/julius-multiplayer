@@ -444,8 +444,9 @@ Chaque mois, chaque guerre en cours ajoute à la jauge :
   - des soldats garés sur le pont n'arrêtent personne : les personnages ne se gênent pas, comme dans l'original ;
   - un mur ne se pose pas sur une route ;
   - mais une **porte** se pose sur une route. Rien n'interdit aujourd'hui d'en bâtir une sur la route de César, à
-    l'entrée du pont, si l'endroit est dans sa zone (une mission à moins de 20 cases). Quand les portes ne laisseront
-    passer que leur propriétaire (M10.2), elle fermera le pont à tout le monde. *À vérifier par un test* ;
+    l'entrée du pont, si l'endroit est dans sa zone (une mission à moins de 20 cases). Depuis M10.2 (D-081), une
+    porte n'arrête que les soldats des joueurs en guerre contre son propriétaire : elle ne ferme pas le pont aux
+    neutres, mais abattue, elle emporte la route de César sous elle (point ouvert de D-081). *À vérifier par un test* ;
 - **le tenir en guerre** : oui, avec des soldats. M10 leur fait attaquer les soldats, les civils et les caravanes de
   l'ennemi.
 
