@@ -199,6 +199,7 @@ static int usage(void)
     printf("                                         fight in the enemy city, pull down buildings, take caravans (T5.5)\n");
     printf("  simtool warmotives SAVE                motives and price of a war, triumphs (M10.4)\n");
     printf("  simtool caesarwrath SAVE               Caesar's wrath: examples of CESAR 7.2, ultimatum (M10.5)\n");
+    printf("  simtool armytolerance SAVE             legions beyond what Caesar tolerates cost laurels (M10.7)\n");
     printf("  simtool terrain MAP PLAYERS X Y W H [raw]  the terrain of a part of the prepared map (or of an .mpsav),\n");
     printf("                                         one letter a tile; raw: terrain bits, image and elevation too\n");
     printf("  simtool tradecities MAP                trade cities of the empire of a map, by land and by sea\n");
@@ -7779,6 +7780,104 @@ static int command_caesarwrath(const char *file)
     return failures ? 1 : 0;
 }
 
+// a fort with soldiers for the player, at the first place where one can be built around (x, y)
+static int legion_near(int player_id, int x, int y, int soldiers)
+{
+    static const int DX[] = { -10, -10, -16, -4, -16, 6, 6, 12, -10, -16, 12, 0, -22, -22 };
+    static const int DY[] = { -8, -14, -8, -14, -14, -14, -8, -8, 6, 6, 6, 10, -8, 0 };
+    for (int i = 0; i < (int) (sizeof(DX) / sizeof(DX[0])); i++) {
+        if (map_building_at(map_grid_offset(x + DX[i], y + DY[i])) > 0) {
+            continue; // a fort already stands there
+        }
+        int legion = make_legion(player_id, BUILDING_FORT_LEGIONARIES, x + DX[i], y + DY[i], soldiers);
+        if (legion) {
+            printf("(a fort of player %d at %+d, %+d from his city)\n", player_id + 1, DX[i], DY[i]);
+            return legion;
+        }
+    }
+    return 0;
+}
+
+// an army too powerful (CESAR §7.5, M10.7): Caesar tolerates max(2, population / 5000) legions; every legion more
+// costs 2 laurels a month, at war or at peace, also to a player alone
+static int command_armytolerance(const char *file)
+{
+    int failures = 0;
+#define CHECK(condition, text) do { int ok_ = (condition); printf("%-90s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
+    CHECK(mp_caesar_tolerated_legions(0) == 2 && mp_caesar_tolerated_legions(9999) == 2 &&
+        mp_caesar_tolerated_legions(14999) == 2 && mp_caesar_tolerated_legions(15000) == 3 &&
+        mp_caesar_tolerated_legions(24999) == 4 && mp_caesar_tolerated_legions(25000) == 5,
+        "tolerated: 2 up to 14 999 inhabitants, then one legion for each 5 000");
+    CHECK(mp_caesar_army_cost(2, 0) == 0 && mp_caesar_army_cost(3, 0) == -20 && mp_caesar_army_cost(5, 9000) == -60 &&
+        mp_caesar_army_cost(3, 15000) == 0 && mp_caesar_army_cost(4, 15000) == -20,
+        "each legion beyond: 2 laurels a month");
+    // alone on the prepared map
+    if (!mp_mapgen_create_prepared(file, 1, 0)) {
+        printf("Unable to create the prepared map\n");
+        return 2;
+    }
+    game_rules_settings rules;
+    game_rules_default_multiplayer_settings(&rules);
+    rules.ai_invasions = 0;
+    game_rules_set_multiplayer(&rules);
+    int x0, y0;
+    mp_mapgen_city_center(0, &x0, &y0);
+    int legions[4];
+    for (int i = 0; i < 4; i++) {
+        legions[i] = legion_near(0, x0, y0, i < 3 ? 4 : 0);
+    }
+    war_run(400);
+    printf("alone: %d inhabitants, %d legions with soldiers, %d tolerated\n", city_population(),
+        mp_caesar_army_legions(0), mp_caesar_tolerated_legions(city_population()));
+    CHECK(legions[0] && legions[1] && legions[2] && legions[3] && mp_caesar_army_legions(0) == 3,
+        "alone: three legions with soldiers, and an empty fort that does not count");
+    run_to_next_month_fast();
+    int first = mp_caesar_laurels_from(0, MP_LAURELS_ARMY);
+    run_to_next_month_fast();
+    printf("alone with 3 legions: %d then %d tenths of laurels of the army\n", first,
+        mp_caesar_laurels_from(0, MP_LAURELS_ARMY));
+    CHECK(first == -20 && mp_caesar_laurels_from(0, MP_LAURELS_ARMY) == -40 && mp_caesar_wrath() == 0,
+        "alone, a legion too many: 2 laurels a month, no wrath");
+    // the fourth fort gets soldiers: two legions too many
+    player_context_switch(0);
+    formation *m = formation_get(legions[3]);
+    figure *soldier = figure_create(m->figure_type, m->x_home, m->y_home, DIR_0_TOP);
+    soldier->formation_id = legions[3];
+    soldier->formation_at_rest = 1;
+    soldier->action_state = FIGURE_ACTION_81_SOLDIER_GOING_TO_FORT;
+    formation_calculate_figures();
+    run_to_next_month_fast();
+    CHECK(mp_caesar_army_legions(0) == 4 && mp_caesar_laurels_from(0, MP_LAURELS_ARMY) == -80,
+        "four legions: 4 laurels a month");
+    // two players: each city on its own
+    player_context_switch(0);
+    player_context_set_num_players(1);
+    if (!start_trade_game(file)) {
+        return 2;
+    }
+    int x1, y1;
+    mp_mapgen_city_center(1, &x1, &y1);
+    for (int i = 0; i < 3; i++) {
+        legion_near(1, x1, y1, 2);
+    }
+    war_run(100);
+    run_to_next_month_fast();
+    CHECK(mp_caesar_army_legions(1) == 3 && mp_caesar_laurels_from(1, MP_LAURELS_ARMY) == -20 &&
+        mp_caesar_laurels_from(0, MP_LAURELS_ARMY) == 0, "two players: only the city with 3 legions pays");
+    // a classic game: nothing
+    player_context_switch(0);
+    player_context_set_num_players(1);
+    if (!load(file)) {
+        return 2;
+    }
+    run_to_next_month_fast();
+    CHECK(!mp_caesar_is_active() && mp_caesar_laurels_from(0, MP_LAURELS_ARMY) == 0, "a classic game: nothing");
+#undef CHECK
+    printf("%s\n", failures ? "DIFFERENT: the army tolerated by Caesar is not as designed" :
+        "Identical: the army tolerated by Caesar is as designed");
+    return failures ? 1 : 0;
+}
+
 // the camera of a player reaches every corner of a generated map, after it went through a .mpmap file as in a game
 static int command_viewcorners(const char *file, int num_players)
 {
@@ -9431,6 +9530,8 @@ int main(int argc, char **argv)
         result = command_warmotives(file);
     } else if (strcmp(command, "caesarwrath") == 0) {
         result = command_caesarwrath(file);
+    } else if (strcmp(command, "armytolerance") == 0) {
+        result = command_armytolerance(file);
     } else if (strcmp(command, "inspect") == 0) {
         result = command_inspect(file);
     } else if (strcmp(command, "tradecities") == 0) {

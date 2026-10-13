@@ -445,6 +445,9 @@ add_test(NAME mp_war_motives COMMAND simtool warmotives brugle-massilia-start.sa
 # Caesar's wrath (M10.5, D-084): the examples of CESAR 7.2, the decrease, the warning, the ultimatum and the peace it
 # imposes, the main culprit an enemy of Rome, the expedition recorded; resumed in the middle of an ultimatum
 add_test(NAME mp_caesar_wrath COMMAND simtool caesarwrath brugle-massilia-start.sav)
+# An army too powerful (M10.7): Caesar tolerates max(2, population / 5000) legions, 2 laurels a month for each one more,
+# alone too
+add_test(NAME mp_army_tolerance COMMAND simtool armytolerance brugle-massilia-start.sav)
 
 # T1.5 (D-034): the roads of Caesar stay, untinted, and serve every city
 add_test(NAME mp_caesar_roads COMMAND simtool caesarroads brugle-massilia-start.sav)

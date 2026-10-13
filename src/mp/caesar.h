@@ -184,6 +184,21 @@ void mp_caesar_decay_wrath(int tenths);
 int mp_caesar_main_culprit(void);
 
 /**
+ * An army too powerful (CESAR §7.5, M10.7): legions a city of this population may keep without displeasing Caesar
+ */
+int mp_caesar_tolerated_legions(int population);
+
+/**
+ * Legions of a city that count for Caesar: those with at least one soldier
+ */
+int mp_caesar_army_legions(int player_id);
+
+/**
+ * Tenths of laurels (negative) a city of this population with so many legions loses every month
+ */
+int mp_caesar_army_cost(int legions, int population);
+
+/**
  * Gifts to Caesar (CESAR §6.1): one gift counts every MP_CAESAR_GIFT_PERIOD months, whatever its size. The others
  * are paid all the same and bring nothing.
  */
