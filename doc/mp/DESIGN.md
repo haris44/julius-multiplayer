@@ -398,18 +398,18 @@ Sur la carte à 4, le pont de César est le seul passage terrestre entre les deu
 missionnaire et armées y passent ; le commerce avec l'étranger, les immigrants, les campagnes et les expéditions de
 César n'en ont pas besoin. Il est indestructible et appartient à César (D-034, D-047). Proposition retenue en
 attendant Alexandre : la **terre de César**.
-- **Où** : les cases à 15 au plus de chaque entrée du pont (réglage de départ), marquées à la création de la carte
-  (`mp/mapgen`, qui connaît le pont : `mp_mapgen_caesar_bridge`) dans une grille sauvegardée, par exemple celle des
-  zones avec César pour propriétaire.
-- **Zones** (`mp/territory`) : aucune zone ne s'étend sur ces cases. Une porte, une tour ou un fort y sont donc
-  refusés par la règle de zone existante (`mp_territory_allows_building`). La mission, qui ne demande pas de zone
-  (`mp_mission_allows_place`), reçoit le même refus.
-- **Murs** : ils se construisent partout (D-036), sauf sur la terre de César : un refus de plus, en multijoueur
-  seulement. Les routes des joueurs restent permises.
-- **Aujourd'hui** (lu dans le code, à vérifier par un test), une porte peut être posée sur une route de César si
-  l'endroit est dans la zone du joueur (`building_construction_place_building` accepte une route sous une porte).
-  Avec la terre de César, ce n'est plus possible près du pont. Ailleurs sur les routes de César, la question reste
-  ouverte (D-068).
+- **Fait (M10.2, D-082, *à valider*)** :
+  - **Où** : les cases à 15 au plus (Tchebychev, `MP_TERRITORY_CAESAR_LAND_RADIUS`) des deux cases de rive contre le
+    pont, marquées à la création de la carte (`mp/mapgen`, `mp_territory_mark_caesar_land`) dans la grille des zones
+    (valeur 255), donc gardées par la sauvegarde sans changement de format. `mp_territory_is_caesar_land(grid_offset)`
+    sert à la colère et au retour des légions.
+  - **Zones** (`mp/territory`) : aucune zone ne s'étend sur ces cases (`mp_territory_owner` y rend -1). Une porte, une
+    tour ou un fort y sont refusés par la règle de zone existante, au menu et par la commande. La mission
+    (`mp_mission_allows_place`) y est refusée aussi.
+  - **Murs** : refusés sur la terre de César, en multijoueur seulement (`callback_calc_distance_build_wall`, le tracé
+    la contourne). Les routes des joueurs restent permises.
+- **Porte sur une route de César** (vérifié par `mp_caesar_land_*`) : impossible près du pont ; au-delà de la terre de
+  César, elle reste permise si l'endroit est dans la zone du joueur (non modifié, D-068 reste ouvert pour la suite).
 - **Hostilité par paire** (M10.1) : les soldats n'attaquent que les figures des joueurs en guerre avec leur
   propriétaire. Les personnages ne se bloquent pas entre eux (règle d'origine) : un joueur neutre passe toujours.
 - **Colère** (M10.5) : dans le terme de puissance, une légion dont le centre est sur la terre de César compte comme
@@ -419,7 +419,8 @@ attendant Alexandre : la **terre de César**.
 - **Eau** : un aqueduc ne se pose ni sur l'eau ni sur un pont (règle d'origine), le pont ne porte donc jamais d'eau.
   La carte à 4 refaite (D-062, T4.14) doit placer un réservoir de César sur chaque rive qui a un joueur des terres.
 - **Tests prévus** (M10) :
-  - porte, mur et mission refusés sur la terre de César ; route permise ; partie seule comprise ;
+  - *fait (`mp_caesar_land_*`)* : porte, mur et mission refusés sur la terre de César ; route permise ; partie seule
+    comprise ;
   - J1 et J3 en guerre : une caravane de J2 vers J4 traverse le pont, celle de J3 vers J1 est interceptée ;
   - une légion sur le pont ajoute sa puissance à la colère ; à la paix, elle rentre à son fort.
 

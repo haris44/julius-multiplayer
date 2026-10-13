@@ -422,6 +422,9 @@ Chaque mois, chaque guerre en cours ajoute à la jauge :
   Les joueurs de la côte sont près du pont, ceux des terres deux fois plus loin. À 3 joueurs, l'emplacement 4 reste
   libre.
 - Il appartient à César, comme ses routes : il est **indestructible** (D-034, D-047). Les navires passent dessous.
+- **Terre de César** (D-082, *à valider*) : les 15 cases autour de chaque entrée du pont ne sont à personne : aucune
+  zone ne s'y étend, donc ni porte, ni tour, ni fort, ni autre bâtiment à zone, ni mission, ni mur ; les routes
+  restent permises. Fait dès la création de la carte, même seul dans le salon.
 - Sur la carte pour 2, les deux joueurs vivent sur la même rive. Le pont ne mène qu'à la rive nord, sauvage : il
   ne compte que pour s'y installer (missions).
 

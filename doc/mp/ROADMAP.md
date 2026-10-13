@@ -1018,6 +1018,8 @@ César revient comme arbitre de la partie. Jouable en paix et **seul** : livré 
   guerre honorable avec 3 mois de préavis, ou brutale et immédiate, D-053), paix proposée des deux côtés. En classique, la matrice actuelle exactement.
 - [ ] **M10.2** Légions chez l'adversaire, ordre « attaquer », portes et murs qui ne laissent passer que leur
   propriétaire.
+  - *Fait (D-082, à valider)* : la terre de César, 15 cases autour de chaque entrée du pont, où aucune zone ne
+    s'étend et où porte, tour, fort, mission et mur sont refusés (routes permises) ; `mp_caesar_land_*`.
 - [ ] **M10.3** Interception des caravanes (ancien M8.7) : cargaison prise, route coupée.
 - [ ] **M10.4** Motifs de guerre (riposte, mandat de César, sans motif) et prix de la guerre brutale, triomphes,
   lauriers gagnés ou perdus.

@@ -1393,3 +1393,34 @@
   revenir au salaire choisi sous le plafond du rang (D-067).
 - Classique : inchangé.
 
+
+### D-082 — La terre de César autour du pont : rien ne s'y bâtit (M10.2, applique l'option 1 de D-068)
+- 2026-10-13 · **adoptée provisoirement**, **à valider** par Alexandre (15 cases, et « rien ne s'y bâtit »)
+- **Où** : les cases à 15 au plus (distance de Tchebychev, `MP_TERRITORY_CAESAR_LAND_RADIUS`, un seul réglage) de
+  chaque entrée du pont, c'est-à-dire des deux cases de rive contre lui. Elles sont marquées à la création de la
+  carte préparée (`mp/mapgen`, `mp_territory_mark_caesar_land`), sur les cartes 1 et 2, à 1, 2, 3 ou 4 joueurs. À
+  1 ou 2 joueurs, le pont mène à la rive nord sauvage et sa terre existe aussi.
+- **Où c'est gardé** : dans la grille des zones (`territory_grid`, valeur 255, qu'aucun joueur n'a). Aucun
+  changement de format : une partie sauvegardée la garde, une sauvegarde d'avant se charge sans terre de César
+  (rien à migrer, la zone s'étend alors comme avant). `mp_territory_owner` rend -1 sur ces cases ; la revendication
+  d'une zone ne prend que les cases libres, donc aucune zone ne les recouvre.
+- **Effets** (cités des joueurs, mode multijoueur seulement) :
+  - porte, tour, fort et tout bâtiment qui demande une zone : refusés par la règle de zone existante, au menu comme
+    par la commande (même fonction, `building_construction_place_building`) ;
+  - mission (qui ne demande pas de zone) : `mp_mission_allows_place` refuse ces cases ;
+  - murs : refusés (tracé et commande), le tracé contourne la terre ou s'arrête ; `callback_calc_distance_build_wall`
+    ne la traverse pas ;
+  - routes : permises.
+- **Pour la suite** : `mp_territory_is_caesar_land(grid_offset)` dit si une case est à César (0 hors des cartes
+  multijoueur). La colère des légions qui s'y trouvent (M10.5) et leur retour au fort à la paix (M10.1, M10.5) s'en
+  serviront ; pas faits ici.
+- **Porte sur une route de César ailleurs** (question laissée ouverte par DESIGN §7.1, vérifiée par
+  `mp_caesar_land_*`) : près du pont, impossible. Au-delà de la terre de César, une porte **peut** être posée sur
+  une route de César si l'endroit est dans la zone du joueur ; non modifié. À trancher avec M10.2 (portes qui ne
+  laissent passer que leur propriétaire).
+- **Tests** : `simtool caesarland` (`mp_caesar_land_{1,2,4}_players` et `mp_caesar_land_map2_*`) : étendue exacte
+  de la terre, zone d'une mission qui ne la prend pas, préfecture, porte, tour, mission et mur refusés dedans et
+  permis juste dehors, route permise, partie sauvegardée et relue. Chaque contrôle échoue quand on inverse sa ligne
+  (marquage, mur, mission, relecture).
+- Pas de nouvelle version de protocole dans cette tâche (la carte préparée change : à signaler à la fusion).
+- Classique : inchangé (la grille reste vide ; `mp_territory_is_caesar_land` rend 0 hors multijoueur).
