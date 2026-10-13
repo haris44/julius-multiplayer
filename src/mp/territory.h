@@ -15,6 +15,13 @@
 #define MP_TERRITORY_RADIUS 20
 
 /**
+ * The land of Caesar (doc/mp/DECISIONS.md D-082): the tiles within this distance (chebyshev) of each end of his
+ * bridge belong to nobody: no zone covers them, so nothing that needs a zone is built there, and walls are refused
+ * too. Players' roads stay allowed.
+ */
+#define MP_TERRITORY_CAESAR_LAND_RADIUS 15
+
+/**
  * Whether territories apply: a multiplayer game with the territories rule
  */
 int mp_territory_is_active(void);
@@ -23,6 +30,18 @@ int mp_territory_is_active(void);
  * @return Player owning the tile, or -1
  */
 int mp_territory_owner(int grid_offset);
+
+/**
+ * Marks the land of Caesar around a tile (an end of his bridge) when the prepared map is created; it is kept in the
+ * grid of the zones, so a saved game keeps it
+ */
+void mp_territory_mark_caesar_land(int x, int y);
+
+/**
+ * Whether this tile is on the land of Caesar (always 0 outside the multiplayer maps). Later milestones (wrath of
+ * Caesar, legions sent home at peace) ask it too.
+ */
+int mp_territory_is_caesar_land(int grid_offset);
 
 /**
  * Whether the current player may put a building of this type on this area (always when territories do not apply)

@@ -726,6 +726,14 @@ static int place_caesar_bridge(void)
     return 1;
 }
 
+// the land of Caesar around both ends of his bridge: the two shores next to it (D-082)
+static void mark_caesar_land(void)
+{
+    int x = data.layout->roads[data.layout->bridge_road].x1;
+    mp_territory_mark_caesar_land(x, data.sea_top[x] - 1);
+    mp_territory_mark_caesar_land(x, data.sea_bottom[x] + 1);
+}
+
 static void set_caesar_aqueduct(int x, int y)
 {
     int grid_offset = map_grid_offset(x, y);
@@ -1170,6 +1178,7 @@ int mp_mapgen_create_prepared_map(const char *template_file, int num_players, in
     if (!place_caesar_water() || !place_caesar_bridge()) {
         return 0;
     }
+    mark_caesar_land();
     fill_cut_off_land();
     open_shut_in_clearings();
     update_tile_images();

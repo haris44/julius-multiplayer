@@ -10,6 +10,7 @@
 #include "map/road_aqueduct.h"
 #include "map/routing_data.h"
 #include "map/terrain.h"
+#include "mp/territory.h"
 
 // circular queue as large as the grid: same wrap-around behaviour as the original on classic maps
 #define MAX_QUEUE (GRID_SIZE * GRID_SIZE)
@@ -237,7 +238,9 @@ void map_routing_calculate_distances_water_flotsam(int x, int y)
 
 static void callback_calc_distance_build_wall(int next_offset, int dist)
 {
-    if (terrain_land_citizen.items[next_offset] == CITIZEN_4_CLEAR_TERRAIN) {
+    // no wall on the land of Caesar (multiplayer, D-082)
+    if (terrain_land_citizen.items[next_offset] == CITIZEN_4_CLEAR_TERRAIN &&
+        !mp_territory_is_caesar_land(next_offset)) {
         enqueue(next_offset, dist);
     }
 }

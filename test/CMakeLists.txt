@@ -364,6 +364,12 @@ endforeach()
 
 # Territories (MT.1, D-036): build only in one's zone, which follows the settled buildings and the missions
 add_test(NAME mp_territory COMMAND simtool territory brugle-massilia-start.sav)
+# The land of Caesar around his bridge (M10.2, D-082): no zone, no building, no mission, no wall; roads allowed; a
+# saved game keeps it; alone on the map too, on both maps
+foreach(players 1 2 4)
+    add_test(NAME mp_caesar_land_${players}_players COMMAND simtool caesarland brugle-massilia-start.sav ${players})
+    add_test(NAME mp_caesar_land_map2_${players}_players COMMAND simtool --map 2 caesarland brugle-massilia-start.sav ${players})
+endforeach()
 # Missions and missionaries (MT.2, MT.3, D-037): near a missionary, free then marble, trained for money
 add_test(NAME mp_missions COMMAND simtool missions brugle-massilia-start.sav)
 # Buildings left outside the zone collapse after three months, unless covered again (MT.4)

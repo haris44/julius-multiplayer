@@ -30,9 +30,30 @@ int mp_territory_is_active(void)
     return game_rules_territories();
 }
 
+// the land of Caesar: a value no player has (players are 0 to 3, stored as 1 to 4)
+#define CAESAR_LAND 255
+
 int mp_territory_owner(int grid_offset)
 {
-    return territory.items[grid_offset] - 1;
+    uint8_t value = territory.items[grid_offset];
+    return value == CAESAR_LAND ? -1 : value - 1;
+}
+
+void mp_territory_mark_caesar_land(int x, int y)
+{
+    for (int yy = y - MP_TERRITORY_CAESAR_LAND_RADIUS; yy <= y + MP_TERRITORY_CAESAR_LAND_RADIUS; yy++) {
+        for (int xx = x - MP_TERRITORY_CAESAR_LAND_RADIUS; xx <= x + MP_TERRITORY_CAESAR_LAND_RADIUS; xx++) {
+            if (map_grid_is_inside(xx, yy, 1)) {
+                territory.items[map_grid_offset(xx, yy)] = CAESAR_LAND;
+            }
+        }
+    }
+}
+
+int mp_territory_is_caesar_land(int grid_offset)
+{
+    return game_rules_multiplayer_map() && map_grid_is_valid_offset(grid_offset) &&
+        territory.items[grid_offset] == CAESAR_LAND;
 }
 
 static int needs_zone(building_type type)
