@@ -333,6 +333,9 @@ endforeach()
 # T4.14: the lobby chooses map 1, map 2 or one drawn by lot; the game keeps the map it is played on
 add_test(NAME mp_prepared_map_choice COMMAND simtool mapchoice brugle-massilia-start.sav)
 
+# MG.1 (D-058): javelin throwers of 136 hit points and 10 attack in a multiplayer game, the original table in classic
+add_test(NAME mp_troops_javelin COMMAND simtool troops x)
+
 # Reservoirs hold water (ME.1, D-035): cut off, a reservoir empties in about 270 days; joined again, it fills
 add_test(NAME mp_reservoir_level COMMAND simtool reservoirlevel brugle-massilia-start.sav)
 # No pond on the prepared maps (D-055): the aqueduct of Caesar is the only water of the city of the rocks, which dries

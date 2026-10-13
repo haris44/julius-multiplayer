@@ -4,6 +4,7 @@
 #include "building/construction.h"
 #include "figure/figure.h"
 #include "figure/formation.h"
+#include "figure/properties.h"
 #include "building/construction_clear.h"
 #include "building/type.h"
 #include "building/count.h"
@@ -158,6 +159,8 @@ static int usage(void)
     printf("                                         classic and multiplayer rules, alone and with four cities, easy\n");
     printf("                                         and hard, and on free land of a classic map (blank: made here;\n");
     printf("                                         MAP: a .map of the game): table, fails if they differ (T4.16)\n");
+    printf("  simtool troops                         javelin throwers: 136 x 10 in a multiplayer game, the table of\n");
+    printf("                                         the original in a classic one; the other troops unchanged (MG.1)\n");
     printf("  simtool reservoirlevel SAVE            prepared map: a reservoir cut off from its source empties\n");
     printf("                                         slowly, joined again it fills\n");
     printf("  simtool drying SAVE PLAYERS            prepared map: no pond; the city of the rocks dries up when\n");
@@ -3219,6 +3222,36 @@ static int command_preparedmap(const char *file, int num_players, int ticks)
     player_context_set_num_players(1);
     printf("%s\n", failures ? "DIFFERENT: the prepared map is not as designed" :
         "Identical: the prepared map is as designed");
+    return failures ? 1 : 0;
+}
+
+// troops of the table of figures (MG.1, D-058): the javelin throwers are stronger in a multiplayer game only
+static int command_troops(void)
+{
+    int failures = 0;
+#define CHECK(condition, text) do { int ok_ = (condition); printf("%-70s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
+    const figure_properties *javelin = figure_properties_for_type(FIGURE_FORT_JAVELIN);
+    CHECK(javelin->max_damage == 80 && javelin->attack_value == 4 && javelin->missile_attack_value == 4 &&
+        javelin->missile_delay == 100, "classic: javelin throwers 80 hit points, attack 4, missile 4 every 100");
+    game_rules_settings rules;
+    game_rules_default_multiplayer_settings(&rules);
+    game_rules_set_multiplayer(&rules);
+    javelin = figure_properties_for_type(FIGURE_FORT_JAVELIN);
+    CHECK(javelin->max_damage == 136 && javelin->attack_value == 10, "multiplayer: javelin throwers 136 hit points, attack 10");
+    CHECK(javelin->missile_attack_value == 4 && javelin->missile_delay == 100 && javelin->defense_value == 0 &&
+        javelin->missile_defense_value == 0 && javelin->category == FIGURE_CATEGORY_ARMED,
+        "multiplayer: missile (4 damage, every 100), defences and category unchanged");
+    const figure_properties *legionary = figure_properties_for_type(FIGURE_FORT_LEGIONARY);
+    const figure_properties *mounted = figure_properties_for_type(FIGURE_FORT_MOUNTED);
+    CHECK(legionary->max_damage == 150 && legionary->attack_value == 10, "multiplayer: legionaries 150 x 10 unchanged");
+    CHECK(mounted->max_damage == 120 && mounted->attack_value == 8, "multiplayer: mounted 120 x 8 unchanged");
+    CHECK(figure_properties_for_type(FIGURE_ENEMY_CAESAR_JAVELIN)->max_damage == 90 &&
+        figure_properties_for_type(FIGURE_ENEMY_CAESAR_JAVELIN)->attack_value == 4, "multiplayer: enemy javelin throwers unchanged");
+    game_rules_set_classic();
+    javelin = figure_properties_for_type(FIGURE_FORT_JAVELIN);
+    CHECK(javelin->max_damage == 80 && javelin->attack_value == 4, "back to classic: the table of the original");
+#undef CHECK
+    printf("%s\n", failures ? "DIFFERENT: the troops are not as designed" : "Identical: the troops are as designed");
     return failures ? 1 : 0;
 }
 
@@ -8694,6 +8727,8 @@ int main(int argc, char **argv)
         result = command_caesarfree(file, ticks);
     } else if (strcmp(command, "preparedmap") == 0 && argc > 4) {
         result = command_preparedmap(file, atoi(argv[3]), atoi(argv[4]));
+    } else if (strcmp(command, "troops") == 0) {
+        result = command_troops();
     } else if (strcmp(command, "reservoirlevel") == 0) {
         result = command_reservoirlevel(file);
     } else if (strcmp(command, "drying") == 0 && argc > 3) {
