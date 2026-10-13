@@ -1,0 +1,51 @@
+# Real game: Caesar's wrath in a game alone from the lobby (M10.5, see tools/mp-wrath-test.sh). Alone, nobody wages
+# war: the test command addwrath gives the gauge its points. Captures: the letters of the warning, of the ultimatum and
+# of the peace imposed (caesarletter: display only), the gauge in the banner, the imperial advisor with the shares of
+# the wrath, the enemy of Rome, the deadline and the army.
+wait 10
+click 400 500
+wait 10
+# main menu: Multiplayer; a new game, one player, host, map 1, start
+click 400 172
+wait 10
+click 180 170
+wait 2
+click 268 350
+wait 2
+click 338 418
+wait 2
+click 240 466
+wait 5
+click 240 466
+mpwait 0
+wait 5
+# Caesar's letter of welcome
+key Return
+wait 3
+# 45 points: the next month brings the warning
+addwrath 450
+ticks 800
+wait 5
+screenshot build/automation/wrath-warning.png
+key Return
+wait 3
+# 30 more: the ultimatum, the player an enemy of Rome
+addwrath 300
+ticks 800
+wait 5
+screenshot build/automation/wrath-ultimatum.png
+key Return
+wait 3
+screenshot build/automation/wrath-banner.png
+key 3
+wait 5
+screenshot build/automation/wrath-imperial.png
+key Escape
+wait 3
+# the letter of the peace imposed at the deadline (needs two players at war: shown here for its text)
+caesarletter 4 3
+wait 5
+screenshot build/automation/wrath-peace.png
+key Return
+wait 3
+quit

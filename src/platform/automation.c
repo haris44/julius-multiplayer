@@ -597,6 +597,23 @@ static int execute(char *line)
         snprintf(value, sizeof(value), "least happy god held %d, angry god %d", stored, god);
         log_message("angrygod:", value);
         return 0;
+    } else if (strcmp(command, "addwrath") == 0) {
+        // tests (M10.5): the local city adds N tenths to Caesar's wrath; changes the local state only (one player)
+        if (sscanf(rest, "%d", &n) != 1) {
+            fail("invalid addwrath:", rest);
+            return 1;
+        }
+        mp_caesar_add_wrath(mp_session_local_player_id(), n);
+        return 0;
+    } else if (strcmp(command, "caesarletter") == 0) {
+        // tests (M10.5): a letter of Caesar to the local player (mp_caesar_letter_type, parameter): display only
+        int type, param;
+        if (sscanf(rest, "%d %d", &type, &param) != 2) {
+            fail("invalid caesarletter:", rest);
+            return 1;
+        }
+        mp_caesar_add_letter((mp_caesar_letter_type) type, param);
+        return 0;
     } else if (strcmp(command, "windowsweep") == 0) {
         // every window and advisor opened and drawn without a tick: none may change the simulated state (T5.3)
         if (platform_window_sweep(log_message)) {

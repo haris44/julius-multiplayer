@@ -56,6 +56,8 @@ mpwait 200
 screenshot build/automation/war-host-war.png
 key Escape
 wait 3
+# the military advisor tells the war (M10.4)
+screenshot build/automation/war-host-advisor-war.png
 key Escape
 wait 5
 # player 2 proposes peace; player 1 sees it in the window of war, and accepts it
