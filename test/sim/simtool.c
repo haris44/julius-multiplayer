@@ -7995,6 +7995,15 @@ static int command_caesargate(const char *file)
     // a triumphal arch for the third case, over the road of Caesar too, west of the warehouse
     int ax = cx - 11, ay = cy - 1;
     int arch_before = caesar_road_tiles(ax, ay, 3, 3);
+    // the command refuses an arch the city has not earned, as the build menu does
+    build_as(1, BUILDING_TRIUMPHAL_ARCH, ax, ay, ax, ay);
+    run_trace(50, 50, 0, 0);
+    int unearned = map_building_at(map_grid_offset(ax, ay));
+    CHECK(!unearned || building_get(unearned)->type != BUILDING_TRIUMPHAL_ARCH,
+        "a triumphal arch the city has not earned: the command refuses it, as the menu");
+    player_context_switch(1);
+    city_buildings_earn_triumphal_arch();
+    player_context_switch(0);
     build_as(1, BUILDING_TRIUMPHAL_ARCH, ax, ay, ax, ay);
     run_trace(50, 50, 0, 0);
     int arch_id = map_building_at(map_grid_offset(ax, ay));

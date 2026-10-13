@@ -1,6 +1,7 @@
 #include "session.h"
 
 #include "building/construction.h"
+#include "city/buildings.h"
 #include "game/player_context.h"
 #include "game/rules.h"
 #include "game/time.h"
@@ -73,6 +74,11 @@ static void execute_build(const mp_command *command)
 {
     // a farm or a raw material the city may not produce: refused, as the build menu does (T4.15, D-065)
     if (game_rules_multiplayer_map() && !mp_permissions_may_build(command->args[0])) {
+        return;
+    }
+    // a triumphal arch the city has not earned: refused, as the build menu does
+    if (game_rules_is_multiplayer() && command->args[0] == BUILDING_TRIUMPHAL_ARCH &&
+        !city_buildings_triumphal_arch_available()) {
         return;
     }
     building_construction_placement placement = {

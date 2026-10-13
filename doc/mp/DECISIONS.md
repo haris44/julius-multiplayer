@@ -1588,3 +1588,7 @@
 - Pas de nouvelle version de protocole (la grille des propriétaires a le même format ; la somme de contrôle d'une partie en
   cours ne change que pour les portes posées sur la route de César).
 - Classique : inchangé (aucune case n'y est à César).
+- **Arc de triomphe par commande** (relevé par la revue de D-085) : la commande de construction refusait déjà ce que
+  le menu refuse pour les matières et la nourriture (D-065), mais pas l'arc de triomphe, que le menu n'offre qu'à une
+  cité qui l'a gagné. Elle le refuse désormais aussi, en multijoueur (`mp/session.c`) ; `mp_caesar_road_under_gate`
+  le vérifie (échoue sans le refus).
