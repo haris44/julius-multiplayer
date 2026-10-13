@@ -1,5 +1,6 @@
 #include "warehouse.h"
 
+#include "building/barracks.h"
 #include "building/count.h"
 #include "building/model.h"
 #include "building/storage.h"
@@ -10,6 +11,7 @@
 #include "core/calc.h"
 #include "core/image.h"
 #include "empire/trade_prices.h"
+#include "game/rules.h"
 #include "game/tutorial.h"
 #include "map/image.h"
 #include "map/road_access.h"
@@ -473,6 +475,23 @@ int building_warehouse_determine_worker_task(building *warehouse, int *resource)
                 if (space->id > 0 && space->loads_stored > 0 &&
                     space->subtype.warehouse_resource_id == RESOURCE_WEAPONS) {
                     *resource = RESOURCE_WEAPONS;
+                    return WAREHOUSE_TASK_DELIVERING;
+                }
+            }
+        }
+    }
+    // deliver timber to the barracks, for its javelin throwers (multiplayer, D-058)
+    if (game_rules_is_multiplayer() && building_count_active(BUILDING_BARRACKS) > 0 &&
+        building_barracks_has_javelin_legion() && !city_resource_is_stockpiled(RESOURCE_TIMBER)) {
+        building *barracks = building_get(city_buildings_get_barracks());
+        if (building_barracks_timber_stored() < BARRACKS_TIMBER_MAX - 1 &&
+                warehouse->road_network_id == barracks->road_network_id) {
+            space = warehouse;
+            for (int i = 0; i < 8; i++) {
+                space = building_next(space);
+                if (space->id > 0 && space->loads_stored > 0 &&
+                    space->subtype.warehouse_resource_id == RESOURCE_TIMBER) {
+                    *resource = RESOURCE_TIMBER;
                     return WAREHOUSE_TASK_DELIVERING;
                 }
             }

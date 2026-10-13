@@ -323,6 +323,11 @@ static translation_string all_strings[] = {
     {TR_MP_SAVED_GAME_MARK, " (multiplayer)"},
     {TR_MP_LOAD_IN_LOBBY_TITLE, "Network game"},
     {TR_MP_LOAD_IN_LOBBY_MESSAGE, "Loading a game here would end it for every player. To resume a multiplayer game: File, New game, then Multiplayer; choose the saved game and host it."},
+    {TR_MP_BARRACKS_TIMBER, "Timber for javelin throwers:"},
+    {TR_MP_FORT_RECRUITS_LEGIONARY, "One load of weapons per recruit. In barracks:"},
+    {TR_MP_FORT_RECRUITS_JAVELIN, "One load of timber per recruit. In barracks:"},
+    {TR_MP_FORT_RECRUITS_MOUNTED, "Recruits: free, no weapons or timber."},
+    {TR_MP_FORT_JAVELIN_WAITS_TIMBER, "The barracks needs timber to recruit javelin throwers."},
 };
 
 void translation_english(const translation_string **strings, int *num_strings)

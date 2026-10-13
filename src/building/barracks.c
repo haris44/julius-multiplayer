@@ -9,6 +9,7 @@
 #include "figure/action.h"
 #include "figure/figure.h"
 #include "figure/formation.h"
+#include "game/rules.h"
 #include "map/grid.h"
 #include "map/road_access.h"
 #include "game/player_context.h"
@@ -16,20 +17,47 @@
 #define INFINITE 10000
 
 static int tower_sentry_request = 0;
+// Loads of timber of the barracks, one per javelin thrower recruited (multiplayer only, D-058, MG.2); the stock of
+// weapons is the loads_stored of the building. It is saved with the extra state of the city.
+static int timber_stored = 0;
+
+static int javelin_recruits_cost_timber(void)
+{
+    return game_rules_is_multiplayer();
+}
+
+int building_barracks_has_javelin_legion(void)
+{
+    for (int i = FORMATION_FIRST; i < FORMATION_END; i++) {
+        const formation *m = formation_get(i);
+        if (m->in_use && m->is_legion && m->figure_type == FIGURE_FORT_JAVELIN) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+int building_barracks_timber_stored(void)
+{
+    return timber_stored;
+}
 
 int building_get_barracks_for_weapon(int resource, int road_network_id, map_point *dst)
 {
-    if (resource != RESOURCE_WEAPONS) {
+    int is_timber = resource == RESOURCE_TIMBER && javelin_recruits_cost_timber();
+    if (resource != RESOURCE_WEAPONS && !is_timber) {
         return 0;
     }
-    if (city_resource_is_stockpiled(RESOURCE_WEAPONS)) {
+    if (city_resource_is_stockpiled(resource)) {
         return 0;
     }
     if (building_count_active(BUILDING_BARRACKS) <= 0) {
         return 0;
     }
     building *b = building_get(city_buildings_get_barracks());
-    if (b->loads_stored < 5 && city_military_has_legionary_legions()) {
+    int needs_load = is_timber ? timber_stored < BARRACKS_TIMBER_MAX && building_barracks_has_javelin_legion() :
+        b->loads_stored < 5 && city_military_has_legionary_legions();
+    if (needs_load) {
         if (map_has_road_access(b->x, b->y, b->size, dst) && b->road_network_id == road_network_id) {
             return b->id;
         }
@@ -41,6 +69,13 @@ void building_barracks_add_weapon(building *barracks)
 {
     if (barracks->id > 0) {
         barracks->loads_stored++;
+    }
+}
+
+void building_barracks_add_timber(building *barracks)
+{
+    if (barracks->id > 0 && timber_stored < BARRACKS_TIMBER_MAX) {
+        timber_stored++;
     }
 }
 
@@ -58,6 +93,10 @@ static int get_closest_legion_needing_soldiers(const building *barracks)
             continue;
         }
         if (m->legion_recruit_type == LEGION_RECRUIT_LEGIONARY && barracks->loads_stored <= 0) {
+            continue;
+        }
+        if (m->legion_recruit_type == LEGION_RECRUIT_JAVELIN && javelin_recruits_cost_timber() &&
+            timber_stored <= 0) {
             continue;
         }
         building *fort = building_get(m->building_id);
@@ -102,6 +141,9 @@ int building_barracks_create_soldier(building *barracks, int x, int y)
             if (barracks->loads_stored > 0) {
                 barracks->loads_stored--;
             }
+        }
+        if (m->figure_type == FIGURE_FORT_JAVELIN && javelin_recruits_cost_timber() && timber_stored > 0) {
+            timber_stored--;
         }
         int academy_id = get_closest_military_academy(building_get(m->building_id));
         if (academy_id) {
@@ -184,4 +226,24 @@ void building_barracks_load_state(buffer *buf)
 void building_barracks_register_player_state(void)
 {
     player_context_register(&tower_sentry_request, sizeof(tower_sentry_request), "tower_sentry_request");
+    player_context_register(&timber_stored, sizeof(timber_stored), "barracks_timber");
+}
+
+void building_barracks_reset_extra_state(void)
+{
+    timber_stored = 0;
+}
+
+void building_barracks_save_extra_state(buffer *buf)
+{
+    buffer_write_i32(buf, timber_stored);
+}
+
+void building_barracks_load_extra_state(buffer *buf)
+{
+    // a game saved before the timber of the barracks (MG.2) ends here: no timber
+    timber_stored = buffer_at_end(buf) ? 0 : buffer_read_i32(buf);
+    if (timber_stored < 0 || timber_stored > BARRACKS_TIMBER_MAX) {
+        timber_stored = 0;
+    }
 }

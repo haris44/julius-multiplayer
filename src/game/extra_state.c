@@ -1,5 +1,6 @@
 #include "extra_state.h"
 
+#include "building/barracks.h"
 #include "building/count.h"
 #include "building/granary.h"
 #include "building/list.h"
@@ -35,6 +36,7 @@ void game_extra_state_reset(void)
     map_water_supply_reset_extra_state();
     mp_territory_reset_extra_state();
     mp_trade_reset_extra_state();
+    building_barracks_reset_extra_state();
 }
 
 void game_extra_state_save(buffer *buf)
@@ -51,6 +53,7 @@ void game_extra_state_save(buffer *buf)
     map_water_supply_save_extra_state(buf);
     mp_territory_save_extra_state(buf);
     mp_trade_save_extra_state(buf);
+    building_barracks_save_extra_state(buf); // last: a game saved before it ends without it (MG.2)
 }
 
 void game_extra_state_load(buffer *buf)
@@ -67,6 +70,7 @@ void game_extra_state_load(buffer *buf)
     map_water_supply_load_extra_state(buf);
     mp_territory_load_extra_state(buf);
     mp_trade_load_extra_state(buf);
+    building_barracks_load_extra_state(buf);
 }
 
 int game_extra_state_size(void)

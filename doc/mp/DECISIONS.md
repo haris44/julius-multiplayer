@@ -1523,3 +1523,33 @@
   (marquage, mur, mission, relecture).
 - Pas de nouvelle version de protocole dans cette tâche (la carte préparée change : à signaler à la fusion).
 - Classique : inchangé (la grille reste vide ; `mp_territory_is_caesar_land` rend 0 hors multijoueur).
+
+### D-083 — Javeliniers renforcés et bois à la caserne (MG.1 à MG.4, applique D-058)
+- 2026-10-14 · **adoptée provisoirement** (D-058 fixait le plan ; les chiffres restent à régler en MG.5)
+- **MG.1** : en multijoueur, `FIGURE_FORT_JAVELIN` passe à **136 points de vie et 10 d'attaque** (80 et 4 en
+  classique). Portée, tir (4 dégâts, délai 100), défenses, légionnaires (150 × 10) et cavaliers (120 × 8) inchangés,
+  ainsi que les javeliniers ennemis. Une seule ligne de table de plus dans `figure/properties.c`, choisie par
+  `game_rules_is_multiplayer()` ; test `mp_troops_javelin`.
+- **MG.2** : la caserne a un **stock de bois séparé** des armes (`building/barracks.c`, 5 chargements au plus).
+  - Livraison : les mêmes chariots que les armes (`building_warehouse_determine_worker_task`, priorité 1 du
+    porteur de l'entrepôt, `building_get_barracks_for_weapon`), seulement si la cité a un fort de javeliniers, que
+    la caserne est en service sur le même réseau de routes et que son stock est sous la limite (l'entrepôt envoie
+    jusqu'à 4, comme pour les armes). Déterministe : aucune nouvelle donnée hors du stock.
+  - Recrutement : sans bois, aucune légion de javeliniers n'est servie ; un javelinier par chargement ; les armes
+    restent aux légionnaires (qui passent avant) ; les cavaliers restent gratuits.
+  - Sauvegarde : un entier **à la fin de la pièce `extra_state` de chaque cité** (aussi dans la somme de contrôle) ;
+    une partie plus ancienne (pièce plus courte) se charge avec 0 bois, sans changer la version du `.mpsav`.
+    Le stock est une région du contexte de cité.
+  - Classique : javeliniers gratuits, aucun bois livré (parité verte).
+  - Mesuré (`mp_barracks_timber`, carte préparée à 2) : 8 chargements dans l'entrepôt donnent 8 javeliniers, jamais
+    plus de 4 chargements en attente à la caserne ; sans fort de javeliniers, rien ne part.
+- **MG.3** : **déjà fait par D-062** : `mp_prepared_map_{2,3,4}_players` et `mp_prepared_map2_*` vérifient par
+  emplacement (`slot_follows_plan`) que le bois n'est permis qu'aux côtiers, dans les terres jamais. Rien changé.
+- **MG.4** : la fiche de la caserne montre les armes et, en multijoueur, le bois (icône, « Bois des javeliniers : N ») ;
+  la fiche du fort et celle de la légion disent ce qu'une recrue coûte et le stock de la caserne (« Une charge de
+  bois par recrue. En caserne : N », en rouge « La caserne attend du bois pour recruter des javeliniers. » à sec ;
+  « Recrues : gratuites » pour les cavaliers). Textes français et anglais, clés ajoutées à la fin du bloc `TR_MP_*`.
+  Captures : `tools/serial.sh tools/mg-barracks-test.sh` (`build/automation/mg-*.png`).
+- *À valider* : plafond de 5 chargements ; texte rouge d'attente ; le stock de bois est celui d'une seule caserne
+  (une par cité, comme les armes) ; le bois d'un entrepôt sert d'abord à la caserne, avant les ateliers de meubles.
+- Classique : inchangé.

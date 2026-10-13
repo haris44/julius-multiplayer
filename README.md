@@ -97,6 +97,9 @@ essayées.
   invasions de l'IA, brouillard de guerre. Les autres joueurs voient ses réglages, tenus à jour, sans pouvoir les
   changer. En partie, la difficulté est la même pour tous.
 - « Invasions IA : non » coupe toutes les attaques de l'IA, Mars compris. Les révoltes de gladiateurs restent.
+- **Trois troupes, trois coûts** : légionnaires payés en armes, javeliniers renforcés (136 points de vie, 10 d'attaque)
+  et payés d'un chargement de bois chacun, que la caserne reçoit des entrepôts (le bois est réservé aux joueurs de la
+  côte), cavaliers gratuits et rapides.
 - Brouillard de guerre, en option : on ne voit que ce qu'on a découvert.
 - Pause pour tout le monde (touche P). La partie se sauvegarde et se reprend depuis le salon, avec ses règles.
 
@@ -105,8 +108,6 @@ essayées.
 - **La guerre entre joueurs** : guerre honorable, avec 3 mois de préavis, ou brutale et immédiate, que César
   n'apprécie pas. Légions chez l'adversaire, caravanes interceptées, aqueduc coupé. Une colère de César commune à
   tous : des joueurs trop belliqueux s'attirent une expédition punitive.
-- **Trois troupes, trois coûts** : légionnaires payés en armes, javeliniers renforcés et payés en bois (réservé aux
-  joueurs de la côte), cavaliers gratuits et rapides.
 - Fêtes et campagnes de César qui rapportent des lauriers, et ses demandes adressées à toute la province.
 - La hausse des prix de l'empire quand un joueur arrête le commerce.
 

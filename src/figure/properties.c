@@ -1,5 +1,7 @@
 #include "properties.h"
 
+#include "game/rules.h"
+
 static const figure_properties properties[] = {
 //  cat  dmg  atk  def Mdef Matk Mfrq
     {0,   0,   0,   0,   0,   0,   0},
@@ -84,7 +86,14 @@ static const figure_properties properties[] = {
     {0, 100,   0,   0,   0,   0,   0}
 };
 
+// Javelin throwers of a multiplayer game (D-058): 136 hit points and an attack of 10 instead of 80 and 4, which
+// makes them 1.1 times weaker than a legionary (150 x 10); the missile (4 damage, delay 100) is unchanged
+static const figure_properties multiplayer_javelin_thrower = {2, 136, 10, 0, 0, 4, 100};
+
 const figure_properties *figure_properties_for_type(figure_type type)
 {
+    if (type == FIGURE_FORT_JAVELIN && game_rules_is_multiplayer()) {
+        return &multiplayer_javelin_thrower;
+    }
     return &properties[type];
 }

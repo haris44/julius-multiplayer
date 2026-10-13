@@ -29,7 +29,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define PROTOCOL_VERSION 26 // 3: the rules of the game travel with the welcome message; 4: territories; 5: fog;
+#define PROTOCOL_VERSION 27 // 3: the rules of the game travel with the welcome message; 4: territories; 5: fog;
                             // 6: one forest map, games alone (D-044); 7: missions at the start (D-045);
                             // 8: a caravan per resource, the empire the dearer source (D-048);
                             // 9: wide places in messages, the missionary goes to the nearest walkable tile;
@@ -50,7 +50,8 @@
                             // 23: each city its own luck from the lobby seed, Rome pays the same wages to all (T5.9);
                             // 24: the declarer withdraws an honourable war during its notice (D-080);
                             // 25: gatehouses closed to the soldiers of enemies, aqueducts broken at war (D-081);
-                            // 26: Caesar's land around the bridge, where nothing is built (D-082)
+                            // 26: Caesar's land around the bridge, where nothing is built (D-082);
+                            // 27: stronger javelin throwers who cost a load of timber each (D-083)
 #define TURN_TICKS 4
 #define TURN_DELAY 2
 #define HISTORY 256
