@@ -1477,7 +1477,7 @@
     l'enceinte de J2 sans s'arrêter ; sa caravane passe par la porte de J2 sur la route de son entrepôt (30 ticks sur
     la porte) et livre ses 8 chargements ;
   - joué deux fois depuis la même sauvegarde : même somme de contrôle (portes, aqueduc).
-- **Point ouvert, à trancher avec D-068** : une porte posée sur une route de César fait de ces cases une route du
+- **Point ouvert, à trancher avec D-068** (*résolu par D-085*) : une porte posée sur une route de César fait de ces cases une route du
   joueur (`map_building_tiles_add` libère la case, la porte y remet une route à lui). Abattue par l'ennemi ou supprimée
   par son propriétaire, elle emporte la route : la route principale est coupée, et les caravanes ne marchent que sur
   les routes. C'était déjà vrai avant (D-077, suppression par le joueur). Pistes : rendre ces cases à César sous la
@@ -1553,3 +1553,38 @@
 - *À valider* : plafond de 5 chargements ; texte rouge d'attente ; le stock de bois est celui d'une seule caserne
   (une par cité, comme les armes) ; le bois d'un entrepôt sert d'abord à la caserne, avant les ateliers de meubles.
 - Classique : inchangé.
+
+### D-085 — La route de César sous un bâtiment lui revient quand le bâtiment disparaît (M10.2, résout le point ouvert de D-081, précise D-034)
+- 2026-10-14 · **adoptée provisoirement**, *à valider* par Alexandre
+- **Constat** : une porte posée sur la route de César (permise dans la zone du joueur, hors de sa terre, D-082) libérait
+  les cases (`map_building_tiles_add` retire la route, donc la propriété) et la porte y remettait une route du joueur.
+  Supprimée, abattue, brûlée ou effondrée, elle laissait de l'herbe ou des décombres : la route principale était coupée
+  pour tous, et les caravanes ne marchent que sur les routes.
+- **Quels bâtiments** : les seuls qui se posent sur une route (masque `~TERRAIN_ROAD` de `building_construction_place_building`) :
+  la **porte** (2×2) et l'**arc de triomphe** (3×3). La place n'est pas un bâtiment (un drapeau sur la route, qui reste).
+  Tour, entrepôt et autres exigent un terrain libre de route.
+- **Règle** : César garde sa revendication sur la case sous le bâtiment, dans la grille des propriétaires déjà
+  sauvegardée : aucun nouveau champ, aucun changement de format, une partie d'avant se charge (ses portes ont alors des
+  cases du joueur, comme avant). « Revendiquée par César et sous un bâtiment » veut dire « sa route est dessous ».
+  - pose (`map_building_tiles_add`) : les cases qui étaient une route de César, ou qui le sont sous le bâtiment (rotation de
+    la vue, qui repose les portes), gardent César ; `update_owner` (`map/terrain.c`) ne libère pas une case de César sous un
+    bâtiment quand la route en est retirée (les côtés de l'arc) ;
+  - disparition (`map_building_tiles_remove`, `map_building_tiles_set_rubble` : suppression, abattage, effondrement,
+    annulation) : chaque case que César revendique sous le bâtiment redevient sa route, sans décombres, puis les images des
+    routes et les grilles de routage sont refaites (`map_tiles_update_area_roads`, `map_routing_update_land`), comme à la pose
+    d'une route ; blanche et indestructible, comme le reste de sa route ;
+  - feu (`destroy_on_fire`) : pas de ruine en flammes sur sa route (comme sur l'eau) : elle revient tout de suite ;
+  - effacer (`construction_clear`) : son propriétaire peut toujours supprimer son bâtiment, même si la case est à César
+    (le test « appartient à un autre joueur » ne regarde plus la case quand il y a un bâtiment à soi) ;
+  - tant que la porte tient, tout est comme D-081 (fermée aux seuls soldats des ennemis de son propriétaire).
+- **Mesuré** (`mp_caesar_road_under_gate`, carte pour 2, J2 s'entoure de murs et de deux portes sur la route principale,
+  un arc de triomphe aussi) : sous les portes, César garde ses 2 cases chacune (les 2 autres sont au joueur et ne
+  reviennent pas), 3 sous l'arc ; sauvegardée puis relue, la partie garde ces revendications ; supprimées par J2, les
+  routes de César sont là sans décombres, personne ne peut les effacer, et la caravane de J2 sort de sa cité close et
+  livre ses 8 charges en 61 jours ; abattue par la légion de J1 en guerre (1 591 ticks), la porte ouest laisse la route ;
+  brûlées et effondrées, portes et arc rendent la route ; même somme de contrôle en rejouant.
+- **À valider** : une ruine en flammes ne se pose pas sur la route de César (elle revient d'un coup) ; l'arc de triomphe
+  est traité comme la porte.
+- Pas de nouvelle version de protocole (la grille des propriétaires a le même format ; la somme de contrôle d'une partie en
+  cours ne change que pour les portes posées sur la route de César).
+- Classique : inchangé (aucune case n'y est à César).

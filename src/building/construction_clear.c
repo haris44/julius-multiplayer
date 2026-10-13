@@ -38,6 +38,9 @@ static int belongs_to_other_player(int grid_offset)
     if (building_id && !BUILDING_IS_OWN(building_id)) {
         return 1;
     }
+    if (building_id) {
+        return 0; // an own building over a road of Caesar (D-085) is his to clear
+    }
     int owner = map_owner_get_claimed(grid_offset);
     return owner != MAP_OWNER_NONE && owner != player_context_current_player;
 }
