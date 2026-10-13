@@ -321,6 +321,11 @@ static translation_string all_strings[] = {
     {TR_MP_SAVED_GAME_MARK, " (multijoueur)"},
     {TR_MP_LOAD_IN_LOBBY_TITLE, "Partie en réseau"},
     {TR_MP_LOAD_IN_LOBBY_MESSAGE, "Charger une partie ici l'arrêterait pour tous les joueurs. Pour reprendre une partie multijoueur : Fichier, Nouvelle partie, puis Multijoueur ; choisissez la sauvegarde et hébergez-la."},
+    {TR_MP_BARRACKS_TIMBER, "Bois des javeliniers :"},
+    {TR_MP_FORT_RECRUITS_LEGIONARY, "Une charge d'armes par recrue. En caserne :"},
+    {TR_MP_FORT_RECRUITS_JAVELIN, "Une charge de bois par recrue. En caserne :"},
+    {TR_MP_FORT_RECRUITS_MOUNTED, "Recrues : gratuites, sans armes ni bois."},
+    {TR_MP_FORT_JAVELIN_WAITS_TIMBER, "La caserne attend du bois pour recruter des javeliniers."},
 };
 
 void translation_french(const translation_string **strings, int *num_strings)

@@ -1033,18 +1033,22 @@ César revient comme arbitre de la partie. Jouable en paix et **seul** : livré 
 ## MG — Troupes et matières de guerre (D-058)
 > MG.1 à MG.4 se font seuls, à tout moment (partie seule, essais contre les envahisseurs de l'IA) ; MG.5 attend la
 > guerre entre joueurs (M10.2).
-- [ ] **MG.1** Javeliniers renforcés en multijoueur : 136 points de vie et 10 d'attaque ; cavaliers et légionnaires
+- [x] **MG.1** Javeliniers renforcés en multijoueur : 136 points de vie et 10 d'attaque ; cavaliers et légionnaires
   inchangés. *Critères* : ctest (valeurs selon le mode) ; parité verte, table d'origine en classique.
-- [ ] **MG.2** La caserne reçoit du bois et en consomme un chargement par javelinier : stock séparé des armes (5 au
+  *Fait* (D-083) : `mp_troops_javelin`, table d'origine en classique, parité verte.
+- [x] **MG.2** La caserne reçoit du bois et en consomme un chargement par javelinier : stock séparé des armes (5 au
   plus), sauvegardé dans le `.mpsav` ; bois livré seulement si la cité a une légion de javeliniers. *Critères* :
   ctest (sans bois aucun javelinier, un javelinier par chargement, armes réservées aux légionnaires, cavaliers
   gratuits) ; en classique, javeliniers gratuits (parité) ; partie seule (`tools/mp-solo-test.sh`) où un fort de
   javeliniers se remplit grâce au bois.
-- [ ] **MG.3** Bois aux seuls côtiers sur les cartes préparées : retiré au joueur des terres avec ses bois proches,
+  *Fait* (D-083) : `mp_barracks_timber` (recrutement, livraison par chariots, sauvegarde, ancienne partie, classique). Le critère « partie seule par `tools/mp-solo-test.sh` » est couvert par ce test sur la carte préparée (un joueur, 8 chargements deviennent 8 javeliniers) ; le script du vrai jeu ne remplit pas de fort.
+- [x] **MG.3** Bois aux seuls côtiers sur les cartes préparées : retiré au joueur des terres avec ses bois proches,
   donné au joueur du sud-est à 4. *Critères* : `mp_prepared_map_*` (autorisations et matériaux de chaque
   emplacement, terre accessible).
-- [ ] **MG.4** Fenêtres : la caserne montre ses stocks d'armes et de bois, le fort ce qu'il lui faut pour recruter ;
+  *Fait* par D-062, vérifié (D-083) : `mp_prepared_map_*` (`slot_follows_plan`), rien changé.
+- [x] **MG.4** Fenêtres : la caserne montre ses stocks d'armes et de bois, le fort ce qu'il lui faut pour recruter ;
   textes en français et en anglais. *Critères* : captures du vrai jeu sans fenêtre.
+  *Fait* (D-083) : `tools/mg-barracks-test.sh`, captures de la caserne et des trois forts (`build/automation/mg-*.png`).
 - [ ] **MG.5** Équilibre des troupes, après M10.2 : batailles simulées légion contre javeliniers (arrêtée en tortue,
   en marche, prise de flanc), cavaliers contre javeliniers et contre caravanes ; chiffres ajustés et notés dans
   DECISIONS (avec M11.3). *Critères* : bornes en ctest.

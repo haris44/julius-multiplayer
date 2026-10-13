@@ -268,6 +268,9 @@ Bon à savoir :
   raisons dans la colonne « En route » (T5.7, T5.6).
 - `tools/mp-ui-test.sh` : hôte en 640 × 480 et client en 1024 × 768 (l'écran factice le ramène à 1024 × 736),
   depuis le salon ; captures `build/automation/ui-*.png` des fenêtres revues par T4 (voir le tableau ci-dessous).
+- `tools/mg-barracks-test.sh` : partie seule depuis le salon ; une caserne et trois forts (légionnaires, javeliniers,
+  cavaliers) par `build`, puis clic droit (deux fois la première : le premier efface les avertissements) sur chacun ;
+  captures `build/automation/mg-barracks.png` et `mg-fort-*.png` : bois de la caserne, coût d'une recrue (MG.4, D-083).
 - `tools/mp-war-test.sh` : hôte en 640 × 480 et client en 1024 × 768 ; l'hôte déclare une guerre brutale depuis le
   conseiller militaire (bouton « Guerre », deux clics), le client la voit annoncée sur sa cité et propose la paix,
   l'hôte l'accepte ; captures `build/automation/war-*.png` (T5.5).

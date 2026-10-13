@@ -1,9 +1,12 @@
 #include "military.h"
 
+#include "building/barracks.h"
 #include "building/count.h"
+#include "city/buildings.h"
 #include "city/view.h"
 #include "core/calc.h"
 #include "core/log.h"
+#include "game/rules.h"
 #include "figure/formation_legion.h"
 #include "graphics/generic_button.h"
 #include "graphics/image.h"
@@ -11,6 +14,7 @@
 #include "graphics/panel.h"
 #include "graphics/text.h"
 #include "sound/speech.h"
+#include "translation/translation.h"
 #include "window/city.h"
 #include "mp/actions.h"
 
@@ -89,6 +93,14 @@ void window_building_draw_barracks(building_info_context *c)
         lang_text_draw_amount(8, 10, b->loads_stored, c->x_offset + 92, c->y_offset + 44, FONT_NORMAL_BLACK);
     }
 
+    if (game_rules_is_multiplayer()) {
+        // the timber for the javelin throwers, beside the weapons (D-058)
+        image_draw(image_group(GROUP_RESOURCE_ICONS) + RESOURCE_TIMBER, c->x_offset + 264, c->y_offset + 38);
+        text_draw(translation_for(TR_MP_BARRACKS_TIMBER), c->x_offset + 296, c->y_offset + 34, FONT_NORMAL_BLACK, 0);
+        text_draw_number(building_barracks_timber_stored(), '@', " ", c->x_offset + 296, c->y_offset + 50,
+            FONT_NORMAL_BLACK);
+    }
+
     if (!c->has_road_access) {
         window_building_draw_description_at(c, 70, 69, 25);
     } else if (b->num_workers <= 0) {
@@ -135,6 +147,27 @@ void window_building_draw_military_academy(building_info_context *c)
     window_building_draw_employment(c, 142);
 }
 
+// What a recruit of this legion costs, and what the barracks holds (multiplayer, D-058)
+static void draw_recruit_cost(const building_info_context *c, const formation *m, int x, int y)
+{
+    if (!game_rules_is_multiplayer()) {
+        return;
+    }
+    if (m->figure_type == FIGURE_FORT_LEGIONARY) {
+        x += text_draw(translation_for(TR_MP_FORT_RECRUITS_LEGIONARY), x, y, FONT_NORMAL_BLACK, 0);
+        text_draw_number(building_get(city_buildings_get_barracks())->loads_stored, '@', " ", x, y, FONT_NORMAL_BLACK);
+    } else if (m->figure_type == FIGURE_FORT_JAVELIN) {
+        int x_start = x;
+        x += text_draw(translation_for(TR_MP_FORT_RECRUITS_JAVELIN), x, y, FONT_NORMAL_BLACK, 0);
+        text_draw_number(building_barracks_timber_stored(), '@', " ", x, y, FONT_NORMAL_BLACK);
+        if (building_barracks_timber_stored() <= 0 && m->num_figures < m->max_figures) {
+            text_draw(translation_for(TR_MP_FORT_JAVELIN_WAITS_TIMBER), x_start, y + 14, FONT_NORMAL_RED, 0);
+        }
+    } else {
+        text_draw(translation_for(TR_MP_FORT_RECRUITS_MOUNTED), x, y, FONT_NORMAL_BLACK, 0);
+    }
+}
+
 void window_building_draw_fort(building_info_context *c)
 {
     c->help_id = 87;
@@ -142,6 +175,7 @@ void window_building_draw_fort(building_info_context *c)
     outer_panel_draw(c->x_offset, c->y_offset, c->width_blocks, c->height_blocks);
     lang_text_draw_centered(89, 0, c->x_offset, c->y_offset + 10, BLOCK_SIZE * c->width_blocks, FONT_LARGE_BLACK);
     int text_id = formation_get(c->formation_id)->cursed_by_mars ? 1 : 2;
+    draw_recruit_cost(c, formation_get(c->formation_id), c->x_offset + 32, c->y_offset + 50);
     window_building_draw_description_at(c, BLOCK_SIZE * c->height_blocks - 158, 89, text_id);
 }
 
@@ -177,6 +211,7 @@ void window_building_draw_legion_info(building_info_context *c)
     image_draw(pole_image_id,
         c->x_offset + 16 + (40 - image_get(pole_image_id)->width) / 2, c->y_offset + 16 + icon_height + flag_height);
 
+    draw_recruit_cost(c, m, c->x_offset + 100, c->y_offset + 36);
     // number of soldiers
     lang_text_draw(138, 23, c->x_offset + 100, c->y_offset + 60, FONT_NORMAL_BLACK);
     text_draw_number(m->num_figures, '@', " ", c->x_offset + 294, c->y_offset + 60, FONT_NORMAL_BLACK);
