@@ -216,6 +216,8 @@ répertoire courant (lancer depuis la racine du dépôt).
 | `angrygod` | tests : un dieu en colère dans la cité locale, autre que le « moins content » qu'elle garde (change l'état de ce seul ordinateur : provoque une désynchronisation à plusieurs) |
 | `lobbylists NOM` / `lobbyselected NOM` | salon : échoue s'il ne liste pas le fichier NOM / si NOM n'est pas la partie choisie (T5.4) |
 | `tradecheck` | la page du commerce a redessiné son cadre pour l'état courant de la route (T5.6) ; échoue sinon |
+| `addwrath N` | tests (M10.5) : la cité locale ajoute N dixièmes à la colère de César (change l'état de ce seul ordinateur : partie seule) |
+| `caesarletter TYPE PARAM` | tests (M10.5) : une lettre de César au joueur local (`mp_caesar_letter_type`), affichage seulement |
 | `log TEXTE` | écrit un repère dans le journal |
 | `quit` | quitte ; c'est aussi automatique en fin de script |
 
@@ -271,6 +273,9 @@ Bon à savoir :
 - `tools/mp-war-test.sh` : hôte en 640 × 480 et client en 1024 × 768 ; l'hôte déclare une guerre brutale depuis le
   conseiller militaire (bouton « Guerre », deux clics), le client la voit annoncée sur sa cité et propose la paix,
   l'hôte l'accepte ; captures `build/automation/war-*.png` (T5.5).
+- `tools/mp-wrath-test.sh` : partie seule depuis le salon ; `addwrath` amène la jauge à l'avertissement puis à
+  l'ultimatum : captures `build/automation/wrath-*.png` des lettres (avertissement, ultimatum, paix imposée), de la
+  jauge du bandeau et du conseiller impérial (M10.5, D-084).
 - `test/automation/display.txt` : les options d'affichage (plus grande fenêtre qui tient sur l'écran).
 
 Taille de l'écran dans un script : `key F7` (640 × 480), `key F8` (800 × 600, la taille par défaut), `key F9`
