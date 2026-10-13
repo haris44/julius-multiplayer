@@ -1424,3 +1424,71 @@
   - `mp_lan_war` : une menace retirée, puis la guerre brutale, en réseau ;
   - `tools/mp-war-test.sh` : vrai jeu, bouton et confirmation chez l'hôte, annonces chez l'autre joueur.
 - Réseau : protocole 24.
+
+### D-081 — Portes et murs en guerre ; les soldats coupent l'aqueduc de César qui abreuve l'ennemi (M10.2, précise D-034, D-055, D-077)
+- 2026-10-13 · **adoptée provisoirement**, *à valider* (tranche de M10.2 demandée par la session de coordination, sans
+  Alexandre)
+- **Constat** (lu dans le code, montré par le test) : les soldats marchent sur la grille des habitants, où une porte
+  est une route. La légion de J1 en guerre traversait donc les portes de J2 sans s'arrêter. Elle ne passait pas sur
+  ses murs, bloqués pour les habitants comme dans l'original.
+- **Portes** : une porte est fermée aux soldats des joueurs qui **se battent** contre son propriétaire
+  (`mp_war_is_fighting`). Pour eux, c'est un mur à abattre, comme pour les envahisseurs de l'original :
+  - comme eux, le soldat cherche d'abord un chemin qui contourne les portes ennemies ; s'il n'y en a pas, il passe par
+    elles. Arrivé devant, il l'attaque (dégâts de l'original : un point tous les 4 ticks par soldat, elle tombe
+    au-delà de 150, avec les images de l'attaque), puis il passe. Il ne gèle ni ne tourne en rond : l'ordre de
+    déplacement n'accepte que des endroits joignables portes ouvertes (règle d'origine), et la seconde recherche les
+    traverse ;
+  - tous les autres passent comme avant : le propriétaire, les joueurs neutres (soldats, caravanes, missionnaire), et
+    chacun en paix ou pendant le préavis d'une guerre honorable. Seuls les soldats sont concernés ;
+  - une porte n'est fermée qu'une fois en service (au plus un jour après sa construction, comme ses autres effets) ;
+  - technique (`mp/siege.c`) : les grilles de routage sont communes à tous. Pour un soldat d'un joueur qui se bat, une
+    recherche de plus, qui saute les cases que lui ferme une fonction (`map_routing_citizen_can_travel_over_land_except`),
+    passe avant celle d'origine ; à chaque pas, `advance_route_tile` arrête le soldat devant une porte ennemie. Tant que
+    personne ne se bat (`mp_war_any_fighting()`), et toujours en classique, la recherche d'origine est faite telle
+    quelle.
+- **Murs** : rien à changer. Aucun soldat ne se tient jamais sur un mur (vérifié à chaque tick dans les tests). Une
+  cité entièrement murée, sans porte, ne peut pas être visée par un ordre de déplacement (règle d'origine).
+- **Aqueducs** : un soldat posté avec sa légion (comme pour les bâtiments, D-077) abat la case d'aqueduc qui le
+  touche, au seuil de l'original pour un aqueduc et tout bâtiment (10) :
+  - un aqueduc **de César**, s'il abreuve un joueur qu'il combat : en suivant les aqueducs qui portent l'eau de ce
+    joueur (ceux de César, les siens, ceux de personne : la règle de `map/water_supply.c`), on atteint un réservoir à
+    lui. C'est la règle déterministe la plus simple qui ne frappe que l'ennemi : à 4 joueurs, chaque joueur des
+    terres a sa ligne, et un soldat ne coupe ni l'eau d'un neutre ni celle de sa propre cité. Une fois la ligne
+    coupée, les cases en amont n'abreuvent plus l'ennemi : les soldats ne cassent que ce qui l'en prive ;
+  - un aqueduc **de l'ennemi** lui-même : sans cela, l'aqueduc de César réparé par lui (devenu le sien), ou un
+    aqueduc tiré par lui depuis un réservoir de César, serait intouchable ;
+  - jamais une case d'aqueduc posée sur une route (la route partirait avec elle ; les envahisseurs de l'original
+    passent dessus). Les routes, les réservoirs et le pont de César restent indestructibles.
+- **Réparer** : la case abattue devient des décombres sans propriétaire. N'importe quel joueur peut les dégager et y
+  poser un aqueduc (sans zone, D-036), qui devient le sien : l'eau revient. César ne répare pas.
+- **Mesuré** (légions de 16 légionnaires) :
+  - `mp_war_gate` (carte pour 2 ; J2 entoure le milieu de sa cité d'un mur, deux portes sur la route principale) : en
+    paix comme pendant un préavis, la légion de J1 entre par la porte en 1 741 ticks. En guerre, le premier soldat
+    s'arrête devant la porte à 1 531 ticks, elle tombe 60 ticks plus tard, et les 16 soldats sont à l'étendard dans
+    l'enceinte à 1 771 ticks. Pour ressortir au nord-est, ils font le tour par la brèche (676 ticks) au lieu d'abattre
+    la porte est (sans la première recherche : 328 ticks, dont 88 arrêtés devant elle) ;
+  - `mp_war_aqueduct` (carte pour 2, J1 dans les terres) : la légion de J2 postée le long de l'aqueduc de César laisse
+    intacte la ligne qui n'abreuve personne (J1 sans réservoir), mais abat un aqueduc de J1 posé à côté d'un soldat.
+    J1 joint un réservoir à la ligne : la première case tombe 46 ticks plus tard. Avec un réservoir déjà rempli :
+    rien en paix ni pendant le préavis ; la première case tombe 42 ticks après le début des combats, 6 en 200 ticks
+    (celles qui touchent les soldats, en aval de la coupure) ; le réservoir passe de 266 à 256 en 10 jours. La paix
+    signée, J1 dégage les décombres et pose son aqueduc : de 250 à 270 (plein) en 10 jours ;
+  - `mp_war_gate_neutral` (carte 1 à 3 joueurs : J3 en guerre contre J2, J1 neutre) : la légion de J1 entre dans
+    l'enceinte de J2 sans s'arrêter ; sa caravane passe par la porte de J2 sur la route de son entrepôt (30 ticks sur
+    la porte) et livre ses 8 chargements ;
+  - joué deux fois depuis la même sauvegarde : même somme de contrôle (portes, aqueduc).
+- **Point ouvert, à trancher avec D-068** : une porte posée sur une route de César fait de ces cases une route du
+  joueur (`map_building_tiles_add` libère la case, la porte y remet une route à lui). Abattue par l'ennemi ou supprimée
+  par son propriétaire, elle emporte la route : la route principale est coupée, et les caravanes ne marchent que sur
+  les routes. C'était déjà vrai avant (D-077, suppression par le joueur). Pistes : rendre ces cases à César sous la
+  porte et y remettre sa route quand elle disparaît (construction, suppression, effondrement) ; ou interdire les
+  portes sur ses routes (on ne fermerait plus une enceinte en travers de la route principale).
+- **À valider** :
+  - portes fermées aux seuls soldats des ennemis de leur propriétaire (la feuille de route disait « qui ne laissent
+    passer que leur propriétaire ») ; un soldat contourne une porte quand il le peut ;
+  - les soldats abattent aussi les aqueducs de l'ennemi, pas seulement ceux de César ;
+  - « abreuve l'ennemi » : relié par les aqueducs à un réservoir de l'ennemi ;
+  - réparer, c'est dégager les décombres et poser son propre aqueduc ; César ne répare pas.
+- Pas dans cette tranche : l'ordre « attaquer » qui marche sur une cible (reste de M10.2), la terre de César autour du
+  pont (D-068).
+- Classique : inchangé.

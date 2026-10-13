@@ -381,7 +381,8 @@ Les conditions de fin se choisissent dans le salon :
   actuelle.
 - Les légions d'un joueur peuvent entrer chez un autre. Elles y sont traitées comme des envahisseurs : les tours,
   les soldats et la règle de paix s'appliquent. Elles attaquent soldats, citoyens et bâtiments grâce à un nouvel
-  ordre « attaquer ». Les portes et les murs ne laissent passer que leur propriétaire.
+  ordre « attaquer ». Les portes d'un joueur sont fermées aux soldats de ceux qui le combattent, comme ses murs
+  (D-081).
 - Moral, totaux et sons de combat sont propres à chaque camp. Les arcs de triomphe, qui venaient des batailles
   lointaines, récompenseront les victoires contre un joueur.
 - **Fait en première tranche** (T5.5, D-077) : `mp/war.c` tient l'état de chaque paire de joueurs (paix, préavis,
@@ -391,6 +392,13 @@ Les conditions de fin se choisissent dans le salon :
   (`mp_war_any_fighting`), si bien que la matrice d'origine reste exacte en classique et en paix. Les recherches
   parcourent d'abord la tranche de la cité, puis celles de ses ennemis. Un bâtiment abattu s'effondre dans le
   contexte de son propriétaire. Une caravane entre joueurs regarde chaque tick les soldats ennemis à une case.
+- **Fait en M10.2** (D-081, `mp/siege.c`) : les grilles de routage restent communes à tous. Pour un soldat d'un joueur
+  qui se bat, `figure_route_add` fait d'abord une recherche qui saute les portes de ses ennemis
+  (`map_routing_citizen_can_travel_over_land_except`, une fonction dit les cases fermées), puis la recherche
+  d'origine ; à chaque pas, `advance_route_tile` arrête le soldat devant une porte ennemie, qu'il abat comme un
+  envahisseur. Le soldat posté abat aussi l'aqueduc de l'ennemi et celui de César qui le relie à un réservoir de
+  l'ennemi (parcours des aqueducs à la manière de `map/water_supply.c`). Tant que personne ne se bat, rien de cela
+  n'est appelé.
 
 ### 7.1 Le pont de César (T4.8, D-068, *à valider* ; règles de jeu : [CESAR.md](CESAR.md) §7.6)
 
@@ -408,6 +416,8 @@ attendant Alexandre : la **terre de César**.
   seulement. Les routes des joueurs restent permises.
 - **Aujourd'hui** (lu dans le code, à vérifier par un test), une porte peut être posée sur une route de César si
   l'endroit est dans la zone du joueur (`building_construction_place_building` accepte une route sous une porte).
+  Depuis D-081, elle n'arrête que les soldats des ennemis de son propriétaire, mais elle prend la route de César :
+  abattue ou supprimée, elle l'emporte (point ouvert).
   Avec la terre de César, ce n'est plus possible près du pont. Ailleurs sur les routes de César, la question reste
   ouverte (D-068).
 - **Hostilité par paire** (M10.1) : les soldats n'attaquent que les figures des joueurs en guerre avec leur

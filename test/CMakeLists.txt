@@ -438,6 +438,13 @@ add_test(NAME mp_caesar_history COMMAND simtool caesarhistory brugle-massilia-st
 # pulls down his buildings and fights his legion; his soldiers take the caravans of the enemy; peace signed by both stops
 # it and sends the legions home; the same war played twice gives the same checksum; nothing in a classic game
 add_test(NAME mp_war COMMAND simtool war brugle-massilia-start.sav)
+# M10.2 (D-081): the gatehouses of a player are closed to the soldiers of the players fighting him: they go around them
+# or break them (150 as invaders) and walk in, never over walls; open in peace, during a notice and to neutral players
+# (legion and caravan, three players); at war, soldiers break the aqueduct of Caesar that waters their enemy (10) and
+# the aqueducts of the enemy, the player cut off mends it with his own; the same siege twice gives the same checksum
+add_test(NAME mp_war_gate COMMAND simtool wargate brugle-massilia-start.sav)
+add_test(NAME mp_war_gate_neutral COMMAND simtool wargate3 brugle-massilia-start.sav)
+add_test(NAME mp_war_aqueduct COMMAND simtool waraqueduct brugle-massilia-start.sav)
 
 # T1.5 (D-034): the roads of Caesar stay, untinted, and serve every city
 add_test(NAME mp_caesar_roads COMMAND simtool caesarroads brugle-massilia-start.sav)

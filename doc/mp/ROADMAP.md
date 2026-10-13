@@ -1017,16 +1017,21 @@ César revient comme arbitre de la partie. Jouable en paix et **seul** : livré 
 
 ## M10 — La guerre sous l'œil de César ([CESAR.md](CESAR.md) §7, DESIGN §7)
 > Une première tranche jouable est faite avec T5.5 (D-077) : état de guerre par paire, déclaration brutale ou
-> honorable, paix des deux, légions qui se battent et abattent les bâtiments chez l'ennemi, caravanes prises. Restent
-> dans M10.1 à M10.3 : hostilité des portes et murs, ordre « attaquer », route coupée ; puis M10.4 et la suite.
+> honorable, paix des deux, légions qui se battent et abattent les bâtiments chez l'ennemi, caravanes prises. Les
+> portes, les murs et l'aqueduc de César en guerre suivent (D-081). Restent dans M10.1 à M10.3 : ordre « attaquer »,
+> route coupée ; puis M10.4 et la suite.
 - [x] **M10.1** Hostilité par propriétaire et état de guerre par paire de joueurs : déclaration (commande, annonce ;
   guerre honorable avec 3 mois de préavis, ou brutale et immédiate, D-053), paix proposée des deux côtés. En classique, la matrice actuelle exactement.
   *Fait* avec T5.5 (D-077), plus la demande d'Alexandre du 2026-10-13 (D-080) : **pendant le préavis, le déclarant
   peut se rétracter** (bouton « Se rétracter », deux clics). La paix revient tout de suite et le commerce reprend :
   la menace laisse au défenseur le temps de céder à la pression du commerce coupé. Tests `mp_war` (échoue sans le
   retrait), `mp_lan_war` (menace retirée en réseau), `tools/mp-war-test.sh` (vrai jeu). Protocole 24.
-- [ ] **M10.2** Légions chez l'adversaire, ordre « attaquer », portes et murs qui ne laissent passer que leur
-  propriétaire.
+- [ ] **M10.2** Légions chez l'adversaire, ordre « attaquer », portes et murs en guerre. *Fait* (D-081) : les portes
+  d'un joueur sont fermées aux soldats de ceux qui le combattent, qui les contournent ou les abattent (150) puis
+  passent ; ouvertes à tous les autres (neutres, paix, préavis) ; personne sur les murs ; en guerre, les soldats
+  coupent l'aqueduc de César qui abreuve l'ennemi et les aqueducs de l'ennemi (10), réparables par un aqueduc du
+  joueur (ctest `mp_war_gate`, `mp_war_gate_neutral`, `mp_war_aqueduct`). *Reste* : l'ordre « attaquer » qui marche
+  sur une cible ; la route de César sous une porte abattue ou supprimée (point ouvert de D-081, avec D-068).
 - [ ] **M10.3** Interception des caravanes (ancien M8.7) : cargaison prise, route coupée.
 - [ ] **M10.4** Motifs de guerre (riposte, mandat de César, sans motif) et prix de la guerre brutale, triomphes,
   lauriers gagnés ou perdus.

@@ -6,6 +6,8 @@
 #include "map/routing.h"
 #include "map/routing_path.h"
 #include "game/player_clone.h"
+#include "mp/siege.h"
+#include "mp/war.h"
 
 #define MAX_PATH_LENGTH 500
 /** Paths per player: every player has its own slice of path ids, as large as the original limit */
@@ -113,8 +115,13 @@ void figure_route_add(figure *f)
                     f->destination_x, f->destination_y);
                 break;
             default:
-                can_travel = map_routing_citizen_can_travel_over_land(f->x, f->y,
-                    f->destination_x, f->destination_y);
+                if (mp_war_any_fighting() && mp_siege_is_soldier_at_war(f)) {
+                    // around the gatehouses of his enemies, else through them (M10.2): never in a classic game
+                    can_travel = mp_siege_soldier_can_travel(f);
+                } else {
+                    can_travel = map_routing_citizen_can_travel_over_land(f->x, f->y,
+                        f->destination_x, f->destination_y);
+                }
                 break;
         }
         if (can_travel) {
