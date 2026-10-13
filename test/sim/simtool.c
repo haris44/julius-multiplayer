@@ -202,6 +202,7 @@ static int usage(void)
     printf("  simtool fog SAVE                       prepared map: what a player discovers and sees (D-038)\n");
     printf("  simtool outside SAVE                   prepared map: buildings outside the zone collapse in 3 months\n");
     printf("  simtool missions SAVE                  prepared map: missions near a missionary, marble, training\n");
+    printf("  simtool caesarland SAVE PLAYERS        prepared map: nothing is built on the land of Caesar (D-082)\n");
     printf("  simtool territory SAVE                 prepared map: players build only in their zone (D-036)\n");
     printf("  simtool caesarroads SAVE               generated map: no player clears a road of Caesar, every\n");
     printf("                                         city uses it\n");
@@ -3861,6 +3862,197 @@ static int command_territory(const char *file)
     player_context_set_num_players(1);
 #undef CHECK
     printf("%s\n", failures ? "DIFFERENT: territories do not work as designed" : "Identical: territories work as designed");
+    return failures ? 1 : 0;
+}
+
+// the land of Caesar around his bridge (M10.2, D-082): no zone, no building that needs one, no mission, no wall;
+// roads stay allowed
+static int caesar_land_count(void)
+{
+    int count = 0;
+    for (int y = 0; y < map_grid_height(); y++) {
+        for (int x = 0; x < map_grid_width(); x++) {
+            count += mp_territory_is_caesar_land(map_grid_offset(x, y));
+        }
+    }
+    return count;
+}
+
+static int caesar_land_expected(int bx, int ye_north, int ye_south)
+{
+    int count = 0;
+    for (int y = 0; y < map_grid_height(); y++) {
+        for (int x = 0; x < map_grid_width(); x++) {
+            int near_x = abs(x - bx) <= MP_TERRITORY_CAESAR_LAND_RADIUS;
+            count += near_x && (abs(y - ye_north) <= MP_TERRITORY_CAESAR_LAND_RADIUS ||
+                abs(y - ye_south) <= MP_TERRITORY_CAESAR_LAND_RADIUS);
+        }
+    }
+    return count;
+}
+
+static int walls_on_caesar_land(void)
+{
+    int count = 0;
+    for (int y = 0; y < map_grid_height(); y++) {
+        for (int x = 0; x < map_grid_width(); x++) {
+            int o = map_grid_offset(x, y);
+            count += mp_territory_is_caesar_land(o) && map_terrain_is(o, TERRAIN_WALL);
+        }
+    }
+    return count;
+}
+
+static int has_terrain_at(int x, int y, int mask)
+{
+    return map_terrain_is(map_grid_offset(x, y), mask) ? 1 : 0;
+}
+
+// one end of the bridge: ye is the row of the shore tile next to it, dir is -1 on the north shore, +1 on the south
+static int caesar_land_end(int bx, int ye, int dir)
+{
+    int failures = 0;
+#define CHECK(condition, text) do { int ok_ = (condition); printf("  %-70s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
+    int r = MP_TERRITORY_CAESAR_LAND_RADIUS;
+    CHECK(mp_territory_is_caesar_land(map_grid_offset(bx, ye)), "the end of the bridge is Caesar's land");
+    CHECK(mp_territory_is_caesar_land(map_grid_offset(bx + r, ye + dir * r)) &&
+        mp_territory_is_caesar_land(map_grid_offset(bx - r, ye + dir * r)), "15 tiles away in x and y, still");
+    CHECK(!mp_territory_is_caesar_land(map_grid_offset(bx + r + 1, ye)) &&
+        !mp_territory_is_caesar_land(map_grid_offset(bx, ye + dir * (r + 1))), "16 tiles away, no longer");
+    // clear the ground of the tests, except the water and what Caesar built
+    for (int y = ye - 2 * dir; y != ye + dir * 40; y += dir) {
+        for (int x = bx - 30; x <= bx + 30; x++) {
+            int o = map_grid_offset(x, y);
+            if (!map_terrain_is(o, TERRAIN_WATER | TERRAIN_ROAD | TERRAIN_AQUEDUCT | TERRAIN_BUILDING)) {
+                map_terrain_set(o, 0);
+            }
+        }
+    }
+    map_routing_update_land();
+    // the first rows beyond the land where nothing of Caesar's lies across (a cross road, a reservoir)
+    int distance = 17;
+    for (; distance < 24; distance++) {
+        int free = 1;
+        for (int k = -3; k <= 5 && free; k++) {
+            for (int x = bx + 2; x <= bx + 22 && free; x++) {
+                free = !map_terrain_is(map_grid_offset(x, ye + dir * (distance + k)),
+                    TERRAIN_WATER | TERRAIN_ROAD | TERRAIN_AQUEDUCT | TERRAIN_BUILDING);
+            }
+        }
+        if (free) {
+            break;
+        }
+    }
+    int inside_y = ye + dir * 8, outside_y = ye + dir * distance, mission_y = ye + dir * (distance + 4);
+    int ix = bx + 6;
+    // the zone of player 1 comes from a mission just outside, as the start mission of a city does
+    for (int yy = mission_y; yy < mission_y + 2; yy++) {
+        for (int xx = ix; xx < ix + 2; xx++) {
+            map_terrain_set(map_grid_offset(xx, yy), 0);
+        }
+    }
+    building *mission = building_create(BUILDING_MISSION_POST, ix, mission_y);
+    mission->state = BUILDING_STATE_IN_USE;
+    map_building_tiles_add(mission->id, ix, mission_y, mission->size, image_group(GROUP_BUILDING_MISSION_POST),
+        TERRAIN_BUILDING);
+    int land_before = caesar_land_count();
+    mp_territory_update_city();
+    CHECK(caesar_land_count() == land_before, "the zone of the mission does not take any of it");
+    CHECK(mp_territory_owner(map_grid_offset(ix, outside_y)) == 0, "the zone covers the land outside, near the mission");
+    CHECK(mp_territory_owner(map_grid_offset(ix, inside_y)) == -1 &&
+        mp_territory_owner(map_grid_offset(ix, ye + dir * (r + 1))) == 0, "and stops where Caesar's land begins");
+
+    // the buildings that need a zone: refused inside, allowed outside, by the command
+    CHECK(has_terrain_at(bx, inside_y, TERRAIN_ROAD) && has_terrain_at(bx, outside_y, TERRAIN_ROAD),
+        "the road of Caesar runs through the land and beyond");
+    CHECK(!build_as(0, BUILDING_PREFECTURE, ix, inside_y, ix, inside_y), "a prefecture is refused inside");
+    CHECK(build_as(0, BUILDING_PREFECTURE, ix, outside_y, ix, outside_y), "and allowed just outside, in the zone");
+    CHECK(!build_as(0, BUILDING_GATEHOUSE, bx, inside_y, bx, inside_y), "a gatehouse on the road of Caesar is refused inside");
+    int gate_outside = build_as(0, BUILDING_GATEHOUSE, bx, outside_y, bx, outside_y);
+    printf("  (outside the land of Caesar, in the zone of the player, a gatehouse on the road of Caesar: %s)\n",
+        gate_outside ? "ALLOWED" : "refused");
+    // a tower needs walls around it: they are put there by hand, so that only the zone says no
+    for (int row = 0; row < 2; row++) {
+        int y0 = row ? outside_y : inside_y;
+        for (int yy = y0 - 2; yy <= y0 + 3; yy++) {
+            for (int xx = ix + 2; xx <= ix + 7; xx++) {
+                map_terrain_add(map_grid_offset(xx, yy), TERRAIN_WALL);
+            }
+        }
+    }
+    CHECK(!build_as(0, BUILDING_TOWER, ix + 4, inside_y, ix + 4, inside_y), "a tower is refused inside, walls around it");
+    CHECK(build_as(0, BUILDING_TOWER, ix + 4, outside_y, ix + 4, outside_y), "and allowed just outside");
+    // the mission needs no zone but a missionary: one stands next to the places
+    mp_missionary_create(0, ix, inside_y);
+    mp_missionary_create(0, ix, ye + dir * (r + 2));
+    CHECK(!mp_mission_allows_place(ix + 2, inside_y, 2), "a mission is refused inside, a missionary beside");
+    CHECK(mp_mission_allows_place(ix + 2, ye + dir * (r + 3), 2), "and allowed outside, a missionary beside");
+    CHECK(!mp_territory_allows_building(BUILDING_MISSION_POST, ix + 2, inside_y, 2), "the build rule says the same");
+    // walls: refused inside, allowed outside; long walls across the land put no stone on it
+    int walls_before = walls_on_caesar_land();
+    int wall_x = bx + 2;
+    build_as(0, BUILDING_WALL, wall_x, inside_y, wall_x + 3, inside_y);
+    CHECK(!has_terrain_at(wall_x, inside_y, TERRAIN_WALL), "a wall inside is refused");
+    build_as(0, BUILDING_WALL, wall_x + 12, outside_y, wall_x + 15, outside_y);
+    CHECK(has_terrain_at(wall_x + 12, outside_y, TERRAIN_WALL) && has_terrain_at(wall_x + 15, outside_y, TERRAIN_WALL),
+        "a wall just outside is allowed");
+    build_as(0, BUILDING_WALL, bx + 2, ye + dir * 6, bx + 25, ye + dir * 6); // from inside to outside
+    build_as(0, BUILDING_WALL, bx + 25, ye + dir * 10, bx + 2, ye + dir * 10); // and the other way round
+    build_as(0, BUILDING_WALL, bx - 25, ye + dir * 4, bx + 25, ye + dir * 4);
+    build_as(0, BUILDING_WALL, bx - 25, ye + dir * 12, bx + 25, ye + dir * 12);
+    CHECK(walls_on_caesar_land() == walls_before, "walls from, to and across the land put no stone on it");
+    // roads stay allowed
+    build_as(0, BUILDING_ROAD, ix + 4, inside_y + dir * 4, ix + 9, inside_y + dir * 4);
+    CHECK(has_terrain_at(ix + 6, inside_y + dir * 4, TERRAIN_ROAD), "but a road of the player is allowed inside");
+#undef CHECK
+    return failures;
+}
+
+static int command_caesarland(const char *file, int num_players)
+{
+    if (!create_prepared(file, num_players, 0)) {
+        printf("Unable to create the prepared map\n");
+        return 2;
+    }
+    game_rules_settings rules;
+    game_rules_default_multiplayer_settings(&rules);
+    rules.territories = 1;
+    rules.ai_invasions = 0;
+    game_rules_set_multiplayer(&rules);
+    int bx, by_north, by_south;
+    mp_mapgen_caesar_bridge(&bx, &by_north, &by_south);
+    int ye_north = by_north - 1, ye_south = by_south + 1;
+    int failures = 0;
+#define CHECK(condition, text) do { int ok_ = (condition); printf("%-72s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
+    printf("map %d, %d player(s): bridge at column %d, from row %d to row %d\n", options.prepared_map + 1,
+        num_players, bx, by_north, by_south);
+    int expected = caesar_land_expected(bx, ye_north, ye_south);
+    CHECK(caesar_land_count() == expected && expected > 0, "Caesar's land is the tiles within 15 of each end, no more");
+    for (int p = 0; p < num_players; p++) {
+        int cx, cy;
+        mp_mapgen_city_center(p, &cx, &cy);
+        CHECK(!mp_territory_is_caesar_land(map_grid_offset(cx, cy)), "no city starts on it");
+    }
+    printf("north shore:\n");
+    failures += caesar_land_end(bx, ye_north, -1);
+    printf("south shore:\n");
+    failures += caesar_land_end(bx, ye_south, 1);
+
+    // a saved and reloaded game keeps the land of Caesar
+    char map_file[64]; // one file per test: ctest runs them in parallel
+    snprintf(map_file, sizeof(map_file), "caesarland-%d-%d.mpsav", options.prepared_map + 1, num_players);
+    int before = caesar_land_count();
+    int saved = mp_savegame_write(map_file) && mp_savegame_read(map_file);
+    remove(map_file);
+    CHECK(saved, "the game is saved and read again");
+    CHECK(caesar_land_count() == before && before == expected, "it keeps the land of Caesar");
+    CHECK(!build_as(0, BUILDING_PREFECTURE, bx + 6, ye_north - 8, bx + 6, ye_north - 8),
+        "and still refuses a prefecture there");
+    player_context_switch(0);
+    player_context_set_num_players(1);
+#undef CHECK
+    printf("%s\n", failures ? "DIFFERENT: the land of Caesar does not work as designed" :
+        "Identical: the land of Caesar works as designed");
     return failures ? 1 : 0;
 }
 
@@ -9391,6 +9583,8 @@ int main(int argc, char **argv)
         result = command_missions(file);
     } else if (strcmp(command, "territory") == 0) {
         result = command_territory(file);
+    } else if (strcmp(command, "caesarland") == 0 && argc > 3) {
+        result = command_caesarland(file, atoi(argv[3]));
     } else if (strcmp(command, "caesarroads") == 0) {
         result = command_caesarroads(file);
     } else if (strcmp(command, "viewcorners") == 0 && argc > 3) {

@@ -163,6 +163,9 @@ int mp_mission_allows_place(int x, int y, int size)
             if (!map_grid_is_inside(x + dx, y + dy, 1)) {
                 return 0;
             }
+            if (mp_territory_is_caesar_land(map_grid_offset(x + dx, y + dy))) {
+                return 0; // nothing is built on the land of Caesar (D-082)
+            }
             int owner = mp_territory_owner(map_grid_offset(x + dx, y + dy));
             if (owner >= 0 && owner != player_context_current_player) {
                 return 0; // never in the zone of another player
