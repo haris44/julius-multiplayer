@@ -8,6 +8,9 @@ set -uo pipefail
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 cd "$ROOT"
 mkdir -p build/automation
+DATA_DIR=${C3_DATA_DIR:-$ROOT/../donnees-c3}
+. tools/mp-autosave-guard.sh
+mp_keep_autosave
 # "# REPEAT N command" becomes N times "command", three frames apart
 awk '/^# REPEAT / { n = $3; cmd = $0; sub(/^# REPEAT [0-9]+ /, "", cmd); for (i = 0; i < n; i++) { print cmd; print "wait 3" } next } { print }' \
     test/automation/mp-trade4-host.txt > build/automation/mp-trade4-host.txt
@@ -28,8 +31,8 @@ for pid in $CLIENTS; do
 done
 grep -h -E "mpcheck|automation\] .*(fail|timed|stopped)" build/automation/mp-trade4-host.log \
     build/automation/mp-trade4-client*.log | sed -E 's/^.*(INFO|ERROR): //'
-DATA_DIR=${C3_DATA_DIR:-$ROOT/../donnees-c3}
 rm -f "$DATA_DIR"/mp-session-* "$DATA_DIR"/mp-desync-*
+mp_restore_autosave
 rm -f build/automation/mp-trade4-host.txt
 MISSING=0
 for shot in player big-price empire stocks; do
