@@ -200,6 +200,11 @@ void mp_action_propose_peace(int other, int propose)
     submit(MP_ACTION_PROPOSE_PEACE, other, propose);
 }
 
+void mp_action_withdraw_war(int other)
+{
+    submit(MP_ACTION_WITHDRAW_WAR, other, 0);
+}
+
 // Legion that can receive orders; the user interface made the same checks before
 static formation *legion_of(int formation_id)
 {
@@ -377,6 +382,9 @@ void mp_actions_execute(const mp_command *command)
             break;
         case MP_ACTION_PROPOSE_PEACE:
             mp_war_propose_peace(arg1, arg2);
+            break;
+        case MP_ACTION_WITHDRAW_WAR:
+            mp_war_withdraw(arg1);
             break;
         case MP_ACTION_SEND_REQUEST:
             scenario_request_dispatch(arg1);

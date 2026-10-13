@@ -662,6 +662,13 @@ static void mpnode_play_war(int tick_in_game)
 {
     int player = mp_session_local_player_id();
     int peace_tick = mpnode_war_ticks * 3 / 4;
+    // a threat first: an honourable war, withdrawn during its notice (D-080)
+    if (player == 0 && tick_in_game == 8) {
+        mp_action_declare_war(1, MP_WAR_HONOURABLE);
+    }
+    if (player == 0 && tick_in_game == 14) {
+        mp_action_withdraw_war(1);
+    }
     if (player == 0 && tick_in_game == 20) {
         mp_action_declare_war(1, MP_WAR_BRUTAL);
     }
@@ -1203,7 +1210,7 @@ next_session:;
         int lost1 = soldiers_at_start[1] - mpnode_soldiers_of(1);
         printf("war: status %d, soldiers lost by player 1: %d, by player 2: %d\n", mp_war_status(0, 1), lost0, lost1);
         printf("war announcements: %d\n", mp_war_announcements());
-        if (mp_war_status(0, 1) != MP_WAR_PEACE || mp_war_announcements() < 3 || lost0 + lost1 <= 0) {
+        if (mp_war_status(0, 1) != MP_WAR_PEACE || mp_war_announcements() < 5 || lost0 + lost1 <= 0) {
             printf("WRONG: the war did not go as scripted (a war with losses, then peace)\n");
             result = 0;
         }
@@ -6973,6 +6980,59 @@ static int command_war(const char *file)
     city_action(0, MP_ACTION_PROPOSE_PEACE, 1, 1, 0);
     city_action(1, MP_ACTION_PROPOSE_PEACE, 0, 1, 0);
     CHECK(mp_war_status(0, 1) == MP_WAR_PEACE, "(peace)");
+    city_action(1, MP_ACTION_WITHDRAW_WAR, 0, 0, 0);
+    CHECK(mp_war_status(0, 1) == MP_WAR_PEACE, "(at peace, nothing to withdraw)");
+    city_action(0, MP_ACTION_DECLARE_WAR, 1, MP_WAR_BRUTAL, 0);
+    city_action(0, MP_ACTION_WITHDRAW_WAR, 1, 0, 0);
+    CHECK(mp_war_is_fighting(0, 1), "a brutal war is not withdrawn: only peace signed by both ends it");
+
+    // the declarer withdraws his declaration during the notice (D-080): the threat stopped the trade between them,
+    // the withdrawal brings it back
+    if (!mp_savegame_read(start)) {
+        return 2;
+    }
+    setup_trade(16, 0, 1);
+    RUN_UNTIL(marble_of(0) >= 8, 10, 3000);
+    CHECK(marble_of(0) == 8 && marble_of(1) == 0 && caravan_of(1), "(in peace, a first caravan delivers 8 loads, "
+        "the next one is on its way)");
+    city_action(0, MP_ACTION_DECLARE_WAR, 1, MP_WAR_HONOURABLE, 0);
+    city_action(0, MP_ACTION_LEGION_MOVE, first.legion[0], first.target_x, first.target_y);
+    war_run(1);
+    CHECK(caravan_of(1) && BUILDING_OWNER(caravan_of(1)->destination_building_id) == 1,
+        "an honourable war declared: the caravan on its way turns back");
+    war_run(600);
+    city_action(1, MP_ACTION_WITHDRAW_WAR, 0, 0, 0);
+    CHECK(mp_war_status(0, 1) == MP_WAR_NOTICE && !mp_war_may_withdraw(1, 0) && mp_war_may_withdraw(0, 1),
+        "only the declarer may withdraw it");
+    int announcements = mp_war_announcements();
+    uint64_t before_withdrawal = mp_checksum_state();
+    city_action(0, MP_ACTION_WITHDRAW_WAR, 1, 0, 0);
+    CHECK(mp_war_status(0, 1) == MP_WAR_PEACE && mp_war_declarer(0, 1) == -1 && !mp_war_peace_proposed(0, 1) &&
+        !mp_war_peace_proposed(1, 0) && mp_checksum_state() != before_withdrawal,
+        "the declarer withdraws it during the notice: peace at once, in the checksum");
+    CHECK(mp_war_announcements() == announcements + 1, "the withdrawal is announced to every player");
+    RUN_UNTIL(marble_of(0) >= 16, 10, 4000);
+    printf("the trade resumes: player 1 has %d marble, player 2 %d, %d ticks after the withdrawal\n", marble_of(0),
+        marble_of(1), war_ticks);
+    CHECK(marble_of(0) == 16 && marble_of(1) == 0 && mp_war_status(0, 1) == MP_WAR_PEACE,
+        "the trade between them resumes: the 8 loads brought home are sold again");
+    RUN_UNTIL(formation_get(first.legion[0])->is_at_fort, 10, 4000);
+    CHECK(formation_get(first.legion[0])->is_at_fort, "the legion sent to the border goes back to its fort");
+    // once the fighting began, the declaration cannot be withdrawn any more
+    city_action(0, MP_ACTION_DECLARE_WAR, 1, MP_WAR_HONOURABLE, 0);
+    RUN_UNTIL(mp_war_is_fighting(0, 1), 10, 3000);
+    city_action(0, MP_ACTION_WITHDRAW_WAR, 1, 0, 0);
+    CHECK(mp_war_is_fighting(0, 1) && !mp_war_may_withdraw(0, 1),
+        "once the fighting began, it is not withdrawn any more");
+    // the defender who struck first in the notice made the war his: the first declarer cannot withdraw it
+    if (!mp_savegame_read(start)) {
+        return 2;
+    }
+    city_action(0, MP_ACTION_DECLARE_WAR, 1, MP_WAR_HONOURABLE, 0);
+    city_action(1, MP_ACTION_DECLARE_WAR, 0, MP_WAR_BRUTAL, 0);
+    city_action(0, MP_ACTION_WITHDRAW_WAR, 1, 0, 0);
+    city_action(1, MP_ACTION_WITHDRAW_WAR, 0, 0, 0);
+    CHECK(mp_war_is_fighting(0, 1), "the defender struck first: nobody withdraws the war any more");
 
     // the war of the legions, played twice from the same start: the same checksum at the end
     if (!mp_savegame_read(start)) {
@@ -7097,6 +7157,7 @@ static int command_war(const char *file)
     }
     uint64_t classic = mp_checksum_state();
     city_action(0, MP_ACTION_DECLARE_WAR, 1, MP_WAR_BRUTAL, 0);
+    city_action(0, MP_ACTION_WITHDRAW_WAR, 1, 0, 0);
     CHECK(mp_war_status(0, 1) == MP_WAR_PEACE && mp_checksum_state() == classic,
         "a classic game: no war, nothing changes");
 #undef CHECK

@@ -335,6 +335,11 @@ est celle prévue en DESIGN §7. Ce plan ajoute le **cadre** : déclaration, mot
 
 - Pendant le préavis, personne n'attaque, ni l'un ni l'autre. Le défenseur peut frapper le premier en déclarant à
   son tour une guerre brutale : c'est une riposte, mais il paie le prix de la brutalité.
+- Pendant le préavis, le déclarant peut aussi **se rétracter** (D-080) : la paix revient tout de suite. La menace
+  laisse au défenseur le temps de céder à la pression du commerce coupé entre eux. Une menace retirée ne coûte ni
+  lauriers ni colère : le prix du motif se paie quand les combats commencent. Mais elle donne au défenseur un motif de
+  riposte pendant 12 mois, et redéclarer la guerre au même joueur dans ces 12 mois est « sans motif », avec une colère
+  double (*à valider*).
 - Le **motif** est déterminé par le jeu, pas choisi par le joueur :
 
 | Motif | Condition | Effet |

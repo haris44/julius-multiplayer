@@ -1,6 +1,11 @@
 # Feuille de route
 
-> **Jalon en cours : M9, César juge** (D-050, D-053, plan complet : [CESAR.md](CESAR.md)). César revient comme
+> **Jalon en cours : M10, la guerre** (2026-10-13, Alexandre : « lance le développement de l'aspect guerrier »).
+> Ordre : M10.1 (retrait d'une déclaration, D-080), puis en parallèle M10.2 (portes ennemies, aqueduc de César cassé
+> en guerre, terre de César autour du pont) et MG.1 à MG.4 (troupes), puis M10.4, M10.5 et M10.7 (motifs, colère,
+> armée trop puissante), M10.6 (expédition punitive), M10.8 et MG.5. M9 reste ouvert pour ses tâches de paix.
+>
+> **Jalon précédent : M9, César juge** (D-050, D-053, plan complet : [CESAR.md](CESAR.md)). César revient comme
 > arbitre : lauriers de la cité et de César, campagnes, demandes ; la première cité au score gagne. Jouable en paix
 > et seul avant la guerre (M10). Ordre : M9.1 → M9.9.
 >
@@ -1014,8 +1019,12 @@ César revient comme arbitre de la partie. Jouable en paix et **seul** : livré 
 > Une première tranche jouable est faite avec T5.5 (D-077) : état de guerre par paire, déclaration brutale ou
 > honorable, paix des deux, légions qui se battent et abattent les bâtiments chez l'ennemi, caravanes prises. Restent
 > dans M10.1 à M10.3 : hostilité des portes et murs, ordre « attaquer », route coupée ; puis M10.4 et la suite.
-- [ ] **M10.1** Hostilité par propriétaire et état de guerre par paire de joueurs : déclaration (commande, annonce ;
+- [x] **M10.1** Hostilité par propriétaire et état de guerre par paire de joueurs : déclaration (commande, annonce ;
   guerre honorable avec 3 mois de préavis, ou brutale et immédiate, D-053), paix proposée des deux côtés. En classique, la matrice actuelle exactement.
+  *Fait* avec T5.5 (D-077), plus la demande d'Alexandre du 2026-10-13 (D-080) : **pendant le préavis, le déclarant
+  peut se rétracter** (bouton « Se rétracter », deux clics). La paix revient tout de suite et le commerce reprend :
+  la menace laisse au défenseur le temps de céder à la pression du commerce coupé. Tests `mp_war` (échoue sans le
+  retrait), `mp_lan_war` (menace retirée en réseau), `tools/mp-war-test.sh` (vrai jeu). Protocole 24.
 - [ ] **M10.2** Légions chez l'adversaire, ordre « attaquer », portes et murs qui ne laissent passer que leur
   propriétaire.
 - [ ] **M10.3** Interception des caravanes (ancien M8.7) : cargaison prise, route coupée.

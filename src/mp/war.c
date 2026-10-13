@@ -265,6 +265,43 @@ static void legions_go_home(int player_id)
     player_context_switch(previous);
 }
 
+// peace between two players, signed or by a declaration withdrawn: the fights between them stop, and the legions of
+// both out of their fort go home
+static void make_peace(int a, int b)
+{
+    set_pair(a, b, MP_WAR_PEACE, MP_WAR_HONOURABLE, -1, 0);
+    stop_fights(a, b);
+    stop_fights(b, a);
+    legions_go_home(a);
+    legions_go_home(b);
+}
+
+// "Player 1 offers peace to player 2" / "Player 1 withdraws his declaration of war on player 2", on every computer
+static void announce_act(int self, int other, translation_key what)
+{
+    uint8_t text[200] = { 0 };
+    append(text, translation_for(TR_MP_PLAYER));
+    append_number(text, self + 1);
+    append(text, translation_for(what));
+    append_number(text, other + 1);
+    announce(text);
+}
+
+int mp_war_may_withdraw(int declarer, int target)
+{
+    return mp_war_status(declarer, target) == MP_WAR_NOTICE && data.declarer[declarer][target] == declarer;
+}
+
+void mp_war_withdraw(int target)
+{
+    int self = player_context_current_player;
+    if (!game_rules_is_multiplayer() || !mp_war_may_withdraw(self, target)) {
+        return;
+    }
+    make_peace(self, target);
+    announce_act(self, target, TR_MP_WAR_ANNOUNCE_WITHDRAWN);
+}
+
 void mp_war_propose_peace(int other, int propose)
 {
     int self = player_context_current_player;
@@ -277,20 +314,11 @@ void mp_war_propose_peace(int other, int propose)
         return;
     }
     if (!data.peace_proposed[other][self]) {
-        uint8_t text[200] = { 0 };
-        append(text, translation_for(TR_MP_PLAYER));
-        append_number(text, self + 1);
-        append(text, translation_for(TR_MP_WAR_ANNOUNCE_PROPOSES));
-        append_number(text, other + 1);
-        announce(text);
+        announce_act(self, other, TR_MP_WAR_ANNOUNCE_PROPOSES);
         return;
     }
     // both proposed it: peace is signed
-    set_pair(self, other, MP_WAR_PEACE, MP_WAR_HONOURABLE, -1, 0);
-    stop_fights(self, other);
-    stop_fights(other, self);
-    legions_go_home(self);
-    legions_go_home(other);
+    make_peace(self, other);
     announce_pair(self, other, TR_MP_WAR_ANNOUNCE_PEACE);
 }
 

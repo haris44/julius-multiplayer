@@ -18,6 +18,9 @@ mpwait 0
 wait 3
 key Return
 wait 2
+# the threat of player 1, then its withdrawal, are announced on the city
+mpwait 190
+screenshot build/automation/war-client-threat.png
 # the war declared by player 1 is announced on the city
 mpwait 240
 screenshot build/automation/war-client-city.png

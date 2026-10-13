@@ -94,7 +94,8 @@ static int action_available(int other, int action)
         case ACTION_BRUTAL:
             return status != MP_WAR_FIGHTING; // during the notice too: the defender strikes first
         case ACTION_HONOURABLE:
-            return status == MP_WAR_PEACE;
+            // during the notice, the declarer may withdraw his declaration instead (D-080)
+            return status == MP_WAR_PEACE || mp_war_may_withdraw(mp_session_local_player_id(), other);
         case ACTION_PEACE:
             return status != MP_WAR_PEACE;
         default:
@@ -156,7 +157,7 @@ static void draw_row(int row, int other, int local)
         } else if (action == ACTION_BRUTAL) {
             key = TR_MP_WAR_BRUTAL;
         } else if (action == ACTION_HONOURABLE) {
-            key = TR_MP_WAR_HONOURABLE;
+            key = mp_war_may_withdraw(local, other) ? TR_MP_WAR_WITHDRAW : TR_MP_WAR_HONOURABLE;
         } else {
             key = mp_war_peace_proposed(local, other) ? TR_MP_WAR_WITHDRAW_PEACE : TR_MP_WAR_PROPOSE_PEACE;
         }
@@ -176,8 +177,8 @@ static void draw_foreground(void)
     graphics_in_dialog();
     outer_panel_draw(0, 0, 40, 30);
     text_draw_centered(translation_for(TR_MP_WAR_TITLE), 0, 16, 640, FONT_LARGE_BLACK, 0);
-    text_draw_multiline(translation_for(TR_MP_WAR_RULE), 32, 54, 576, FONT_NORMAL_BLACK, 0);
-    text_draw_multiline(translation_for(TR_MP_WAR_RULE_2), 32, 94, 576, FONT_NORMAL_BLACK, 0);
+    int height = text_draw_multiline(translation_for(TR_MP_WAR_RULE), 32, 50, 576, FONT_NORMAL_BLACK, 0);
+    text_draw_multiline(translation_for(TR_MP_WAR_RULE_2), 32, 50 + height, 576, FONT_NORMAL_BLACK, 0);
 
     inner_panel_draw(16, FIRST_ROW_Y - 10, 38, 16);
     int local = mp_session_local_player_id();
@@ -220,8 +221,12 @@ static void button_war(int row, int action)
     } else {
         int form = action == ACTION_BRUTAL ? MP_WAR_BRUTAL : MP_WAR_HONOURABLE;
         if (data.armed_player == other && data.armed_form == form) {
-            data.armed_player = -1; // second click: declared
-            mp_action_declare_war(other, form);
+            data.armed_player = -1; // second click: declared, or withdrawn during the notice
+            if (action == ACTION_HONOURABLE && mp_war_may_withdraw(mp_session_local_player_id(), other)) {
+                mp_action_withdraw_war(other);
+            } else {
+                mp_action_declare_war(other, form);
+            }
         } else {
             data.armed_player = other;
             data.armed_form = form;

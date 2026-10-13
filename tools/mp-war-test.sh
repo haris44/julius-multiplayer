@@ -19,8 +19,8 @@ grep -h -E "mpcheck|automation\] .*(fail|timed|stopped)" build/automation/mp-war
 DATA_DIR=${C3_DATA_DIR:-$ROOT/../donnees-c3}
 rm -f "$DATA_DIR"/mp-session-* "$DATA_DIR"/mp-desync-*
 MISSING=0
-for shot in host-advisor host-peace host-confirm host-war host-offer host-signed client-city client-war client-offer \
-    client-signed; do
+for shot in host-advisor host-peace host-notice host-withdraw-confirm host-withdrawn host-confirm host-war host-offer host-signed client-threat client-city client-war \
+    client-offer client-signed; do
     [ -s "build/automation/war-$shot.png" ] || { echo "missing screenshot war-$shot.png"; MISSING=1; }
 done
 if [ $HOST_STATUS -ne 0 ] || [ $CLIENT_STATUS -ne 0 ] || [ $MISSING -ne 0 ]; then

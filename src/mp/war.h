@@ -10,7 +10,9 @@
  * for each pair of players, changed by commands of the military advisor and told to every player.
  *
  * - A player declares war on another: a brutal war fights at once, an honourable war after a notice of three months
- *   (D-053). During the notice nobody fights; the defender may strike first by declaring a brutal war in turn.
+ *   (D-053). During the notice nobody fights; the defender may strike first by declaring a brutal war in turn, and
+ *   the declarer may withdraw his declaration: the threat leaves the defender time to give in to the pressure of the
+ *   trade stopped between them (D-080).
  * - Peace is signed when both players proposed it; the legions of both out of their fort then go home (unless
  *   their player is still at war with another one).
  * - While two players fight, their soldiers are hostile to each other: they fight each other's soldiers and
@@ -62,6 +64,18 @@ int mp_war_any_fighting(void);
  * MP_WAR_HONOURABLE after the notice. A brutal declaration during the notice starts the fighting.
  */
 void mp_war_declare(int target, int form);
+
+/**
+ * Whether `declarer` may withdraw his declaration of war on `target`: an honourable war he declared, during its
+ * notice (D-080)
+ */
+int mp_war_may_withdraw(int declarer, int target);
+
+/**
+ * The current player withdraws his declaration of an honourable war on another, during the notice (command of its
+ * player): peace at once, as when it is signed
+ */
+void mp_war_withdraw(int target);
 
 /**
  * The current player proposes peace to another, or withdraws the proposal (command of its player); peace is signed

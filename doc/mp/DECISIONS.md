@@ -1393,3 +1393,34 @@
   revenir au salaire choisi sous le plafond du rang (D-067).
 - Classique : inchangé.
 
+
+### D-080 — Se rétracter d'une déclaration de guerre pendant le préavis (M10.1, précise D-053, D-077)
+- 2026-10-13 · **adoptée** (Alexandre : « lorsque l'on annonce une guerre à un ennemi, on peut se rétracter : cela
+  permet de lui laisser le temps de céder à la pression commerciale ») ; détails *à valider*
+- Pendant le préavis d'une guerre honorable (3 mois), **celui qui l'a déclarée** peut la retirer : bouton « Se
+  rétracter » à la place de « Honorable » dans la fenêtre « Guerre et paix », deux clics comme pour déclarer
+  (commande `MP_ACTION_WITHDRAW_WAR`). La paix revient tout de suite, comme si elle était signée : propositions
+  effacées, légions des deux hors de leur fort rentrées (sauf guerre avec un tiers), annonce à tous (« Joueur 1 retire
+  sa déclaration de guerre au joueur 2 »).
+- **La pression** : dès la déclaration, plus aucune caravane ne part entre eux, et celles en route font demi-tour
+  (D-077). Le défenseur a 3 mois pour céder (prix, ventes, route ouverte). S'il cède, le déclarant se rétracte et le
+  commerce reprend avec la caravane suivante. Mesuré (`mp_war`) : les 8 chargements rentrés chez le vendeur sont
+  livrés 3 400 ticks (un peu plus de 4 mois de jeu) après le retrait, avec une caravane par mois (D-075).
+- **Pas de retrait** d'une guerre brutale, ni une fois les combats commencés, ni par le défenseur (il peut proposer la
+  paix). Si le défenseur frappe le premier par une guerre brutale, la guerre devient la sienne et personne ne la
+  retire. Dans ces cas, seule la paix signée par les deux y met fin.
+- **Avec César** (M10.4, proposé, *à valider*) :
+  - une menace retirée ne coûte ni lauriers ni colère ;
+  - le prix d'une guerre sans motif (−15 lauriers) se paie quand les combats commencent : à la fin du préavis pour une
+    guerre honorable, tout de suite pour une guerre brutale ;
+  - contre l'abus des menaces, la déclaration retirée donne au défenseur un motif de riposte pendant 12 mois, et
+    redéclarer la guerre au même joueur dans les 12 mois est « sans motif », avec une colère double, comme après une
+    paix (CESAR §7.1).
+- Tests :
+  - `mp_war` : retrait par le seul déclarant pendant le préavis, dans la somme de contrôle et annoncé ; caravane qui
+    fait demi-tour à la déclaration, puis commerce repris ; légion envoyée à la frontière rentrée ; pas de retrait d'une
+    guerre brutale, après le début des combats, ni après la riposte du défenseur ; rien en classique. Quatre
+    vérifications échouent sans le retrait ;
+  - `mp_lan_war` : une menace retirée, puis la guerre brutale, en réseau ;
+  - `tools/mp-war-test.sh` : vrai jeu, bouton et confirmation chez l'hôte, annonces chez l'autre joueur.
+- Réseau : protocole 24.
