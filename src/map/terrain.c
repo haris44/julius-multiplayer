@@ -1,6 +1,7 @@
 #include "terrain.h"
 
 #include "game/player_context.h"
+#include "map/building.h"
 #include "map/grid.h"
 #include "map/owner.h"
 #include "map/ring.h"
@@ -29,6 +30,9 @@ static void update_owner(int grid_offset)
         return;
     }
     if (!(terrain_grid.items[grid_offset] & TERRAIN_INFRASTRUCTURE)) {
+        if (map_owner_get_claimed(grid_offset) == MAP_OWNER_CAESAR && map_building_at(grid_offset)) {
+            return; // a building over a road of Caesar (D-085): his claim stays, his road comes back with the tile
+        }
         map_owner_set(grid_offset, MAP_OWNER_NONE);
     } else if (map_owner_get_claimed(grid_offset) == MAP_OWNER_NONE && map_owner_builder() != MAP_OWNER_NONE) {
         map_owner_set(grid_offset, map_owner_builder());

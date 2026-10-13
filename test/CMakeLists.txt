@@ -451,6 +451,10 @@ add_test(NAME mp_war COMMAND simtool war brugle-massilia-start.sav)
 add_test(NAME mp_war_gate COMMAND simtool wargate brugle-massilia-start.sav)
 add_test(NAME mp_war_gate_neutral COMMAND simtool wargate3 brugle-massilia-start.sav)
 add_test(NAME mp_war_aqueduct COMMAND simtool waraqueduct brugle-massilia-start.sav)
+# M10.2 (D-085): a gatehouse (or a triumphal arch) over a road of Caesar leaves him his claim on the tiles; when it
+# disappears (deleted by its owner, pulled down by enemy soldiers, after a save and a load) his road is back at once,
+# indestructible and walkable, and a caravan crosses it again; the same deletion twice gives the same checksum
+add_test(NAME mp_caesar_road_under_gate COMMAND simtool caesargate brugle-massilia-start.sav)
 
 # T1.5 (D-034): the roads of Caesar stay, untinted, and serve every city
 add_test(NAME mp_caesar_roads COMMAND simtool caesarroads brugle-massilia-start.sav)

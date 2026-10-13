@@ -418,8 +418,8 @@ attendant Alexandre : la **terre de César**.
     la contourne). Les routes des joueurs restent permises.
 - **Porte sur une route de César** (vérifié par `mp_caesar_land_*`) : impossible près du pont ; au-delà de la terre de
   César, elle reste permise si l'endroit est dans la zone du joueur. Depuis D-081, elle n'arrête que les soldats des
-  ennemis de son propriétaire, mais elle prend la route de César : abattue ou supprimée, elle l'emporte (point ouvert,
-  D-068).
+  ennemis de son propriétaire. César garde sa revendication sous elle (grille des propriétaires, sauvegardée) ; quand
+  elle disparaît (supprimée, abattue, brûlée, effondrée), sa route revient sur ces cases, indestructible (D-085).
 - **Hostilité par paire** (M10.1) : les soldats n'attaquent que les figures des joueurs en guerre avec leur
   propriétaire. Les personnages ne se bloquent pas entre eux (règle d'origine) : un joueur neutre passe toujours.
 - **Colère** (M10.5) : dans le terme de puissance, une légion dont le centre est sur la terre de César compte comme

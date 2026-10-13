@@ -1031,7 +1031,8 @@ César revient comme arbitre de la partie. Jouable en paix et **seul** : livré 
   passent ; ouvertes à tous les autres (neutres, paix, préavis) ; personne sur les murs ; en guerre, les soldats
   coupent l'aqueduc de César qui abreuve l'ennemi et les aqueducs de l'ennemi (10), réparables par un aqueduc du
   joueur (ctest `mp_war_gate`, `mp_war_gate_neutral`, `mp_war_aqueduct`). *Reste* : l'ordre « attaquer » qui marche
-  sur une cible ; la route de César sous une porte abattue ou supprimée (point ouvert de D-081, avec D-068).
+  sur une cible. La route de César sous une porte (ou un arc de triomphe) lui revient quand le bâtiment disparaît,
+  par tous les chemins (D-085, à valider ; ctest `mp_caesar_road_under_gate`).
   - *Fait (D-082, à valider)* : la terre de César, 15 cases autour de chaque entrée du pont, où aucune zone ne
     s'étend et où porte, tour, fort, mission et mur sont refusés (routes permises) ; `mp_caesar_land_*`.
 - [ ] **M10.3** Interception des caravanes (ancien M8.7) : cargaison prise, route coupée.

@@ -44,8 +44,8 @@ static void destroy_on_fire(building *b, int plagued)
         num_tiles = 0;
     }
     map_building_tiles_remove(b->id, b->x, b->y);
-    if (map_terrain_is(b->grid_offset, TERRAIN_WATER)) {
-        b->state = BUILDING_STATE_DELETED_BY_GAME;
+    if (map_terrain_is(b->grid_offset, TERRAIN_WATER) || map_building_tiles_is_caesar_road(b->grid_offset)) {
+        b->state = BUILDING_STATE_DELETED_BY_GAME; // on a road of Caesar, no ruin: his road is back at once (D-085)
     } else {
         b->type = BUILDING_BURNING_RUIN;
         b->figure_id4 = 0;
@@ -73,7 +73,8 @@ static void destroy_on_fire(building *b, int plagued)
     for (int tile = 1; tile < num_tiles; tile++) {
         int x = x_tiles[tile] + b->x;
         int y = y_tiles[tile] + b->y;
-        if (map_terrain_is(map_grid_offset(x, y), TERRAIN_WATER)) {
+        if (map_terrain_is(map_grid_offset(x, y), TERRAIN_WATER) ||
+            map_building_tiles_is_caesar_road(map_grid_offset(x, y))) {
             continue;
         }
         building *ruin = building_create(BUILDING_BURNING_RUIN, x, y);

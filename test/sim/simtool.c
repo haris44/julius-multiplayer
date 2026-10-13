@@ -5,6 +5,7 @@
 #include "figure/figure.h"
 #include "figure/formation.h"
 #include "building/construction_clear.h"
+#include "building/destruction.h"
 #include "building/type.h"
 #include "building/count.h"
 #include "building/menu.h"
@@ -7500,8 +7501,7 @@ static int play_siege(int legion, const siege_ring *r, int show, siege_march *in
     CHECK(in->on_walls == 0, "none ever stands on a wall");
     CHECK(in->arrived && in->inside == in->soldiers, "once it fell, they walk in: every soldier at the standard");
     if (show) {
-        // the gatehouse took the road of Caesar under it when it was built (map_building_tiles_add): the road goes
-        // with it, as when its owner deletes it; open point of D-081 and D-068
+        // the gatehouse stood on the road of Caesar: his road is back under it (D-085, tested by caesargate)
         int o = map_grid_offset(r->gate_x[0], r->gate_y);
         printf("under the fallen gatehouse, on the main road: %s, owner %d\n",
             map_terrain_is(o, TERRAIN_ROAD) ? "road" : map_terrain_is(o, TERRAIN_RUBBLE) ? "rubble" : "other",
@@ -7680,6 +7680,199 @@ static int command_wargate3(const char *file)
 #undef CHECK
     printf("%s\n", failures ? "DIFFERENT: the gatehouses of a player at war stop the neutral players" :
         "Identical: the gatehouses of a player at war let the neutral players through");
+    return failures ? 1 : 0;
+}
+
+// the tiles of a w x h area that are a road of Caesar: road, his, no building, no rubble, walkable
+static int caesar_road_tiles(int x, int y, int w, int h)
+{
+    int count = 0;
+    for (int dy = 0; dy < h; dy++) {
+        for (int dx = 0; dx < w; dx++) {
+            int o = map_grid_offset(x + dx, y + dy);
+            count += map_terrain_is(o, TERRAIN_ROAD) && !map_terrain_is(o, TERRAIN_BUILDING | TERRAIN_RUBBLE) &&
+                map_building_at(o) == 0 && map_owner_get_claimed(o) == MAP_OWNER_CAESAR && map_routing_citizen_is_road(o);
+        }
+    }
+    return count;
+}
+
+// the tiles of the area that Caesar claims
+static int caesar_claims(int x, int y, int w, int h)
+{
+    int count = 0;
+    for (int dy = 0; dy < h; dy++) {
+        for (int dx = 0; dx < w; dx++) {
+            count += map_owner_get_claimed(map_grid_offset(x + dx, y + dy)) == MAP_OWNER_CAESAR;
+        }
+    }
+    return count;
+}
+
+static void delete_building_at(int player_id, int x, int y)
+{
+    mp_command clear = { .type = MP_COMMAND_BUILD, .player_id = player_id, .args = { BUILDING_CLEAR_LAND, 0, x, y, x, y, 0, 0 } };
+    mp_command_execute(&clear);
+}
+
+// a building on the road of Caesar gives it back when it disappears (M10.2, D-085): two players on map 1, player 2
+// closes his city with walls and two gatehouses over the main road (D-081); the road of Caesar under them is still his
+// while they stand, and comes back at once, indestructible and walkable, when the owner deletes them, when enemy soldiers
+// pull one down, after a save and a load, and under a triumphal arch; a caravan of player 2 leaves his walled city
+// again; the same deletion played twice gives the same checksum
+static int command_caesargate(const char *file)
+{
+    int failures = 0;
+#define CHECK(condition, text) do { int ok_ = (condition); printf("%-78s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
+    int legion1, legion2, tx, ty;
+    if (!start_war_game(file, &legion1, &legion2, &tx, &ty)) {
+        printf("Unable to prepare the game\n");
+        return 2;
+    }
+    int cx, cy;
+    mp_mapgen_city_center(1, &cx, &cy);
+    // the gatehouses of the ring (build_siege_ring) and the road of Caesar that is under them
+    int gx[2] = { cx - 14, cx + 3 }, gy = cy;
+    int caesar_before[2];
+    for (int g = 0; g < 2; g++) {
+        caesar_before[g] = caesar_road_tiles(gx[g], gy, 2, 2);
+    }
+    printf("road of Caesar under the future gatehouses: %d and %d tiles\n", caesar_before[0], caesar_before[1]);
+    siege_ring ring;
+    CHECK(caesar_before[0] > 0 && caesar_before[1] > 0 && build_siege_ring(1, &ring) && ring.gate_x[0] == gx[0] &&
+        ring.gate_x[1] == gx[1] && ring.gate_y == gy, "player 2 closes his city: two gatehouses over the road of Caesar");
+    setup_trade(8, 0, 0);
+    int gates_claim = 1, gates_road = 1;
+    for (int g = 0; g < 2; g++) {
+        gates_claim &= caesar_claims(gx[g], gy, 2, 2) == caesar_before[g];
+        gates_road &= map_terrain_is(map_grid_offset(gx[g], gy), TERRAIN_ROAD) &&
+            map_terrain_is(map_grid_offset(gx[g], gy), TERRAIN_GATEHOUSE);
+    }
+    CHECK(gates_claim && gates_road, "while the gatehouses stand, Caesar still claims his tiles under them");
+    // the road under a building taken away (as the triumphal arch does on its sides) does not free the claim
+    int under = map_grid_offset(gx[0], gy);
+    map_owner_set_builder(1);
+    map_terrain_remove(under, TERRAIN_ROAD);
+    int claim_kept = map_owner_get_claimed(under) == MAP_OWNER_CAESAR;
+    map_terrain_add(under, TERRAIN_ROAD);
+    map_owner_set_builder(MAP_OWNER_NONE);
+    CHECK(claim_kept && map_owner_get_claimed(under) == MAP_OWNER_CAESAR,
+        "the road taken away under a building (triumphal arch): Caesar still claims the tile");
+    // a triumphal arch for the third case, over the road of Caesar too, west of the warehouse
+    int ax = cx - 11, ay = cy - 1;
+    int arch_before = caesar_road_tiles(ax, ay, 3, 3);
+    build_as(1, BUILDING_TRIUMPHAL_ARCH, ax, ay, ax, ay);
+    run_trace(50, 50, 0, 0);
+    int arch_id = map_building_at(map_grid_offset(ax, ay));
+    int arch_standing = arch_id > 0 && building_get(arch_id)->type == BUILDING_TRIUMPHAL_ARCH;
+    printf("triumphal arch over %d tiles of the road of Caesar: %s, he claims %d tiles\n", arch_before,
+        arch_standing ? "built" : "not built", caesar_claims(ax, ay, 3, 3));
+    const char *start = "caesargate-start.mpsav";
+    if (!mp_savegame_write(start)) {
+        printf("Unable to save\n");
+        return 2;
+    }
+
+    // the owner deletes everything: twice from the same start, the second time from the saved game and played again
+    uint64_t checksum[2] = { 0, 0 };
+    for (int run = 0; run < 2; run++) {
+        if (!mp_savegame_read(start)) {
+            return 2;
+        }
+        int still = 1;
+        for (int g = 0; g < 2; g++) {
+            still &= caesar_claims(gx[g], gy, 2, 2) == caesar_before[g];
+        }
+        if (!run) {
+            CHECK(still, "reloaded with the gatehouses standing: Caesar still claims the tiles under them");
+        }
+        for (int g = 0; g < 2; g++) {
+            delete_building_at(1, gx[g], gy);
+        }
+        if (arch_standing) {
+            delete_building_at(1, ax + 1, ay + 1);
+        }
+        run_trace(100, 100, 0, 0);
+        int back = 1, nothing_else = 1;
+        for (int g = 0; g < 2; g++) {
+            back &= caesar_road_tiles(gx[g], gy, 2, 2) == caesar_before[g];
+            nothing_else &= !map_terrain_is(map_grid_offset(gx[g], gy), TERRAIN_BUILDING | TERRAIN_GATEHOUSE | TERRAIN_RUBBLE);
+        }
+        if (arch_standing) {
+            back &= caesar_road_tiles(ax, ay, 3, 3) == arch_before;
+        }
+        if (!run) {
+            CHECK(back && nothing_else, "deleted by player 2: the road of Caesar is back under every one, no rubble");
+        }
+        // indestructible, as the rest of his road
+        for (int q = 0; q < 2; q++) {
+            for (int g = 0; g < 2; g++) {
+                delete_building_at(q, gx[g], gy);
+            }
+        }
+        int kept = caesar_road_tiles(gx[0], gy, 2, 2) == caesar_before[0] &&
+            caesar_road_tiles(gx[1], gy, 2, 2) == caesar_before[1];
+        if (!run) {
+            CHECK(kept, "nobody can clear it");
+        }
+        // a caravan of player 2 leaves his walled city by the roads that came back
+        city_action(0, MP_ACTION_PROPOSE_ROUTE, 1, 1, 0);
+        city_action(1, MP_ACTION_PROPOSE_ROUTE, 0, 1, 0);
+        int days = 0;
+        for (; days < 120 && marble_of(0) < 8; days++) {
+            run_trace(50, 50, 0, 0);
+        }
+        if (!run) {
+            printf("player 1 has %d marble of player 2 after %d days\n", marble_of(0), days);
+            CHECK(marble_of(0) == 8, "the caravan of player 2 walks out through the road of Caesar and delivers");
+        }
+        checksum[run] = mp_checksum_state();
+    }
+    CHECK(checksum[0] == checksum[1], "the same deletion played again from the saved game: the same checksum");
+
+    // enemy soldiers pull a gatehouse down
+    if (!mp_savegame_read(start)) {
+        return 2;
+    }
+    city_action(0, MP_ACTION_DECLARE_WAR, 1, MP_WAR_BRUTAL, 0);
+    siege_march s;
+    march(legion1, &ring, ring.west + 8, ring.gate_y - 3, 8000, &s); // the warehouse is south of the road
+    printf("the legion of player 1 pulls the west gatehouse down after %d ticks (first stopped after %d, at the standard "
+        "after %d, %d of %d inside)\n", s.fall, s.first_stop, s.arrived, s.inside, s.soldiers);
+    CHECK(s.fall > 0 && !gate_standing(&ring, 0), "the soldiers of player 1 pull the west gatehouse of player 2 down");
+    CHECK(caesar_road_tiles(gx[0], gy, 2, 2) == caesar_before[0],
+        "the road of Caesar is back under the fallen gatehouse, no rubble");
+    CHECK(gate_standing(&ring, 1) && caesar_claims(gx[1], gy, 2, 2) == caesar_before[1],
+        "the east gatehouse stands on his claim");
+
+    // collapse and fire: the west gatehouse burns, the east one and the arch collapse
+    if (!mp_savegame_read(start)) {
+        return 2;
+    }
+    player_context_switch(1);
+    building_destroy_by_fire(building_get(map_building_at(map_grid_offset(gx[0], gy))));
+    building_destroy_by_collapse(building_get(map_building_at(map_grid_offset(gx[1], gy))));
+    if (arch_standing) {
+        building_destroy_by_collapse(building_get(map_building_at(map_grid_offset(ax, ay))));
+    }
+    player_context_switch(0);
+    CHECK(caesar_claims(gx[0], gy, 2, 2) == caesar_before[0] && caesar_claims(gx[1], gy, 2, 2) == caesar_before[1],
+        "burnt and collapsed: Caesar still claims the tiles");
+    run_trace(1000, 1000, 0, 0);
+    int back = caesar_road_tiles(gx[0], gy, 2, 2) == caesar_before[0] && caesar_road_tiles(gx[1], gy, 2, 2) == caesar_before[1];
+    if (arch_standing) {
+        back &= caesar_road_tiles(ax, ay, 3, 3) == arch_before;
+    }
+    printf("west (burnt) %d, east (collapsed) %d, arch (collapsed) %d tiles of road of Caesar back\n",
+        caesar_road_tiles(gx[0], gy, 2, 2), caesar_road_tiles(gx[1], gy, 2, 2), caesar_road_tiles(ax, ay, 3, 3));
+    CHECK(back, "burnt and collapsed gatehouses and arch: his road is back, no ruin, no rubble");
+    CHECK(arch_standing, "the triumphal arch could be built on the road of Caesar");
+    remove(start);
+    player_context_switch(0);
+    player_context_set_num_players(1);
+#undef CHECK
+    printf("%s\n", failures ? "DIFFERENT: the road of Caesar is not given back" :
+        "Identical: the road of Caesar is given back when what stood on it disappears");
     return failures ? 1 : 0;
 }
 
@@ -9559,6 +9752,8 @@ int main(int argc, char **argv)
         result = command_war(file);
     } else if (strcmp(command, "wargate") == 0) {
         result = command_wargate(file);
+    } else if (strcmp(command, "caesargate") == 0) {
+        result = command_caesargate(file);
     } else if (strcmp(command, "waraqueduct") == 0) {
         result = command_waraqueduct(file);
     } else if (strcmp(command, "wargate3") == 0) {
