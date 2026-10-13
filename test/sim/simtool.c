@@ -7105,6 +7105,557 @@ static int command_war(const char *file)
     return failures ? 1 : 0;
 }
 
+// ---------- gatehouses, walls and the aqueduct of Caesar at war (M10.2, D-081) ----------
+
+// A ring of walls of the player around the middle of his city, closed by two gatehouses on the main road of Caesar,
+// west and east (2 x 2 tiles from (gate_x, gate_y), the road on their north row)
+typedef struct {
+    int west, east, north, south;
+    int gate_x[2], gate_y;
+} siege_ring;
+
+static int is_wall(int x, int y)
+{
+    return map_terrain_is(map_grid_offset(x, y), TERRAIN_WALL);
+}
+
+static int gate_standing(const siege_ring *r, int i)
+{
+    int id = map_building_at(map_grid_offset(r->gate_x[i], r->gate_y));
+    const building *b = building_get(id);
+    return id > 0 && b->type == BUILDING_GATEHOUSE && b->state == BUILDING_STATE_IN_USE;
+}
+
+static int build_siege_ring(int player_id, siege_ring *r)
+{
+    int cx, cy;
+    mp_mapgen_city_center(player_id, &cx, &cy);
+    r->west = cx - 14;
+    r->east = cx + 4;
+    r->north = cy - 6;
+    r->south = cy + 6;
+    r->gate_y = cy;
+    r->gate_x[0] = r->west;
+    r->gate_x[1] = r->east - 1;
+    build_as(player_id, BUILDING_GATEHOUSE, r->gate_x[0], r->gate_y, r->gate_x[0], r->gate_y);
+    build_as(player_id, BUILDING_GATEHOUSE, r->gate_x[1], r->gate_y, r->gate_x[1], r->gate_y);
+    build_as(player_id, BUILDING_WALL, r->west, r->north, r->east, r->north);
+    build_as(player_id, BUILDING_WALL, r->west, r->south, r->east, r->south);
+    build_as(player_id, BUILDING_WALL, r->west, r->north + 1, r->west, r->gate_y - 1);
+    build_as(player_id, BUILDING_WALL, r->west, r->gate_y + 2, r->west, r->south - 1);
+    build_as(player_id, BUILDING_WALL, r->east, r->north + 1, r->east, r->gate_y - 1);
+    build_as(player_id, BUILDING_WALL, r->east, r->gate_y + 2, r->east, r->south - 1);
+    for (int t = 0; t < 50 && !(gate_standing(r, 0) && gate_standing(r, 1)); t++) {
+        war_run(1); // the gatehouses come into use (building_update_state, once a day)
+    }
+    int closed = gate_standing(r, 0) && gate_standing(r, 1) &&
+        BUILDING_OWNER(map_building_at(map_grid_offset(r->gate_x[0], r->gate_y))) == player_id;
+    for (int x = r->west; x <= r->east; x++) {
+        closed &= is_wall(x, r->north) && is_wall(x, r->south);
+    }
+    for (int y = r->north; y <= r->south; y++) {
+        if (y != r->gate_y && y != r->gate_y + 1) {
+            closed &= is_wall(r->west, y) && is_wall(r->east, y);
+        }
+    }
+    return closed;
+}
+
+static int is_soldier_of(const figure *f, int formation_id)
+{
+    return f->state == FIGURE_STATE_ALIVE && f->formation_id == formation_id && figure_is_legion(f) &&
+        f->action_state != FIGURE_ACTION_149_CORPSE;
+}
+
+typedef struct {
+    int inside;      // soldiers inside the ring
+    int on_walls;    // soldiers standing on a wall
+    int stopped;     // soldiers stopped by a gatehouse, breaking it
+} siege_count;
+
+static void count_siege(int formation_id, const siege_ring *r, siege_count *c)
+{
+    memset(c, 0, sizeof(*c));
+    int owner = FORMATION_OWNER(formation_id);
+    for (int i = owner * MAX_FIGURES + 1; i < (owner + 1) * MAX_FIGURES; i++) {
+        figure *f = figure_get(i);
+        if (!is_soldier_of(f, formation_id)) {
+            continue;
+        }
+        c->inside += f->x > r->west && f->x < r->east && f->y > r->north && f->y < r->south;
+        c->on_walls += is_wall(f->x, f->y);
+        c->stopped += f->direction == DIR_FIGURE_ATTACK && f->action_state != FIGURE_ACTION_150_ATTACK;
+    }
+}
+
+typedef struct {
+    int arrived;             // tick at which every soldier stood at the standard, 0 if never
+    int first_stop;          // tick at which a soldier was first stopped by a gatehouse, 0 if never
+    int fall;                // tick at which the west gatehouse fell, 0 if never
+    int inside_before_fall;  // most soldiers inside the ring while the west gatehouse stood
+    int on_walls;            // soldiers on a wall, summed over the ticks
+    int stopped_ticks;       // ticks with a soldier stopped by a gatehouse
+    int inside;              // soldiers inside at the end
+    int soldiers;            // soldiers alive at the end
+} siege_march;
+
+// the legion marches to (x, y), tick by tick, until every soldier stands at the standard (at most max_ticks)
+static void march(int formation_id, const siege_ring *r, int x, int y, int max_ticks, siege_march *s)
+{
+    memset(s, 0, sizeof(*s));
+    city_action(FORMATION_OWNER(formation_id), MP_ACTION_LEGION_MOVE, formation_id, x, y);
+    for (int t = 1; t <= max_ticks; t++) {
+        war_run(1);
+        siege_count c;
+        count_siege(formation_id, r, &c);
+        if (!s->fall && !gate_standing(r, 0)) {
+            s->fall = t;
+        }
+        if (!s->fall && c.inside > s->inside_before_fall) {
+            s->inside_before_fall = c.inside;
+        }
+        if (!s->first_stop && c.stopped) {
+            s->first_stop = t;
+        }
+        s->on_walls += c.on_walls;
+        s->stopped_ticks += c.stopped > 0;
+        s->soldiers = alive_soldiers(formation_id);
+        s->inside = c.inside;
+        if (s->soldiers && soldiers_at_standard(formation_id) == s->soldiers) {
+            s->arrived = t;
+            break;
+        }
+    }
+}
+
+// the war of the gatehouses, from the start with the ring: the legion of player 1 breaks the west gatehouse of
+// player 2 and walks in, then goes out to the north-east of the ring, around the east gatehouse
+static int play_siege(int legion, const siege_ring *r, int show, siege_march *in, siege_march *around,
+    uint64_t *checksum)
+{
+    int failures = 0;
+#define CHECK(condition, text) do { int ok_ = (condition); if (show) printf("%-74s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
+    city_action(0, MP_ACTION_DECLARE_WAR, 1, MP_WAR_BRUTAL, 0);
+    march(legion, r, r->west + 8, r->gate_y + 3, 8000, in);
+    if (show) {
+        printf("at war: a soldier stopped by the west gatehouse after %d ticks, which falls after %d ticks (%d ticks of "
+            "attack); %d of %d soldiers inside after %d ticks\n", in->first_stop, in->fall,
+            in->fall - in->first_stop, in->inside, in->soldiers, in->arrived);
+    }
+    CHECK(in->first_stop > 0 && in->fall > in->first_stop, "at war, the gatehouse of player 2 stops the legion of player 1");
+    CHECK(in->inside_before_fall == 0, "no soldier of it inside the walls before the gatehouse falls");
+    CHECK(in->on_walls == 0, "none ever stands on a wall");
+    CHECK(in->arrived && in->inside == in->soldiers, "once it fell, they walk in: every soldier at the standard");
+    if (show) {
+        // the gatehouse took the road of Caesar under it when it was built (map_building_tiles_add): the road goes
+        // with it, as when its owner deletes it; open point of D-081 and D-068
+        int o = map_grid_offset(r->gate_x[0], r->gate_y);
+        printf("under the fallen gatehouse, on the main road: %s, owner %d\n",
+            map_terrain_is(o, TERRAIN_ROAD) ? "road" : map_terrain_is(o, TERRAIN_RUBBLE) ? "rubble" : "other",
+            map_owner_get_claimed(o));
+    }
+    CHECK(gate_standing(r, 1), "the east gatehouse stands");
+    march(legion, r, r->east + 6, r->north + 2, 4000, around);
+    if (show) {
+        printf("out of the ring by the broken gate and around it: %d ticks, %d ticks stopped by a gatehouse\n",
+            around->arrived, around->stopped_ticks);
+    }
+    CHECK(around->arrived && around->stopped_ticks == 0 && gate_standing(r, 1),
+        "with a way around, they go around the east gatehouse, which stands");
+    CHECK(around->on_walls == 0, "still never on a wall");
+    *checksum = mp_checksum_state();
+#undef CHECK
+    return failures;
+}
+
+// gatehouses and walls at war (M10.2, D-081): the gatehouses of a player are closed to the soldiers of the players
+// fighting him, who go around them or break them as invaders; open to everyone else, in peace and during the notice
+// of an honourable war; nobody walks over walls
+static int command_wargate(const char *file)
+{
+    int failures = 0;
+#define CHECK(condition, text) do { int ok_ = (condition); printf("%-74s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
+    int legion1, legion2, tx, ty;
+    if (!start_war_game(file, &legion1, &legion2, &tx, &ty)) {
+        printf("Unable to prepare the game\n");
+        return 2;
+    }
+    siege_ring ring;
+    CHECK(build_siege_ring(1, &ring), "player 2 closes the middle of his city: walls and two gatehouses");
+    int soldiers = alive_soldiers(legion1);
+    const char *start = "wargate-start.mpsav";
+    if (!mp_savegame_write(start)) {
+        printf("Unable to save\n");
+        return 2;
+    }
+    int x = ring.west + 8, y = ring.gate_y + 3;
+
+    // in peace, then during the notice of an honourable war: the gatehouses let the legion through
+    siege_march peace;
+    march(legion1, &ring, x, y, 6000, &peace);
+    printf("in peace: the legion of player 1 inside the walls of player 2 after %d ticks, %d of %d soldiers\n",
+        peace.arrived, peace.inside, soldiers);
+    CHECK(peace.arrived && peace.inside == soldiers && peace.stopped_ticks == 0 && gate_standing(&ring, 0),
+        "in peace, the legion of player 1 goes through the gatehouse of player 2");
+    CHECK(peace.on_walls == 0, "never over his walls");
+    if (!mp_savegame_read(start)) {
+        return 2;
+    }
+    city_action(0, MP_ACTION_DECLARE_WAR, 1, MP_WAR_HONOURABLE, 0);
+    siege_march notice;
+    march(legion1, &ring, x, y, 6000, &notice);
+    printf("during the notice: inside after %d ticks, %d of %d soldiers, %d days before the fighting\n",
+        notice.arrived, notice.inside, soldiers, mp_war_days_until_fighting(0, 1));
+    CHECK(mp_war_status(0, 1) == MP_WAR_NOTICE && notice.arrived && notice.inside == soldiers &&
+        notice.stopped_ticks == 0 && gate_standing(&ring, 0), "during the notice of an honourable war too");
+
+    // at war: twice from the same start, the same siege
+    siege_march in[2], around[2];
+    uint64_t checksum[2];
+    for (int run = 0; run < 2; run++) {
+        if (!mp_savegame_read(start)) {
+            return 2;
+        }
+        failures += play_siege(legion1, &ring, !run, &in[run], &around[run], &checksum[run]);
+    }
+    CHECK(checksum[0] == checksum[1] && in[0].fall == in[1].fall && around[0].arrived == around[1].arrived,
+        "played again from the same start: the same siege, the same checksum");
+    remove(start);
+    player_context_switch(0);
+    player_context_set_num_players(1);
+#undef CHECK
+    printf("%s\n", failures ? "DIFFERENT: the gatehouses and walls of the players at war are not as designed" :
+        "Identical: the gatehouses and walls of the players at war are as designed");
+    return failures ? 1 : 0;
+}
+
+// a caravan of the player on a tile of the gatehouse
+static int caravan_on_gate(int player_id, int gate_x, int gate_y)
+{
+    for (int i = player_id * MAX_FIGURES + 1; i < (player_id + 1) * MAX_FIGURES; i++) {
+        figure *f = figure_get(i);
+        if (f->state == FIGURE_STATE_ALIVE && mp_trade_is_caravan(f) && f->x >= gate_x && f->x <= gate_x + 1 &&
+            f->y >= gate_y && f->y <= gate_y + 1) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+// The gatehouses of a player at war let the neutral players through (M10.2, D-081): three players on map 1, players
+// A and G fight; the legion of the neutral player N walks through the gatehouse of the ring of G, and his caravan
+// through the gatehouse on the road to the warehouse of G
+static int command_wargate3(const char *file)
+{
+    if (!start_tradegame(file, 3, 0, "wargate3")) {
+        return 2;
+    }
+    int failures = 0;
+#define CHECK(condition, text) do { int ok_ = (condition); printf("%-74s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
+    // G on the north coast, N inland on the same shore, A on the other shore
+    int g = -1, n = -1, a = -1;
+    for (int p = 0; p < 3; p++) {
+        int cx, cy;
+        mp_mapgen_city_center(p, &cx, &cy);
+        if (cy > 150) {
+            a = p;
+        } else if (cx > 130) {
+            g = p;
+        } else {
+            n = p;
+        }
+    }
+    if (g < 0 || n < 0 || a < 0) {
+        printf("Unexpected places of the cities\n");
+        return 2;
+    }
+    int gx, gy, nx, ny;
+    mp_mapgen_city_center(g, &gx, &gy);
+    mp_mapgen_city_center(n, &nx, &ny);
+    printf("player %d at war with player %d, who has gatehouses; player %d neutral\n", a + 1, g + 1, n + 1);
+    int legion = make_legion(n, BUILDING_FORT_LEGIONARIES, nx - 10, ny + 4, 16);
+    siege_ring ring;
+    int ready = legion && build_siege_ring(g, &ring);
+    // the warehouse of G at the end of a road of his own, east of the ring, a gatehouse on that road
+    int road_x = gx + 10;
+    build_as(g, BUILDING_ROAD, road_x, gy + 1, road_x, gy + 7);
+    ready &= build_as(g, BUILDING_WAREHOUSE, road_x + 1, gy + 5, road_x + 1, gy + 5);
+    int store = map_building_at(map_grid_offset(road_x + 1, gy + 5));
+    ready &= build_as(g, BUILDING_GATEHOUSE, road_x, gy + 2, road_x, gy + 2);
+    int seller_store = build_warehouse_off_main_road(n, 1);
+    ready &= seller_store != 0;
+    run_trace(50, 50, 0, 0); // in use
+    int gate = map_building_at(map_grid_offset(road_x, gy + 2));
+    ready &= building_get(gate)->type == BUILDING_GATEHOUSE && building_get(gate)->state == BUILDING_STATE_IN_USE;
+    CHECK(ready, "a legion for the neutral player; gatehouses for the other");
+    if (!ready) {
+        player_context_switch(0);
+        player_context_set_num_players(1);
+        return 1;
+    }
+    city_action(a, MP_ACTION_DECLARE_WAR, g, MP_WAR_BRUTAL, 0);
+    CHECK(mp_war_is_fighting(a, g) && !mp_war_is_fighting(n, g) && !mp_war_is_fighting(n, a),
+        "a brutal war between two players, the third at peace with both");
+
+    // the legion of the neutral player into the ring
+    int soldiers = alive_soldiers(legion);
+    siege_march s;
+    march(legion, &ring, ring.west + 8, ring.gate_y + 3, 8000, &s);
+    printf("the legion of player %d inside the walls of player %d after %d ticks: %d of %d soldiers, %d ticks stopped\n",
+        n + 1, g + 1, s.arrived, s.inside, soldiers, s.stopped_ticks);
+    CHECK(s.arrived && s.inside == soldiers && s.stopped_ticks == 0 && gate_standing(&ring, 0) &&
+        gate_standing(&ring, 1), "the neutral legion goes through the gatehouses of a player at war");
+    CHECK(s.on_walls == 0, "never over his walls");
+
+    // the caravan of the neutral player through the gatehouse on the road to the warehouse
+    set_stock(n, seller_store, RESOURCE_MARBLE, 8);
+    city_action(n, MP_ACTION_PROPOSE_ROUTE, g, 1, 0);
+    city_action(g, MP_ACTION_PROPOSE_ROUTE, n, 1, 0);
+    city_action(g, MP_ACTION_SET_BUYS_FROM, n, RESOURCE_MARBLE, 1);
+    int on_gate_ticks = 0, ticks = 0;
+    for (; ticks < 8 * 16 * 50 && !stock_in(g, store, RESOURCE_MARBLE); ticks++) {
+        war_run(1);
+        on_gate_ticks += caravan_on_gate(n, road_x, gy + 2);
+    }
+    printf("the caravan of player %d delivers %d loads to player %d after %d ticks, %d ticks on his gatehouse\n",
+        n + 1, stock_in(g, store, RESOURCE_MARBLE), g + 1, ticks, on_gate_ticks);
+    CHECK(stock_in(g, store, RESOURCE_MARBLE) > 0 && on_gate_ticks > 0 &&
+        building_get(gate)->state == BUILDING_STATE_IN_USE,
+        "the caravan of the neutral player goes through his gatehouse and delivers");
+    player_context_switch(0);
+    player_context_set_num_players(1);
+#undef CHECK
+    printf("%s\n", failures ? "DIFFERENT: the gatehouses of a player at war stop the neutral players" :
+        "Identical: the gatehouses of a player at war let the neutral players through");
+    return failures ? 1 : 0;
+}
+
+// the tiles of the aqueduct of Caesar on the row of its end, from x to x + width - 1
+static int caesar_aqueduct_tiles(int x, int y, int width)
+{
+    int count = 0;
+    for (int i = 0; i < width; i++) {
+        int o = map_grid_offset(x + i, y);
+        count += map_terrain_is(o, TERRAIN_AQUEDUCT) && map_owner_get_claimed(o) == MAP_OWNER_CAESAR;
+    }
+    return count;
+}
+
+// a free tile next to a soldier of the legion at its standard, away from other aqueducts: 0 if none
+static int tile_by_soldier(int formation_id, int *x, int *y)
+{
+    int owner = FORMATION_OWNER(formation_id);
+    for (int i = owner * MAX_FIGURES + 1; i < (owner + 1) * MAX_FIGURES; i++) {
+        figure *f = figure_get(i);
+        if (!is_soldier_of(f, formation_id) || f->action_state != FIGURE_ACTION_84_SOLDIER_AT_STANDARD) {
+            continue;
+        }
+        for (int dir = 0; dir < 8; dir++) {
+            int o = f->grid_offset + map_grid_direction_delta(dir);
+            int tx = map_grid_offset_to_x(o), ty = map_grid_offset_to_y(o);
+            if (!map_terrain_is(o, TERRAIN_NOT_CLEAR) && !map_has_figure_at(o) &&
+                !map_terrain_exists_tile_in_area_with_type(tx - 1, ty - 1, 3, TERRAIN_AQUEDUCT)) {
+                *x = tx;
+                *y = ty;
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
+
+// ticks of the aqueduct game: no engineer keeps the reservoir from collapsing
+static void aqueduct_run(int ticks, int reservoir_x, int reservoir_y)
+{
+    for (int i = 0; i < ticks; i++) {
+        war_run(1);
+        int id = map_building_at(map_grid_offset(reservoir_x, reservoir_y));
+        if (id > 0) {
+            building_get(id)->damage_risk = 0;
+        }
+    }
+}
+
+typedef struct {
+    int inland, attacker, legion;  // the player watered by Caesar, his enemy and the legion of the enemy
+    int ax, ay;                    // the end of the aqueduct of Caesar
+    int standard_x, standard_y;
+} aqueduct_war;
+
+typedef struct {
+    int level_at_peace, level_at_break, level_after_cut, level_mended;
+    int ticks_to_break;            // after the start of the fighting
+    int broken;                    // tiles of Caesar broken by the soldiers
+    uint64_t checksum;
+} aqueduct_result;
+
+#define AQUEDUCT_ROW 16 // tiles of the row of the aqueduct watched, from its end
+
+// The aqueduct of Caesar at war, from the start: the player inland has his reservoir at the end of the aqueduct of
+// Caesar; the legion of his enemy stands by it in peace, then during the notice of an honourable war, then fights
+// and breaks it; peace signed, the player inland mends it with an aqueduct of his own
+static int play_aqueduct_war(const aqueduct_war *w, int show, aqueduct_result *r)
+{
+    int failures = 0;
+    int war_ticks = 0;
+#define CHECK(condition, text) do { int ok_ = (condition); if (show) printf("%-74s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
+    int rx = w->ax - 2, ry = w->ay, level = 0;
+    build_as(w->inland, BUILDING_DRAGGABLE_RESERVOIR, rx, ry, rx, ry);
+    city_action(w->attacker, MP_ACTION_LEGION_MOVE, w->legion, w->standard_x, w->standard_y);
+    int soldiers = alive_soldiers(w->legion);
+    for (war_ticks = 0; war_ticks < 6000 && soldiers_at_standard(w->legion) < soldiers; war_ticks += 50) {
+        aqueduct_run(50, rx, ry);
+    }
+    int tiles = caesar_aqueduct_tiles(w->ax, w->ay, AQUEDUCT_ROW);
+    aqueduct_run(300, rx, ry);
+    reservoir_at(rx, ry, &r->level_at_peace);
+    if (show) {
+        printf("in peace: the legion of player %d by the aqueduct of Caesar after %d ticks; the reservoir of player %d "
+            "holds %d\n", w->attacker + 1, war_ticks, w->inland + 1, r->level_at_peace);
+    }
+    CHECK(soldiers_at_standard(w->legion) == soldiers && r->level_at_peace > 0,
+        "the aqueduct of Caesar waters player 1, the legion of player 2 stands by it");
+    CHECK(caesar_aqueduct_tiles(w->ax, w->ay, AQUEDUCT_ROW) == tiles, "in peace, it leaves the aqueduct alone");
+    city_action(w->attacker, MP_ACTION_DECLARE_WAR, w->inland, MP_WAR_HONOURABLE, 0);
+    aqueduct_run(300, rx, ry);
+    CHECK(mp_war_status(w->inland, w->attacker) == MP_WAR_NOTICE &&
+        caesar_aqueduct_tiles(w->ax, w->ay, AQUEDUCT_ROW) == tiles, "during the notice of an honourable war too");
+    for (war_ticks = 0; war_ticks < MP_WAR_NOTICE_TICKS && !mp_war_is_fighting(w->inland, w->attacker); war_ticks++) {
+        aqueduct_run(1, rx, ry);
+    }
+    for (war_ticks = 0; war_ticks < 1000 && caesar_aqueduct_tiles(w->ax, w->ay, AQUEDUCT_ROW) == tiles; war_ticks++) {
+        aqueduct_run(1, rx, ry);
+    }
+    r->ticks_to_break = war_ticks;
+    aqueduct_run(200, rx, ry);
+    r->broken = tiles - caesar_aqueduct_tiles(w->ax, w->ay, AQUEDUCT_ROW);
+    reservoir_at(rx, ry, &r->level_at_break);
+    aqueduct_run(10 * 50, rx, ry);
+    reservoir_at(rx, ry, &r->level_after_cut);
+    int first_broken = -1, last_broken = -1, rubble = 1;
+    for (int i = 0; i < AQUEDUCT_ROW; i++) {
+        int o = map_grid_offset(w->ax + i, w->ay);
+        if (!map_terrain_is(o, TERRAIN_AQUEDUCT)) {
+            first_broken = first_broken < 0 ? w->ax + i : first_broken;
+            last_broken = w->ax + i;
+            rubble &= map_terrain_is(o, TERRAIN_RUBBLE) && map_owner_get_claimed(o) == MAP_OWNER_NONE;
+        }
+    }
+    if (show) {
+        printf("at war: the first tile of the aqueduct of Caesar falls %d ticks after the start of the fighting, %d "
+            "tiles 200 ticks later (x %d to %d); the reservoir holds %d, 10 days later %d\n", r->ticks_to_break,
+            r->broken, first_broken, last_broken, r->level_at_break, r->level_after_cut);
+    }
+    CHECK(r->broken > 0 && rubble, "at war, the soldiers of player 2 break the aqueduct of Caesar that waters player 1");
+    CHECK(r->level_after_cut < r->level_at_break, "the reservoir of player 1 no longer fills: it empties");
+    CHECK(caesar_aqueduct_tiles(w->ax + AQUEDUCT_ROW, w->ay, 1) == 1 && mp_war_is_fighting(w->inland, w->attacker),
+        "the aqueduct beyond the soldiers stands");
+
+    // peace, then the player inland mends the aqueduct with his own
+    city_action(w->attacker, MP_ACTION_PROPOSE_PEACE, w->inland, 1, 0);
+    city_action(w->inland, MP_ACTION_PROPOSE_PEACE, w->attacker, 1, 0);
+    aqueduct_run(300, rx, ry);
+    if (first_broken >= 0) {
+        // the rubble first, as anywhere in the original game
+        build_as(w->inland, BUILDING_CLEAR_LAND, first_broken, w->ay, last_broken, w->ay);
+        build_as(w->inland, BUILDING_AQUEDUCT, first_broken, w->ay, last_broken, w->ay);
+    }
+    int mended = first_broken >= 0;
+    for (int x = first_broken; mended && x <= last_broken; x++) {
+        int o = map_grid_offset(x, w->ay);
+        mended &= map_terrain_is(o, TERRAIN_AQUEDUCT) && map_owner_get_claimed(o) == w->inland;
+    }
+    reservoir_at(rx, ry, &level);
+    aqueduct_run(10 * 50, rx, ry);
+    reservoir_at(rx, ry, &r->level_mended);
+    if (show) {
+        printf("mended by player 1 in peace: the reservoir holds %d, 10 days later %d\n", level, r->level_mended);
+    }
+    CHECK(mended && r->level_mended > level, "in peace, player 1 mends it with an aqueduct of his own: water again");
+    r->checksum = mp_checksum_state();
+#undef CHECK
+    return failures;
+}
+
+// the aqueduct of Caesar at war (M10.2, D-081, D-034, D-055): the soldiers of a player at war break the aqueduct of
+// Caesar that waters his enemy, never in peace nor during a notice; the aqueduct that waters no enemy stays; the
+// player cut off mends it with his own aqueduct; the same war twice gives the same checksum
+static int command_waraqueduct(const char *file)
+{
+    int failures = 0;
+    int war_ticks = 0;
+#define CHECK(condition, text) do { int ok_ = (condition); printf("%-74s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
+    int legion[2], tx, ty;
+    if (!start_war_game(file, &legion[0], &legion[1], &tx, &ty)) {
+        printf("Unable to prepare the game\n");
+        return 2;
+    }
+    aqueduct_war w;
+    w.inland = 0;
+    while (w.inland < 2 && !mp_mapgen_caesar_aqueduct_end(w.inland, &w.ax, &w.ay)) {
+        w.inland++;
+    }
+    if (w.inland != 0) {
+        printf("Player 1 is not the one inland\n");
+        return 2;
+    }
+    w.attacker = 1;
+    w.legion = legion[1];
+    w.standard_x = w.ax + 7;
+    w.standard_y = w.ay + 1;
+    printf("the aqueduct of Caesar ends at (%d, %d), by the city of player 1; the legion of player 2 stands at (%d, %d)\n",
+        w.ax, w.ay, w.standard_x, w.standard_y);
+    const char *start = "waraqueduct-start.mpsav";
+    if (!mp_savegame_write(start)) {
+        printf("Unable to save\n");
+        return 2;
+    }
+
+    // an aqueduct of Caesar that waters no enemy (player 1 has no reservoir yet): the soldiers at war leave it
+    city_action(1, MP_ACTION_LEGION_MOVE, w.legion, w.standard_x, w.standard_y);
+    int soldiers = alive_soldiers(w.legion);
+    RUN_UNTIL(soldiers_at_standard(w.legion) >= soldiers, 50, 6000);
+    int tiles = caesar_aqueduct_tiles(w.ax, w.ay, AQUEDUCT_ROW);
+    // and an aqueduct of player 1 himself, apart, by a soldier
+    int own_x = 0, own_y = 0;
+    int own = tile_by_soldier(w.legion, &own_x, &own_y);
+    if (own) {
+        build_as(0, BUILDING_AQUEDUCT, own_x, own_y, own_x, own_y);
+    }
+    int own_offset = map_grid_offset(own_x, own_y);
+    own &= map_terrain_is(own_offset, TERRAIN_AQUEDUCT) && map_owner_get_claimed(own_offset) == 0;
+    city_action(1, MP_ACTION_DECLARE_WAR, 0, MP_WAR_BRUTAL, 0);
+    war_run(500);
+    CHECK(tiles == AQUEDUCT_ROW && caesar_aqueduct_tiles(w.ax, w.ay, AQUEDUCT_ROW) == tiles &&
+        soldiers_at_standard(w.legion) == soldiers,
+        "at war, the soldiers of player 2 leave the aqueduct of Caesar that waters nobody");
+    printf("an aqueduct of player 1 at (%d, %d), by a soldier of player 2\n", own_x, own_y);
+    CHECK(own && !map_terrain_is(own_offset, TERRAIN_AQUEDUCT) && map_terrain_is(own_offset, TERRAIN_RUBBLE),
+        "but they break an aqueduct of player 1 himself");
+    build_as(0, BUILDING_DRAGGABLE_RESERVOIR, w.ax - 2, w.ay, w.ax - 2, w.ay);
+    RUN_UNTIL(caesar_aqueduct_tiles(w.ax, w.ay, AQUEDUCT_ROW) < tiles, 1, 1000);
+    printf("player 1 joins a reservoir to it: the first tile falls %d ticks later\n", war_ticks);
+    CHECK(caesar_aqueduct_tiles(w.ax, w.ay, AQUEDUCT_ROW) < tiles, "once it waters player 1, they break it");
+
+    // in peace, during the notice, then at war; twice from the same start
+    aqueduct_result result[2];
+    for (int run = 0; run < 2; run++) {
+        if (!mp_savegame_read(start)) {
+            return 2;
+        }
+        failures += play_aqueduct_war(&w, !run, &result[run]);
+    }
+    CHECK(result[0].checksum == result[1].checksum && result[0].ticks_to_break == result[1].ticks_to_break &&
+        result[0].broken == result[1].broken, "played again from the same start: the same war, the same checksum");
+    remove(start);
+    player_context_switch(0);
+    player_context_set_num_players(1);
+#undef CHECK
+    printf("%s\n", failures ? "DIFFERENT: the aqueduct of Caesar at war is not as designed" :
+        "Identical: the aqueduct of Caesar at war is as designed");
+    return failures ? 1 : 0;
+}
+
 // the camera of a player reaches every corner of a generated map, after it went through a .mpmap file as in a game
 static int command_viewcorners(const char *file, int num_players)
 {
@@ -8753,6 +9304,12 @@ int main(int argc, char **argv)
         result = command_caesarhistory(file);
     } else if (strcmp(command, "war") == 0) {
         result = command_war(file);
+    } else if (strcmp(command, "wargate") == 0) {
+        result = command_wargate(file);
+    } else if (strcmp(command, "waraqueduct") == 0) {
+        result = command_waraqueduct(file);
+    } else if (strcmp(command, "wargate3") == 0) {
+        result = command_wargate3(file);
     } else if (strcmp(command, "inspect") == 0) {
         result = command_inspect(file);
     } else if (strcmp(command, "tradecities") == 0) {

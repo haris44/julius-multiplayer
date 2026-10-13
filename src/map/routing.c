@@ -43,6 +43,7 @@ static grid_u8 water_drag;
 
 static struct {
     int through_building_id;
+    int (*is_closed)(int grid_offset);
 } state;
 
 static void clear_distances(void)
@@ -406,6 +407,25 @@ int map_routing_citizen_can_travel_over_land(int src_x, int src_y, int dst_x, in
     int dst_offset = map_grid_offset(dst_x, dst_y);
     ++stats.total_routes_calculated;
     route_queue(src_offset, dst_offset, callback_travel_citizen_land);
+    return routing_distance.items[dst_offset] != 0;
+}
+
+static void callback_travel_citizen_land_except(int next_offset, int dist)
+{
+    if (terrain_land_citizen.items[next_offset] >= 0 && !has_fighting_friendly(next_offset) &&
+        !state.is_closed(next_offset)) {
+        enqueue(next_offset, dist);
+    }
+}
+
+int map_routing_citizen_can_travel_over_land_except(int src_x, int src_y, int dst_x, int dst_y,
+    int (*is_closed)(int grid_offset))
+{
+    int src_offset = map_grid_offset(src_x, src_y);
+    int dst_offset = map_grid_offset(dst_x, dst_y);
+    ++stats.total_routes_calculated;
+    state.is_closed = is_closed;
+    route_queue(src_offset, dst_offset, callback_travel_citizen_land_except);
     return routing_distance.items[dst_offset] != 0;
 }
 

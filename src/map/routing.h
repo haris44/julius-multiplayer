@@ -21,6 +21,12 @@ void map_routing_delete_first_wall_or_aqueduct(int x, int y);
 int map_routing_distance(int grid_offset);
 
 int map_routing_citizen_can_travel_over_land(int src_x, int src_y, int dst_x, int dst_y);
+/**
+ * As map_routing_citizen_can_travel_over_land, around the tiles `is_closed` says closed (multiplayer: the gatehouses
+ * of the enemies of a soldier at war, mp/siege.c)
+ */
+int map_routing_citizen_can_travel_over_land_except(int src_x, int src_y, int dst_x, int dst_y,
+    int (*is_closed)(int grid_offset));
 int map_routing_citizen_can_travel_over_road_garden(int src_x, int src_y, int dst_x, int dst_y);
 int map_routing_can_travel_over_walls(int src_x, int src_y, int dst_x, int dst_y);
 

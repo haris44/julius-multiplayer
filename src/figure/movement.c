@@ -16,6 +16,8 @@
 #include "map/road_access.h"
 #include "map/routing_terrain.h"
 #include "map/terrain.h"
+#include "mp/siege.h"
+#include "mp/war.h"
 
 static void advance_tick(figure *f)
 {
@@ -188,6 +190,10 @@ static void advance_route_tile(figure *f, int roaming_enabled)
         if (!map_routing_is_wall_passable(target_grid_offset)) {
             f->direction = DIR_FIGURE_REROUTE;
         }
+    } else if (mp_war_any_fighting() && mp_siege_soldier_breaks_gate(f, target_grid_offset)) {
+        // a gatehouse of a player at war with his own stops a soldier: he breaks it, as the invaders above (M10.2)
+        f->attack_direction = f->direction;
+        f->direction = DIR_FIGURE_ATTACK;
     } else if (map_terrain_is(target_grid_offset, TERRAIN_ROAD | TERRAIN_ACCESS_RAMP)) {
         if (roaming_enabled && map_terrain_is(target_grid_offset, TERRAIN_BUILDING)) {
             if (building_get(map_building_at(target_grid_offset))->type == BUILDING_GATEHOUSE) {

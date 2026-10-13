@@ -15,6 +15,7 @@
 #include "map/figure.h"
 #include "map/grid.h"
 #include "map/point.h"
+#include "mp/siege.h"
 #include "mp/war.h"
 
 static const map_point ALTERNATIVE_POINTS[] = {{-1, -6},
@@ -221,6 +222,13 @@ static void update_image(figure *f, const formation *m)
     } else if (f->type == FIGURE_FORT_LEGIONARY) {
         update_image_legionary(f, m, dir);
     }
+    if (f->direction == DIR_FIGURE_ATTACK && f->action_state != FIGURE_ACTION_150_ATTACK) {
+        // breaking a gatehouse of an enemy player (M10.2, never in a classic game): the frames of the attack
+        int group = f->type == FIGURE_FORT_JAVELIN ? GROUP_BUILDING_FORT_JAVELIN :
+            f->type == FIGURE_FORT_MOUNTED ? GROUP_FIGURE_FORT_MOUNTED : GROUP_BUILDING_FORT_LEGIONARY;
+        f->image_id = image_group(group) + 96 + figure_image_normalize_direction(f->attack_direction) +
+            8 * (f->image_offset / 2);
+    }
 }
 
 void figure_soldier_action(figure *f)
@@ -337,7 +345,10 @@ void figure_soldier_action(figure *f)
                     legionary_attack_adjacent_enemy(f);
                 }
                 if (f->action_state == FIGURE_ACTION_84_SOLDIER_AT_STANDARD && mp_war_any_fighting()) {
-                    mp_war_soldier_attack_buildings(f); // players at war (T5.5): never in a classic game
+                    // players at war (T5.5, M10.2): never in a classic game
+                    if (!mp_war_soldier_attack_buildings(f)) {
+                        mp_siege_soldier_attack_aqueduct(f);
+                    }
                 }
             }
             break;
