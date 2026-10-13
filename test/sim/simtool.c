@@ -1,5 +1,6 @@
 // Headless simulation tool: loads saved games, runs ticks exactly like the autopilot and
 // prints state checksums. See doc/mp/TESTING.md.
+#include "building/barracks.h"
 #include "building/building.h"
 #include "building/construction.h"
 #include "figure/figure.h"
@@ -161,6 +162,8 @@ static int usage(void)
     printf("                                         MAP: a .map of the game): table, fails if they differ (T4.16)\n");
     printf("  simtool troops                         javelin throwers: 136 x 10 in a multiplayer game, the table of\n");
     printf("                                         the original in a classic one; the other troops unchanged (MG.1)\n");
+    printf("  simtool barrackstimber SAVE            prepared map: the barracks recruits a javelin thrower with a load of\n");
+    printf("                                         timber, a legionary with weapons, a horseman for nothing (MG.2)\n");
     printf("  simtool reservoirlevel SAVE            prepared map: a reservoir cut off from its source empties\n");
     printf("                                         slowly, joined again it fills\n");
     printf("  simtool drying SAVE PLAYERS            prepared map: no pond; the city of the rocks dries up when\n");
@@ -6898,6 +6901,204 @@ static int start_war_game(const char *file, int *legion1, int *legion2, int *tx,
     return *legion1 && *legion2;
 }
 
+// ---------- timber of the barracks (MG.2, D-058) ----------
+
+// one recruit of the barracks of the player: the legion that got him (0 for none)
+static int recruit_one(building *barracks, int javelin, int legionary, int mounted)
+{
+    int before[3] = { alive_soldiers(javelin), alive_soldiers(legionary), alive_soldiers(mounted) };
+    building_barracks_create_soldier(barracks, barracks->x, barracks->y + 3);
+    int after[3] = { alive_soldiers(javelin), alive_soldiers(legionary), alive_soldiers(mounted) };
+    for (int i = 0; i < 3; i++) {
+        if (after[i] == before[i] + 1) {
+            return i + 1; // 1 javelin throwers, 2 legionaries, 3 mounted
+        }
+    }
+    return 0;
+}
+
+static void force_workers(int player_id)
+{
+    player_context_switch(player_id);
+    for (int i = BUILDING_FIRST; i < BUILDING_END; i++) {
+        building *b = building_get(i);
+        if (b->state == BUILDING_STATE_IN_USE && (b->type == BUILDING_WAREHOUSE || b->type == BUILDING_BARRACKS)) {
+            b->num_workers = 20;
+        }
+    }
+    player_context_switch(0);
+}
+
+// ticks with the barracks and the warehouses staffed: nobody lives in these cities, the labour of the month would
+// take their workers away
+static void staffed_run(int ticks)
+{
+    for (int i = 0; i < ticks; i++) {
+        force_workers(0);
+        run_one_tick();
+    }
+}
+
+static int command_barrackstimber(const char *file)
+{
+    if (!start_trade_game(file)) {
+        return 2;
+    }
+    int failures = 0;
+#define CHECK(condition, text) do { int ok_ = (condition); printf("%-72s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
+    int cx, cy;
+    mp_mapgen_city_center(0, &cx, &cy);
+    int fx = cx - 10, fy = cy - 8;
+    // the road from the entry point of the city to its centre: the walkers come from there
+    const map_tile *entry = city_map_entry_point();
+    build_as(0, BUILDING_ROAD, entry->x, entry->y, cx, cy);
+    war_run(120); // two days: the counts of the buildings are made again
+    CHECK(build_as(0, BUILDING_BARRACKS, cx - 3, cy + 1, cx - 3, cy + 1), "a barracks by the main road");
+    CHECK(build_as(0, BUILDING_WAREHOUSE, cx - 6, cy + 1, cx - 6, cy + 1), "a warehouse by the main road");
+    map_road_network_update_grid(); // the roads are joined again only once a month
+    map_road_network_update_largest();
+    staffed_run(300);
+    player_context_switch(0);
+    building *barracks = building_get(city_buildings_get_barracks());
+    building *store = building_get(map_building_at(map_grid_offset(cx - 6, cy + 1)));
+    CHECK(barracks->type == BUILDING_BARRACKS && barracks->road_network_id > 0 &&
+        barracks->road_network_id == store->road_network_id, "the barracks and the warehouse are on the same roads");
+    const char *start = "barracks-timber-start.mpsav";
+    CHECK(mp_savegame_write(start), "(the city saved, without forts)");
+
+    // ---- recruits: a load of timber per javelin thrower ----
+    int javelin = make_legion(0, BUILDING_FORT_JAVELIN, fx, fy, 1);
+    int legionary = make_legion(0, BUILDING_FORT_LEGIONARIES, cx - 10, cy + 8, 1);
+    int mounted = 0;
+    for (int i = 0; i < 6 && !mounted; i++) { // the first free place
+        mounted = make_legion(0, BUILDING_FORT_MOUNTED, cx - 22 + 7 * i, cy - 8 - (i % 2) * 8, 1);
+    }
+    CHECK(javelin && legionary && mounted, "three forts: javelin throwers, legionaries, horsemen");
+    war_run(300); // the soldiers reach their forts
+    player_context_switch(0);
+    barracks = building_get(city_buildings_get_barracks());
+    barracks->num_workers = 20;
+    CHECK(formation_get(javelin)->legion_recruit_type == LEGION_RECRUIT_JAVELIN &&
+        formation_get(legionary)->legion_recruit_type == LEGION_RECRUIT_LEGIONARY &&
+        formation_get(mounted)->legion_recruit_type == LEGION_RECRUIT_MOUNTED, "the three forts ask for recruits");
+    building_barracks_reset_extra_state();
+    barracks->loads_stored = 0;
+    CHECK(recruit_one(barracks, javelin, legionary, mounted) == 3, "without timber and weapons: a horseman");
+    CHECK(recruit_one(barracks, javelin, legionary, mounted) == 3, "again a horseman (free)");
+    building_barracks_add_timber(barracks);
+    CHECK(recruit_one(barracks, javelin, legionary, mounted) == 1 && building_barracks_timber_stored() == 0,
+        "one load of timber: one javelin thrower, the load is used");
+    CHECK(recruit_one(barracks, javelin, legionary, mounted) == 3, "then a horseman again: one javelin thrower per load");
+    for (int i = 0; i < 3; i++) {
+        building_barracks_add_timber(barracks);
+    }
+    int ok = 1;
+    for (int i = 0; i < 3; i++) {
+        ok &= recruit_one(barracks, javelin, legionary, mounted) == 1;
+    }
+    CHECK(ok && building_barracks_timber_stored() == 0 && recruit_one(barracks, javelin, legionary, mounted) == 3,
+        "three loads of timber: three javelin throwers");
+    barracks->loads_stored = 2;
+    ok = recruit_one(barracks, javelin, legionary, mounted) == 2 && recruit_one(barracks, javelin, legionary, mounted) == 2;
+    CHECK(ok && barracks->loads_stored == 0 && building_barracks_timber_stored() == 0,
+        "two loads of weapons: two legionaries, no timber used");
+    CHECK(recruit_one(barracks, javelin, legionary, mounted) == 3, "weapons used up: a horseman");
+    barracks->loads_stored = 1;
+    building_barracks_add_timber(barracks);
+    ok = recruit_one(barracks, javelin, legionary, mounted) == 2 && recruit_one(barracks, javelin, legionary, mounted) == 1;
+    CHECK(ok && barracks->loads_stored == 0 && building_barracks_timber_stored() == 0,
+        "one load of each: a legionary then a javelin thrower");
+
+    // ---- the decision to deliver timber ----
+    map_point dst;
+    int network = barracks->road_network_id;
+    staffed_run(60); // the barracks is counted as active (it recruits as it likes meanwhile)
+    building_barracks_reset_extra_state();
+    barracks->loads_stored = 0;
+    CHECK(building_get_barracks_for_weapon(RESOURCE_TIMBER, network, &dst) == barracks->id, "room for timber: it is delivered");
+    CHECK(building_get_barracks_for_weapon(RESOURCE_WEAPONS, network, &dst) == barracks->id, "and the weapons still are");
+    CHECK(building_get_barracks_for_weapon(RESOURCE_MARBLE, network, &dst) == 0, "other goods are not");
+    for (int i = 0; i < 8; i++) {
+        building_barracks_add_timber(barracks);
+    }
+    CHECK(building_barracks_timber_stored() == BARRACKS_TIMBER_MAX, "at most 5 loads of timber");
+    CHECK(building_get_barracks_for_weapon(RESOURCE_TIMBER, network, &dst) == 0, "five loads: no more timber is delivered");
+
+    // ---- saved with the game, in the checksum; an older game has no timber ----
+    building_barracks_reset_extra_state();
+    for (int i = 0; i < 3; i++) {
+        building_barracks_add_timber(barracks);
+    }
+    uint64_t with_timber = mp_checksum_state();
+    const char *saved = "barracks-timber.mpsav";
+    CHECK(mp_savegame_write(saved) && mp_savegame_read(saved), "(the game saved and read back)");
+    player_context_switch(0);
+    CHECK(building_barracks_timber_stored() == 3 && mp_checksum_state() == with_timber,
+        "the saved game keeps the timber of the barracks, and its checksum");
+    building_barracks_add_timber(building_get(city_buildings_get_barracks()));
+    CHECK(mp_checksum_state() != with_timber, "the timber is in the checksum");
+    {
+        uint8_t data[64];
+        buffer buf;
+        buffer_init(&buf, data, sizeof(data));
+        building_barracks_save_extra_state(&buf);
+        int size = buf.index;
+        buffer_init(&buf, data, size - 4); // as written before the timber: the piece ends earlier
+        building_barracks_load_extra_state(&buf);
+        CHECK(building_barracks_timber_stored() == 0, "an older saved game loads with no timber");
+        buffer_init(&buf, data, size);
+        building_barracks_load_extra_state(&buf);
+        CHECK(building_barracks_timber_stored() == 4, "(and the current format reads back)");
+    }
+    remove(saved);
+
+    // ---- classic: javelin throwers are free, timber is not delivered ----
+    game_rules_set_classic();
+    barracks = building_get(city_buildings_get_barracks());
+    building_barracks_reset_extra_state();
+    CHECK(recruit_one(barracks, javelin, legionary, mounted) == 1, "classic: a javelin thrower without any timber");
+    CHECK(building_get_barracks_for_weapon(RESOURCE_TIMBER, network, &dst) == 0, "classic: no timber is delivered");
+    game_rules_settings rules;
+    game_rules_default_multiplayer_settings(&rules);
+    rules.ai_invasions = 0;
+    game_rules_set_multiplayer(&rules);
+
+    // ---- by cart, without javelin throwers: the timber stays in the warehouse ----
+    CHECK(mp_savegame_read(start), "(back to the city without forts)");
+    player_context_switch(0);
+    make_legion(0, BUILDING_FORT_LEGIONARIES, cx - 10, cy + 8, 1);
+    store = building_get(map_building_at(map_grid_offset(cx - 6, cy + 1)));
+    for (int i = 0; i < 8; i++) {
+        building_warehouse_add_resource(store, RESOURCE_TIMBER);
+    }
+    CHECK(!building_barracks_has_javelin_legion(), "the city has no javelin throwers");
+    staffed_run(1500);
+    CHECK(building_barracks_timber_stored() == 0 && stock_of(0, RESOURCE_TIMBER) == 8,
+        "without javelin throwers: no timber goes to the barracks");
+
+    // ---- by cart, with javelin throwers: every load becomes a javelin thrower, five at most waiting ----
+    javelin = make_legion(0, BUILDING_FORT_JAVELIN, fx, fy, 1);
+    CHECK(javelin && building_barracks_has_javelin_legion(), "a fort of javelin throwers is built");
+    int most = 0, ticks = 0;
+    for (; ticks < 4000 && (stock_of(0, RESOURCE_TIMBER) > 0 || building_barracks_timber_stored() > 0 ||
+        alive_soldiers(javelin) < 9); ticks++) {
+        staffed_run(1);
+        most = building_barracks_timber_stored() > most ? building_barracks_timber_stored() : most;
+    }
+    printf("after %d ticks: %d javelin throwers (1 + 8 loads), %d loads in the warehouse, %d in the barracks, at most %d waiting\n",
+        ticks, alive_soldiers(javelin), stock_of(0, RESOURCE_TIMBER), building_barracks_timber_stored(), most);
+    CHECK(alive_soldiers(javelin) == 9 && stock_of(0, RESOURCE_TIMBER) == 0 && building_barracks_timber_stored() == 0,
+        "with javelin throwers: the carts bring timber, one javelin thrower per load");
+    CHECK(most > 0 && most <= BARRACKS_TIMBER_MAX, "and the barracks never keeps more than 5 loads");
+    remove(start);
+    player_context_switch(0);
+    player_context_set_num_players(1);
+#undef CHECK
+    printf("%s\n", failures ? "DIFFERENT: the timber of the barracks is not as designed" :
+        "Identical: the timber of the barracks is as designed");
+    return failures ? 1 : 0;
+}
+
 // figures of a player in a fight with a figure of the other player
 static int fighting_against(int player_id, int other)
 {
@@ -8727,6 +8928,8 @@ int main(int argc, char **argv)
         result = command_caesarfree(file, ticks);
     } else if (strcmp(command, "preparedmap") == 0 && argc > 4) {
         result = command_preparedmap(file, atoi(argv[3]), atoi(argv[4]));
+    } else if (strcmp(command, "barrackstimber") == 0) {
+        result = command_barrackstimber(file);
     } else if (strcmp(command, "troops") == 0) {
         result = command_troops();
     } else if (strcmp(command, "reservoirlevel") == 0) {

@@ -461,7 +461,11 @@ void figure_warehouseman_action(figure *f)
                         building_granary_add_resource(b, f->resource_id, 0);
                         break;
                     case BUILDING_BARRACKS:
-                        building_barracks_add_weapon(b);
+                        if (f->resource_id == RESOURCE_TIMBER) {
+                            building_barracks_add_timber(b);
+                        } else {
+                            building_barracks_add_weapon(b);
+                        }
                         break;
                     case BUILDING_WAREHOUSE:
                     case BUILDING_WAREHOUSE_SPACE:
