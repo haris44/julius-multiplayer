@@ -22,6 +22,7 @@
 #include "map/routing.h"
 #include "map/terrain.h"
 #include "mp/session.h"
+#include "mp/wrath.h"
 #include "translation/translation.h"
 
 #include <string.h>
@@ -212,6 +213,7 @@ void mp_war_declare(int target, int form)
         set_pair(self, target, MP_WAR_NOTICE, MP_WAR_HONOURABLE, self,
             game_time_absolute_tick() + MP_WAR_NOTICE_TICKS);
     }
+    mp_wrath_war_declared(self, target, form); // Caesar's judgement (M10.4): the motive; a brutal war is paid at once
     announce_declaration(self, target, form);
 }
 
@@ -299,6 +301,7 @@ void mp_war_withdraw(int target)
         return;
     }
     make_peace(self, target);
+    mp_wrath_war_withdrawn(self, target); // Caesar's judgement (M10.4): nothing to pay, but it binds the declarer
     announce_act(self, target, TR_MP_WAR_ANNOUNCE_WITHDRAWN);
 }
 
@@ -319,6 +322,7 @@ void mp_war_propose_peace(int other, int propose)
     }
     // both proposed it: peace is signed
     make_peace(self, other);
+    mp_wrath_peace_signed(self, other); // Caesar's judgement (M10.4): a new war within 12 months is without motive
     announce_pair(self, other, TR_MP_WAR_ANNOUNCE_PEACE);
 }
 
@@ -333,10 +337,28 @@ void mp_war_update(void)
             if (data.status[a][b] == MP_WAR_NOTICE && now >= data.fight_tick[a][b]) {
                 data.status[a][b] = data.status[b][a] = MP_WAR_FIGHTING;
                 update_summary();
+                mp_wrath_fighting_started(a, b); // Caesar's judgement (M10.4): the declarer pays the price now
                 announce_pair(a, b, TR_MP_WAR_ANNOUNCE_FIGHTING);
             }
         }
     }
+}
+
+// ---------- Caesar's judgement (M10.4, M10.5, mp/wrath.c) ----------
+
+void mp_war_impose_peace(int a, int b)
+{
+    if (!game_rules_is_multiplayer() || !is_player(a) || !is_player(b) || a == b ||
+        data.status[a][b] == MP_WAR_PEACE) {
+        return;
+    }
+    make_peace(a, b);
+    announce_pair(a, b, TR_MP_WAR_ANNOUNCE_IMPOSED);
+}
+
+void mp_war_announce(const uint8_t *text)
+{
+    announce(text);
 }
 
 // ---------- combat ----------
@@ -463,6 +485,7 @@ int mp_war_soldier_attack_buildings(figure *f)
             continue;
         }
         if (!(game_time_tick() & 3) && map_building_damage_increase(grid_offset) > max_damage) {
+            mp_wrath_building_pulled_down(self, victim); // Caesar's wrath (M10.5)
             // the building collapses in the city of its owner: his peace rating, his walls and sentries
             int previous = player_context_current();
             player_context_switch(victim);
@@ -544,6 +567,7 @@ int mp_war_intercept_caravan(figure *caravan)
     }
     player_context_switch(previous);
     caravan->loads_sold_or_carrying = 0;
+    mp_wrath_caravan_intercepted(taker, seller); // Caesar's wrath (M10.5)
     display.loads_taken += taken;
     display.loads_lost += loads - taken;
     announce_interception(seller, taker, resource, taken);

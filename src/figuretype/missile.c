@@ -11,6 +11,7 @@
 #include "sound/effect.h"
 #include "map/grid.h"
 #include "mp/war.h"
+#include "mp/wrath.h"
 
 static const int CLOUD_TILE_OFFSETS[] = {0, 0, 0, 1, 1, 2};
 
@@ -163,6 +164,9 @@ static void missile_hit_target(figure *f, int target_id, figure_type legionary_t
         target->wait_ticks = 0;
         figure_play_die_sound(target);
         formation_update_morale_after_death(m);
+        if (mp_war_any_fighting()) {
+            mp_wrath_figure_killed(FIGURE_OWNER(f->id), target); // players at war (M10.4, M10.5)
+        }
     }
     f->state = FIGURE_STATE_DEAD;
     // for missiles: building_id contains the figure who shot it

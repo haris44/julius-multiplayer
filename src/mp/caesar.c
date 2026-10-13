@@ -376,6 +376,31 @@ int mp_caesar_belligerence(int player_id)
     return is_player(player_id) ? data.belligerence[player_id] : 0;
 }
 
+void mp_caesar_decay_wrath(int tenths)
+{
+    if (!mp_caesar_is_active() || tenths <= 0) {
+        return;
+    }
+    int before = data.wrath;
+    int after = before > tenths ? before - tenths : 0;
+    // the shares follow the gauge, each rounded down
+    for (int p = 0; p < PLAYER_CONTEXT_MAX_PLAYERS; p++) {
+        data.belligerence[p] = before > 0 ? (int) ((long long) data.belligerence[p] * after / before) : 0;
+    }
+    data.wrath = after;
+}
+
+int mp_caesar_main_culprit(void)
+{
+    int culprit = -1;
+    for (int p = 0; p < player_context_num_players(); p++) {
+        if (data.belligerence[p] > 0 && (culprit < 0 || data.belligerence[p] > data.belligerence[culprit])) {
+            culprit = p;
+        }
+    }
+    return culprit;
+}
+
 // ---------- letters to the local player ----------
 
 int mp_caesar_num_letters(void)

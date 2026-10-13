@@ -438,6 +438,13 @@ add_test(NAME mp_caesar_history COMMAND simtool caesarhistory brugle-massilia-st
 # pulls down his buildings and fights his legion; his soldiers take the caravans of the enemy; peace signed by both stops
 # it and sends the legions home; the same war played twice gives the same checksum; nothing in a classic game
 add_test(NAME mp_war COMMAND simtool war brugle-massilia-start.sav)
+# Caesar judges the wars (M10.4, D-084): the motive set by the game (retaliation for 12 months, a withdrawn threat
+# included; mandate against an enemy of Rome, three players; without motive, always for the declarer within 12 months of
+# the end of his war), its price paid when the fighting starts, nothing for a threat withdrawn, triumphs
+add_test(NAME mp_war_motives COMMAND simtool warmotives brugle-massilia-start.sav)
+# Caesar's wrath (M10.5, D-084): the examples of CESAR 7.2, the decrease, the warning, the ultimatum and the peace it
+# imposes, the main culprit an enemy of Rome, the expedition recorded; resumed in the middle of an ultimatum
+add_test(NAME mp_caesar_wrath COMMAND simtool caesarwrath brugle-massilia-start.sav)
 
 # T1.5 (D-034): the roads of Caesar stay, untinted, and serve every city
 add_test(NAME mp_caesar_roads COMMAND simtool caesarroads brugle-massilia-start.sav)

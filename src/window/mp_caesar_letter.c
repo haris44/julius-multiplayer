@@ -50,9 +50,62 @@ static int is_judged_to_the_score(void)
     return game_rules_end_condition() == GAME_END_CAESAR;
 }
 
+// "player 1, player 2 and player 3"
+static void append_players(uint8_t *text, int players)
+{
+    int count = 0;
+    for (int p = 0; p < 8; p++) {
+        count += (players >> p) & 1;
+    }
+    int written = 0;
+    for (int p = 0; p < 8; p++) {
+        if (!((players >> p) & 1)) {
+            continue;
+        }
+        if (written) {
+            append(text, written == count - 1 ? translation_for(TR_MP_WAR_AND) : (const uint8_t *) ", ");
+        }
+        append(text, translation_for(TR_MP_LETTER_PLAYER));
+        append_number(text, p + 1);
+        written++;
+    }
+}
+
+// the letters of Caesar's wrath (M10.5): the warning, the ultimatum, the peace he imposes
+static int compose_wrath(const mp_caesar_letter *letter, uint8_t *text)
+{
+    switch (letter->type) {
+        case MP_CAESAR_LETTER_WARNING:
+            append(text, translation_for(TR_MP_LETTER_WARNING_1));
+            append_players(text, letter->param);
+            append(text, translation_for(TR_MP_LETTER_WARNING_2));
+            return 1;
+        case MP_CAESAR_LETTER_ULTIMATUM:
+            append(text, translation_for(TR_MP_LETTER_ULTIMATUM_1));
+            append_number(text, MP_CAESAR_ULTIMATUM_DELAY);
+            append(text, translation_for(TR_MP_LETTER_ULTIMATUM_2));
+            if (letter->param >= 0) {
+                append(text, translation_for(TR_MP_LETTER_ULTIMATUM_3));
+                append_number(text, letter->param + 1);
+                append(text, translation_for(TR_MP_LETTER_ULTIMATUM_4));
+            }
+            return 1;
+        case MP_CAESAR_LETTER_PEACE_IMPOSED:
+            append(text, translation_for(TR_MP_LETTER_PEACE_IMPOSED_1));
+            append_players(text, letter->param);
+            append(text, translation_for(TR_MP_LETTER_PEACE_IMPOSED_2));
+            return 1;
+        default:
+            return 0;
+    }
+}
+
 static void compose(const mp_caesar_letter *letter, uint8_t *text)
 {
     text[0] = 0;
+    if (compose_wrath(letter, text)) {
+        return;
+    }
     if (letter->type == MP_CAESAR_LETTER_WELCOME) {
         if (is_judged_to_the_score()) {
             append(text, translation_for(TR_MP_LETTER_WELCOME_1));

@@ -9,6 +9,7 @@
 #include "game/difficulty.h"
 #include "map/figure.h"
 #include "mp/war.h"
+#include "mp/wrath.h"
 #include "sound/effect.h"
 
 static int is_attacking_native(const figure *f)
@@ -111,6 +112,9 @@ static void hit_opponent(figure *f)
         opponent->wait_ticks = 0;
         figure_play_die_sound(opponent);
         formation_update_morale_after_death(opponent_formation);
+        if (mp_war_any_fighting()) {
+            mp_wrath_figure_killed(FIGURE_OWNER(f->id), opponent); // players at war (M10.4, M10.5)
+        }
     }
 }
 
@@ -410,6 +414,9 @@ void figure_combat_attack_figure_at(figure *f, int grid_offset)
         if (!attack && mp_war_any_fighting() && opponent->state == FIGURE_STATE_ALIVE &&
             opponent->action_state != FIGURE_ACTION_149_CORPSE && figure_category == FIGURE_CATEGORY_ARMED) {
             attack = mp_war_may_attack(f, opponent); // players at war (T5.5): never in a classic game
+            if (attack) {
+                mp_wrath_hostile_act(FIGURE_OWNER(f->id), FIGURE_OWNER(opponent->id)); // a motive of retaliation
+            }
         }
         if (attack && opponent->action_state == FIGURE_ACTION_150_ATTACK && opponent->num_attackers >= 2) {
             attack = 0;
