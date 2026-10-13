@@ -3,6 +3,8 @@
 > Une entrée par session, **la plus récente en haut**. Format : fait / appris / prochaine étape / points ouverts.
 > C'est la mémoire du projet d'une session à l'autre : rester factuel et concis.
 
+---
+
 ## 2026-10-13 et 14 — Deuxième essai à trois (T5), puis la guerre (M10, MG)
 
 **Demandes d'Alexandre** : le backlog de son deuxième essai à trois Mac (TEST_2.md, T5.1 à T5.8) ; « les joueurs qui
