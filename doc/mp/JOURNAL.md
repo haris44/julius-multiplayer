@@ -3,6 +3,47 @@
 > Une entrée par session, **la plus récente en haut**. Format : fait / appris / prochaine étape / points ouverts.
 > C'est la mémoire du projet d'une session à l'autre : rester factuel et concis.
 
+## 2026-10-13 et 14 — Deuxième essai à trois (T5), puis la guerre (M10, MG)
+
+**Demandes d'Alexandre** : le backlog de son deuxième essai à trois Mac (TEST_2.md, T5.1 à T5.8) ; « les joueurs qui
+ne sont pas l'hôte ont encore des comportements de mode difficile » (T5.9) ; puis « lance le développement de
+l'aspect guerrier », avec une subtilité : pouvoir se rétracter d'une déclaration de guerre, pour laisser à l'ennemi
+le temps de céder à la pression commerciale.
+
+**Fait**
+- T5 (ROADMAP §T5, D-074 à D-079) : journal de la difficulté au lancement, sauvegarde du mois et reprise par le salon,
+  première guerre entre joueurs, page du commerce refaite, caravanes qui circulent, aqueduc de César à 8 rangées de la
+  route. T5.9 : la cause unique des « comportements difficiles » chez J2 à J4 était le générateur aléatoire, copié de
+  la cité 1 avec une graine fixe (salaires de Rome, dieux, événements) ; chaque cité a désormais son hasard, tiré de
+  la graine du salon, et Rome paie les mêmes salaires à tous (D-079).
+- Guerre, en agents parallèles dans des worktrees, fusionnés et testés un par un sur master :
+  - M10.1 : retrait d'une déclaration pendant le préavis (D-080) ;
+  - M10.2 : portes fermées aux seuls soldats ennemis, aqueducs coupés en guerre (D-081) ; terre de César autour du pont
+    (D-082) ; la route de César revient sous une porte abattue (D-085), arc de triomphe refusé par commande s'il n'est
+    pas gagné ;
+  - MG.1 à MG.4 : javeliniers renforcés, bois à la caserne (D-083) ;
+  - M10.4, M10.5, M10.7 : motif et prix des guerres, triomphes, colère de César, avertissement, ultimatum, ennemi de
+    Rome, armée trop puissante (D-084) ;
+  - en cours à la fin de l'entrée : M10.6 (expédition punitive), ordre « attaquer » (reste de M10.2), M10.8 et MG.5.
+- Protocole 23 → 29. 255 tests.
+
+**Appris**
+- Les worktrees des agents partent parfois encore de Julius amont : la consigne doit donner le commit attendu et la
+  commande pour s'y remettre.
+- Sous la charge de quatre agents, des tests réseau dépassent leur délai (charge moyenne 35) : relancés seuls, ils
+  passent. Ne pas confondre avec une régression, mais toujours relancer avant de pousser.
+- Deux scripts du vrai jeu (`mp-war-test.sh`, `mp-trade4-test.sh`) ne mettaient pas de côté la sauvegarde
+  automatique d'Alexandre : corrigé. Un agent a écrit `autosave.mpsav` dans `donnees-c3` sans cette garde.
+- Plusieurs fusions de `simtool.c` : quand deux branches ajoutent de gros blocs au même endroit, appliquer les ajouts
+  d'une branche comme un patch sur l'autre plutôt que de résoudre les conflits entremêlés.
+
+**Prochaine étape** : fusionner M10.6, l'ordre « attaquer », M10.8 et MG.5 ; une version GitHub pour un essai de
+guerre à plusieurs.
+
+**Points ouverts (à valider par Alexandre)** : D-076 (salaire du gouverneur) à garder ou défaire ; D-080 (coût d'une
+menace retirée) ; D-081 (portes, aqueducs) ; D-082 (15 cases autour du pont) ; D-083 (5 chargements de bois) ; D-084
+(motifs, triomphe à 4 morts, part du défenseur) ; D-077, D-078.
+
 ---
 
 ## 2026-10-07 (nuit) — Les demandes du premier essai à plusieurs (T4.1 à T4.17, D-060 à D-073)

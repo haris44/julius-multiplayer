@@ -125,6 +125,18 @@ Les règles propres au multijoueur :
   un joueur des terres (avec les olives) et un de la côte (avec les vignes) ; à 4, deux de chaque, les olives à un
   joueur des terres et les vignes à l'autre ; à 3, une place de la côte reste libre.
   En multijoueur, un réservoir coupé de sa source garde son eau environ 5 minutes.
+- La guerre : le bouton « Guerre » du conseiller militaire (touche 2) ouvre « Guerre et paix ». Guerre brutale :
+  on se bat tout de suite ; guerre honorable : dans 3 mois. Dès la déclaration, plus aucune caravane ne circule entre
+  vous. Pendant le préavis, celui qui a déclaré peut se rétracter (la menace laisse à l'autre le temps de céder), et
+  l'autre peut frapper le premier. La paix se signe quand les deux la proposent. En guerre, les légions abattent les
+  bâtiments, murs et portes de l'ennemi, coupent l'aqueduc qui l'alimente et prennent ses caravanes ; vos portes
+  n'arrêtent que les soldats de vos ennemis. Rien ne se bâtit à moins de 15 cases du pont de César.
+- César juge les guerres : sans motif, une guerre coûte 15 lauriers (brutale : 30), payés quand les combats
+  commencent ; une riposte ou une guerre contre un « ennemi de Rome » est juste, et détruire une légion ennemie
+  rapporte alors 20 lauriers. Sa colère, commune à tous (jauge dans le bandeau), monte avec les guerres : à 40 il
+  avertit, à 70 il impose la paix dans les 3 mois. Il tolère une légion par 5 000 habitants (au moins 2) ; chaque
+  légion de plus coûte 2 lauriers par mois.
+- Javeliniers renforcés : chacun coûte un chargement de bois, que la caserne reçoit de vos entrepôts.
 - Brouillard de guerre (option du salon) : on ne voit que ce qu'on a découvert.
 
 Affichage : le plus simple est le plein écran (Options, Affichage), qui prend la taille de votre écran. En

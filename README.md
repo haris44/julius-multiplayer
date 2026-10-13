@@ -15,9 +15,9 @@ Caesar III.
 > with each other, depend on Caesar's aqueduct for water and compete for Caesar's laurels. War between players is
 > in progress. The documentation is in French.*
 
-**État** : en développement. On joue déjà en paix : zones, missionnaire, commerce entre joueurs, César qui juge. La
-guerre entre joueurs est le prochain grand chantier. Les versions Linux et Windows sont récentes et encore peu
-essayées.
+**État** : en développement. On joue en paix (zones, missionnaire, commerce entre joueurs, César qui juge) et la
+guerre entre joueurs est jouable, sous l'œil de César ; son expédition punitive reste à venir. Les versions Linux et
+Windows sont récentes et encore peu essayées.
 
 ## La partie en bref
 
@@ -53,9 +53,9 @@ essayées.
 
 - La seule eau de la carte est le bras de mer. Les joueurs des terres en vivent loin : seul l'aqueduc de César les
   alimente, depuis un réservoir de César sur la côte, un par joueur des terres.
-- Les routes de César sont indestructibles. Son aqueduc l'est aussi, tant que la guerre n'existe pas : ensuite, les
-  soldats pourront le couper. Privé de sa source, un réservoir garde son eau environ 5 minutes, puis les fontaines
-  s'assèchent.
+- Les routes de César sont indestructibles. Son aqueduc ne l'est pas en guerre : les soldats coupent celui qui
+  alimente leur ennemi. Privé de sa source, un réservoir garde son eau environ 5 minutes, puis les fontaines
+  s'assèchent. Le joueur coupé déblaie et pose son propre aqueduc pour réparer.
 
 ## Le commerce
 
@@ -91,6 +91,27 @@ essayées.
   score. Un clic donne les lauriers du mois dernier, la tendance et la place dans la province. L'ancienne faveur de
   César n'est plus affichée.
 
+## La guerre
+
+- Le bouton « Guerre » du conseiller militaire ouvre « Guerre et paix ». **Guerre brutale** : on se bat tout de
+  suite. **Guerre honorable** : on se bat dans 3 mois.
+- Dès la déclaration, plus aucune caravane ne circule entre les deux joueurs. Pendant le préavis, celui qui a
+  déclaré peut **se rétracter** : la menace laisse à l'autre le temps de céder à la pression du commerce coupé.
+  L'autre peut aussi frapper le premier par une guerre brutale. La paix se signe quand les deux la proposent.
+- En guerre, les légions se battent chez l'ennemi, abattent ses bâtiments, ses murs et ses portes, coupent l'aqueduc
+  qui l'alimente et prennent ses caravanes. Les portes d'un joueur n'arrêtent que les soldats de ses ennemis.
+- Autour du pont de César, sur 15 cases, rien ne se bâtit (seulement des routes) : personne ne peut fermer le pont.
+- **César juge les guerres**. Le jeu détermine le motif : riposte (l'autre vous a menacé ou attaqué dans l'année),
+  mandat de César (contre un « ennemi de Rome »), ou sans motif. Une guerre sans motif coûte 15 lauriers, une guerre
+  brutale 15 de plus, payés quand les combats commencent : une menace retirée ne coûte rien. Détruire une légion
+  ennemie dans une guerre juste rapporte un triomphe (20 lauriers).
+- **La colère de César**, commune à toute la province, monte avec la durée des guerres, les légions chez l'ennemi et
+  les dégâts. À 40, il avertit ; à 70, ultimatum : la paix dans 3 mois, et le principal responsable devient
+  « ennemi de Rome ». Elle redescend en paix. La jauge est dans le bandeau, la part de chacun dans le conseiller
+  impérial.
+- Même en paix, César tolère une légion par 5 000 habitants (au moins 2) ; chaque légion de plus coûte 2 lauriers
+  par mois.
+
 ## Le salon et les règles
 
 - L'hôte règle la partie jusqu'au lancement : carte, difficulté (« facile » par défaut), dieux, fin de partie,
@@ -105,9 +126,8 @@ essayées.
 
 ## À venir
 
-- **La guerre entre joueurs** : guerre honorable, avec 3 mois de préavis, ou brutale et immédiate, que César
-  n'apprécie pas. Légions chez l'adversaire, caravanes interceptées, aqueduc coupé. Une colère de César commune à
-  tous : des joueurs trop belliqueux s'attirent une expédition punitive.
+- **La fin de la guerre** : l'expédition punitive de César quand sa colère est à son comble, l'ordre « attaquer »
+  des légions, le moral de chaque camp et les arcs de triomphe.
 - Fêtes et campagnes de César qui rapportent des lauriers, et ses demandes adressées à toute la province.
 - La hausse des prix de l'empire quand un joueur arrête le commerce.
 

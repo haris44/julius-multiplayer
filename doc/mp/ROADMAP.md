@@ -1036,7 +1036,9 @@ César revient comme arbitre de la partie. Jouable en paix et **seul** : livré 
   par tous les chemins (D-085, à valider ; ctest `mp_caesar_road_under_gate`).
   - *Fait (D-082, à valider)* : la terre de César, 15 cases autour de chaque entrée du pont, où aucune zone ne
     s'étend et où porte, tour, fort, mission et mur sont refusés (routes permises) ; `mp_caesar_land_*`.
-- [ ] **M10.3** Interception des caravanes (ancien M8.7) : cargaison prise, route coupée.
+- [x] **M10.3** Interception des caravanes (ancien M8.7) : cargaison prise, route coupée.
+  *Fait* avec T5.5 (D-077) : plus aucune caravane entre deux joueurs en guerre, préavis compris, celles en route font
+  demi-tour ; un soldat ennemi à une case prend la cargaison (`mp_war`). La colère compte chaque caravane prise (D-084).
 - [x] **M10.4** Motifs de guerre (riposte, mandat de César, sans motif) et prix de la guerre brutale, triomphes,
   lauriers gagnés ou perdus.
   *Fait* (D-084, `mp/wrath.c`) : motif fixé par le jeu à la déclaration (sans motif pour le déclarant moins de 12 mois
