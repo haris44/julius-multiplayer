@@ -84,6 +84,7 @@
 #include "mp/savegame.h"
 #include "mp/trade.h"
 #include "mp/war.h"
+#include "mp/wrath.h"
 #include "mp/fog.h"
 #include "building/warehouse.h"
 #include "mp/missionary.h"
@@ -203,6 +204,9 @@ static int usage(void)
     printf("  simtool caesarhistory SAVE             monthly history of the laurels of each city: gain, trend, saved\n");
     printf("  simtool war SAVE                       prepared map: war between players by commands, saved; legions\n");
     printf("                                         fight in the enemy city, pull down buildings, take caravans (T5.5)\n");
+    printf("  simtool warmotives SAVE                motives and price of a war, triumphs (M10.4)\n");
+    printf("  simtool caesarwrath SAVE               Caesar's wrath: examples of CESAR 7.2, ultimatum (M10.5)\n");
+    printf("  simtool armytolerance SAVE             legions beyond what Caesar tolerates cost laurels (M10.7)\n");
     printf("  simtool terrain MAP PLAYERS X Y W H [raw]  the terrain of a part of the prepared map (or of an .mpsav),\n");
     printf("                                         one letter a tile; raw: terrain bits, image and elevation too\n");
     printf("  simtool tradecities MAP                trade cities of the empire of a map, by land and by sea\n");
@@ -7593,6 +7597,714 @@ static int command_war(const char *file)
     return failures ? 1 : 0;
 }
 
+// ---------- Caesar judges the wars (M10.4, M10.5, M10.7, D-084) ----------
+
+static int war_laurels(int player_id)
+{
+    return mp_caesar_laurels_from(player_id, MP_LAURELS_WARS);
+}
+
+static const char *motive_name(int motive)
+{
+    return motive == MP_WAR_MOTIVE_RETALIATION ? "retaliation" : motive == MP_WAR_MOTIVE_MANDATE ? "mandate" :
+        "without motive";
+}
+
+// what the wars of player 1 added to the wrath over the months run; the gauge decreases after
+static int wrath_months(int months, int *added)
+{
+    int total = 0;
+    for (int i = 0; i < months; i++) {
+        run_to_next_month_fast();
+        if (added) {
+            added[i] = mp_wrath_added_last_month(0);
+        }
+        total += mp_wrath_added_last_month(0);
+    }
+    return total;
+}
+
+// runs until the given day of the month starts
+static void run_to_day(int day)
+{
+    setting_reset_speeds(500, setting_scroll_speed());
+    for (int i = 0; i < 20 * 50 && !(game_time_day() == day && game_time_tick() == 0); i++) {
+        run_one_tick();
+    }
+}
+
+static int last_letter_type(void)
+{
+    int count = mp_caesar_num_letters();
+    return count ? (int) mp_caesar_get_letter(count - 1)->type : -1;
+}
+
+static int last_letter_param(void)
+{
+    int count = mp_caesar_num_letters();
+    return count ? mp_caesar_get_letter(count - 1)->param : -1;
+}
+
+// two legions of the sizes asked, at their forts, in a game of two players on the prepared map; *tx, *ty: by the
+// houses of player 2, where the legion of player 1 goes in the tests of the war
+static int start_judged_war(const char *file, int soldiers1, int soldiers2, int *legion1, int *legion2, int *tx,
+    int *ty)
+{
+    player_context_switch(0);
+    player_context_set_num_players(1); // a new map in the same process
+    if (!start_trade_game(file)) {
+        return 0;
+    }
+    int x0, y0, x1, y1;
+    mp_mapgen_city_center(0, &x0, &y0);
+    mp_mapgen_city_center(1, &x1, &y1);
+    *legion1 = make_legion(0, BUILDING_FORT_LEGIONARIES, x0 - 10, y0 - 8, soldiers1);
+    *legion2 = make_legion(1, BUILDING_FORT_LEGIONARIES, x1 + 6, y1 + 4, soldiers2);
+    *tx = x1 - 4;
+    *ty = y1 - 4;
+    war_run(400); // the soldiers reach their forts
+    return *legion1 && *legion2;
+}
+
+// a tile of the land of `owner` on the line from (x0, y0) to (x1, y1), clear, with no building within 3 tiles
+static int land_tile_of(int owner, int x0, int y0, int x1, int y1, int *x, int *y)
+{
+    int steps = abs(x1 - x0) > abs(y1 - y0) ? abs(x1 - x0) : abs(y1 - y0);
+    for (int i = 0; i <= steps; i++) {
+        int px = x0 + (x1 - x0) * i / (steps ? steps : 1);
+        int py = y0 + (y1 - y0) * i / (steps ? steps : 1);
+        int offset = map_grid_offset(px, py);
+        if (mp_territory_owner(offset) != owner || map_terrain_is(offset, TERRAIN_NOT_CLEAR)) {
+            continue;
+        }
+        int free = 1;
+        for (int dy = -3; dy <= 3 && free; dy++) {
+            for (int dx = -3; dx <= 3 && free; dx++) {
+                int near = map_grid_offset(px + dx, py + dy);
+                free = !map_grid_is_valid_offset(near) || map_building_at(near) <= 0;
+            }
+        }
+        if (free) {
+            *x = px;
+            *y = py;
+            return 1;
+        }
+    }
+    return 0;
+}
+
+// a legion of player 1 goes to the tile in peace and stands there with all its soldiers
+static int legion_stands_at(int legion, int x, int y)
+{
+    int war_ticks = 0;
+    int soldiers = alive_soldiers(legion);
+    city_action(FORMATION_OWNER(legion), MP_ACTION_LEGION_MOVE, legion, x, y);
+    RUN_UNTIL(soldiers_at_standard(legion) >= soldiers, 50, 8000);
+    return soldiers_at_standard(legion) >= soldiers;
+}
+
+// the legion of the defender comes out against the legion standing at (x, y); runs until one of them has no soldier
+// left (or `max_ticks`)
+static int battle(int legion_out, int legion_standing, int x, int y, int max_ticks)
+{
+    int war_ticks = 0;
+    city_action(FORMATION_OWNER(legion_out), MP_ACTION_LEGION_MOVE, legion_out, x + 1, y);
+    RUN_UNTIL(!alive_soldiers(legion_out) || !alive_soldiers(legion_standing), 10, max_ticks);
+    return war_ticks;
+}
+
+// the motive of a war, its price paid when the fighting starts, the 12 months of a retaliation and after a peace,
+// the mandate against an enemy of Rome, the triumphs (CESAR §7.1, D-053, D-080, D-084)
+static int command_warmotives(const char *file)
+{
+    int failures = 0;
+    int war_ticks = 0;
+    int redeclared = 0;
+#define CHECK(condition, text) do { int ok_ = (condition); printf("%-100s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
+    int legion1, legion2, tx, ty;
+    if (!start_war_game(file, &legion1, &legion2, &tx, &ty)) {
+        printf("Unable to prepare the game\n");
+        return 2;
+    }
+    const char *start = "warmotives-start.mpsav";
+    const char *threat = "warmotives-threat.mpsav";
+    const char *legions = "warmotives-legions.mpsav";
+    if (!mp_savegame_write(start)) {
+        printf("Unable to save\n");
+        return 2;
+    }
+    CHECK(mp_wrath_motive_if_declared(0, 1, &redeclared) == MP_WAR_MOTIVE_UNJUST && !redeclared,
+        "a new game: a war would be without motive");
+    CHECK(mp_wrath_war_price(MP_WAR_MOTIVE_UNJUST, MP_WAR_HONOURABLE) == -150 &&
+        mp_wrath_war_price(MP_WAR_MOTIVE_UNJUST, MP_WAR_BRUTAL) == -300 &&
+        mp_wrath_war_price(MP_WAR_MOTIVE_RETALIATION, MP_WAR_HONOURABLE) == 0 &&
+        mp_wrath_war_price(MP_WAR_MOTIVE_RETALIATION, MP_WAR_BRUTAL) == -150 &&
+        mp_wrath_war_price(MP_WAR_MOTIVE_MANDATE, MP_WAR_HONOURABLE) == 0 &&
+        mp_wrath_war_price(MP_WAR_MOTIVE_MANDATE, MP_WAR_BRUTAL) == -150,
+        "prices: 15 laurels without motive, 15 more for a brutal war, nothing for a just honourable war");
+
+    // an honourable war without motive is paid when its fighting starts
+    city_action(0, MP_ACTION_DECLARE_WAR, 1, MP_WAR_HONOURABLE, 0);
+    CHECK(mp_wrath_motive(0, 1) == MP_WAR_MOTIVE_UNJUST && war_laurels(0) == 0,
+        "an honourable war without motive: nothing paid at the declaration");
+    CHECK(mp_wrath_motive_if_declared(1, 0, 0) == MP_WAR_MOTIVE_RETALIATION,
+        "its target has a motive of retaliation");
+    war_run(MP_WAR_NOTICE_TICKS - 1);
+    CHECK(mp_war_status(0, 1) == MP_WAR_NOTICE && war_laurels(0) == 0 && !mp_wrath_is_enemy_of_rome(0),
+        "the last tick of the notice: still nothing paid");
+    war_run(1);
+    printf("the fighting starts: %d tenths of laurels of war for player 1, %d for player 2\n", war_laurels(0),
+        war_laurels(1));
+    CHECK(mp_war_is_fighting(0, 1) && war_laurels(0) == MP_CAESAR_UNJUST_WAR_LAURELS && war_laurels(1) == 0,
+        "the fighting starts: its declarer pays 15 laurels, at that tick");
+    CHECK(mp_wrath_is_enemy_of_rome(0) && mp_wrath_enemy_of_rome_months(0) == 12 && !mp_wrath_is_enemy_of_rome(1),
+        "a war without motive makes its declarer an enemy of Rome for 12 months");
+    run_to_next_month_fast();
+    CHECK(war_laurels(0) == MP_CAESAR_UNJUST_WAR_LAURELS, "paid once");
+
+    // a threat withdrawn during its notice costs nothing (D-080)
+    if (!mp_savegame_read(start)) {
+        return 2;
+    }
+    city_action(0, MP_ACTION_DECLARE_WAR, 1, MP_WAR_HONOURABLE, 0);
+    war_run(600);
+    city_action(0, MP_ACTION_WITHDRAW_WAR, 1, 0, 0);
+    war_run(MP_WAR_NOTICE_TICKS + 2 * 800);
+    CHECK(mp_war_status(0, 1) == MP_WAR_PEACE && war_laurels(0) == 0 && mp_caesar_wrath() == 0 &&
+        mp_caesar_belligerence(0) == 0 && !mp_wrath_is_enemy_of_rome(0),
+        "a threat withdrawn during its notice costs neither laurels nor wrath");
+    CHECK(mp_wrath_motive_if_declared(1, 0, &redeclared) == MP_WAR_MOTIVE_RETALIATION && !redeclared,
+        "it gives its target a motive of retaliation");
+    CHECK(mp_wrath_motive_if_declared(0, 1, &redeclared) == MP_WAR_MOTIVE_UNJUST && redeclared,
+        "declaring it again within 12 months would be without motive, its wrath doubled");
+    city_action(0, MP_ACTION_DECLARE_WAR, 1, MP_WAR_HONOURABLE, 0);
+    CHECK(mp_wrath_motive(0, 1) == MP_WAR_MOTIVE_UNJUST && mp_wrath_is_redeclared(0, 1) && war_laurels(0) == 0,
+        "declared again: without motive, wrath doubled, nothing paid yet");
+    RUN_UNTIL(mp_war_is_fighting(0, 1), 10, 3000);
+    CHECK(war_laurels(0) == MP_CAESAR_UNJUST_WAR_LAURELS, "paid when its fighting starts");
+
+    // a brutal war without motive: 30 laurels at once
+    if (!mp_savegame_read(start)) {
+        return 2;
+    }
+    city_action(0, MP_ACTION_DECLARE_WAR, 1, MP_WAR_BRUTAL, 0);
+    CHECK(mp_war_is_fighting(0, 1) && war_laurels(0) == -300 && mp_wrath_is_enemy_of_rome(0),
+        "a brutal war without motive: 30 laurels at once, its declarer an enemy of Rome");
+
+    // the defender strikes first during the notice: the war is his, a retaliation, and he pays its brutality
+    if (!mp_savegame_read(start)) {
+        return 2;
+    }
+    city_action(0, MP_ACTION_DECLARE_WAR, 1, MP_WAR_HONOURABLE, 0);
+    war_run(100);
+    city_action(1, MP_ACTION_DECLARE_WAR, 0, MP_WAR_BRUTAL, 0);
+    CHECK(mp_war_declarer(0, 1) == 1 && mp_wrath_motive(0, 1) == MP_WAR_MOTIVE_RETALIATION &&
+        war_laurels(1) == MP_CAESAR_BRUTAL_WAR_LAURELS && war_laurels(0) == 0,
+        "the defender strikes first: his retaliation, 15 laurels for its brutality");
+    war_run(MP_WAR_NOTICE_TICKS);
+    CHECK(war_laurels(0) == 0 && war_laurels(1) == MP_CAESAR_BRUTAL_WAR_LAURELS && !mp_wrath_is_enemy_of_rome(0) &&
+        !mp_wrath_is_enemy_of_rome(1), "the first declarer pays nothing: his war never started; no enemy of Rome");
+
+    // a motive of retaliation lasts 12 months
+    if (!mp_savegame_read(start)) {
+        return 2;
+    }
+    city_action(1, MP_ACTION_DECLARE_WAR, 0, MP_WAR_HONOURABLE, 0);
+    city_action(1, MP_ACTION_WITHDRAW_WAR, 0, 0, 0);
+    if (!mp_savegame_write(threat)) {
+        return 2;
+    }
+    city_action(0, MP_ACTION_DECLARE_WAR, 1, MP_WAR_BRUTAL, 0);
+    CHECK(mp_wrath_motive(0, 1) == MP_WAR_MOTIVE_RETALIATION && war_laurels(0) == MP_CAESAR_BRUTAL_WAR_LAURELS &&
+        !mp_wrath_is_enemy_of_rome(0),
+        "player 1 answers the threat of player 2 by a brutal war: a retaliation, 15 laurels, not an enemy of Rome");
+    if (!mp_savegame_read(threat)) {
+        return 2;
+    }
+    war_run(MP_CAESAR_RETALIATION_MONTHS * 800 - 1);
+    CHECK(mp_wrath_motive_if_declared(0, 1, 0) == MP_WAR_MOTIVE_RETALIATION &&
+        mp_wrath_motive_if_declared(1, 0, &redeclared) == MP_WAR_MOTIVE_UNJUST && redeclared,
+        "a tick before 12 months: still a retaliation, and player 2 still bound by his withdrawn threat");
+    war_run(1);
+    int redeclared_by_2 = 1;
+    CHECK(mp_wrath_motive_if_declared(0, 1, &redeclared) == MP_WAR_MOTIVE_UNJUST && !redeclared &&
+        mp_wrath_motive_if_declared(1, 0, &redeclared_by_2) == MP_WAR_MOTIVE_UNJUST && !redeclared_by_2,
+        "12 months after the threat: no motive any more, nobody bound");
+
+    // a peace binds the declarer of the war, not his enemy
+    if (!mp_savegame_read(start)) {
+        return 2;
+    }
+    city_action(0, MP_ACTION_DECLARE_WAR, 1, MP_WAR_BRUTAL, 0);
+    city_action(0, MP_ACTION_PROPOSE_PEACE, 1, 1, 0);
+    city_action(1, MP_ACTION_PROPOSE_PEACE, 0, 1, 0);
+    CHECK(mp_war_status(0, 1) == MP_WAR_PEACE &&
+        mp_wrath_motive_if_declared(0, 1, &redeclared) == MP_WAR_MOTIVE_UNJUST && redeclared,
+        "after the peace, its declarer may declare it again within 12 months only without motive");
+    CHECK(mp_wrath_motive_if_declared(1, 0, &redeclared) == MP_WAR_MOTIVE_MANDATE && !redeclared,
+        "his enemy is free: a mandate of Caesar, the declarer of a war without motive being an enemy of Rome");
+    city_action(0, MP_ACTION_DECLARE_WAR, 1, MP_WAR_BRUTAL, 0);
+    CHECK(mp_wrath_motive(0, 1) == MP_WAR_MOTIVE_UNJUST && mp_wrath_is_redeclared(0, 1) && war_laurels(0) == -600,
+        "declared again: without motive, its wrath doubled, 30 laurels again");
+
+    // the acts of war are hostile acts: the declaration, the buildings pulled down, the fights
+    if (!mp_savegame_read(start)) {
+        return 2;
+    }
+    CHECK(legion_stands_at(legion1, tx, ty), "(in peace, the legion of player 1 stands by the houses of player 2)");
+    city_action(0, MP_ACTION_DECLARE_WAR, 1, MP_WAR_BRUTAL, 0);
+    int declared_at = mp_wrath_last_hostile_act(0, 1);
+    CHECK(declared_at >= 0 && mp_wrath_last_hostile_act(1, 0) < 0, "the declaration is a hostile act of the declarer");
+    int buildings_before, caravans_before, killed_before;
+    mp_wrath_damage_done(0, 1, &buildings_before, &caravans_before, &killed_before);
+    int buildings2 = buildings_of(1);
+    RUN_UNTIL(buildings_of(1) < buildings2, 10, 3000);
+    int pulled_down, caravans, killed;
+    mp_wrath_damage_done(0, 1, &pulled_down, &caravans, &killed);
+    printf("the first building of player 2 down after %d ticks: %d counted\n", war_ticks,
+        pulled_down - buildings_before);
+    CHECK(pulled_down > buildings_before && mp_wrath_last_hostile_act(0, 1) > declared_at,
+        "his soldiers pull down a building of player 2: counted for the wrath, a hostile act");
+    int soldiers1 = alive_soldiers(legion1);
+    city_action(1, MP_ACTION_LEGION_MOVE, legion2, tx + 1, ty);
+    RUN_UNTIL(mp_wrath_last_hostile_act(1, 0) >= 0, 1, 4000);
+    printf("the legion of player 2 comes out: its first hostile act after %d ticks, %d of %d soldiers of player 1 "
+        "alive\n", war_ticks, alive_soldiers(legion1), soldiers1);
+    CHECK(mp_wrath_last_hostile_act(1, 0) >= 0 && alive_soldiers(legion1) == soldiers1,
+        "it engages the soldiers of player 1: a hostile act of player 2, before anyone dies");
+
+    // triumphs: a legion destroyed by the defender of a war without motive
+    if (!start_judged_war(file, 8, 16, &legion1, &legion2, &tx, &ty)) {
+        printf("Unable to prepare the game\n");
+        return 2;
+    }
+    CHECK(legion_stands_at(legion1, tx, ty), "(8 soldiers of player 1 stand in the city of player 2)");
+    city_action(0, MP_ACTION_DECLARE_WAR, 1, MP_WAR_BRUTAL, 0);
+    int ticks = battle(legion2, legion1, tx, ty, 8000);
+    printf("16 soldiers of player 2 come out against them: after %d ticks, %d of player 1 and %d of player 2 alive; "
+        "triumphs %d and %d; laurels of war %d and %d tenths\n", ticks, alive_soldiers(legion1),
+        alive_soldiers(legion2), mp_wrath_triumphs(0), mp_wrath_triumphs(1), war_laurels(0), war_laurels(1));
+    CHECK(!alive_soldiers(legion1) && mp_wrath_triumphs(1) == 1 && war_laurels(1) == MP_CAESAR_TRIUMPH_LAURELS,
+        "the defender destroys the legion of the declarer of a war without motive: a triumph, 20 laurels");
+    CHECK(mp_wrath_triumphs(0) == 0 && war_laurels(0) == -300, "the declarer: his 30 laurels, no triumph");
+
+    // the declarer of a war without motive destroys a legion: no triumph; the same in a retaliation: a triumph
+    if (!start_judged_war(file, 16, 4, &legion1, &legion2, &tx, &ty) || !mp_savegame_write(legions)) {
+        printf("Unable to prepare the game\n");
+        return 2;
+    }
+    CHECK(legion_stands_at(legion1, tx, ty), "(16 soldiers of player 1 stand in the city of player 2)");
+    city_action(0, MP_ACTION_DECLARE_WAR, 1, MP_WAR_BRUTAL, 0);
+    ticks = battle(legion2, legion1, tx, ty, 6000);
+    printf("4 soldiers of player 2 come out: after %d ticks, %d of player 1 and %d of player 2 alive\n", ticks,
+        alive_soldiers(legion1), alive_soldiers(legion2));
+    CHECK(!alive_soldiers(legion2) && mp_wrath_triumphs(0) == 0 && war_laurels(0) == -300,
+        "the declarer of a war without motive destroys a legion: no triumph");
+    if (!mp_savegame_read(legions)) {
+        return 2;
+    }
+    city_action(1, MP_ACTION_DECLARE_WAR, 0, MP_WAR_HONOURABLE, 0);
+    city_action(1, MP_ACTION_WITHDRAW_WAR, 0, 0, 0);
+    CHECK(legion_stands_at(legion1, tx, ty), "(after a threat of player 2, the legion of player 1 stands in his city)");
+    city_action(0, MP_ACTION_DECLARE_WAR, 1, MP_WAR_BRUTAL, 0);
+    ticks = battle(legion2, legion1, tx, ty, 6000);
+    printf("a retaliation: after %d ticks, %d of player 1 and %d of player 2 alive; laurels of war %d tenths\n", ticks,
+        alive_soldiers(legion1), alive_soldiers(legion2), war_laurels(0));
+    CHECK(mp_wrath_motive(0, 1) == MP_WAR_MOTIVE_RETALIATION && !alive_soldiers(legion2) &&
+        mp_wrath_triumphs(0) == 1 && war_laurels(0) == MP_CAESAR_BRUTAL_WAR_LAURELS + MP_CAESAR_TRIUMPH_LAURELS,
+        "the same legion destroyed in a retaliation: a triumph, 20 laurels");
+    remove(legions);
+    remove(threat);
+    remove(start);
+
+    // three players: the declarer of a war without motive is an enemy of Rome, a war on him a mandate of Caesar
+    player_context_switch(0);
+    player_context_set_num_players(1);
+    if (!start_tradegame(file, 3, 0, "motives")) {
+        return 2;
+    }
+    CHECK(mp_wrath_motive_if_declared(2, 0, 0) == MP_WAR_MOTIVE_UNJUST, "three players: player 3 has no motive");
+    run_to_day(8); // no fighting starts on the first day of a month
+    city_action(0, MP_ACTION_DECLARE_WAR, 1, MP_WAR_BRUTAL, 0);
+    CHECK(mp_wrath_is_enemy_of_rome(0) && mp_wrath_motive_if_declared(2, 0, 0) == MP_WAR_MOTIVE_MANDATE,
+        "player 1 wages a war without motive on player 2: a war of player 3 on him is a mandate of Caesar");
+    city_action(2, MP_ACTION_DECLARE_WAR, 0, MP_WAR_HONOURABLE, 0);
+    RUN_UNTIL(mp_war_is_fighting(0, 2), 10, 3000);
+    CHECK(mp_wrath_motive(2, 0) == MP_WAR_MOTIVE_MANDATE && war_laurels(2) == 0,
+        "player 3 declares it: a mandate, nothing to pay when its fighting starts");
+    // a month of each war: the mandate counts a quarter, the war without motive in full, both brutal or not
+    run_to_next_month_fast();
+    int months_1 = mp_wrath_months_fighting(0, 1);
+    printf("a month: player 1 (brutal, without motive, its month %d) added %d tenths, player 3 (honourable, "
+        "mandate, its first month) %d\n", months_1, mp_wrath_added_last_month(0), mp_wrath_added_last_month(2));
+    CHECK(mp_wrath_months_fighting(0, 2) == 1 && mp_wrath_added_last_month(2) == 3 &&
+        mp_wrath_added_last_month(0) == 15 * months_1,
+        "the n-th month: n points x 1.5 for the brutal war without motive, n / 4 for the mandate (rounded up)");
+
+    // a classic game: nothing
+    player_context_switch(0);
+    player_context_set_num_players(1);
+    if (!load(file)) {
+        return 2;
+    }
+    city_action(0, MP_ACTION_DECLARE_WAR, 1, MP_WAR_BRUTAL, 0);
+    run_to_next_month_fast();
+    CHECK(!mp_caesar_is_active() && war_laurels(0) == 0 && mp_caesar_wrath() == 0 && !mp_wrath_is_enemy_of_rome(0),
+        "a classic game: no war, no laurels, no wrath");
+#undef CHECK
+    printf("%s\n", failures ? "DIFFERENT: Caesar does not judge the wars as designed" :
+        "Identical: Caesar judges the wars as designed");
+    return failures ? 1 : 0;
+}
+
+// a hash of the saved state of Caesar and of the wars, cheaper than the checksum of the whole game
+static uint64_t judge_state_hash(void)
+{
+    static uint8_t bytes[8192];
+    void (*save[])(buffer *buf) = { mp_caesar_save_state, mp_war_save_state, mp_wrath_save_state };
+    uint64_t hash = 0xcbf29ce484222325ULL;
+    for (int piece = 0; piece < 3; piece++) {
+        buffer buf;
+        buffer_init(&buf, bytes, sizeof(bytes));
+        save[piece](&buf);
+        for (int i = 0; i < buf.index; i++) {
+            hash = (hash ^ bytes[i]) * 0x100000001b3ULL;
+        }
+    }
+    return hash;
+}
+
+// the ticks of a replay whose whole checksum is compared (it costs much more than a tick on the prepared map): every
+// 25th, and every tick around the start of a month, when Caesar judges
+static int full_checksum_tick(int tick)
+{
+    int in_month = tick % (16 * 50);
+    return tick % 25 == 0 || in_month <= 20 || in_month >= 16 * 50 - 20;
+}
+
+// the first example of CESAR §7.2: a targeted strike without motive, 1 legion, 3 months of war, 2 of them in the
+// land of the enemy, 8 buildings and 3 caravans; returns the wrath its declarer added
+static int targeted_strike(int legion, int lx, int ly, int form, int *months)
+{
+    int war_ticks = 0;
+    run_to_day(8); // the fighting does not start on the first day of a month
+    city_action(0, MP_ACTION_DECLARE_WAR, 1, form, 0);
+    RUN_UNTIL(mp_war_is_fighting(0, 1), 10, 3000);
+    int total = wrath_months(1, months);
+    city_action(0, MP_ACTION_LEGION_MOVE, legion, lx, ly);
+    total += wrath_months(1, months + 1);
+    // the damage of the example, as the soldiers would do it
+    for (int i = 0; i < 8; i++) {
+        mp_wrath_building_pulled_down(0, 1);
+    }
+    for (int i = 0; i < 3; i++) {
+        mp_wrath_caravan_intercepted(0, 1);
+    }
+    total += wrath_months(1, months + 2);
+    return total;
+}
+
+// Caesar's wrath (CESAR §7.2, §7.3): what the wars add every month, its decrease, the warning, the ultimatum and the
+// peace it imposes, the expedition recorded; saved and resumed in the middle of an ultimatum
+static int command_caesarwrath(const char *file)
+{
+    int failures = 0;
+    int war_ticks = 0;
+    int redeclared = 0;
+#define CHECK(condition, text) do { int ok_ = (condition); printf("%-100s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
+    int legion1, legion2, tx, ty;
+    if (!start_judged_war(file, 16, 16, &legion1, &legion2, &tx, &ty)) {
+        printf("Unable to prepare the game\n");
+        return 2;
+    }
+    const char *start = "caesarwrath-start.mpsav";
+    const char *ultimatum = "caesarwrath-ultimatum.mpsav";
+    if (!mp_savegame_write(start)) {
+        printf("Unable to save\n");
+        return 2;
+    }
+    int x0, y0, x1, y1, lx = 0, ly = 0;
+    mp_mapgen_city_center(0, &x0, &y0);
+    mp_mapgen_city_center(1, &x1, &y1);
+    CHECK(land_tile_of(1, x0, y0, x1, y1, &lx, &ly), "(a tile of open land of player 2, on the way from player 1)");
+    printf("the legion of player 1 will stand at (%d, %d), in the land of player 2 (his city at (%d, %d))\n", lx, ly,
+        x1, y1);
+
+    // the decrease, in general peace: 3 a month, every share in proportion
+    mp_caesar_add_wrath(0, 60);
+    mp_caesar_add_wrath(1, 40);
+    run_to_next_month_fast();
+    printf("in peace, a month later: gauge %d, shares %d and %d (tenths)\n", mp_caesar_wrath(),
+        mp_caesar_belligerence(0), mp_caesar_belligerence(1));
+    CHECK(mp_caesar_wrath() == 70 && mp_caesar_belligerence(0) == 42 && mp_caesar_belligerence(1) == 28,
+        "in general peace the gauge loses 3 a month, each share in proportion");
+    wrath_months(3, 0);
+    CHECK(mp_caesar_wrath() == 0 && mp_caesar_belligerence(0) == 0 && mp_caesar_belligerence(1) == 0,
+        "10 points are gone in 4 months of peace");
+    CHECK(mp_caesar_num_letters() == 0, "no letter of Caesar below the warning");
+
+    // CESAR §7.2, a targeted strike without motive: duration 6, power 4, damage 14, 24 points
+    if (!mp_savegame_read(start)) {
+        return 2;
+    }
+    int months[3];
+    int added = targeted_strike(legion1, lx, ly, MP_WAR_HONOURABLE, months);
+    int buildings, caravans, killed;
+    mp_wrath_damage_done(0, 1, &buildings, &caravans, &killed);
+    printf("a targeted strike without motive: months of war add %d, %d and %d tenths, %d in all; the gauge %d after "
+        "its decrease; %d legion in the land of player 2; damage %d buildings, %d caravans, %d killed\n", months[0],
+        months[1], months[2], added, mp_caesar_wrath(), mp_wrath_legions_in_land_of(0, 1), buildings, caravans, killed);
+    CHECK(months[0] == 10 && months[1] == 40 && months[2] == 190 && added == 240,
+        "duration 1 + 2 + 3, power 2 + 2, damage 8 + 6: 24 points, as in CESAR 7.2");
+    CHECK(mp_caesar_wrath() == 240 - 3 * MP_CAESAR_WRATH_DECAY_WAR && mp_caesar_belligerence(0) == mp_caesar_wrath() &&
+        mp_caesar_belligerence(1) == 0, "the gauge, less 1 a month of war: all of it the share of player 1");
+    // the same in peace afterwards: gone in 7 months
+    city_action(0, MP_ACTION_PROPOSE_PEACE, 1, 1, 0);
+    city_action(1, MP_ACTION_PROPOSE_PEACE, 0, 1, 0);
+    int peace_months = 0;
+    while (mp_caesar_wrath() > 0 && peace_months < 24) {
+        wrath_months(1, 0);
+        peace_months++;
+    }
+    printf("after the peace, the gauge is back to 0 in %d months\n", peace_months);
+    CHECK(peace_months == 7, "after the peace, 21 points gone in 7 months");
+    // the same strike, brutal: 36 points
+    if (!mp_savegame_read(start)) {
+        return 2;
+    }
+    added = targeted_strike(legion1, lx, ly, MP_WAR_BRUTAL, months);
+    printf("the same strike as a brutal war: %d, %d and %d tenths, %d in all\n", months[0], months[1], months[2],
+        added);
+    CHECK(months[0] == 15 && months[1] == 60 && months[2] == 285 && added == 360,
+        "the same strike as a brutal war: 36 points, as in CESAR 7.2");
+    // declared again within 12 months of its peace: doubled
+    city_action(0, MP_ACTION_PROPOSE_PEACE, 1, 1, 0);
+    city_action(1, MP_ACTION_PROPOSE_PEACE, 0, 1, 0);
+    city_action(0, MP_ACTION_DECLARE_WAR, 1, MP_WAR_BRUTAL, 0);
+    wrath_months(1, months);
+    printf("declared again within 12 months: a first month adds %d tenths\n", months[0]);
+    CHECK(mp_wrath_is_redeclared(0, 1) && months[0] == 30, "declared again within 12 months: its wrath counts double");
+
+    // the warning, the ultimatum, the peace it imposes
+    if (!mp_savegame_read(start)) {
+        return 2;
+    }
+    city_action(0, MP_ACTION_DECLARE_WAR, 1, MP_WAR_HONOURABLE, 0);
+    RUN_UNTIL(mp_war_is_fighting(0, 1), 10, 3000);
+    wrath_months(2, 0);
+    int letters = mp_caesar_num_letters();
+    mp_caesar_add_wrath(0, 395 - mp_caesar_wrath());
+    wrath_months(1, months);
+    printf("the gauge at 39.5 points, a third month of war adds %d: %d letter(s) of Caesar\n", months[0],
+        mp_caesar_num_letters() - letters);
+    CHECK(mp_caesar_num_letters() == letters + 1 && last_letter_type() == MP_CAESAR_LETTER_WARNING &&
+        last_letter_param() == 1, "crossing 40: a letter of warning to every player, naming player 1");
+    wrath_months(1, 0);
+    CHECK(mp_caesar_num_letters() == letters + 1, "no second warning while the gauge stays above");
+    mp_caesar_add_wrath(0, 695 - mp_caesar_wrath());
+    wrath_months(1, months);
+    CHECK(mp_caesar_num_letters() == letters + 2 && last_letter_type() == MP_CAESAR_LETTER_ULTIMATUM &&
+        last_letter_param() == 0 && mp_wrath_ultimatum_months() == MP_CAESAR_ULTIMATUM_DELAY &&
+        mp_wrath_ultimatum_culprit() == 0,
+        "crossing 70: an ultimatum, peace within 3 months; player 1 the main culprit");
+    CHECK(mp_wrath_is_enemy_of_rome(0) && mp_wrath_enemy_of_rome_months(0) == 12,
+        "the main culprit is an enemy of Rome for 12 months");
+    // saved in the middle of the ultimatum, read back twice: the same game tick after tick
+    wrath_months(1, 0);
+    if (!mp_savegame_write(ultimatum)) {
+        return 2;
+    }
+    int ultimatum_wrath = mp_caesar_wrath();
+    const int replay_ticks = 2 * 800 + 100;
+    static uint64_t checksums[2 * 800 + 100];
+    static uint64_t judge_hashes[2 * 800 + 100];
+    CHECK(mp_savegame_read(ultimatum) && mp_wrath_ultimatum_months() == 2 && mp_caesar_wrath() == ultimatum_wrath &&
+        mp_wrath_ultimatum_culprit() == 0 && mp_wrath_is_enemy_of_rome(0) && mp_war_is_fighting(0, 1),
+        "(saved and read back a month after the ultimatum: two months left)");
+    setting_reset_speeds(500, setting_scroll_speed());
+    int imposed_after = -1;
+    letters = mp_caesar_num_letters();
+    for (int i = 0; i < replay_ticks; i++) {
+        run_one_tick();
+        judge_hashes[i] = judge_state_hash();
+        checksums[i] = full_checksum_tick(i + 1) ? mp_checksum_state() : 0;
+        if (imposed_after < 0 && mp_war_status(0, 1) == MP_WAR_PEACE) {
+            imposed_after = i + 1;
+        }
+    }
+    printf("peace imposed %d ticks after the reading: letter %d with players %d\n", imposed_after, last_letter_type(),
+        last_letter_param());
+    CHECK(mp_war_status(0, 1) == MP_WAR_PEACE && mp_wrath_ultimatum_months() == 0 &&
+        mp_caesar_num_letters() == letters + 1 && last_letter_type() == MP_CAESAR_LETTER_PEACE_IMPOSED &&
+        last_letter_param() == 3, "at the deadline, Caesar imposes peace and tells every player");
+    CHECK(mp_wrath_motive_if_declared(0, 1, &redeclared) == MP_WAR_MOTIVE_UNJUST && redeclared,
+        "as a signed peace, it binds the declarer for 12 months");
+    CHECK(mp_wrath_motive_if_declared(1, 0, &redeclared) == MP_WAR_MOTIVE_MANDATE && !redeclared,
+        "the culprit is an enemy of Rome: a war of his victim on him is a mandate of Caesar");
+    CHECK(mp_savegame_read(ultimatum), "(read back again)");
+    int same = 1;
+    int first_difference = -1;
+    int full_checksums = 0;
+    for (int i = 0; i < replay_ticks; i++) {
+        run_one_tick();
+        int different = judge_state_hash() != judge_hashes[i];
+        if (checksums[i]) {
+            different |= mp_checksum_state() != checksums[i];
+            full_checksums++;
+        }
+        if (different && same) {
+            same = 0;
+            first_difference = i + 1;
+        }
+    }
+    printf("replayed %d ticks: the state of Caesar and of the wars compared at every tick, the whole game at %d of "
+        "them\n", replay_ticks, full_checksums);
+    if (!same) {
+        printf("first difference %d ticks after the reading\n", first_difference);
+    }
+    CHECK(same, "resumed in the middle of an ultimatum: the same game tick after tick, through the imposed peace");
+
+    // the punitive expedition: only recorded (M10.6)
+    city_action(1, MP_ACTION_DECLARE_WAR, 0, MP_WAR_BRUTAL, 0);
+    letters = mp_caesar_num_letters();
+    mp_caesar_add_wrath(1, MP_CAESAR_WRATH_MAX - mp_caesar_wrath());
+    wrath_months(1, 0);
+    CHECK(mp_wrath_expedition_due() && mp_caesar_num_letters() == letters,
+        "reaching 100: the punitive expedition is due, nothing announced yet (M10.6)");
+    if (!mp_savegame_write(ultimatum) || !mp_savegame_read(ultimatum)) {
+        return 2;
+    }
+    CHECK(mp_wrath_expedition_due(), "(and saved)");
+
+    // a game saved before Caesar judged the wars: the wars in progress have no motive and are paid for
+    if (!mp_savegame_read(start)) {
+        return 2;
+    }
+    city_action(0, MP_ACTION_DECLARE_WAR, 1, MP_WAR_HONOURABLE, 0);
+    if (!mp_savegame_write(ultimatum) || !remove_saved_piece(ultimatum, "mp_wrath") || !mp_savegame_read(ultimatum)) {
+        printf("Unable to write an older saved game\n");
+        return 2;
+    }
+    RUN_UNTIL(mp_war_is_fighting(0, 1), 10, 3000);
+    CHECK(mp_war_is_fighting(0, 1) && war_laurels(0) == 0 && mp_wrath_motive(0, 1) == MP_WAR_MOTIVE_UNJUST,
+        "an older saved game: its war goes on without motive, and nothing is paid at its start");
+    remove(ultimatum);
+    remove(start);
+
+    // a classic game: nothing
+    player_context_switch(0);
+    player_context_set_num_players(1);
+    if (!load(file)) {
+        return 2;
+    }
+    mp_caesar_add_wrath(0, 500);
+    wrath_months(2, 0);
+    CHECK(!mp_caesar_is_active() && mp_caesar_wrath() == 0 && mp_caesar_num_letters() == 0 &&
+        !mp_wrath_ultimatum_months(), "a classic game: no wrath, no letter");
+#undef CHECK
+    printf("%s\n", failures ? "DIFFERENT: Caesar's wrath is not as designed" :
+        "Identical: Caesar's wrath is as designed");
+    return failures ? 1 : 0;
+}
+
+// a fort with soldiers for the player, at the first place where one can be built around (x, y)
+static int legion_near(int player_id, int x, int y, int soldiers)
+{
+    static const int DX[] = { -10, -10, -16, -4, -16, 6, 6, 12, -10, -16, 12, 0, -22, -22 };
+    static const int DY[] = { -8, -14, -8, -14, -14, -14, -8, -8, 6, 6, 6, 10, -8, 0 };
+    for (int i = 0; i < (int) (sizeof(DX) / sizeof(DX[0])); i++) {
+        if (map_building_at(map_grid_offset(x + DX[i], y + DY[i])) > 0) {
+            continue; // a fort already stands there
+        }
+        int legion = make_legion(player_id, BUILDING_FORT_LEGIONARIES, x + DX[i], y + DY[i], soldiers);
+        if (legion) {
+            printf("(a fort of player %d at %+d, %+d from his city)\n", player_id + 1, DX[i], DY[i]);
+            return legion;
+        }
+    }
+    return 0;
+}
+
+// an army too powerful (CESAR §7.5, M10.7): Caesar tolerates max(2, population / 5000) legions; every legion more
+// costs 2 laurels a month, at war or at peace, also to a player alone
+static int command_armytolerance(const char *file)
+{
+    int failures = 0;
+#define CHECK(condition, text) do { int ok_ = (condition); printf("%-90s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
+    CHECK(mp_caesar_tolerated_legions(0) == 2 && mp_caesar_tolerated_legions(9999) == 2 &&
+        mp_caesar_tolerated_legions(14999) == 2 && mp_caesar_tolerated_legions(15000) == 3 &&
+        mp_caesar_tolerated_legions(24999) == 4 && mp_caesar_tolerated_legions(25000) == 5,
+        "tolerated: 2 up to 14 999 inhabitants, then one legion for each 5 000");
+    CHECK(mp_caesar_army_cost(2, 0) == 0 && mp_caesar_army_cost(3, 0) == -20 && mp_caesar_army_cost(5, 9000) == -60 &&
+        mp_caesar_army_cost(3, 15000) == 0 && mp_caesar_army_cost(4, 15000) == -20,
+        "each legion beyond: 2 laurels a month");
+    // alone on the prepared map
+    if (!mp_mapgen_create_prepared(file, 1, 0)) {
+        printf("Unable to create the prepared map\n");
+        return 2;
+    }
+    game_rules_settings rules;
+    game_rules_default_multiplayer_settings(&rules);
+    rules.ai_invasions = 0;
+    game_rules_set_multiplayer(&rules);
+    int x0, y0;
+    mp_mapgen_city_center(0, &x0, &y0);
+    int legions[4];
+    for (int i = 0; i < 4; i++) {
+        legions[i] = legion_near(0, x0, y0, i < 3 ? 4 : 0);
+    }
+    war_run(400);
+    printf("alone: %d inhabitants, %d legions with soldiers, %d tolerated\n", city_population(),
+        mp_caesar_army_legions(0), mp_caesar_tolerated_legions(city_population()));
+    CHECK(legions[0] && legions[1] && legions[2] && legions[3] && mp_caesar_army_legions(0) == 3,
+        "alone: three legions with soldiers, and an empty fort that does not count");
+    run_to_next_month_fast();
+    int first = mp_caesar_laurels_from(0, MP_LAURELS_ARMY);
+    run_to_next_month_fast();
+    printf("alone with 3 legions: %d then %d tenths of laurels of the army\n", first,
+        mp_caesar_laurels_from(0, MP_LAURELS_ARMY));
+    CHECK(first == -20 && mp_caesar_laurels_from(0, MP_LAURELS_ARMY) == -40 && mp_caesar_wrath() == 0,
+        "alone, a legion too many: 2 laurels a month, no wrath");
+    // the fourth fort gets soldiers: two legions too many
+    player_context_switch(0);
+    formation *m = formation_get(legions[3]);
+    figure *soldier = figure_create(m->figure_type, m->x_home, m->y_home, DIR_0_TOP);
+    soldier->formation_id = legions[3];
+    soldier->formation_at_rest = 1;
+    soldier->action_state = FIGURE_ACTION_81_SOLDIER_GOING_TO_FORT;
+    formation_calculate_figures();
+    run_to_next_month_fast();
+    CHECK(mp_caesar_army_legions(0) == 4 && mp_caesar_laurels_from(0, MP_LAURELS_ARMY) == -80,
+        "four legions: 4 laurels a month");
+    // two players: each city on its own
+    player_context_switch(0);
+    player_context_set_num_players(1);
+    if (!start_trade_game(file)) {
+        return 2;
+    }
+    int x1, y1;
+    mp_mapgen_city_center(1, &x1, &y1);
+    for (int i = 0; i < 3; i++) {
+        legion_near(1, x1, y1, 2);
+    }
+    war_run(100);
+    run_to_next_month_fast();
+    CHECK(mp_caesar_army_legions(1) == 3 && mp_caesar_laurels_from(1, MP_LAURELS_ARMY) == -20 &&
+        mp_caesar_laurels_from(0, MP_LAURELS_ARMY) == 0, "two players: only the city with 3 legions pays");
+    // a classic game: nothing
+    player_context_switch(0);
+    player_context_set_num_players(1);
+    if (!load(file)) {
+        return 2;
+    }
+    run_to_next_month_fast();
+    CHECK(!mp_caesar_is_active() && mp_caesar_laurels_from(0, MP_LAURELS_ARMY) == 0, "a classic game: nothing");
+#undef CHECK
+    printf("%s\n", failures ? "DIFFERENT: the army tolerated by Caesar is not as designed" :
+        "Identical: the army tolerated by Caesar is as designed");
+    return failures ? 1 : 0;
+}
+
 // ---------- gatehouses, walls and the aqueduct of Caesar at war (M10.2, D-081) ----------
 
 // A ring of walls of the player around the middle of his city, closed by two gatehouses on the main road of Caesar,
@@ -7724,7 +8436,12 @@ static int play_siege(int legion, const siege_ring *r, int show, siege_march *in
     int failures = 0;
 #define CHECK(condition, text) do { int ok_ = (condition); if (show) printf("%-74s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
     city_action(0, MP_ACTION_DECLARE_WAR, 1, MP_WAR_BRUTAL, 0);
+    int pulled_down = 0, caravans_taken = 0, killed = 0;
+    mp_wrath_damage_done(0, 1, &pulled_down, &caravans_taken, &killed);
     march(legion, r, r->west + 8, r->gate_y + 3, 8000, in);
+    int pulled_down_after = 0;
+    mp_wrath_damage_done(0, 1, &pulled_down_after, &caravans_taken, &killed);
+    CHECK(pulled_down_after > pulled_down, "Caesar counts the gatehouse pulled down in his wrath (D-084)");
     if (show) {
         printf("at war: a soldier stopped by the west gatehouse after %d ticks, which falls after %d ticks (%d ticks of "
             "attack); %d of %d soldiers inside after %d ticks\n", in->first_stop, in->fall,
@@ -10005,6 +10722,12 @@ int main(int argc, char **argv)
         result = command_waraqueduct(file);
     } else if (strcmp(command, "wargate3") == 0) {
         result = command_wargate3(file);
+    } else if (strcmp(command, "warmotives") == 0) {
+        result = command_warmotives(file);
+    } else if (strcmp(command, "caesarwrath") == 0) {
+        result = command_caesarwrath(file);
+    } else if (strcmp(command, "armytolerance") == 0) {
+        result = command_armytolerance(file);
     } else if (strcmp(command, "inspect") == 0) {
         result = command_inspect(file);
     } else if (strcmp(command, "tradecities") == 0) {

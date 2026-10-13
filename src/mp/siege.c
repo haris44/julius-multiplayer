@@ -11,6 +11,7 @@
 #include "map/routing.h"
 #include "map/terrain.h"
 #include "mp/war.h"
+#include "mp/wrath.h"
 
 // damage of the original game (figure/movement.c, invaders): a gatehouse collapses past 150, any building or
 // aqueduct past 10; one point every four ticks for each soldier attacking it
@@ -79,10 +80,11 @@ int mp_siege_soldier_can_travel(const figure *f)
 }
 
 // one point of damage every four ticks; past `max_damage` it collapses in the city of its owner (his peace rating,
-// his sentries), as in mp_war_soldier_attack_buildings
-static void damage(int grid_offset, int max_damage, int victim)
+// his sentries), as in mp_war_soldier_attack_buildings; Caesar counts it in his wrath (D-084)
+static void damage(int grid_offset, int max_damage, int victim, int attacker)
 {
     if (!(game_time_tick() & 3) && map_building_damage_increase(grid_offset) > max_damage) {
+        mp_wrath_building_pulled_down(attacker, victim);
         int previous = player_context_current();
         player_context_switch(victim);
         building_destroy_by_enemy(map_grid_offset_to_x(grid_offset), map_grid_offset_to_y(grid_offset), grid_offset);
@@ -99,7 +101,7 @@ int mp_siege_soldier_breaks_gate(figure *f, int grid_offset)
     if (!gatehouse_id) {
         return 0;
     }
-    damage(grid_offset, GATEHOUSE_MAX_DAMAGE, BUILDING_OWNER(gatehouse_id));
+    damage(grid_offset, GATEHOUSE_MAX_DAMAGE, BUILDING_OWNER(gatehouse_id), FIGURE_OWNER(f->id));
     return 1;
 }
 
@@ -185,7 +187,7 @@ int mp_siege_soldier_attack_aqueduct(figure *f)
         }
         int victim = aqueduct_victim(self, grid_offset);
         if (victim >= 0) {
-            damage(grid_offset, AQUEDUCT_MAX_DAMAGE, victim);
+            damage(grid_offset, AQUEDUCT_MAX_DAMAGE, victim, self);
             return 1;
         }
     }

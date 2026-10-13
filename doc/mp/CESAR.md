@@ -346,7 +346,7 @@ est celle prévue en DESIGN §7. Ce plan ajoute le **cadre** : déclaration, mot
 |-------|-----------|-------|
 | **Riposte** | la cible a déclaré la guerre au joueur, l'a attaqué ou a intercepté ses caravanes dans les 12 derniers mois | juste : colère comptée à moitié, triomphes possibles |
 | **Mandat de César** | César a déclaré la cible « ennemie de Rome » : elle a déclaré une guerre sans motif dans les 12 derniers mois, ou elle est la principale fautive d'un ultimatum | juste : colère comptée au quart, triomphes possibles |
-| **Sans motif** | les autres cas | injuste : −15 lauriers à la déclaration (−40 si la cible a des troupes en campagne pour César), colère pleine, pas de triomphe |
+| **Sans motif** | les autres cas | injuste : −15 lauriers au début des combats (−40 si la cible a des troupes en campagne pour César : pas fait, attend M9.7), colère pleine, pas de triomphe |
 
 - La forme et le motif se cumulent : une guerre brutale sans motif coûte 30 lauriers, et sa colère compte ×1,5.
 
@@ -354,6 +354,14 @@ est celle prévue en DESIGN §7. Ce plan ajoute le **cadre** : déclaration, mot
   - elle se signe quand les deux camps la proposent, ou quand César l'impose (§7.3) ;
   - redéclarer la guerre au même joueur dans les 12 mois suivants est toujours « sans motif », et la colère compte
     double.
+- **Mise en œuvre** (M10.4, D-084, *à valider*) :
+  - la fin d'une guerre (paix signée, imposée, déclaration retirée) ne lie que celui qui l'avait déclarée : sa victime
+    garde son motif de riposte ;
+  - le mandat passe avant la riposte quand les deux s'appliquent ;
+  - « attaqué » : un combat engagé contre une de ses figures, un bâtiment abattu ;
+  - le déclarant d'une guerre sans motif devient ennemi de Rome au début de ses combats, pas à sa déclaration ;
+  - triomphe (+20) : la dernière figure d'une légion ennemie tuée, si la légion a perdu au moins 4 soldats sous les
+    coups de ses ennemis.
 
 ### 7.2 La colère de César (jauge commune)
 Chaque mois, chaque guerre en cours ajoute à la jauge :
@@ -369,6 +377,13 @@ Chaque mois, chaque guerre en cours ajoute à la jauge :
 - En paix générale, la jauge baisse de 3 par mois ; s'il y a une guerre quelque part, de 1 par mois.
 - La **belligérance** d'un joueur, c'est sa part de la jauge : ce que ses guerres ont ajouté, au prorata de ses
   actes.
+- **Mise en œuvre** (M10.5, D-084) : la jauge se calcule une fois par mois pour toute la province. Une guerre compte
+  pour un mois si elle se battait à la fin d'un de ses jours ; L est le plus grand nombre de légions de l'agresseur
+  (le déclarant) dont l'étendard était dans le territoire adverse à la fin d'un jour. Les habitants tués sont les
+  figures de la cité (pas la population des maisons abattues). Les dégâts du défenseur comptent comme une riposte,
+  dans sa part. Une guerre redéclarée compte double. Chaque ajout mensuel est arrondi au dixième de point. Mesuré :
+  la frappe ciblée fait bien 24 points (36 en brutale), et la jauge revient à 0 en 7 mois de paix (21 points après
+  les 3 mois de baisse en guerre).
 - **Ce que ça donne** (réglages de départ) :
   - **Frappe ciblée sans motif** : 1 légion, 3 mois de guerre dont 2 chez l'adversaire, 8 bâtiments et 3 caravanes.
     Durée 6, puissance 4, dégâts 14 : 24 de colère, effacés en 8 mois de paix, plus 15 lauriers perdus. Ça passe,
@@ -385,6 +400,10 @@ Chaque mois, chaque guerre en cours ajoute à la jauge :
 | 40 | **Avertissement** : lettre de César à tous (« les troubles de la province me déplaisent »). Les responsables sont nommés. |
 | 70 | **Ultimatum** : toutes les guerres doivent cesser dans les 3 mois (paix imposée). Le responsable principal est déclaré « ennemi de Rome » : la guerre contre lui devient un mandat. |
 | 100 | **Expédition punitive** (§7.4). |
+
+Mise en œuvre (M10.5, D-084) : les seuils se lisent sur la jauge avant sa baisse du mois. Un avertissement tant que la
+jauge ne repasse pas sous 40 ; un ultimatum à la fois. Au délai, la paix est imposée à toutes les guerres déclarées,
+préavis compris, comme une paix signée. À 100, l'expédition est seulement notée comme due : elle viendra avec M10.6.
 
 ### 7.4 L'expédition punitive
 - Les légions de César débarquent dans **chaque** cité : c'est l'invasion de César d'origine (code-map/07 §3). Ses
@@ -407,6 +426,8 @@ Chaque mois, chaque guerre en cours ajoute à la jauge :
   légion de trop coûte 2 lauriers par mois.
 - Cela freine la course aux armements, et la guerre « trop puissante d'un coup » devient coûteuse avant même d'être
   déclarée.
+- Mise en œuvre (M10.7, D-084) : chaque mois, en paix comme en guerre, seul aussi ; une légion compte dès qu'elle a un
+  soldat.
 
 ### 7.6 Le pont de César (T4.8, D-068, *à valider*)
 
@@ -613,7 +634,7 @@ colère, seuils. Chaque changement de réglage est noté dans DECISIONS avec la 
   chaque cité à la fin de ses 12 derniers mois, dans `mp_caesar`.
 - **Sénat et barre latérale** : les lauriers à la place de la faveur (drapeau, infobulle, score à atteindre).
 - **Bandeau multijoueur** (en bas à gauche) : les lauriers remplacent le score, et une **jauge de colère** colorée
-  est toujours visible.
+  est toujours visible (faite, M10.5 : verte, jaune dès 40, rouge dès 70).
 - **Lettres de César** : messages en plein écran, comme l'alerte de prix, pour l'avertissement, l'ultimatum,
   l'expédition, les campagnes et le verdict.
 - **Fenêtre de la province** :

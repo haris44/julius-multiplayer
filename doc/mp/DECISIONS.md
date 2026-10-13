@@ -1554,6 +1554,112 @@
   (une par cité, comme les armes) ; le bois d'un entrepôt sert d'abord à la caserne, avant les ateliers de meubles.
 - Classique : inchangé.
 
+### D-084 — César juge les guerres : motif, prix, triomphes, colère, armée trop puissante (M10.4, M10.5, M10.7, précise D-053, D-080)
+- 2026-10-14 · **adoptée provisoirement**, *à valider* (tâches M10.4, M10.5 et M10.7 ; Claude a tranché les points
+  que CESAR §7 laissait ouverts)
+- **Module** `mp/wrath.c`, branché sur `mp/war.c` par des appels d'une ligne (déclaration, début des combats, retrait,
+  paix, bâtiment abattu, caravane prise) et sur le combat (`figure/combat.c`, `figuretype/missile.c` : combat engagé,
+  figure tuée), une fois pour le monde après les cités (`game/tick.c`). Son état (motif, forme et agresseur de chaque
+  paire, prix payé, mois de combats, légions du mois, dernier acte hostile et dernière fin de guerre par paire
+  orientée, dégâts du mois, ennemi de Rome jusqu'à, triomphes, pertes des légions, étape de la jauge, ultimatum,
+  expédition due) est dans le morceau `mp_wrath` du `.mpsav` (version 1) et donc dans la somme de contrôle. Une
+  partie plus ancienne se charge : ses guerres en cours sont sans motif et déjà payées, rien d'autre. La jauge et les
+  parts restent dans `mp_caesar`. Rien en classique ; en paix, seules la baisse de la jauge et l'armée (M10.7)
+  tournent.
+- **Motif**, déterminé à la déclaration (aussi quand le défenseur frappe le premier pendant le préavis : la guerre
+  devient la sienne, avec son motif), dans cet ordre :
+  1. **sans motif**, toujours, si la dernière guerre que le déclarant a déclarée à la même cible a fini (paix signée,
+     imposée, ou déclaration retirée) il y a moins de 12 mois ; sa colère compte double ;
+  2. **mandat de César** si la cible est ennemie de Rome ;
+  3. **riposte** si, dans les 12 derniers mois (16 jours de 50 ticks par mois), la cible a déclaré la guerre au joueur
+     (menace retirée comprise), engagé un combat avec une de ses figures, abattu un de ses bâtiments ou pris une de
+     ses caravanes ;
+  4. **sans motif** sinon.
+- **Ennemi de Rome** pour 12 mois : le déclarant d'une guerre sans motif, dès que ses combats commencent (une menace
+  retirée n'en fait pas un) ; le principal responsable d'un ultimatum. Pas d'annonce : la fenêtre de guerre (« Mandat
+  de César »), le conseiller impérial et la lettre d'ultimatum le disent.
+- **Prix**, en lauriers de César (source « guerres »), payé par le déclarant **quand les combats commencent** (D-080) :
+  à la fin du préavis, ou tout de suite pour une guerre brutale. Sans motif −15, brutale −15 de plus (une riposte
+  brutale coûte 15, une guerre brutale sans motif 30). Une menace retirée ne coûte rien. Le −40 d'une guerre sans
+  motif contre un joueur dont les légions sont en campagne pour César attend les campagnes (M9.7) : **pas fait**.
+- **Triomphe** : +20 lauriers au joueur dont une figure tue le dernier soldat d'une légion d'un ennemi avec qui il se
+  bat, si cette légion a perdu au moins 4 soldats sous les coups de ses ennemis depuis sa dernière destruction, et
+  sauf s'il est le déclarant d'une guerre sans motif contre ce joueur. Annoncé à tous.
+- **Colère**, une fois pour le monde au début de chaque mois, après les cités, dans cet ordre :
+  1. chaque paire de joueurs, par numéros croissants, qui s'est battue pendant le mois (un relevé à la fin de chacun
+     des 16 jours) : le n-ième mois de combats ajoute n points, la puissance 2 × L² (L : le plus grand nombre de
+     légions de l'agresseur, le déclarant, dont l'étendard était dans le territoire du défenseur à la fin d'un jour
+     du mois ; ou sur la terre de César autour du pont : crochet `stands_on_caesar_land`, à brancher à la fusion sur
+     `mp_territory_is_caesar_land`, D-082), et les
+     dégâts de l'agresseur : 1 par bâtiment ou mur abattu, 2 par caravane prise, 1 par 10 habitants tués. Le tout
+     × motif (sans motif 1, riposte ½, mandat ¼) × 1,5 pour une guerre brutale × 2 pour une guerre redéclarée. Les
+     dégâts du défenseur comptent à part, comme une riposte (× ½), dans sa propre part ;
+  2. le délai d'un ultimatum (voir plus bas) ;
+  3. les seuils, sur la jauge **avant** sa baisse : sinon, plafonnée à 100, elle ne pourrait jamais l'atteindre ;
+  4. la baisse : −3 si personne ne s'est battu du mois, −1 sinon ; chaque part (belligérance) baisse en proportion,
+     arrondie vers le bas.
+  Tout est entier, en dixièmes de point : l'ajout mensuel de chaque joueur pour une guerre est arrondi au dixième le
+  plus proche, une moitié vers le haut (un premier mois sous mandat : 0,25 → 0,3).
+- **Habitants tués** : les figures non militaires de la cité (passants, préfets, sentinelles) tuées par l'ennemi ; ni
+  les soldats, ni la population des maisons abattues (l'exemple de CESAR §7.2 compte 8 bâtiments pour 8 points).
+- **Étapes** : franchir 40 → lettre de César à tous, qui nomme les joueurs ayant une part de la colère, une seule tant
+  que la jauge ne repasse pas sous 40. Franchir 70 → ultimatum, un seul à la fois : lettre, paix dans 3 mois, le
+  principal responsable (plus grande part, plus petit numéro à égalité) ennemi de Rome. Au délai, César impose la paix
+  à toutes les guerres déclarées, préavis compris, comme une paix signée (combats arrêtés, légions rentrées, le
+  déclarant lié 12 mois), avec une annonce et une lettre. Atteindre 100 → l'expédition punitive est **due**
+  (`mp_wrath_expedition_due`, sauvegardée) ; rien n'est annoncé ni envoyé : c'est M10.6.
+- **Armée trop puissante** (M10.7) : chaque mois, dans le tour de chaque cité, César tolère max(2, population / 5 000)
+  légions ; chaque légion de plus coûte 2 lauriers (source « armée »), en paix comme en guerre, seul aussi. Une
+  légion compte dès qu'elle a un soldat : un fort vide ne compte pas.
+- **Interface** :
+  - fenêtre « Guerre et paix » : sous les boutons de chaque joueur, ce que vaut la déclaration (celle qui attend son
+    second clic ; honorable sinon, brutale pendant un préavis) : « Sans motif : -15 lauriers au début des combats »,
+    « Sans motif : -30 lauriers tout de suite ; colère double (guerre récente) », « Riposte : juste ; brutale : -15
+    lauriers tout de suite », « Mandat de César : juste » ; pendant le préavis et la guerre, son motif et son mois ;
+  - conseiller militaire : « En guerre contre le joueur 2 » ou « Préavis : combats contre le joueur 2 dans 30 jours »
+    à la place de la ligne des ennemis ;
+  - bandeau : « Colère 42 » et une jauge, verte, jaune dès 40, rouge dès 70, toujours visible en multijoueur ;
+  - lettres de César : avertissement, ultimatum, paix imposée ;
+  - conseiller impérial : la colère, la part de chacun, les ennemis de Rome, le délai de l'ultimatum, les lauriers des
+    guerres et de l'armée, les légions et celles que César tolère.
+- **Mesuré** (carte préparée pour 2) :
+  - CESAR §7.2, frappe ciblée sans motif (1 légion, 3 mois de combats dont 2 avec l'étendard chez l'adversaire,
+    8 bâtiments et 3 caravanes) : 1, 4 puis 19 points, **24** en tout ; la jauge à 21 après ses baisses du mois, à 0
+    en 7 mois de paix. La même en guerre brutale : 1,5, 6 puis 28,5 points, **36**. Redéclarée moins de 12 mois après
+    sa paix, en guerre brutale : 3 points le premier mois ;
+  - le 4e mois d'une guerre brutale sans motif ajoute 6 points, le premier d'une guerre sous mandat 0,3 (à trois) ;
+  - jauge à 10 points, en paix : 7 un mois plus tard (parts 4,2 et 2,8), 0 au bout de 4 mois ;
+  - triomphes : 16 soldats du défenseur détruisent les 8 du déclarant d'une guerre sans motif en 550 ticks (14
+    survivants) : +20 lauriers au défenseur ; 16 soldats détruisent une légion de 4 en 420 ticks : rien pour le
+    déclarant d'une guerre sans motif, +20 dans une riposte (−15 + 20 = +5 lauriers de guerre) ;
+  - armée : seul, 3 légions sans habitants : −2 lauriers par mois, 4 légions : −4.
+- **Tests** : `mp_war_motives` (motifs, prix au début des combats, menace retirée gratuite, 12 mois de la riposte au
+  tick près, paix qui lie le déclarant, actes hostiles, triomphes, mandat à trois, rien en classique),
+  `mp_caesar_wrath` (exemples de §7.2, baisse, double colère, avertissement, ultimatum, paix imposée, ennemi de Rome,
+  partie reprise au milieu d'un ultimatum et rejouée deux fois : l'état de César et des guerres identique à chaque
+  tick, toute la somme de contrôle à 168 ticks dont chaque tick autour des débuts de mois, expédition due, partie
+  plus ancienne, rien en classique), `mp_army_tolerance` (seuils, seul, à deux, rien en classique). Chaque
+  vérification nouvelle échoue quand on inverse la ligne qui la fait passer (22 inversions). Captures :
+  `tools/mp-wrath-test.sh` (commandes de test `addwrath` et `caesarletter`, partie seule), `tools/mp-war-test.sh`
+  (fenêtre de guerre et conseiller militaire).
+- **À valider** :
+  - la paix ne lie que le déclarant de la guerre finie : sa victime garde son motif de riposte (CESAR §7.1 disait
+    « redéclarer la guerre au même joueur » sans dire qui) ;
+  - le mandat passe avant la riposte quand les deux s'appliquent (colère au quart plutôt qu'à moitié) ;
+  - ennemi de Rome au début des combats d'une guerre sans motif, pas à sa déclaration ;
+  - triomphe seulement pour une légion qui a perdu au moins 4 soldats sous les coups de ses ennemis ;
+  - les dégâts du défenseur comptent comme une riposte, dans sa part ;
+  - habitants tués : les figures de la cité, pas la population des maisons abattues ;
+  - les relevés de chaque jour (étendards, guerre en cours) plutôt qu'un seul en fin de mois ;
+  - l'ennemi de Rome n'est pas annoncé ;
+  - une légion compte pour César dès son premier soldat.
+- Réseau : nouveau morceau de sauvegarde, nouvel état de la simulation : protocole à monter à la fusion.
+- **À la fusion avec D-081 et D-082** : les légions de l'agresseur sur la terre de César (autour du pont) comptent dans
+  la puissance comme dans le territoire adverse (`mp_territory_is_caesar_land`) ; une porte, un mur ou un aqueduc
+  abattu par les soldats (`mp/siege.c`) compte comme un bâtiment détruit (`mp_war_gate` le vérifie, échoue sans).
+- Réseau : protocole 29.
+
+
 ### D-085 — La route de César sous un bâtiment lui revient quand le bâtiment disparaît (M10.2, résout le point ouvert de D-081, précise D-034)
 - 2026-10-14 · **adoptée provisoirement**, *à valider* par Alexandre
 - **Constat** : une porte posée sur la route de César (permise dans la zone du joueur, hors de sa terre, D-082) libérait

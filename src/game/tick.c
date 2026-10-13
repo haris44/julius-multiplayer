@@ -63,6 +63,7 @@
 #include "mp/territory.h"
 #include "mp/trade.h"
 #include "mp/war.h"
+#include "mp/wrath.h"
 #include "game/player_context.h"
 
 // Every city runs the original tick in turn, in its own context (doc/mp/code-map/06): the parts that
@@ -246,6 +247,7 @@ void game_tick_run(void)
     world_turn = 1;
     player_context_switch(previous_player); // the user interface shows the local city
     mp_war_update(); // no-op while nobody is at war (T5.5)
+    mp_wrath_update(); // Caesar's wrath, once for the world (M10.5): no-op in a classic game
     mp_endgame_check();
     map_owner_set_simulating(0);
 }

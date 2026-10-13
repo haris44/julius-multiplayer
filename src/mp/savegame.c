@@ -18,6 +18,7 @@
 #include "mp/territory.h"
 #include "mp/trade.h"
 #include "mp/war.h"
+#include "mp/wrath.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -71,6 +72,7 @@ void mp_savegame_visit(mp_savegame_visitor visitor, void *userdata)
     visit_buffer(visitor, userdata, "mp_caesar", mp_caesar_save_state, 1024);
     visit_buffer(visitor, userdata, "mp_trade_bounds", mp_trade_save_bounds, 1024);
     visit_buffer(visitor, userdata, "mp_war", mp_war_save_state, 1024);
+    visit_buffer(visitor, userdata, "mp_wrath", mp_wrath_save_state, 2048);
     visit_buffer(visitor, userdata, "caesar_buildings", building_save_caesar_state, MAX_BUILDINGS * 256);
     visit_buffer(visitor, userdata, "territory_grid", mp_territory_save_state, GRID_MAX_TILES);
     visit_buffer(visitor, userdata, "fog_grid", mp_fog_save_state, GRID_MAX_TILES);
@@ -294,6 +296,14 @@ static int load_pieces(void)
         mp_war_load_state(&war_buf);
     } else {
         mp_war_reset(); // a game saved before the war between players (T5.5): peace everywhere
+    }
+    const piece *wrath = find_piece("mp_wrath", 0, reading.num_pieces);
+    if (wrath) {
+        buffer wrath_buf;
+        buffer_init(&wrath_buf, (uint8_t *) wrath->data, wrath->size);
+        mp_wrath_load_state(&wrath_buf);
+    } else {
+        mp_wrath_reset_for_old_game(); // saved before Caesar judged the wars (M10.4): no motive known, nothing to pay
     }
     const piece *caesar = find_piece("caesar_buildings", 0, reading.num_pieces);
     if (caesar) {

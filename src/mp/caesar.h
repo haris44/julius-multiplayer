@@ -51,7 +51,10 @@ typedef enum {
  */
 typedef enum {
     MP_CAESAR_LETTER_WELCOME = 0, // the rules of the judgement, at the start of a game
-    MP_CAESAR_LETTER_PROMOTION    // param: the new rank
+    MP_CAESAR_LETTER_PROMOTION,   // param: the new rank
+    MP_CAESAR_LETTER_WARNING,     // the wrath reached the warning (M10.5); param: the culprits, one bit per player
+    MP_CAESAR_LETTER_ULTIMATUM,   // the wrath reached the ultimatum (M10.5); param: the main culprit, or -1
+    MP_CAESAR_LETTER_PEACE_IMPOSED // the deadline of the ultimatum (M10.5); param: the players, one bit each
 } mp_caesar_letter_type;
 
 typedef struct {
@@ -169,6 +172,31 @@ void mp_caesar_add_wrath(int player_id, int tenths);
  * What a city added to the wrath, in tenths: its share of the gauge
  */
 int mp_caesar_belligerence(int player_id);
+
+/**
+ * Monthly decrease of the wrath (M10.5): the gauge loses `tenths`, every belligerence in proportion
+ */
+void mp_caesar_decay_wrath(int tenths);
+
+/**
+ * The main culprit of the wrath: the largest belligerence, the lowest id on a tie; -1 when nobody added to it
+ */
+int mp_caesar_main_culprit(void);
+
+/**
+ * An army too powerful (CESAR §7.5, M10.7): legions a city of this population may keep without displeasing Caesar
+ */
+int mp_caesar_tolerated_legions(int population);
+
+/**
+ * Legions of a city that count for Caesar: those with at least one soldier
+ */
+int mp_caesar_army_legions(int player_id);
+
+/**
+ * Tenths of laurels (negative) a city of this population with so many legions loses every month
+ */
+int mp_caesar_army_cost(int legions, int population);
 
 /**
  * Gifts to Caesar (CESAR §6.1): one gift counts every MP_CAESAR_GIFT_PERIOD months, whatever its size. The others

@@ -79,7 +79,10 @@
 #define MP_CAESAR_UNJUST_WAR_CAMPAIGN_LAURELS -400 // the target has legions away for Caesar
 #define MP_CAESAR_BRUTAL_WAR_LAURELS -150          // on top of the motive
 #define MP_CAESAR_HONOURABLE_WAR_NOTICE 3          // months between the declaration and the fighting
-#define MP_CAESAR_REDECLARATION_DELAY 12           // a new war within it is without motive, wrath doubled
+#define MP_CAESAR_REDECLARATION_DELAY 12           // the declarer's new war within it is without motive, wrath x2
+#define MP_CAESAR_RETALIATION_MONTHS 12            // a hostile act gives its victim a motive of retaliation so long
+#define MP_CAESAR_ENEMY_OF_ROME_MONTHS 12          // a war on an enemy of Rome is a mandate of Caesar so long
+#define MP_CAESAR_TRIUMPH_MIN_SOLDIERS 4           // soldiers of the legion killed by enemies, for a triumph (D-084)
 
 // Army too powerful (CESAR §7.5): one legion for each 5000 inhabitants, at least 2
 #define MP_CAESAR_TOLERATED_LEGIONS_POPULATION 5000

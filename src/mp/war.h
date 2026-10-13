@@ -21,7 +21,7 @@
  *   between them turns back home, unpaid (mp/trade.c), from the declaration on, notice included.
  *
  * Nothing here exists in a classic game, nor in a multiplayer game while nobody is at war: every check below is then
- * a no-op. Caesar's wrath and laurels of war (M10.4 and later) are not part of this slice.
+ * a no-op. Caesar judges the wars in mp/wrath.c (M10.4, M10.5): motive, price, triumphs, wrath.
  */
 
 typedef enum {
@@ -87,6 +87,16 @@ void mp_war_propose_peace(int other, int propose);
  * Every tick, once for the world: the honourable wars whose notice ended start fighting
  */
 void mp_war_update(void);
+
+/**
+ * Caesar imposes peace on two players at the deadline of his ultimatum (M10.5): as when it is signed
+ */
+void mp_war_impose_peace(int a, int b);
+
+/**
+ * Tells every player, as the other announcements of the war (Caesar's judgement, mp/wrath.c)
+ */
+void mp_war_announce(const uint8_t *text);
 
 /**
  * Melee: whether the figure attacks the opponent because their players fight each other. A soldier attacks the

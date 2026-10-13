@@ -22,7 +22,7 @@ grep -h -E "mpcheck|automation\] .*(fail|timed|stopped)" build/automation/mp-war
 rm -f "$DATA_DIR"/mp-session-* "$DATA_DIR"/mp-desync-*
 mp_restore_autosave
 MISSING=0
-for shot in host-advisor host-peace host-notice host-withdraw-confirm host-withdrawn host-confirm host-war host-offer host-signed client-threat client-city client-war \
+for shot in host-advisor host-peace host-notice host-withdraw-confirm host-withdrawn host-confirm host-war host-advisor-war host-offer host-signed client-threat client-city client-war \
     client-offer client-signed; do
     [ -s "build/automation/war-$shot.png" ] || { echo "missing screenshot war-$shot.png"; MISSING=1; }
 done

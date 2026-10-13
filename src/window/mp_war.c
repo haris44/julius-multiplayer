@@ -16,6 +16,7 @@
 #include "mp/colors.h"
 #include "mp/session.h"
 #include "mp/war.h"
+#include "mp/wrath.h"
 #include "translation/translation.h"
 #include "window/advisors.h"
 
@@ -68,6 +69,43 @@ static struct {
 int window_mp_war_is_available(void)
 {
     return game_rules_is_multiplayer() && player_context_num_players() > 1;
+}
+
+int window_mp_war_advisor_text(uint8_t *text, int size)
+{
+    text[0] = 0;
+    if (!window_mp_war_is_available()) {
+        return 0;
+    }
+    int local = mp_session_local_player_id();
+    int notice = -1;
+    for (int p = 0; p < player_context_num_players(); p++) {
+        if (p == local) {
+            continue;
+        }
+        if (mp_war_is_fighting(local, p)) {
+            // "At war with player 2", ", 3" for each other enemy
+            if (!text[0]) {
+                string_copy(translation_for(TR_MP_MILITARY_AT_WAR), text, size);
+            } else {
+                string_copy((const uint8_t *) ", ", text + string_length(text), size - string_length(text));
+            }
+            if (string_length(text) < size - 16) {
+                string_from_int(text + string_length(text), p + 1, 0);
+            }
+        } else if (notice < 0 && mp_war_status(local, p) == MP_WAR_NOTICE) {
+            notice = p;
+        }
+    }
+    if (!text[0] && notice >= 0) {
+        // "Notice: fighting with player 2 in 30 days"
+        string_copy(translation_for(TR_MP_MILITARY_NOTICE), text, size);
+        string_from_int(text + string_length(text), notice + 1, 0);
+        string_copy(translation_for(TR_MP_MILITARY_IN), text + string_length(text), size - string_length(text));
+        string_from_int(text + string_length(text), mp_war_days_until_fighting(local, notice), 0);
+        string_copy(translation_for(TR_MP_WAR_DAYS), text + string_length(text), size - string_length(text));
+    }
+    return text[0] != 0;
 }
 
 // the other player shown on a row, or -1
@@ -128,6 +166,103 @@ static void draw_status(int local, int other, int y)
     }
 }
 
+// ---------- Caesar's judgement (M10.4, D-084) ----------
+
+static void append(uint8_t *text, int size, const uint8_t *part)
+{
+    int length = string_length(text);
+    string_copy(part, text + length, size - length);
+}
+
+// laurels from tenths: "-15", or "-1,5"
+static void append_laurels(uint8_t *text, int size, int tenths)
+{
+    int length = string_length(text);
+    if (length >= size - 16) {
+        return;
+    }
+    uint8_t *out = text + length;
+    if (tenths < 0) {
+        *out++ = '-';
+        tenths = -tenths;
+    }
+    out += string_from_int(out, tenths / 10, 0);
+    if (tenths % 10) {
+        *out++ = ',';
+        out += string_from_int(out, tenths % 10, 0);
+    }
+    *out = 0;
+}
+
+static translation_key motive_name(int motive)
+{
+    switch (motive) {
+        case MP_WAR_MOTIVE_RETALIATION:
+            return TR_MP_WRATH_MOTIVE_RETALIATION;
+        case MP_WAR_MOTIVE_MANDATE:
+            return TR_MP_WRATH_MOTIVE_MANDATE;
+        default:
+            return TR_MP_WRATH_MOTIVE_UNJUST;
+    }
+}
+
+// what a declaration of the local player would be worth to Caesar: "Without motive: -15 laurels when the fighting
+// starts", "Retaliation: just; brutal: -15 laurels at once"
+static void compose_declaration(uint8_t *text, int size, int local, int other, int form)
+{
+    int redeclared = 0;
+    int motive = mp_wrath_motive_if_declared(local, other, &redeclared);
+    int price = mp_wrath_war_price(motive, form);
+    append(text, size, translation_for(motive_name(motive)));
+    if (motive == MP_WAR_MOTIVE_UNJUST) {
+        append(text, size, translation_for(TR_MP_WRATH_PRICE));
+        append_laurels(text, size, price);
+        append(text, size, translation_for(form == MP_WAR_BRUTAL ?
+            TR_MP_WRATH_LAURELS_AT_ONCE : TR_MP_WRATH_LAURELS_AT_FIGHTING));
+        if (redeclared) {
+            append(text, size, translation_for(TR_MP_WRATH_REDECLARED));
+        }
+    } else {
+        append(text, size, translation_for(TR_MP_WRATH_JUST));
+        if (form == MP_WAR_BRUTAL) {
+            append(text, size, translation_for(TR_MP_WRATH_BRUTAL_PRICE));
+            append_laurels(text, size, price);
+            append(text, size, translation_for(TR_MP_WRATH_LAURELS_AT_ONCE));
+        }
+    }
+}
+
+// under the buttons of a row: before a declaration, its motive and its price (the form whose button waits for its
+// second click, honourable otherwise; brutal during a notice); during a war, its motive and its months
+static void draw_judgement(int local, int other, int y)
+{
+    uint8_t text[200] = { 0 };
+    int status = mp_war_status(local, other);
+    if (status == MP_WAR_FIGHTING || (status == MP_WAR_NOTICE && data.armed_player != other)) {
+        append(text, sizeof(text), translation_for(TR_MP_WRATH_WAR_MOTIVE));
+        append(text, sizeof(text), translation_for(motive_name(mp_wrath_motive(local, other))));
+        if (status == MP_WAR_FIGHTING) {
+            append(text, sizeof(text), translation_for(TR_MP_WRATH_MONTH_OF_WAR));
+            int length = string_length(text);
+            string_from_int(text + length, mp_wrath_months_fighting(local, other) + 1, 0); // the month going on
+        } else if (mp_war_declarer(local, other) == local &&
+            mp_wrath_motive(local, other) == MP_WAR_MOTIVE_UNJUST) {
+            append(text, sizeof(text), translation_for(TR_MP_WRATH_PRICE));
+            append_laurels(text, sizeof(text), mp_wrath_war_price(MP_WAR_MOTIVE_UNJUST, MP_WAR_HONOURABLE));
+            append(text, sizeof(text), translation_for(TR_MP_WRATH_LAURELS_AT_FIGHTING));
+        }
+    } else {
+        int form = MP_WAR_HONOURABLE;
+        if (data.armed_player == other) {
+            form = data.armed_form;
+        } else if (status == MP_WAR_NOTICE) {
+            form = MP_WAR_BRUTAL;
+        }
+        compose_declaration(text, sizeof(text), local, other, form);
+    }
+    text_draw(text, 32, y, FONT_NORMAL_WHITE, 0);
+}
+
 static void draw_button(const generic_button *b, translation_key key, int focused)
 {
     button_border_draw(b->x, b->y, b->width, b->height, focused);
@@ -163,6 +298,7 @@ static void draw_row(int row, int other, int local)
         }
         draw_button(&buttons[index], key, data.focus_button_id == index + 1);
     }
+    draw_judgement(local, other, y + BUTTONS_DY + 30);
 }
 
 static void draw_background(void)

@@ -100,9 +100,16 @@ static int draw_background(void)
     }
     int bullet_x = 60;
     int text_x = 80;
+    // multiplayer: the war with another player first (M10.4)
+    uint8_t war_text[100];
+    int at_war = window_mp_war_advisor_text(war_text, sizeof(war_text));
     if (num_legions <= 0) {
         image_draw(image_group(GROUP_BULLET), bullet_x, 359);
-        lang_text_draw(51, enemy_text_id, text_x, 358, FONT_NORMAL_BLACK);
+        if (at_war) {
+            text_draw(war_text, text_x, 358, FONT_NORMAL_BLACK, 0);
+        } else {
+            lang_text_draw(51, enemy_text_id, text_x, 358, FONT_NORMAL_BLACK);
+        }
 
         image_draw(image_group(GROUP_BULLET), bullet_x, 379);
         lang_text_draw(51, distant_battle_text_id, text_x, 378, FONT_NORMAL_BLACK);
@@ -114,7 +121,11 @@ static int draw_background(void)
         lang_text_draw_amount(8, 48, city_military_total_legions(), text_x + width, 348, FONT_NORMAL_BLACK);
 
         image_draw(image_group(GROUP_BULLET), bullet_x, 369);
-        lang_text_draw(51, enemy_text_id, text_x, 368, FONT_NORMAL_BLACK);
+        if (at_war) {
+            text_draw(war_text, text_x, 368, FONT_NORMAL_BLACK, 0);
+        } else {
+            lang_text_draw(51, enemy_text_id, text_x, 368, FONT_NORMAL_BLACK);
+        }
 
         image_draw(image_group(GROUP_BULLET), bullet_x, 389);
         lang_text_draw(51, distant_battle_text_id, text_x, 388, FONT_NORMAL_BLACK);

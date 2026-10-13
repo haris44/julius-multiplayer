@@ -10,6 +10,7 @@
 #include "game/player_context.h"
 #include "game/rules.h"
 #include "mp/caesar.h"
+#include "mp/caesar_rules.h"
 #include "mp/colors.h"
 #include "mp/fog.h"
 #include "mp/endgame.h"
@@ -23,6 +24,26 @@
 
 #define BANNER_HEIGHT 22
 #define BANNER_Y 28
+#define WRATH_BAR_WIDTH 50
+#define COLOR_WRATH_BACKGROUND 0x303030
+#define COLOR_WRATH_LOW 0x40a040
+#define COLOR_WRATH_WARNING 0xd0b030
+#define COLOR_WRATH_ULTIMATUM 0xc04040
+
+// Caesar's wrath (M10.5, CESAR §11): "Wrath 12" and a gauge, green, then yellow from the warning, red from the
+// ultimatum
+static void draw_wrath(const uint8_t *label, int x, int y)
+{
+    int width = text_draw(label, x, y + 6, FONT_NORMAL_PLAIN, COLOR_FONT_LIGHT_GRAY) + 4;
+    int wrath = mp_caesar_wrath();
+    color_t color = wrath >= MP_CAESAR_WRATH_ULTIMATUM ? COLOR_WRATH_ULTIMATUM :
+        wrath >= MP_CAESAR_WRATH_WARNING ? COLOR_WRATH_WARNING : COLOR_WRATH_LOW;
+    graphics_fill_rect(x + width, y + 7, WRATH_BAR_WIDTH, 9, COLOR_WRATH_BACKGROUND);
+    int filled = WRATH_BAR_WIDTH * wrath / MP_CAESAR_WRATH_MAX;
+    if (filled > 0) {
+        graphics_fill_rect(x + width, y + 7, filled, 9, color);
+    }
+}
 
 // a player without any mission nor land is told how to found his city again (D-037, D-045)
 static void draw_objective(int banner_y)
@@ -100,6 +121,13 @@ void widget_mp_status_draw(void)
         string_copy(translation_for(TR_MP_LAURELS), target + target_short_length, 60 - target_short_length);
         target_width = text_get_width(target, FONT_NORMAL_PLAIN) + 12;
     }
+    uint8_t wrath[32] = { 0 };
+    int wrath_width = 0;
+    if (state == MP_LOCKSTEP_RUNNING && mp_caesar_is_active()) {
+        string_copy(translation_for(TR_MP_BANNER_WRATH), wrath, 20);
+        string_from_int(wrath + string_length(wrath), mp_caesar_wrath() / 10, 0);
+        wrath_width = text_get_width(wrath, FONT_NORMAL_PLAIN) + 4 + WRATH_BAR_WIDTH + 12;
+    }
     uint8_t paused[32];
     int paused_width = 0;
     if (state == MP_LOCKSTEP_RUNNING && mp_lockstep_is_paused()) {
@@ -113,18 +141,18 @@ void widget_mp_status_draw(void)
         int ignored, available;
         city_view_get_viewport(&ignored, &ignored, &available, &ignored);
         available -= 4;
-        if (width + scores_width + target_width + paused_width > available) {
+        if (width + scores_width + target_width + wrath_width + paused_width > available) {
             width = 8;
         }
-        if (width + scores_width + target_width + paused_width > available && target_short_length) {
+        if (width + scores_width + target_width + wrath_width + paused_width > available && target_short_length) {
             target[target_short_length] = 0;
             target_width = text_get_width(target, FONT_NORMAL_PLAIN) + 12;
         }
-        if (width + scores_width + target_width + paused_width > available) {
+        if (width + scores_width + target_width + wrath_width + paused_width > available) {
             target[0] = 0;
             target_width = 0;
         }
-        scores_width += target_width;
+        scores_width += target_width + wrath_width;
     }
     int x = state == MP_LOCKSTEP_RUNNING ? 4 : (screen_width() - width) / 2;
     // during the game, at the bottom of the view: the warnings of the game use the top
@@ -142,6 +170,10 @@ void widget_mp_status_draw(void)
         }
         if (target[0]) {
             x_score += text_draw(target, x_score, banner_y + 6, FONT_NORMAL_PLAIN, COLOR_FONT_LIGHT_GRAY) + 12;
+        }
+        if (wrath_width) {
+            draw_wrath(wrath, x_score, banner_y);
+            x_score += wrath_width;
         }
     }
     if (paused_width) {

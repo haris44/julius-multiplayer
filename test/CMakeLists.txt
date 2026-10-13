@@ -461,6 +461,16 @@ add_test(NAME mp_war_aqueduct COMMAND simtool waraqueduct brugle-massilia-start.
 # disappears (deleted by its owner, pulled down by enemy soldiers, after a save and a load) his road is back at once,
 # indestructible and walkable, and a caravan crosses it again; the same deletion twice gives the same checksum
 add_test(NAME mp_caesar_road_under_gate COMMAND simtool caesargate brugle-massilia-start.sav)
+# Caesar judges the wars (M10.4, D-084): the motive set by the game (retaliation for 12 months, a withdrawn threat
+# included; mandate against an enemy of Rome, three players; without motive, always for the declarer within 12 months of
+# the end of his war), its price paid when the fighting starts, nothing for a threat withdrawn, triumphs
+add_test(NAME mp_war_motives COMMAND simtool warmotives brugle-massilia-start.sav)
+# Caesar's wrath (M10.5, D-084): the examples of CESAR 7.2, the decrease, the warning, the ultimatum and the peace it
+# imposes, the main culprit an enemy of Rome, the expedition recorded; resumed in the middle of an ultimatum
+add_test(NAME mp_caesar_wrath COMMAND simtool caesarwrath brugle-massilia-start.sav)
+# An army too powerful (M10.7): Caesar tolerates max(2, population / 5000) legions, 2 laurels a month for each one more,
+# alone too
+add_test(NAME mp_army_tolerance COMMAND simtool armytolerance brugle-massilia-start.sav)
 
 # T1.5 (D-034): the roads of Caesar stay, untinted, and serve every city
 add_test(NAME mp_caesar_roads COMMAND simtool caesarroads brugle-massilia-start.sav)

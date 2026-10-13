@@ -1005,8 +1005,9 @@ César revient comme arbitre de la partie. Jouable en paix et **seul** : livré 
   - salon : le score ;
   - écran de fin : lauriers et héritier.
   Captures : `test/automation/caesar-advisor.txt`, `mp-solo-letter.png`, `mp-lobby-host.png`.
-  Reste : les boutons dons, salaire et épargne, quand ils seront des commandes (M9.3), la jauge de colère (M10)
-  et les options du salon (demandes, classement public).
+  Reste : les boutons dons, salaire et épargne, quand ils seront des commandes (M9.3), et les options du salon
+  (demandes, classement public). La jauge de colère et les lettres d'avertissement, d'ultimatum et de paix imposée
+  sont faites avec M10.5 (D-084).
 - [ ] **M9.7** Campagnes de César : batailles lointaines partagées, troupes de tous les joueurs additionnées,
   récompenses selon la part, refus pénalisé. *Critères* : ctest (envoi, voyage, résolution, récompenses), partie
   reprise identique pendant une campagne.
@@ -1036,14 +1037,30 @@ César revient comme arbitre de la partie. Jouable en paix et **seul** : livré 
   - *Fait (D-082, à valider)* : la terre de César, 15 cases autour de chaque entrée du pont, où aucune zone ne
     s'étend et où porte, tour, fort, mission et mur sont refusés (routes permises) ; `mp_caesar_land_*`.
 - [ ] **M10.3** Interception des caravanes (ancien M8.7) : cargaison prise, route coupée.
-- [ ] **M10.4** Motifs de guerre (riposte, mandat de César, sans motif) et prix de la guerre brutale, triomphes,
+- [x] **M10.4** Motifs de guerre (riposte, mandat de César, sans motif) et prix de la guerre brutale, triomphes,
   lauriers gagnés ou perdus.
-- [ ] **M10.5** Jauge de colère : durée, puissance, dégâts (sans les caravanes d'une ressource demandée par César),
+  *Fait* (D-084, `mp/wrath.c`) : motif fixé par le jeu à la déclaration (sans motif pour le déclarant moins de 12 mois
+  après la fin de sa guerre, mandat contre un ennemi de Rome, riposte pendant 12 mois après une déclaration, menace
+  retirée comprise, un combat, un bâtiment abattu ou une caravane prise) ; prix payé quand les combats commencent
+  (−15 sans motif, −15 de plus en guerre brutale ; rien pour une menace retirée) ; triomphes (+20) ; motif et prix
+  dans la fenêtre de guerre avant le second clic, la guerre dans le conseiller militaire. Pas fait : le −40 contre un
+  joueur dont les légions sont en campagne (attend M9.7). Test `mp_war_motives`.
+- [x] **M10.5** Jauge de colère : durée, puissance, dégâts (sans les caravanes d'une ressource demandée par César),
   ×1,5 en guerre brutale, décrue, belligérance de chacun ; avertissement et ultimatum (paix imposée, « ennemi de
   Rome »).
+  *Fait* (D-084) : chaque mois, une fois pour le monde, durée, puissance (légions dont l'étendard est chez le
+  défenseur) et dégâts, pondérés par le motif, la forme et la redéclaration ; baisse de 3 (paix) ou 1 (guerre), parts
+  en proportion ; lettres d'avertissement (40), d'ultimatum (70, paix imposée 3 mois plus tard, principal responsable
+  ennemi de Rome) ; à 100, l'expédition est seulement notée comme due (M10.6). Les exemples de CESAR §7.2 tombent
+  juste (24 et 36 points). Jauge dans le bandeau, parts dans le conseiller impérial. Tests `mp_caesar_wrath`
+  (partie reprise au milieu d'un ultimatum, identique tick après tick), captures `tools/mp-wrath-test.sh`. Restent :
+  les caravanes d'une ressource demandée par César (M9.8) ; la terre de César autour du pont est un crochet à
+  brancher sur `mp_territory_is_caesar_land` (D-082) à la fusion.
 - [ ] **M10.6** Expédition punitive : invasion de César dans chaque cité, disgrâce de 12 mois, pertes du fautif ;
   seconde expédition fatale (option, désactivée par défaut).
-- [ ] **M10.7** Armée trop puissante : légions au-delà de la tolérance de César.
+- [x] **M10.7** Armée trop puissante : légions au-delà de la tolérance de César.
+  *Fait* (D-084) : chaque mois, max(2, population / 5 000) légions tolérées, −2 lauriers par légion de plus (avec au
+  moins un soldat), seul aussi ; montré dans le conseiller impérial. Test `mp_army_tolerance`.
 - [ ] **M10.8** Moral et totaux par camp, arcs de triomphe ; combats rejoués et duels scriptés (CESAR §10.3),
   captures.
 

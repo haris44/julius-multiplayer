@@ -5,6 +5,7 @@
 #include "city/finance.h"
 #include "city/population.h"
 #include "city/ratings.h"
+#include "figure/formation.h"
 #include "game/player_context.h"
 #include "game/rules.h"
 #include "game/time.h"
@@ -323,6 +324,40 @@ mp_caesar_trend mp_caesar_laurels_trend(int player_id)
     return MP_CAESAR_TREND_STEADY;
 }
 
+// ---------- an army too powerful (CESAR §7.5, M10.7) ----------
+
+int mp_caesar_tolerated_legions(int population)
+{
+    int tolerated = population / MP_CAESAR_TOLERATED_LEGIONS_POPULATION;
+    return tolerated > MP_CAESAR_TOLERATED_LEGIONS_MIN ? tolerated : MP_CAESAR_TOLERATED_LEGIONS_MIN;
+}
+
+int mp_caesar_army_legions(int player_id)
+{
+    if (!is_player(player_id)) {
+        return 0;
+    }
+    int legions = 0;
+    for (int i = player_id * MAX_FORMATIONS + 1; i < (player_id + 1) * MAX_FORMATIONS; i++) {
+        const formation *m = formation_get(i);
+        legions += m->in_use && m->is_legion && m->num_figures > 0;
+    }
+    return legions;
+}
+
+int mp_caesar_army_cost(int legions, int population)
+{
+    int extra = legions - mp_caesar_tolerated_legions(population);
+    return extra > 0 ? extra * MP_CAESAR_EXTRA_LEGION_LAURELS : 0;
+}
+
+// monthly, for the current city: each legion beyond what Caesar tolerates costs laurels, at war or at peace
+static void charge_army(int player_id)
+{
+    data.laurels[player_id][MP_LAURELS_ARMY] += mp_caesar_army_cost(mp_caesar_army_legions(player_id),
+        city_population());
+}
+
 void mp_caesar_update_city_month(void)
 {
     if (!mp_caesar_is_active()) {
@@ -339,6 +374,7 @@ void mp_caesar_update_city_month(void)
         data.laurels[p][note] += hundredths / 100;
         data.remainders[p][note] = hundredths % 100;
     }
+    charge_army(p);
     int rank = rank_of_laurels(mp_caesar_laurels(p));
     if (rank > data.ranks[p] && p == mp_session_local_player_id()) {
         mp_caesar_add_letter(MP_CAESAR_LETTER_PROMOTION, rank);
@@ -374,6 +410,31 @@ void mp_caesar_add_wrath(int player_id, int tenths)
 int mp_caesar_belligerence(int player_id)
 {
     return is_player(player_id) ? data.belligerence[player_id] : 0;
+}
+
+void mp_caesar_decay_wrath(int tenths)
+{
+    if (!mp_caesar_is_active() || tenths <= 0) {
+        return;
+    }
+    int before = data.wrath;
+    int after = before > tenths ? before - tenths : 0;
+    // the shares follow the gauge, each rounded down
+    for (int p = 0; p < PLAYER_CONTEXT_MAX_PLAYERS; p++) {
+        data.belligerence[p] = before > 0 ? (int) ((long long) data.belligerence[p] * after / before) : 0;
+    }
+    data.wrath = after;
+}
+
+int mp_caesar_main_culprit(void)
+{
+    int culprit = -1;
+    for (int p = 0; p < player_context_num_players(); p++) {
+        if (data.belligerence[p] > 0 && (culprit < 0 || data.belligerence[p] > data.belligerence[culprit])) {
+            culprit = p;
+        }
+    }
+    return culprit;
 }
 
 // ---------- letters to the local player ----------
