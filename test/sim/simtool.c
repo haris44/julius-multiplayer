@@ -37,6 +37,7 @@
 #include "empire/trade_route.h"
 #include "empire/type.h"
 #include "core/buffer.h"
+#include "core/random.h"
 #include "core/time.h"
 #include "game/difficulty.h"
 #include "game/file.h"
@@ -3611,6 +3612,157 @@ static int inland_water_game(const char *file, int num_players, int seed, int p,
     *checksum = mp_checksum_state();
 #undef CHECK
     return failures;
+}
+
+// T5.9: Rome is one for every player. Its wages change by a random event of the month; in a multiplayer game they
+// change for every city at once, by the same amount and as often as with fewer players, so that no player has to
+// pay more than the others to keep his people happy (Alexandre: the players who were not the host had riots, Rome
+// paying them more). Returns the month the cities first differ (0: never), the wages of each month in `wages`.
+#define ROME_MONTHS (12 * 12)
+static int rome_wages_game(const char *file, int num_players, int *wages)
+{
+    player_context_switch(0);
+    player_context_set_num_players(1);
+    // seed 0 keeps the luck of the template, as every game had it before T5.9: Rome raised its wages in the cities of
+    // players 2 to 4 at month 16, not in the first one
+    if (!create_prepared(file, num_players, 0)) {
+        printf("Unable to create the prepared map\n");
+        return -1;
+    }
+    game_rules_settings rules;
+    game_rules_default_multiplayer_settings(&rules);
+    rules.territories = 1;
+    rules.difficulty = DIFFICULTY_EASY;
+    game_rules_set_multiplayer(&rules);
+    setting_reset_speeds(500, setting_scroll_speed());
+    int different_month = 0;
+    for (int month = 0; month < ROME_MONTHS; month++) {
+        for (int tick = 0; tick < 800; tick++) {
+            run_one_tick();
+        }
+        player_context_switch(0);
+        wages[month] = city_data.labor.wages_rome;
+        for (int p = 1; p < num_players; p++) {
+            player_context_switch(p);
+            if (city_data.labor.wages_rome != wages[month] && !different_month) {
+                printf("month %d: Rome pays %d Dn in the city of player 1 and %d in the city of player %d\n",
+                    month + 1, wages[month], city_data.labor.wages_rome, p + 1);
+                different_month = month + 1;
+            }
+        }
+        player_context_switch(0);
+    }
+    player_context_switch(0);
+    player_context_set_num_players(1);
+    return different_month;
+}
+
+static int command_romewages(const char *file, int num_players)
+{
+    // the reference: the first city of a game with one player fewer on the same map (the map for 4 also holds 3
+    // players; alone, one plays on the map for 2), whose wage events are those of its own draws
+    static int alone[ROME_MONTHS], together[ROME_MONTHS];
+    int reference_players = num_players - 1;
+    if (rome_wages_game(file, reference_players, alone) < 0) {
+        return 2;
+    }
+    int different = rome_wages_game(file, num_players, together);
+    if (different < 0) {
+        return 2;
+    }
+    int changes = 0, as_alone = 1;
+    for (int month = 0; month < ROME_MONTHS; month++) {
+        if (month && together[month] != together[month - 1]) {
+            printf("month %d: Rome now pays %d Dn in every city\n", month + 1, together[month]);
+            changes++;
+        }
+        if (together[month] != alone[month] && as_alone) {
+            printf("month %d: Rome pays %d Dn with %d players, %d with %d\n", month + 1, together[month], num_players,
+                alone[month], reference_players);
+            as_alone = 0;
+        }
+    }
+    if (different) {
+        printf("DIFFERENT: Rome does not pay the same wages to every player\n");
+        return 1;
+    }
+    if (!as_alone) {
+        printf("DIFFERENT: Rome changes its wages more often with more players\n");
+        return 1;
+    }
+    if (!changes) {
+        printf("FAILED: Rome never changed its wages in %d months, the test proves nothing\n", ROME_MONTHS);
+        return 1;
+    }
+    printf("Rome pays the same wages to the %d players, as with %d: %d changes in %d months\n", num_players,
+        reference_players, changes, ROME_MONTHS);
+    return 0;
+}
+
+// the luck of a city: its next random numbers, as the simulation will read them
+static void city_luck(int player_id, int32_t *luck)
+{
+    player_context_switch(player_id);
+    luck[0] = random_short();
+    for (int i = 1; i < 8; i++) {
+        luck[i] = random_from_pool(i);
+    }
+    player_context_switch(0);
+}
+
+// T5.9: each city has its own luck, drawn from the seed of the lobby: no two cities share their random numbers, the
+// same seed gives the same luck on every computer and after a save, another seed another luck
+static int command_cityluck(const char *file)
+{
+    int failures = 0;
+#define CHECK(condition, text) do { int ok_ = (condition); printf("%-66s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
+    int32_t luck[2][4][8];
+    for (int run = 0; run < 2; run++) {
+        player_context_switch(0);
+        player_context_set_num_players(1);
+        if (!create_prepared(file, 4, run ? 8 : 7)) {
+            printf("Unable to create the prepared map\n");
+            return 2;
+        }
+        for (int p = 0; p < 4; p++) {
+            city_luck(p, luck[run][p]);
+        }
+    }
+    int shared = 0;
+    for (int p = 0; p < 4; p++) {
+        for (int q = 0; q < p; q++) {
+            shared |= memcmp(luck[0][p], luck[0][q], sizeof(luck[0][p])) == 0;
+        }
+    }
+    CHECK(!shared, "no two cities share their random numbers");
+    int same_as_other_seed = 0;
+    for (int p = 0; p < 4; p++) {
+        same_as_other_seed |= memcmp(luck[0][p], luck[1][p], sizeof(luck[0][p])) == 0;
+    }
+    CHECK(!same_as_other_seed, "another seed of the lobby gives every city another luck");
+    // the same seed again, then written and read back as the players receive the game
+    player_context_switch(0);
+    player_context_set_num_players(1);
+    int32_t again[4][8];
+    int same = create_prepared(file, 4, 7);
+    for (int p = 0; p < 4 && same; p++) {
+        city_luck(p, again[p]);
+        same &= memcmp(again[p], luck[0][p], sizeof(again[p])) == 0;
+    }
+    CHECK(same, "the same seed gives the same luck (every computer)");
+    const char *map_file = "cityluck.mpmap";
+    int saved = mp_savegame_write(map_file) && mp_savegame_read(map_file);
+    for (int p = 0; p < 4 && saved; p++) {
+        city_luck(p, again[p]);
+        saved &= memcmp(again[p], luck[0][p], sizeof(again[p])) == 0;
+    }
+    remove(map_file);
+    CHECK(saved, "the saved game keeps the luck of every city");
+    player_context_switch(0);
+    player_context_set_num_players(1);
+#undef CHECK
+    printf("%s\n", failures ? "DIFFERENT: the cities do not each have their own luck" : "every city has its own luck");
+    return failures ? 1 : 0;
 }
 
 static int command_inlandwater(const char *file, int num_players)
@@ -8210,6 +8362,7 @@ static int restrict_close(int a, int b, int percent, int slack)
     return difference <= slack + larger * percent / 100;
 }
 
+// b, the multiplayer rules (or the city building with the others), against a: alike, and its people never less happy
 static int restrict_alike(const char *what, const restrict_result *a, const restrict_result *b)
 {
     int level_a = a->inhabited ? 10 * a->level_sum / a->inhabited : 0;
@@ -8235,8 +8388,10 @@ static int restrict_alike(const char *what, const restrict_result *a, const rest
             b->workers_available - b->staffed - b->mission_workers, 25, 8) &&
         restrict_close(a->desirability, b->desirability, 15, 15) &&          // the land
         restrict_close(a->immigrated, b->immigrated, 10, 20) &&              // the newcomers
-        restrict_close(a->sentiment, b->sentiment, 0, 3 * gap) &&
-        restrict_close(a->migration_percentage, b->migration_percentage, 0, 25 * gap);
+        // the mood of the people: never worse under the rules of b. Rome pays every multiplayer city the same wages
+        // (T5.9, D-079): with classic rules, players 2 to 4 had Rome's raise, and their people were less happy
+        b->sentiment >= a->sentiment - 3 * gap &&
+        b->migration_percentage >= a->migration_percentage - 25 * gap;
     if (!ok) {
         printf("  DIFFERENT: %s\n", what);
     }
@@ -8543,6 +8698,10 @@ int main(int argc, char **argv)
         result = command_reservoirlevel(file);
     } else if (strcmp(command, "drying") == 0 && argc > 3) {
         result = command_drying(file, atoi(argv[3]));
+    } else if (strcmp(command, "cityluck") == 0) {
+        result = command_cityluck(file);
+    } else if (strcmp(command, "romewages") == 0 && argc > 3) {
+        result = command_romewages(file, atoi(argv[3]));
     } else if (strcmp(command, "inlandwater") == 0 && argc > 3) {
         result = command_inlandwater(file, atoi(argv[3]));
     } else if (strcmp(command, "farinvasion") == 0) {

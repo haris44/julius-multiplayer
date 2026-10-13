@@ -25,6 +25,11 @@ int city_labor_wages_rome(void);
 int city_labor_raise_wages_rome(void);
 int city_labor_lower_wages_rome(void);
 
+/**
+ * Sets the wages Rome pays (multiplayer: Rome pays the same wages to every player, T5.9)
+ */
+void city_labor_set_wages_rome(int wages);
+
 const labor_category_data *city_labor_category(int category);
 
 void city_labor_calculate_workers(int num_plebs, int num_patricians);

@@ -4,6 +4,7 @@
 #include "building/storage.h"
 #include "core/dir.h"
 #include "core/image.h"
+#include "core/random.h"
 #include "city/data.h"
 #include "city/emperor.h"
 #include "city/map.h"
@@ -1117,6 +1118,23 @@ int mp_mapgen_create_prepared(const char *template_file, int num_players, unsign
     return mp_mapgen_create_prepared_map(template_file, num_players, 0, placement_seed);
 }
 
+// Each city has its own luck (T5.9, D-079): the cities are copies of the first one, so they all started with the
+// random numbers of the template, the others always the same as each other and the first one a little ahead (it
+// draws for the whole map). Every game, the same city then had the raise of Rome's wages, the angry god, the flooded
+// pit. The seed of the lobby gives each city its own numbers, which every computer reads in the saved game. Seed 0
+// (tests) keeps the numbers of the template.
+static void seed_the_luck_of_every_city(int num_players, unsigned int placement_seed)
+{
+    if (!placement_seed) {
+        return;
+    }
+    for (int p = 0; p < num_players; p++) {
+        player_context_switch(p);
+        random_set_seed(placement_seed * 0x85ebca6bu + (unsigned int) (p + 1) * 0xc2b2ae35u);
+    }
+    player_context_switch(0);
+}
+
 int mp_mapgen_create_prepared_map(const char *template_file, int num_players, int map, unsigned int placement_seed)
 {
     lacks_trade_routes = 0;
@@ -1196,6 +1214,7 @@ int mp_mapgen_create_prepared_map(const char *template_file, int num_players, in
     player_context_switch(0);
     figure_create_fishing_points(); // the gulls over the fish, once for everybody
     update_networks(num_players);
+    seed_the_luck_of_every_city(num_players, placement_seed);
     return 1;
 }
 

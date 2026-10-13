@@ -47,6 +47,21 @@ void random_generate_next(void)
     data.random2_15bit = data.iv2 & 0x7fff;
 }
 
+void random_set_seed(uint32_t seed)
+{
+    random_init();
+    data.iv1 ^= seed;
+    data.iv2 ^= seed * 0x9e3779b1u;
+    // the generator never leaves a state of zero bits
+    if (!(data.iv1 & 0x7fffffff)) {
+        data.iv1 = 0x54657687;
+    }
+    if (!(data.iv2 & 0x7fffffff)) {
+        data.iv2 = 0x72641663;
+    }
+    random_generate_pool();
+}
+
 void random_generate_pool(void)
 {
     data.pool_index = 0;

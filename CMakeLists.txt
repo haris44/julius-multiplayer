@@ -626,6 +626,7 @@ set(MP_FILES
     ${PROJECT_SOURCE_DIR}/src/mp/missionary.c
     ${PROJECT_SOURCE_DIR}/src/mp/fog.c
     ${PROJECT_SOURCE_DIR}/src/mp/trade.c
+    ${PROJECT_SOURCE_DIR}/src/mp/rome.c
     ${PROJECT_SOURCE_DIR}/src/mp/war.c
     ${PROJECT_SOURCE_DIR}/src/mp/lobby.c
     ${PROJECT_SOURCE_DIR}/src/mp/lockstep.c

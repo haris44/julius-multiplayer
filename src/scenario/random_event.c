@@ -7,6 +7,7 @@
 #include "city/population.h"
 #include "city/trade.h"
 #include "core/random.h"
+#include "mp/rome.h"
 #include "scenario/data.h"
 #include "scenario/property.h"
 
@@ -33,18 +34,21 @@ static const int RANDOM_EVENT_PROBABILITY[128] = {
 
 static void raise_wages(void)
 {
-    if (scenario.random_events.raise_wages) {
+    // multiplayer: Rome is one, its wages change in every city at once (T5.9)
+    if (scenario.random_events.raise_wages && mp_rome_draws_wage_events()) {
         if (city_labor_raise_wages_rome()) {
             city_message_post(1, MESSAGE_ROME_RAISES_WAGES, 0, 0);
+            mp_rome_share_wages(MESSAGE_ROME_RAISES_WAGES);
         }
     }
 }
 
 static void lower_wages(void)
 {
-    if (scenario.random_events.lower_wages) {
+    if (scenario.random_events.lower_wages && mp_rome_draws_wage_events()) {
         if (city_labor_lower_wages_rome()) {
             city_message_post(1, MESSAGE_ROME_LOWERS_WAGES, 0, 0);
+            mp_rome_share_wages(MESSAGE_ROME_LOWERS_WAGES);
         }
     }
 }

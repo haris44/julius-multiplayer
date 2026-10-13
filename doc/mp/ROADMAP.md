@@ -824,6 +824,23 @@ Les journaux de l'essai ne sont pas sur le Mac de développement : diagnostic pa
   (`mp_prepared_map*`) échoue si un tronçon d'aqueduc court à moins de 6 cases d'une route (19 à 58 cases trop
   proches avant, 0 après). Images vérifiées avec `MAPGEN_PICTURE`. Protocole 21.
 
+- [x] **T5.9** Les joueurs qui ne sont pas l'hôte ont des « comportements de mode difficile » : émeutes, salaires de
+  Rome, violence des dieux (Alexandre, 2026-10-13). *Cause* (D-079) : pas la difficulté. Elle est la même partout :
+  toute la simulation la lit dans les règles du salon, et les tests réseau à 3 joueurs donnent sur chaque ordinateur
+  la même difficulté et les mêmes valeurs qui en découlent. La source est le **hasard** : les cités 2 à 4 sont des
+  copies de la première, générateur aléatoire compris, et ce générateur part d'une graine fixe. Les joueurs 2 à 4
+  avaient donc la même suite de hasard, le joueur 1 une autre, et le même schéma revenait à chaque partie. Ce hasard
+  décide des hausses du salaire de Rome, du dieu dont la colère monte chaque jour et des événements de la carte.
+  Mesuré : au mois 16, Rome paie 32 Dn aux joueurs 2 à 4 et 30 au joueur 1 ; à plan égal, le moral du joueur 2
+  tombe à 82 contre 100 (émeutes). *Correctif* : chaque cité a sa propre graine, tirée de celle du salon ; et Rome,
+  qui est une, change ses salaires pour toutes les cités à la fois (tirage au tour de la première cité, même montant
+  pour tous). Tests `mp_city_luck` (hasard propre à chaque cité, le même sur chaque ordinateur et après sauvegarde),
+  `mp_rome_wages_{2,4}_players` (même salaire de Rome pour tous, aussi souvent qu'avec un joueur de moins) : ils
+  échouaient avant. La mesure `mp_restrictiveness` demande maintenant que le moral en multijoueur ne soit jamais plus
+  bas qu'en règles classiques.
+  *Erreur à corriger* : T5.2 demandait d'aligner les **salaires de Rome** (ceux des ouvriers) ; j'avais compris le
+  salaire du gouverneur (D-076). C'est fait maintenant ; D-076 reste à valider ou à défaire.
+
 ## MC — Cartes multijoueur préparées et César (D-033, D-034)
 - [ ] **MC.1** Ouvrages de César dessinés en blanc (la teinte actuelle ne fait que foncer les images) ; son aqueduc
   porte l'eau de son réservoir à toutes les cités. Le propriétaire existe déjà (T1.5).

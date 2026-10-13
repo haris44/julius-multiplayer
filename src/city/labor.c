@@ -110,6 +110,11 @@ int city_labor_raise_wages_rome(void)
     return 1;
 }
 
+void city_labor_set_wages_rome(int wages)
+{
+    city_data.labor.wages_rome = wages;
+}
+
 int city_labor_lower_wages_rome(void)
 {
     if (city_data.labor.wages_rome <= 5) {

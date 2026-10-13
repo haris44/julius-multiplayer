@@ -472,3 +472,9 @@ if(NOT WIN32)
         mp_lan_start_easy_saved_template mp_lan_start_easy_cities_map PROPERTIES TIMEOUT 120)
 endif()
 
+# T5.9: Rome pays the same wages to every player: its wage events change every city at once
+foreach(players 2 4)
+    add_test(NAME mp_rome_wages_${players}_players COMMAND simtool romewages brugle-massilia-start.sav ${players})
+endforeach()
+# T5.9: each city has its own luck, drawn from the seed of the lobby, kept by the saved game
+add_test(NAME mp_city_luck COMMAND simtool cityluck brugle-massilia-start.sav)

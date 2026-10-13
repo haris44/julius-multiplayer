@@ -26,6 +26,12 @@ void random_generate_next(void);
 void random_generate_pool(void);
 
 /**
+ * Starts the random numbers again from a seed (multiplayer: each city has its own luck, T5.9), then fills the pool
+ * @param seed Any number; 0 gives the start of the original game
+ */
+void random_set_seed(uint32_t seed);
+
+/**
  * Gets the current random 7-bit byte
  * @return Random 7-bit byte
  */

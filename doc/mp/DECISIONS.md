@@ -1372,3 +1372,24 @@
   - *À valider* : huit rangées (le texte de la demande parlait de trois à cinq cases, déjà le cas avec quatre) ; un
     aqueduc plus loin laisse la place entre la route et lui, mais coupe la moitié nord de la zone du joueur.
 - Classique : inchangé.
+
+### D-079 — Chaque cité a son propre hasard ; Rome paie les mêmes salaires à tous (T5.9, revoit D-076)
+- 2026-10-13 · **adoptée** (Alexandre : les joueurs qui ne sont pas l'hôte ont des émeutes, des salaires de Rome et
+  des dieux plus durs ; « aligner les salaires de Rome pour tous les joueurs », T5.2)
+- **Cause** : les cités des joueurs 2 à 4 sont des copies de la première, générateur aléatoire compris, avec la
+  graine fixe du jeu. Les joueurs 2 à 4 partageaient la même suite de hasard, le joueur 1 une autre, et chaque
+  partie rejouait le même schéma : hausse des salaires de Rome au mois 16 chez les joueurs 2 à 4 seulement, d'où un
+  moral plus bas et des émeutes ; même suite pour le choix du dieu en colère et pour les événements de la carte. La
+  difficulté n'y est pour rien : elle est celle du salon sur chaque ordinateur.
+- **Chaque cité a sa propre graine**, tirée de la graine du salon et du numéro du joueur, à la création de la carte
+  préparée. Elle voyage dans la sauvegarde ; chaque ordinateur a donc le même hasard pour chaque cité. La graine 0
+  (tests) garde le hasard du modèle.
+- **Rome est une** : ses salaires changent pour toutes les cités à la fois. Le tirage se fait au tour de la
+  première cité, aussi souvent que dans une partie d'une cité, et le nouveau salaire (même montant) va à toutes,
+  avec le message habituel (`mp/rome.c`).
+- Les autres événements (eau contaminée, mine, carrière, commerce perturbé) restent propres à chaque cité, chacune
+  avec son hasard.
+- *À valider* : D-076 (salaire du gouverneur fixé par le rang) venait d'une mauvaise lecture de T5.2 ; la garder ou
+  revenir au salaire choisi sous le plafond du rang (D-067).
+- Classique : inchangé.
+
