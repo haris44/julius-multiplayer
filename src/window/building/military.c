@@ -96,8 +96,9 @@ void window_building_draw_barracks(building_info_context *c)
     if (game_rules_is_multiplayer()) {
         // the timber for the javelin throwers, beside the weapons (D-058)
         image_draw(image_group(GROUP_RESOURCE_ICONS) + RESOURCE_TIMBER, c->x_offset + 264, c->y_offset + 38);
-        text_draw(translation_for(TR_MP_BARRACKS_TIMBER), c->x_offset + 296, c->y_offset + 34, FONT_NORMAL_BLACK, 0);
-        text_draw_number(building_barracks_timber_stored(), '@', " ", c->x_offset + 296, c->y_offset + 50,
+        int width = text_draw(translation_for(TR_MP_BARRACKS_TIMBER), c->x_offset + 296, c->y_offset + 44,
+            FONT_NORMAL_BLACK, 0);
+        text_draw_number(building_barracks_timber_stored(), '@', " ", c->x_offset + 296 + width, c->y_offset + 44,
             FONT_NORMAL_BLACK);
     }
 
