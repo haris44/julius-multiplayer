@@ -18,6 +18,7 @@ static struct {
     int ai_invasions;
     int fog_of_war;
     int map_choice;
+    int rome_takes_province;
     game_rules_settings shown;
 } data;
 
@@ -37,6 +38,8 @@ void mp_lobby_rules_init(void)
     data.fog_of_war = rules.fog_of_war;
     // a map drawn by lot (T4.14, D-069, to be confirmed): the default rules of the tests keep map 1
     data.map_choice = GAME_MAP_RANDOM;
+    // a second punitive expedition strikes like the first one, unless the host chooses otherwise (D-053)
+    data.rome_takes_province = rules.rome_takes_province;
 }
 
 int mp_lobby_rules_editable(void)
@@ -55,6 +58,7 @@ void mp_lobby_rules_settings(game_rules_settings *settings)
     settings->ai_invasions = data.ai_invasions;
     settings->fog_of_war = data.fog_of_war;
     settings->prepared_map = data.map_choice;
+    settings->rome_takes_province = data.rome_takes_province;
     settings->end_condition = END_SCORES[data.end_choice] ? GAME_END_CAESAR : GAME_END_NONE;
     if (END_SCORES[data.end_choice]) {
         settings->caesar_score = END_SCORES[data.end_choice];
@@ -85,6 +89,9 @@ void mp_lobby_change_rule(mp_lobby_rule rule)
             break;
         case MP_LOBBY_RULE_MAP:
             data.map_choice = (data.map_choice + 1) % NUM_MAP_CHOICES;
+            break;
+        case MP_LOBBY_RULE_SECOND_EXPEDITION:
+            data.rome_takes_province = !data.rome_takes_province;
             break;
     }
     if (mp_lockstep_get_state() == MP_LOCKSTEP_WAITING_FOR_PLAYERS && mp_lockstep_is_host()) {

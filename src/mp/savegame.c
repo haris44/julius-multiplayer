@@ -14,6 +14,7 @@
 #include "map/grid.h"
 #include "map/owner.h"
 #include "mp/command.h"
+#include "mp/expedition.h"
 #include "mp/fog.h"
 #include "mp/territory.h"
 #include "mp/trade.h"
@@ -73,6 +74,7 @@ void mp_savegame_visit(mp_savegame_visitor visitor, void *userdata)
     visit_buffer(visitor, userdata, "mp_trade_bounds", mp_trade_save_bounds, 1024);
     visit_buffer(visitor, userdata, "mp_war", mp_war_save_state, 1024);
     visit_buffer(visitor, userdata, "mp_wrath", mp_wrath_save_state, 2048);
+    visit_buffer(visitor, userdata, "mp_expedition", mp_expedition_save_state, 256);
     visit_buffer(visitor, userdata, "caesar_buildings", building_save_caesar_state, MAX_BUILDINGS * 256);
     visit_buffer(visitor, userdata, "territory_grid", mp_territory_save_state, GRID_MAX_TILES);
     visit_buffer(visitor, userdata, "fog_grid", mp_fog_save_state, GRID_MAX_TILES);
@@ -304,6 +306,14 @@ static int load_pieces(void)
         mp_wrath_load_state(&wrath_buf);
     } else {
         mp_wrath_reset_for_old_game(); // saved before Caesar judged the wars (M10.4): no motive known, nothing to pay
+    }
+    const piece *expedition = find_piece("mp_expedition", 0, reading.num_pieces);
+    if (expedition) {
+        buffer expedition_buf;
+        buffer_init(&expedition_buf, (uint8_t *) expedition->data, expedition->size);
+        mp_expedition_load_state(&expedition_buf);
+    } else {
+        mp_expedition_reset(); // saved before the punitive expedition (M10.6): none sent, an expedition due is sent
     }
     const piece *caesar = find_piece("caesar_buildings", 0, reading.num_pieces);
     if (caesar) {

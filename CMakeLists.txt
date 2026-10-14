@@ -630,6 +630,7 @@ set(MP_FILES
     ${PROJECT_SOURCE_DIR}/src/mp/war.c
     ${PROJECT_SOURCE_DIR}/src/mp/siege.c
     ${PROJECT_SOURCE_DIR}/src/mp/wrath.c
+    ${PROJECT_SOURCE_DIR}/src/mp/expedition.c
     ${PROJECT_SOURCE_DIR}/src/mp/lobby.c
     ${PROJECT_SOURCE_DIR}/src/mp/lockstep.c
     ${PROJECT_SOURCE_DIR}/src/mp/mapgen.c

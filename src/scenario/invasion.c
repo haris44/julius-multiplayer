@@ -190,17 +190,14 @@ static void determine_formations(int num_soldiers, int *num_formations, int sold
     }
 }
 
-static int start_invasion(int enemy_type, int amount, int invasion_point, int attack_type, int invasion_id)
+// an army of exactly `amount` soldiers (at most 150)
+static int spawn_invasion(int enemy_type, int amount, int invasion_point, int attack_type, int invasion_id)
 {
-    if (amount <= 0) {
-        return -1;
-    }
     int formations_per_type[3];
     int soldiers_per_formation[3][4];
     int x, y;
     int orientation;
 
-    amount = difficulty_adjust_enemies(amount);
     if (amount >= 150) {
         amount = 150;
     }
@@ -318,6 +315,14 @@ static int start_invasion(int enemy_type, int amount, int invasion_point, int at
     return grid_offset;
 }
 
+static int start_invasion(int enemy_type, int amount, int invasion_point, int attack_type, int invasion_id)
+{
+    if (amount <= 0) {
+        return -1;
+    }
+    return spawn_invasion(enemy_type, difficulty_adjust_enemies(amount), invasion_point, attack_type, invasion_id);
+}
+
 void scenario_invasion_process(void)
 {
     int enemy_id = scenario.enemy_id;
@@ -425,6 +430,20 @@ int scenario_invasion_start_from_mars(void)
 int scenario_invasion_start_from_caesar(int size)
 {
     int grid_offset = start_invasion(ENEMY_11_CAESAR, size, 0, FORMATION_ATTACK_BEST_BUILDINGS, 24);
+    if (grid_offset > 0) {
+        city_message_post(1, MESSAGE_CAESAR_ARMY_ATTACK, data.last_internal_invasion_id, grid_offset);
+        return 1;
+    }
+    return 0;
+}
+
+int scenario_invasion_start_caesar_expedition(int soldiers)
+{
+    // the punitive expedition of the multiplayer game (M10.6, D-086): its soldiers whatever the difficulty
+    if (soldiers <= 0) {
+        return 0;
+    }
+    int grid_offset = spawn_invasion(ENEMY_11_CAESAR, soldiers, 0, FORMATION_ATTACK_BEST_BUILDINGS, 24);
     if (grid_offset > 0) {
         city_message_post(1, MESSAGE_CAESAR_ARMY_ATTACK, data.last_internal_invasion_id, grid_offset);
         return 1;

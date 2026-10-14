@@ -17,7 +17,7 @@
  *   nothing.
  * - Every month, once for the world, each war adds to the gauge (duration, power, damage), weighed by its motive and
  *   form; the gauge then decreases. Crossing a threshold brings a letter of Caesar to every player, an ultimatum
- *   (peace imposed at its deadline, the main culprit an enemy of Rome), then the punitive expedition (M10.6).
+ *   (peace imposed at its deadline, the main culprit an enemy of Rome), then the punitive expedition (mp/expedition).
  *
  * Nothing here runs in a classic game. While nobody is at war, only the decrease of the gauge runs.
  */
@@ -64,12 +64,19 @@ int mp_wrath_ultimatum_months(void);
 int mp_wrath_ultimatum_culprit(void);
 
 /**
- * Whether the gauge reached the punitive expedition (M10.6, not done yet: nothing happens, it is only recorded)
+ * Whether the gauge reached the punitive expedition this month: mp/expedition sends it (M10.6)
  */
 int mp_wrath_expedition_due(void);
 
-/** The punitive expedition was sent (M10.6) */
+/** The punitive expedition is no longer due */
 void mp_wrath_clear_expedition(void);
+
+/**
+ * The punitive expedition was sent (M10.6, D-086): Caesar imposes peace on every war, as a signed peace, the ultimatum
+ * ends, the expedition is no longer due, and the stages of the wrath start again from the gauge
+ * @return The players whose wars ended, one bit each
+ */
+int mp_wrath_expedition_sent(void);
 
 /**
  * Damage of the current month, by `from` on `to`: buildings pulled down, caravans intercepted, inhabitants killed

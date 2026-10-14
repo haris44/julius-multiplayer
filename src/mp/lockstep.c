@@ -259,6 +259,7 @@ static void write_rules(buffer *buf, const game_rules_settings *rules)
     buffer_write_i32(buf, rules->fog_of_war);
     buffer_write_i32(buf, rules->caesar_score);
     buffer_write_i32(buf, rules->prepared_map);
+    buffer_write_i32(buf, rules->rome_takes_province);
 }
 
 // Client: the numbers come from the network, the lobby draws them (a translation per difficulty): rules out of
@@ -276,13 +277,14 @@ static int read_rules(buffer *buf, game_rules_settings *rules)
     rules->fog_of_war = buffer_read_i32(buf);
     rules->caesar_score = buffer_read_i32(buf);
     rules->prepared_map = buffer_read_i32(buf);
+    rules->rome_takes_province = buffer_read_i32(buf);
     return !buf->overflow && game_rules_settings_valid(rules);
 }
 
 // Host: the rules of the game to come, for the lobby of a player (they travel again with the welcome message)
 static void send_rules(int player)
 {
-    uint8_t payload[1 + 12 * 4];
+    uint8_t payload[1 + 13 * 4];
     buffer buf;
     buffer_init(&buf, payload, sizeof(payload));
     buffer_write_u8(&buf, MSG_RULES);
@@ -415,9 +417,10 @@ static void log_game_start(int player)
 {
     char line[200];
     const game_rules_settings *rules = game_rules_multiplayer_settings();
-    snprintf(line, sizeof(line), "difficulty %d, gods %d, AI invasions %d, fog %d, end %d, score %d, map %d, tick %d",
+    snprintf(line, sizeof(line),
+        "difficulty %d, gods %d, AI invasions %d, fog %d, end %d, score %d, map %d, second expedition %d, tick %d",
         rules->difficulty, rules->gods_enabled, rules->ai_invasions, rules->fog_of_war, rules->end_condition,
-        rules->caesar_score, rules->prepared_map, game_time_absolute_tick());
+        rules->caesar_score, rules->prepared_map, rules->rome_takes_province, game_time_absolute_tick());
     log_info("Multiplayer: rules of the game:", line, 0);
     int previous = player_context_current();
     for (int p = 0; p < player_context_num_players(); p++) {

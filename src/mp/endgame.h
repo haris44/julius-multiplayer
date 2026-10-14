@@ -29,9 +29,20 @@ int mp_endgame_is_over(void);
 int mp_endgame_live_score(int player_id);
 
 /**
- * Player with the best score (the lowest id on a tie; with Caesar, see mp_caesar_ranking), once the game is over
+ * Player with the best score (the lowest id on a tie; with Caesar, see mp_caesar_ranking), once the game is over;
+ * -1 when Rome took the province back
  */
 int mp_endgame_winner(void);
+
+/**
+ * A second punitive expedition with the lobby option (CESAR §7.4, D-053, D-086): the game ends now, without winner
+ */
+void mp_endgame_rome_takes_province(void);
+
+/**
+ * Whether the game ended because Rome took the province back
+ */
+int mp_endgame_rome_took_province(void);
 
 /**
  * Score of a player at the end of the game: with Caesar, his whole laurels

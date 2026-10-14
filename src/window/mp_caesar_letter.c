@@ -16,6 +16,7 @@
 #include "input/input.h"
 #include "mp/caesar.h"
 #include "mp/caesar_rules.h"
+#include "mp/expedition.h"
 #include "mp/session.h"
 #include "translation/translation.h"
 #include "window/city.h"
@@ -100,10 +101,53 @@ static int compose_wrath(const mp_caesar_letter *letter, uint8_t *text)
     }
 }
 
+// the punitive expedition (M10.6): the soldiers in the city of this player and what he lost, as the expedition left
+// them (they change only with the next one)
+static int compose_expedition(const mp_caesar_letter *letter, uint8_t *text)
+{
+    int local = mp_session_local_player_id();
+    switch (letter->type) {
+        case MP_CAESAR_LETTER_EXPEDITION: {
+            append(text, translation_for(TR_MP_LETTER_EXPEDITION_1));
+            append_number(text, mp_expedition_soldiers_landed(local));
+            append(text, translation_for(TR_MP_LETTER_EXPEDITION_2));
+            if (letter->param >= 0) {
+                append(text, translation_for(TR_MP_LETTER_EXPEDITION_3));
+                append_number(text, letter->param + 1);
+                append(text, translation_for(TR_MP_LETTER_EXPEDITION_4));
+                append_number(text, MP_CAESAR_CULPRIT_LOSS_PERCENT);
+                append(text, translation_for(TR_MP_LETTER_EXPEDITION_5));
+            }
+            int lost = mp_expedition_laurels_lost(local) / 10;
+            if (lost > 0) {
+                append(text, translation_for(TR_MP_LETTER_EXPEDITION_6));
+                append_number(text, lost);
+                append(text, translation_for(TR_MP_LETTER_EXPEDITION_7));
+            }
+            append(text, translation_for(TR_MP_LETTER_EXPEDITION_8));
+            append_number(text, MP_CAESAR_DISGRACE_MONTHS);
+            append(text, translation_for(TR_MP_LETTER_EXPEDITION_9));
+            append_number(text, MP_CAESAR_EXPEDITION_DEFEATED_LAURELS / 10);
+            append(text, translation_for(TR_MP_LETTER_EXPEDITION_10));
+            return 1;
+        }
+        case MP_CAESAR_LETTER_EXPEDITION_DEFEATED:
+            append(text, translation_for(TR_MP_LETTER_EXPEDITION_DEFEATED_1));
+            append_number(text, letter->param / 10);
+            append(text, translation_for(TR_MP_LETTER_EXPEDITION_DEFEATED_2));
+            return 1;
+        case MP_CAESAR_LETTER_EXPEDITION_LEFT:
+            append(text, translation_for(TR_MP_LETTER_EXPEDITION_LEFT));
+            return 1;
+        default:
+            return 0;
+    }
+}
+
 static void compose(const mp_caesar_letter *letter, uint8_t *text)
 {
     text[0] = 0;
-    if (compose_wrath(letter, text)) {
+    if (compose_wrath(letter, text) || compose_expedition(letter, text)) {
         return;
     }
     if (letter->type == MP_CAESAR_LETTER_WELCOME) {

@@ -72,6 +72,7 @@
 #include "mp/caesar.h"
 #include "mp/caesar_rules.h"
 #include "mp/endgame.h"
+#include "mp/expedition.h"
 #include "mp/permissions.h"
 #include "mp/mapgen.h"
 #include "city/map.h"
@@ -207,6 +208,7 @@ static int usage(void)
     printf("  simtool warmotives SAVE                motives and price of a war, triumphs (M10.4)\n");
     printf("  simtool caesarwrath SAVE               Caesar's wrath: examples of CESAR 7.2, ultimatum (M10.5)\n");
     printf("  simtool armytolerance SAVE             legions beyond what Caesar tolerates cost laurels (M10.7)\n");
+    printf("  simtool caesarexpedition SAVE          Caesar's punitive expedition, disgrace, second one (M10.6)\n");
     printf("  simtool terrain MAP PLAYERS X Y W H [raw]  the terrain of a part of the prepared map (or of an .mpsav),\n");
     printf("                                         one letter a tile; raw: terrain bits, image and elevation too\n");
     printf("  simtool tradecities MAP                trade cities of the empire of a map, by land and by sea\n");
@@ -716,13 +718,14 @@ static int same_lobby_rules(const game_rules_settings *a, const game_rules_setti
     return a->difficulty == b->difficulty && a->gods_enabled == b->gods_enabled &&
         a->ai_invasions == b->ai_invasions && a->fog_of_war == b->fog_of_war &&
         a->end_condition == b->end_condition && a->caesar_score == b->caesar_score &&
-        a->prepared_map == b->prepared_map;
+        a->prepared_map == b->prepared_map && a->rome_takes_province == b->rome_takes_province;
 }
 
 static void print_lobby_rules(const char *label, const game_rules_settings *r)
 {
-    printf("%s: difficulty %d gods %d invasions %d fog %d end %d score %d map %d\n", label, r->difficulty,
-        r->gods_enabled, r->ai_invasions, r->fog_of_war, r->end_condition, r->caesar_score, r->prepared_map);
+    printf("%s: difficulty %d gods %d invasions %d fog %d end %d score %d map %d second expedition ends %d\n", label,
+        r->difficulty, r->gods_enabled, r->ai_invasions, r->fog_of_war, r->end_condition, r->caesar_score,
+        r->prepared_map, r->rome_takes_province);
 }
 
 // The host changes every rule of the lobby after "Host", once the players are there, then starts the game
@@ -734,13 +737,14 @@ static void change_every_lobby_rule(void)
     mp_lobby_change_rule(MP_LOBBY_RULE_INVASIONS);
     mp_lobby_change_rule(MP_LOBBY_RULE_FOG);
     mp_lobby_change_rule(MP_LOBBY_RULE_MAP);
+    mp_lobby_change_rule(MP_LOBBY_RULE_SECOND_EXPEDITION);
 }
 
 static int every_lobby_rule_differs(const game_rules_settings *a, const game_rules_settings *b)
 {
     return a->difficulty != b->difficulty && a->gods_enabled != b->gods_enabled &&
         a->ai_invasions != b->ai_invasions && a->fog_of_war != b->fog_of_war && a->caesar_score != b->caesar_score &&
-        a->prepared_map != b->prepared_map;
+        a->prepared_map != b->prepared_map && a->rome_takes_province != b->rome_takes_province;
 }
 
 // the state of the trade between players, which every player of a game must see the same (T5.4)
@@ -2009,6 +2013,10 @@ static int command_lobbyrules(const char *file)
         printf("WRONG: the lobby must propose an easy game, the default rules stay hard\n");
         result = 1;
     }
+    if (lobby.rome_takes_province || defaults.rome_takes_province) {
+        printf("WRONG: a second punitive expedition must strike like the first one by default (D-053)\n");
+        result = 1;
+    }
     if (!mp_lobby_rules_editable()) {
         printf("WRONG: the rules cannot be chosen before hosting\n");
         result = 1;
@@ -2220,18 +2228,19 @@ static int command_mapchoice(const char *file)
 }
 
 // K-review-fixes: a host sends the lobby of a player some rules; NUMBERS are the ten integers of the message, then
-// the prepared map and the number of players of the host (T4.11)
-static int send_raw_rules(int socket, const int *numbers, int num_players)
+// the prepared map, the second expedition of Caesar (M10.6) and the number of players of the host (T4.11)
+static int send_raw_rules(int socket, const int *numbers, int rome_takes_province, int num_players)
 {
-    uint8_t payload[4 + 1 + 12 * 4];
+    uint8_t payload[4 + 1 + 13 * 4];
     buffer buf;
     buffer_init(&buf, payload, sizeof(payload));
-    buffer_write_i32(&buf, 1 + 12 * 4);
+    buffer_write_i32(&buf, 1 + 13 * 4);
     buffer_write_u8(&buf, 10); // MSG_RULES of mp/lockstep.c
     for (int i = 0; i < 10; i++) {
         buffer_write_i32(&buf, numbers[i]);
     }
     buffer_write_i32(&buf, GAME_MAP_1); // the prepared map (T4.14)
+    buffer_write_i32(&buf, rome_takes_province);
     buffer_write_i32(&buf, num_players);
     return net_send(socket, payload, buf.index);
 }
@@ -2285,7 +2294,7 @@ static int command_badrules(int port)
         { 1, 1, 0, 0, 1, 0, 10, 1, 1, -5 }
     };
     for (int i = 0; i < (int) (sizeof(bad) / sizeof(bad[0])); i++) {
-        send_raw_rules(host, bad[i], 3);
+        send_raw_rules(host, bad[i], 0, 3);
         poll_lockstep_for(100);
         const game_rules_settings *seen = mp_lockstep_lobby_rules();
         const game_rules_settings *shown = mp_lobby_rules_shown();
@@ -2302,10 +2311,17 @@ static int command_badrules(int port)
         }
     }
     const int good[10] = { DIFFICULTY_VERY_HARD, 0, 1, 1, 0, GAME_END_CAESAR, 5, 1, 0, 1500 };
+    // the second expedition of Caesar is a yes or a no (M10.6)
+    send_raw_rules(host, good, 2, 3);
+    poll_lockstep_for(100);
+    if (mp_lockstep_lobby_rules() && mp_lockstep_lobby_rules()->difficulty == DIFFICULTY_VERY_HARD) {
+        printf("WRONG: a rule of the second expedition out of its bounds reaches the lobby of the player\n");
+        result = 1;
+    }
     // a number of players out of 1 to 4 spoils the message (T4.11): nothing of it reaches the lobby
     const int bad_players[] = { 0, 5, -2, 1000000 };
     for (int i = 0; i < (int) (sizeof(bad_players) / sizeof(bad_players[0])); i++) {
-        send_raw_rules(host, good, bad_players[i]);
+        send_raw_rules(host, good, 0, bad_players[i]);
         poll_lockstep_for(100);
         if (mp_lockstep_lobby_num_players() != 0 ||
             (mp_lockstep_lobby_rules() && mp_lockstep_lobby_rules()->difficulty == DIFFICULTY_VERY_HARD)) {
@@ -2313,7 +2329,7 @@ static int command_badrules(int port)
             result = 1;
         }
     }
-    send_raw_rules(host, good, 3);
+    send_raw_rules(host, good, 1, 3);
     poll_lockstep_for(100);
     if (mp_lockstep_lobby_num_players() != 3) {
         printf("WRONG: the lobby of the player shows %d players, the host sent 3\n", mp_lockstep_lobby_num_players());
@@ -2326,14 +2342,17 @@ static int command_badrules(int port)
     } else {
         print_lobby_rules("valid rules seen", seen);
         if (seen->difficulty != DIFFICULTY_VERY_HARD || seen->gods_enabled != 0 ||
-            seen->end_condition != GAME_END_CAESAR || seen->caesar_score != 1500 || seen->score_years != 5) {
+            seen->end_condition != GAME_END_CAESAR || seen->caesar_score != 1500 || seen->score_years != 5 ||
+            seen->rome_takes_province != 1) {
             printf("WRONG: valid rules are not shown as sent\n");
             result = 1;
         }
     }
     // welcome messages with rules out of their bounds, then with a player index or a number of players out of
     // theirs: the player leaves before reading the game
-    const int welcome_rules[12] = { GAME_MODE_MULTIPLAYER, DIFFICULTY_EASY, 1, 0, 0, 1, 0, 10, 1, 1, 1000, GAME_MAP_1 };
+    const int welcome_rules[13] = {
+        GAME_MODE_MULTIPLAYER, DIFFICULTY_EASY, 1, 0, 0, 1, 0, 10, 1, 1, 1000, GAME_MAP_1, 0
+    };
     const struct { int player; int players; int difficulty; const char *what; } welcomes[] = {
         { 1, 2, 42, "difficulty 42" },
         { -1, 2, DIFFICULTY_EASY, "player -1" },
@@ -2373,7 +2392,7 @@ static int command_badrules(int port)
         buffer_write_u8(&buf, 1); // separate cities
         buffer_write_u32(&buf, 0);
         buffer_write_u32(&buf, 0);
-        for (int i = 0; i < 12; i++) {
+        for (int i = 0; i < 13; i++) {
             buffer_write_i32(&buf, i == 1 ? welcomes[w].difficulty : welcome_rules[i]);
         }
         buffer_write_i32(&buf, 4); // save size
@@ -8164,17 +8183,17 @@ static int command_caesarwrath(const char *file)
     }
     CHECK(same, "resumed in the middle of an ultimatum: the same game tick after tick, through the imposed peace");
 
-    // the punitive expedition: only recorded (M10.6)
+    // the punitive expedition: sent at once (M10.6, its own test: mp_caesar_expedition)
     city_action(1, MP_ACTION_DECLARE_WAR, 0, MP_WAR_BRUTAL, 0);
     letters = mp_caesar_num_letters();
     mp_caesar_add_wrath(1, MP_CAESAR_WRATH_MAX - mp_caesar_wrath());
     wrath_months(1, 0);
-    CHECK(mp_wrath_expedition_due() && mp_caesar_num_letters() == letters,
-        "reaching 100: the punitive expedition is due, nothing announced yet (M10.6)");
+    CHECK(!mp_wrath_expedition_due() && mp_expedition_count() == 1 && mp_caesar_num_letters() == letters + 1 &&
+        last_letter_type() == MP_CAESAR_LETTER_EXPEDITION, "reaching 100: the punitive expedition is sent (M10.6)");
     if (!mp_savegame_write(ultimatum) || !mp_savegame_read(ultimatum)) {
         return 2;
     }
-    CHECK(mp_wrath_expedition_due(), "(and saved)");
+    CHECK(mp_expedition_count() == 1, "(and saved)");
 
     // a game saved before Caesar judged the wars: the wars in progress have no motive and are paid for
     if (!mp_savegame_read(start)) {
@@ -8302,6 +8321,455 @@ static int command_armytolerance(const char *file)
 #undef CHECK
     printf("%s\n", failures ? "DIFFERENT: the army tolerated by Caesar is not as designed" :
         "Identical: the army tolerated by Caesar is as designed");
+    return failures ? 1 : 0;
+}
+
+// ---------- Caesar's punitive expedition (M10.6, D-086) ----------
+
+// Caesar's soldiers alive in the city of a player, counted here from the figures; *x, *y: where the first one stands
+static int caesar_soldiers(int player_id, int *x, int *y)
+{
+    int count = 0;
+    for (int i = player_id * MAX_FIGURES + 1; i < (player_id + 1) * MAX_FIGURES; i++) {
+        figure *f = figure_get(i);
+        if (f->state != FIGURE_STATE_ALIVE || f->type != FIGURE_ENEMY_CAESAR_LEGIONARY ||
+            f->action_state == FIGURE_ACTION_149_CORPSE) {
+            continue;
+        }
+        if (!count && x && y) {
+            *x = f->x;
+            *y = f->y;
+        }
+        count++;
+    }
+    return count;
+}
+
+// every soldier of Caesar in the city of the player: the legionary of the original, in a formation of the city, come
+// from its point of arrival; the number of his formations
+static int caesar_soldiers_as_original(int player_id, int *formations)
+{
+    int ok = 1;
+    int seen[MAX_FORMATIONS] = { 0 };
+    *formations = 0;
+    player_context_switch(player_id);
+    map_point entry = scenario_map_entry();
+    for (int i = player_id * MAX_FIGURES + 1; i < (player_id + 1) * MAX_FIGURES; i++) {
+        figure *f = figure_get(i);
+        if (f->state != FIGURE_STATE_ALIVE || f->type != FIGURE_ENEMY_CAESAR_LEGIONARY) {
+            continue;
+        }
+        const formation *m = formation_get(f->formation_id);
+        ok &= f->formation_id > 0 && FORMATION_OWNER(f->formation_id) == player_id && m->in_use &&
+            m->figure_type == FIGURE_ENEMY_CAESAR_LEGIONARY && !m->is_legion &&
+            m->attack_type == FORMATION_ATTACK_BEST_BUILDINGS && f->source_x == entry.x && f->source_y == entry.y;
+        int local = FORMATION_LOCAL_ID(f->formation_id);
+        if (local >= 0 && local < MAX_FORMATIONS && !seen[local]) {
+            seen[local] = 1;
+            (*formations)++;
+        }
+    }
+    player_context_switch(0);
+    return ok;
+}
+
+static int punishment_laurels(int player_id)
+{
+    return mp_caesar_laurels_from(player_id, MP_LAURELS_PUNISHMENT);
+}
+
+static void set_second_expedition_ends_game(int on)
+{
+    game_rules_settings rules = *game_rules_multiplayer_settings();
+    rules.rome_takes_province = on;
+    game_rules_set_multiplayer(&rules);
+}
+
+// the legions of a player march on Caesar's soldiers in his city, again every 100 ticks, until none is left (or
+// `max_ticks`); returns the ticks it took
+static int fight_expedition(int player_id, const int *legions, int num_legions, int max_ticks)
+{
+    int ticks = 0;
+    int x = 0, y = 0;
+    while (caesar_soldiers(player_id, &x, &y) > 0 && ticks < max_ticks) {
+        for (int i = 0; i < num_legions; i++) {
+            if (alive_soldiers(legions[i])) {
+                city_action(player_id, MP_ACTION_LEGION_MOVE, legions[i], x, y);
+            }
+        }
+        war_run(100);
+        ticks += 100;
+    }
+    return ticks;
+}
+
+static int legions_soldiers(const int *legions, int num_legions)
+{
+    int soldiers = 0;
+    for (int i = 0; i < num_legions; i++) {
+        soldiers += alive_soldiers(legions[i]);
+    }
+    return soldiers;
+}
+
+// a hash of the saved state of the expedition, with that of Caesar and of the wars
+static uint64_t expedition_state_hash(void)
+{
+    static uint8_t bytes[1024];
+    buffer buf;
+    buffer_init(&buf, bytes, sizeof(bytes));
+    mp_expedition_save_state(&buf);
+    uint64_t hash = judge_state_hash();
+    for (int i = 0; i < buf.index; i++) {
+        hash = (hash ^ bytes[i]) * 0x100000001b3ULL;
+    }
+    return hash;
+}
+
+// laurels of the notes over months, while the province is in disgrace or not: for each note, what it brought against
+// what its monthly notes give, halved or not (the remainders carried from month to month make it exact within a
+// tenth); returns whether every note brought what it should
+static int notes_laurels_months(int player_id, int months, int halved, int *gained, int *expected)
+{
+    static const int weights[MP_NOTE_MAX] = {
+        MP_CAESAR_WEIGHT_PROSPERITY, MP_CAESAR_WEIGHT_TRADE, MP_CAESAR_WEIGHT_HOUSING, MP_CAESAR_WEIGHT_CULTURE,
+        MP_CAESAR_WEIGHT_GREATNESS
+    };
+    long long hundredths[MP_NOTE_MAX] = { 0 };
+    int start[MP_NOTE_MAX];
+    for (int note = 0; note < MP_NOTE_MAX; note++) {
+        start[note] = mp_caesar_laurels_from(player_id, note);
+    }
+    for (int m = 0; m < months; m++) {
+        run_to_next_month_fast();
+        for (int note = 0; note < MP_NOTE_MAX; note++) {
+            int earned = weights[note] * mp_caesar_note(player_id, note);
+            hundredths[note] += halved ? earned / 2 : earned;
+        }
+    }
+    int ok = 1;
+    *gained = *expected = 0;
+    for (int note = 0; note < MP_NOTE_MAX; note++) {
+        long long gain = mp_caesar_laurels_from(player_id, note) - start[note];
+        ok &= 100 * gain > hundredths[note] - 100 && 100 * gain < hundredths[note] + 100;
+        *gained += (int) gain;
+        *expected += (int) (hundredths[note] / 100);
+    }
+    return ok;
+}
+
+// Caesar's punitive expedition (CESAR §7.4, D-053, D-086): his legions in every city, more for the culprits, the
+// laurels the culprits lose, the peace, the gauge at 30, the disgrace, the legions destroyed or gone after 12 months,
+// the second expedition with the option of the lobby off and on; saved and replayed; three players; alone; classic
+static int command_caesarexpedition(const char *file)
+{
+    int failures = 0;
+    int war_ticks = 0;
+    int redeclared = 0;
+#define CHECK(condition, text) do { int ok_ = (condition); printf("%-100s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
+    const figure_properties *props = figure_properties_for_type(FIGURE_ENEMY_CAESAR_LEGIONARY);
+    CHECK(props->attack_value == 13 && props->defense_value == 2,
+        "Caesar's legionaries of the original game: attack 13, defence 2");
+
+    // two players on the prepared map: player 2 wages war on player 1, who has four legions
+    int legion1, legion2, tx, ty;
+    if (!start_judged_war(file, 16, 16, &legion1, &legion2, &tx, &ty)) {
+        printf("Unable to prepare the game\n");
+        return 2;
+    }
+    int x0, y0;
+    mp_mapgen_city_center(0, &x0, &y0);
+    int legions1[4] = { legion1 };
+    for (int i = 1; i < 4; i++) {
+        legions1[i] = legion_near(0, x0, y0, 16);
+    }
+    war_run(400);
+    CHECK(legions1[1] && legions1[2] && legions1[3] && legions_soldiers(legions1, 4) == 64,
+        "(player 1 has four legions of 16 soldiers)");
+    for (int p = 0; p < 2; p++) {
+        player_context_switch(p);
+        map_point entry = scenario_map_entry();
+        printf("player %d arrives at (%d, %d)\n", p + 1, entry.x, entry.y);
+    }
+    player_context_switch(0);
+    // the option of the lobby: the first expedition strikes all the same
+    set_second_expedition_ends_game(1);
+    CHECK(!game_rules_ai_invasions() && game_rules_rome_takes_province(),
+        "(AI invasions off, a second expedition would end the game)");
+    mp_caesar_add_laurels(0, MP_LAURELS_GIFTS, 1000);
+    mp_caesar_add_laurels(1, MP_LAURELS_GIFTS, 800);
+    run_to_day(8);
+    city_action(1, MP_ACTION_DECLARE_WAR, 0, MP_WAR_BRUTAL, 0);
+    CHECK(mp_war_is_fighting(0, 1) && mp_wrath_motive(1, 0) == MP_WAR_MOTIVE_UNJUST,
+        "(player 2 wages a brutal war without motive on player 1)");
+    // the war adds 1.5 points at the next month: the gauge reaches 100, all of it the share of player 2
+    mp_caesar_add_wrath(1, MP_CAESAR_WRATH_MAX - 15 - mp_caesar_wrath());
+    int letters = mp_caesar_num_letters();
+    int announcements = mp_war_announcements();
+    run_to_next_month_fast();
+    int soldiers[2], formations[2];
+    for (int p = 0; p < 2; p++) {
+        soldiers[p] = caesar_soldiers(p, 0, 0);
+    }
+    int as_original[2] = { caesar_soldiers_as_original(0, &formations[0]), caesar_soldiers_as_original(1,
+        &formations[1]) };
+    int lost2 = -punishment_laurels(1);
+    int before2 = mp_caesar_laurels(1) + lost2;
+    printf("the expedition: %d soldiers in %d formations in the city of player 1, %d in %d in that of player 2; "
+        "player 2 loses %d tenths of %d; gauge %d, shares %d and %d; %d letters\n", soldiers[0], formations[0],
+        soldiers[1], formations[1], lost2, before2, mp_caesar_wrath(), mp_caesar_belligerence(0),
+        mp_caesar_belligerence(1), mp_caesar_num_letters() - letters);
+    CHECK(mp_expedition_count() == 1 && !mp_wrath_expedition_due() && !mp_endgame_is_over(),
+        "reaching 100: the punitive expedition is sent; the first one, also with the option of the lobby");
+    CHECK(soldiers[0] == MP_CAESAR_EXPEDITION_SOLDIERS_INNOCENT && mp_expedition_soldiers_landed(0) == soldiers[0],
+        "an innocent city: 32 soldiers of Caesar");
+    CHECK(soldiers[1] == MP_CAESAR_EXPEDITION_SOLDIERS_CULPRIT_MAX && mp_expedition_soldiers_landed(1) == soldiers[1],
+        "the main culprit with all the wrath: 144 soldiers");
+    CHECK(as_original[0] && as_original[1] && formations[0] == 2 && formations[1] == 3,
+        "the invasion of Caesar of the original: his legionaries, at the arrival of each city, in its formations");
+    CHECK(!game_rules_ai_invasions() && soldiers[0] > 0 && soldiers[1] > 0, "\"AI invasions: no\" does not stop it");
+    CHECK(lost2 == before2 * MP_CAESAR_CULPRIT_LOSS_PERCENT / 100 && lost2 > 0 && punishment_laurels(0) == 0 &&
+        mp_expedition_laurels_lost(1) == lost2, "the main culprit loses 25 % of his laurels, the innocent nothing");
+    CHECK(mp_war_status(0, 1) == MP_WAR_PEACE && !mp_wrath_ultimatum_months() &&
+        mp_wrath_motive_if_declared(1, 0, &redeclared) == MP_WAR_MOTIVE_UNJUST && redeclared &&
+        mp_war_announcements() > announcements, "peace on every war, as a signed peace (it binds the declarer)");
+    CHECK(mp_caesar_wrath() == MP_CAESAR_WRATH_AFTER_EXPEDITION && mp_caesar_belligerence(1) == mp_caesar_wrath() &&
+        mp_caesar_belligerence(0) == 0, "the gauge falls to 30, the shares with it");
+    CHECK(mp_expedition_disgrace_months() == MP_CAESAR_DISGRACE_MONTHS, "the province in disgrace for 12 months");
+    CHECK(mp_caesar_num_letters() == letters + 3 && last_letter_type() == MP_CAESAR_LETTER_EXPEDITION &&
+        last_letter_param() == 1, "a letter of Caesar to every player, naming the main culprit (after the warning and "
+        "the ultimatum of the same month)");
+    CHECK(mp_expedition_state_of(0) == MP_EXPEDITION_IN_CITY && mp_expedition_months_left(0) == 12 &&
+        mp_expedition_state_of(1) == MP_EXPEDITION_IN_CITY, "the legions stay 12 months at most");
+    const char *landed = "caesarexpedition-landed.mpsav";
+    if (!mp_savegame_write(landed)) {
+        return 2;
+    }
+
+    // saved during the expedition, read back twice: the same game tick after tick
+    const int replay_ticks = 2 * 800 + 100;
+    static uint64_t checksums[2 * 800 + 100];
+    static uint64_t hashes[2 * 800 + 100];
+    CHECK(mp_savegame_read(landed) && mp_expedition_count() == 1 && caesar_soldiers(1, 0, 0) == 144 &&
+        mp_expedition_disgrace_months() == 12 && game_rules_rome_takes_province(),
+        "(saved and read back: the expedition, the disgrace and the option of the lobby are in the saved game)");
+    setting_reset_speeds(500, setting_scroll_speed());
+    for (int i = 0; i < replay_ticks; i++) {
+        run_one_tick();
+        hashes[i] = expedition_state_hash();
+        checksums[i] = full_checksum_tick(i + 1) ? mp_checksum_state() : 0;
+    }
+    int alive_after[2] = { caesar_soldiers(0, 0, 0), caesar_soldiers(1, 0, 0) };
+    CHECK(mp_savegame_read(landed), "(read back again)");
+    int same = 1;
+    int first_difference = -1;
+    for (int i = 0; i < replay_ticks; i++) {
+        run_one_tick();
+        int different = expedition_state_hash() != hashes[i] || (checksums[i] && mp_checksum_state() != checksums[i]);
+        if (different && same) {
+            same = 0;
+            first_difference = i + 1;
+        }
+    }
+    printf("replayed %d ticks from the saved game: %d and %d soldiers of Caesar left%s\n", replay_ticks,
+        alive_after[0], alive_after[1], same ? "" : ", DIFFERENT");
+    if (!same) {
+        printf("first difference %d ticks after the reading\n", first_difference);
+    }
+    CHECK(same && alive_after[0] == caesar_soldiers(0, 0, 0) && alive_after[1] == caesar_soldiers(1, 0, 0),
+        "resumed during the expedition: the same game tick after tick");
+
+    // the legions of player 1 destroy the expedition in his city: 20 laurels
+    if (!mp_savegame_read(landed)) {
+        return 2;
+    }
+    int landing_month = 12 * game_time_year() + game_time_month();
+    letters = mp_caesar_num_letters();
+    int ticks = fight_expedition(0, legions1, 4, 12 * 800);
+    war_run(50); // a day for Caesar to see it
+    printf("the four legions of player 1 destroy the 32 soldiers of Caesar in %d ticks (%d months), %d of their 64 "
+        "soldiers alive; laurels of the expedition %d tenths\n", ticks, ticks / 800, legions_soldiers(legions1, 4),
+        punishment_laurels(0));
+    CHECK(!caesar_soldiers(0, 0, 0) && mp_expedition_state_of(0) == MP_EXPEDITION_DEFEATED &&
+        punishment_laurels(0) == MP_CAESAR_EXPEDITION_DEFEATED_LAURELS,
+        "destroying the expedition gives the city 20 laurels");
+    CHECK(mp_caesar_num_letters() == letters + 1 && last_letter_type() == MP_CAESAR_LETTER_EXPEDITION_DEFEATED &&
+        last_letter_param() == MP_CAESAR_EXPEDITION_DEFEATED_LAURELS, "and a letter of Caesar to its player");
+    // the 144 soldiers in the city of player 2 stay 12 months, then go back where they landed
+    int months = 12 * game_time_year() + game_time_month() - landing_month;
+    while (mp_expedition_state_of(1) == MP_EXPEDITION_IN_CITY && months < 14) {
+        run_to_next_month_fast();
+        months = 12 * game_time_year() + game_time_month() - landing_month;
+    }
+    int leaving = caesar_soldiers(1, 0, 0);
+    int punishment2 = punishment_laurels(1);
+    announcements = mp_war_announcements();
+    RUN_UNTIL(mp_expedition_state_of(1) != MP_EXPEDITION_LEAVING, 50, 6 * 800);
+    printf("the expedition of player 2 leaves after %d months with %d soldiers; gone %d ticks later\n", months,
+        leaving, war_ticks);
+    CHECK(months == MP_CAESAR_EXPEDITION_MONTHS && leaving > 0, "the expedition leaves after 12 months");
+    CHECK(mp_expedition_state_of(1) == MP_EXPEDITION_LEFT && !caesar_soldiers(1, 0, 0) &&
+        punishment_laurels(1) == punishment2 && mp_war_announcements() > announcements,
+        "its soldiers go back where they landed: no laurels, an announcement to every player");
+    CHECK(mp_expedition_disgrace_months() == 0, "(the disgrace is over too)");
+
+    // a second expedition, the option of the lobby off: it strikes like the first one
+    if (!mp_savegame_read(landed)) {
+        return 2;
+    }
+    set_second_expedition_ends_game(0);
+    int punishment_first = punishment_laurels(1);
+    mp_caesar_add_wrath(1, MP_CAESAR_WRATH_MAX - mp_caesar_wrath());
+    run_to_next_month_fast();
+    lost2 = -(punishment_laurels(1) - punishment_first);
+    before2 = mp_caesar_laurels(1) + lost2;
+    printf("a second expedition: %d and %d soldiers more, player 2 loses %d tenths of %d\n",
+        mp_expedition_soldiers_landed(0), mp_expedition_soldiers_landed(1), lost2, before2);
+    CHECK(mp_expedition_count() == 2 && !mp_endgame_is_over() && mp_expedition_soldiers_landed(0) == 32 &&
+        mp_expedition_soldiers_landed(1) == 144 && lost2 == before2 * MP_CAESAR_CULPRIT_LOSS_PERCENT / 100 &&
+        mp_caesar_wrath() == MP_CAESAR_WRATH_AFTER_EXPEDITION && mp_expedition_disgrace_months() == 12,
+        "the option of the lobby off: a second expedition strikes like the first");
+    // the option on: Rome takes the province back, no winner
+    if (!mp_savegame_read(landed)) {
+        return 2;
+    }
+    int punishment_before[2] = { punishment_laurels(0), punishment_laurels(1) };
+    mp_caesar_add_wrath(1, MP_CAESAR_WRATH_MAX - mp_caesar_wrath());
+    run_to_next_month_fast();
+    printf("a second expedition, the option on: over %d, winner %d, Rome %d, scores %d and %d\n", mp_endgame_is_over(),
+        mp_endgame_winner(), mp_endgame_rome_took_province(), mp_endgame_score(0), mp_endgame_score(1));
+    CHECK(mp_endgame_is_over() && mp_endgame_winner() == -1 && mp_endgame_rome_took_province() &&
+        mp_expedition_count() == 1 && mp_expedition_soldiers_landed(0) == 32 &&
+        punishment_laurels(0) == punishment_before[0] && punishment_laurels(1) == punishment_before[1] &&
+        mp_endgame_score(0) == mp_caesar_laurels(0) / 10 && mp_endgame_score(1) == mp_caesar_laurels(1) / 10,
+        "the option of the lobby on: a second expedition ends the game, without winner");
+    if (!mp_savegame_write(landed) || !mp_savegame_read(landed)) {
+        return 2;
+    }
+    CHECK(mp_endgame_is_over() && mp_endgame_winner() == -1 && mp_endgame_rome_took_province(), "(and saved)");
+
+    // a game saved before the expedition: none sent, no disgrace
+    if (!mp_savegame_read(landed) || !remove_saved_piece(landed, "mp_expedition") || !mp_savegame_read(landed)) {
+        printf("Unable to write an older saved game\n");
+        return 2;
+    }
+    CHECK(mp_expedition_count() == 0 && !mp_expedition_disgrace_months() &&
+        mp_expedition_state_of(0) == MP_EXPEDITION_NONE, "an older saved game: no expedition was sent");
+    remove(landed);
+
+    // three players: player 1 innocent, players 2 and 3 culprits, 60 and 40 % of the wrath; easy: the same soldiers
+    player_context_switch(0);
+    player_context_set_num_players(1);
+    if (!start_tradegame(file, 3, 0, "expedition")) {
+        return 2;
+    }
+    CHECK(game_rules_difficulty() == DIFFICULTY_EASY, "(three players, easy)");
+    int laurels[3] = { 500, 1000, 1000 };
+    for (int p = 0; p < 3; p++) {
+        mp_caesar_add_laurels(p, MP_LAURELS_GIFTS, laurels[p]);
+    }
+    mp_caesar_add_wrath(1, 600);
+    mp_caesar_add_wrath(2, 400);
+    // player 1 may create only 20 more figures
+    int kept = 0;
+    for (int i = 1; i < MAX_FIGURES; i++) {
+        figure *f = figure_get(i);
+        if (!f->state && kept++ >= 20) {
+            f->state = FIGURE_STATE_ALIVE; // a figure without type, which does nothing
+        }
+    }
+    run_to_next_month_fast();
+    // no war: the gauge lost 3 points before the expedition, each share in proportion
+    int share2 = 600 * 970 / 1000, share3 = 400 * 970 / 1000;
+    int main_soldiers = 96 + 48 * share2 / (share2 + share3);
+    int expected3 = 32 + (main_soldiers - 32) * share3 / share2;
+    int lost[3];
+    for (int p = 0; p < 3; p++) {
+        lost[p] = -punishment_laurels(p);
+    }
+    printf("three players: %d, %d and %d soldiers (expected 20 at most, %d, %d); laurels lost %d, %d, %d tenths\n",
+        caesar_soldiers(0, 0, 0), caesar_soldiers(1, 0, 0), caesar_soldiers(2, 0, 0), main_soldiers, expected3,
+        lost[0], lost[1], lost[2]);
+    CHECK(caesar_soldiers(1, 0, 0) == main_soldiers && caesar_soldiers(2, 0, 0) == expected3 && main_soldiers == 124 &&
+        expected3 == 93, "the main culprit by his share, 124; the other by his share against the main one, 93");
+    CHECK(lost[1] == (mp_caesar_laurels(1) + lost[1]) / 4 &&
+        lost[2] == (mp_caesar_laurels(2) + lost[2]) * 25 * share3 / (100 * share2) && lost[0] == 0,
+        "the main culprit loses 25 %, the other 25 % of his share against the main one, the innocent nothing");
+    CHECK(caesar_soldiers(0, 0, 0) > 0 && caesar_soldiers(0, 0, 0) <= 20 && !figure_get(0)->state &&
+        !figure_get(0)->formation_id && !figure_get(0)->action_state,
+        "a city may not create more figures: fewer soldiers land");
+    for (int i = 1; i < MAX_FIGURES; i++) {
+        figure *f = figure_get(i);
+        if (f->state == FIGURE_STATE_ALIVE && !f->type) {
+            f->state = 0;
+        }
+    }
+    // nobody fights them: they all leave after 12 months
+    letters = mp_caesar_num_letters();
+    months = 0;
+    while (mp_expedition_state_of(0) == MP_EXPEDITION_IN_CITY && months < 14) {
+        run_to_next_month_fast();
+        months++;
+    }
+    RUN_UNTIL(mp_expedition_state_of(0) != MP_EXPEDITION_LEAVING && mp_expedition_state_of(1) !=
+        MP_EXPEDITION_LEAVING && mp_expedition_state_of(2) != MP_EXPEDITION_LEAVING, 50, 6 * 800);
+    printf("three players: the expeditions leave after %d months, gone %d ticks later; states %d %d %d\n", months,
+        war_ticks, mp_expedition_state_of(0), mp_expedition_state_of(1), mp_expedition_state_of(2));
+    CHECK(months == 12 && mp_expedition_state_of(0) == MP_EXPEDITION_LEFT &&
+        mp_expedition_state_of(1) == MP_EXPEDITION_LEFT && mp_expedition_state_of(2) == MP_EXPEDITION_LEFT &&
+        -punishment_laurels(1) == lost[1] && -punishment_laurels(0) == lost[0],
+        "no city destroyed them: they all leave after 12 months, nothing gained");
+    CHECK(mp_caesar_num_letters() == letters + 1 && last_letter_type() == MP_CAESAR_LETTER_EXPEDITION_LEFT,
+        "a letter of Caesar to the player whose city they leave");
+
+    // alone on the prepared map: no war, the gauge cannot rise
+    player_context_switch(0);
+    player_context_set_num_players(1);
+    if (!mp_mapgen_create_prepared(file, 1, 0)) {
+        return 2;
+    }
+    set_caesar_rules(GAME_END_CAESAR, 1000);
+    city_action(0, MP_ACTION_DECLARE_WAR, 1, MP_WAR_BRUTAL, 0);
+    for (int m = 0; m < 3; m++) {
+        run_to_next_month_fast();
+    }
+    CHECK(mp_war_status(0, 1) == MP_WAR_PEACE && mp_caesar_wrath() == 0 && mp_expedition_count() == 0 &&
+        !caesar_soldiers(0, 0, 0), "alone: no war, no wrath, no expedition");
+    // forced (tests): the disgrace halves the laurels of the notes for 12 months, then stops
+    if (!load("valentia57.sav")) {
+        return 2;
+    }
+    set_caesar_rules(GAME_END_CAESAR, 1000);
+    run_to_next_month_fast();
+    mp_caesar_add_wrath(0, MP_CAESAR_WRATH_MAX);
+    run_to_next_month_fast();
+    printf("alone in Valentia, the gauge forced to 100: %d soldiers of Caesar, disgrace %d months\n",
+        caesar_soldiers(0, 0, 0), mp_expedition_disgrace_months());
+    CHECK(mp_expedition_count() == 1 && caesar_soldiers(0, 0, 0) == 144, "(the expedition lands in Valentia)");
+    int gained = 0, expected = 0, full_gained = 0, full_expected = 0;
+    int halved = notes_laurels_months(0, MP_CAESAR_DISGRACE_MONTHS, 1, &gained, &expected);
+    int disgrace_after = mp_expedition_disgrace_months();
+    int full = notes_laurels_months(0, 3, 0, &full_gained, &full_expected);
+    printf("laurels of the notes: %d tenths in the 12 months of disgrace (expected %d, halved), %d in the 3 months "
+        "after (expected %d)\n", gained, expected, full_gained, full_expected);
+    CHECK(halved && expected > 100 && disgrace_after == 0,
+        "in disgrace, every monthly laurel of the notes is halved, for 12 months");
+    CHECK(full && full_expected > 0, "then they are whole again");
+
+    // a classic game: nothing
+    options.multiplayer = 0;
+    if (!load(file)) {
+        return 2;
+    }
+    mp_caesar_add_wrath(0, MP_CAESAR_WRATH_MAX);
+    for (int m = 0; m < 2; m++) {
+        run_to_next_month_fast();
+    }
+    CHECK(!mp_caesar_is_active() && mp_expedition_count() == 0 && !mp_expedition_disgrace_months() &&
+        !caesar_soldiers(0, 0, 0), "a classic game: no expedition");
+#undef CHECK
+    printf("%s\n", failures ? "DIFFERENT: Caesar's punitive expedition is not as designed" :
+        "Identical: Caesar's punitive expedition is as designed");
     return failures ? 1 : 0;
 }
 
@@ -10728,6 +11196,8 @@ int main(int argc, char **argv)
         result = command_caesarwrath(file);
     } else if (strcmp(command, "armytolerance") == 0) {
         result = command_armytolerance(file);
+    } else if (strcmp(command, "caesarexpedition") == 0) {
+        result = command_caesarexpedition(file);
     } else if (strcmp(command, "inspect") == 0) {
         result = command_inspect(file);
     } else if (strcmp(command, "tradecities") == 0) {

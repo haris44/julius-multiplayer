@@ -12,6 +12,7 @@
 #include "city/population.h"
 #include "mp/caesar_rules.h"
 #include "mp/colors.h"
+#include "mp/expedition.h"
 #include "mp/session.h"
 #include "mp/wrath.h"
 #include "scenario/property.h"
@@ -120,6 +121,12 @@ static void draw_war_and_army(int player_id, int y)
     append_laurels(line, sizeof(line), mp_caesar_laurels_from(player_id, MP_LAURELS_WARS));
     append(line, sizeof(line), translation_for(TR_MP_IMPERIAL_ARMY_LAURELS));
     append_laurels(line, sizeof(line), mp_caesar_laurels_from(player_id, MP_LAURELS_ARMY));
+    int punishment = mp_caesar_laurels_from(player_id, MP_LAURELS_PUNISHMENT);
+    if (punishment) {
+        // what the punitive expedition took from the city, and what destroying it gave (M10.6)
+        append(line, sizeof(line), translation_for(TR_MP_IMPERIAL_EXPEDITION_LAURELS));
+        append_laurels(line, sizeof(line), punishment);
+    }
     append(line, sizeof(line), (const uint8_t *) ". ");
     int legions = mp_caesar_army_legions(player_id);
     int population = city_population();
@@ -170,6 +177,15 @@ static void draw_wrath(int count)
         append_number(ultimatum, sizeof(ultimatum), mp_wrath_ultimatum_months());
         append(ultimatum, sizeof(ultimatum), translation_for(TR_MP_IMPERIAL_MONTHS));
         text_draw(ultimatum, RANKING_X, y, FONT_SMALL_PLAIN, COLOR_FONT_RED);
+        y += 13;
+    }
+    if (mp_expedition_disgrace_months() > 0) {
+        // after a punitive expedition (M10.6), the months the laurels of the notes stay halved
+        uint8_t disgrace[100] = { 0 };
+        append(disgrace, sizeof(disgrace), translation_for(TR_MP_IMPERIAL_DISGRACE));
+        append_number(disgrace, sizeof(disgrace), mp_expedition_disgrace_months());
+        append(disgrace, sizeof(disgrace), translation_for(TR_MP_IMPERIAL_MONTHS));
+        text_draw_multiline(disgrace, RANKING_X, y, 600 - RANKING_X, FONT_SMALL_PLAIN, COLOR_FONT_RED);
     }
 }
 

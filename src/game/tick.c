@@ -36,6 +36,7 @@
 #include "map/owner.h"
 #include "mp/caesar.h"
 #include "mp/endgame.h"
+#include "mp/expedition.h"
 #include "game/settings.h"
 #include "game/time.h"
 #include "game/tutorial.h"
@@ -248,6 +249,7 @@ void game_tick_run(void)
     player_context_switch(previous_player); // the user interface shows the local city
     mp_war_update(); // no-op while nobody is at war (T5.5)
     mp_wrath_update(); // Caesar's wrath, once for the world (M10.5): no-op in a classic game
+    mp_expedition_update(); // his punitive expedition (M10.6), before the end of the game: no-op in a classic game
     mp_endgame_check();
     map_owner_set_simulating(0);
 }

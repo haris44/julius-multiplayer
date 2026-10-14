@@ -580,8 +580,9 @@ static void issue_ultimatum(void)
     mp_caesar_add_letter(MP_CAESAR_LETTER_ULTIMATUM, data.ultimatum_culprit);
 }
 
-// the deadline of the ultimatum: Caesar imposes peace on every war still declared, as if it were signed
-static void impose_peace(void)
+// Caesar imposes peace on every war still declared, notice included, as if it were signed; returns the players at
+// war, one bit each
+static int impose_peace_on_every_war(void)
 {
     int imposed = 0;
     for (int a = 0; a < MAX_PLAYERS; a++) {
@@ -593,9 +594,32 @@ static void impose_peace(void)
             }
         }
     }
+    return imposed;
+}
+
+// the deadline of the ultimatum
+static void impose_peace(void)
+{
+    int imposed = impose_peace_on_every_war();
     if (imposed) {
         mp_caesar_add_letter(MP_CAESAR_LETTER_PEACE_IMPOSED, imposed);
     }
+}
+
+int mp_wrath_expedition_sent(void)
+{
+    if (!is_active()) {
+        return 0;
+    }
+    // the wars may still go on: the ultimatum issued the same month or before, its deadline not reached yet, or a war
+    // declared after its imposed peace. The expedition ends them all, as the deadline would have done, and its own
+    // letter says so; the ultimatum has no object any more.
+    int imposed = impose_peace_on_every_war();
+    data.ultimatum_months = 0;
+    data.expedition_due = 0;
+    // the stages start again from the gauge the expedition leaves: a new warning at 40, a new ultimatum at 70
+    data.level = level_of(mp_caesar_wrath());
+    return imposed;
 }
 
 static void check_stages(void)
@@ -608,7 +632,7 @@ static void check_stages(void)
         issue_ultimatum();
     }
     if (data.level < LEVEL_EXPEDITION && level >= LEVEL_EXPEDITION) {
-        // HOOK (M10.6): the punitive expedition; only recorded, nothing is announced yet
+        // the punitive expedition, sent by mp/expedition after the decrease of the month (M10.6)
         data.expedition_due = 1;
     }
     data.level = level;

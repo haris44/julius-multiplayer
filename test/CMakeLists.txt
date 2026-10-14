@@ -466,11 +466,17 @@ add_test(NAME mp_caesar_road_under_gate COMMAND simtool caesargate brugle-massil
 # the end of his war), its price paid when the fighting starts, nothing for a threat withdrawn, triumphs
 add_test(NAME mp_war_motives COMMAND simtool warmotives brugle-massilia-start.sav)
 # Caesar's wrath (M10.5, D-084): the examples of CESAR 7.2, the decrease, the warning, the ultimatum and the peace it
-# imposes, the main culprit an enemy of Rome, the expedition recorded; resumed in the middle of an ultimatum
+# imposes, the main culprit an enemy of Rome, the expedition sent; resumed in the middle of an ultimatum
 add_test(NAME mp_caesar_wrath COMMAND simtool caesarwrath brugle-massilia-start.sav)
 # An army too powerful (M10.7): Caesar tolerates max(2, population / 5000) legions, 2 laurels a month for each one more,
 # alone too
 add_test(NAME mp_army_tolerance COMMAND simtool armytolerance brugle-massilia-start.sav)
+# Caesar's punitive expedition (M10.6, D-086): his legions in every city (32 for an innocent, 96 to 144 for the main
+# culprit, another culprit by his share), the laurels lost, peace imposed, the gauge at 30, 12 months of disgrace, the
+# legions destroyed (20 laurels) or gone after 12 months, the second expedition with the lobby option off and on;
+# AI invasions off; resumed during the expedition; three players; alone; classic
+add_test(NAME mp_caesar_expedition COMMAND simtool caesarexpedition brugle-massilia-start.sav)
+set_tests_properties(mp_caesar_expedition PROPERTIES TIMEOUT 600)
 
 # T1.5 (D-034): the roads of Caesar stay, untinted, and serve every city
 add_test(NAME mp_caesar_roads COMMAND simtool caesarroads brugle-massilia-start.sav)

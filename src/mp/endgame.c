@@ -12,6 +12,7 @@ static struct {
     int over;
     int winner;
     int scores[PLAYER_CONTEXT_MAX_PLAYERS];
+    int rome_took_province; // a second punitive expedition ended the game, without winner (M10.6)
     int notified;
     void (*over_callback)(void);
     int live_scores[PLAYER_CONTEXT_MAX_PLAYERS]; // interface only, every game day: not saved, never read back
@@ -100,6 +101,24 @@ int mp_endgame_winner(void)
     return data.winner;
 }
 
+void mp_endgame_rome_takes_province(void)
+{
+    if (data.over || !game_rules_is_multiplayer()) {
+        return;
+    }
+    for (int p = 0; p < player_context_num_players(); p++) {
+        data.scores[p] = mp_caesar_laurels(p) / 10;
+    }
+    data.winner = -1;
+    data.rome_took_province = 1;
+    data.over = 1;
+}
+
+int mp_endgame_rome_took_province(void)
+{
+    return data.rome_took_province;
+}
+
 int mp_endgame_score(int player_id)
 {
     return player_id >= 0 && player_id < PLAYER_CONTEXT_MAX_PLAYERS ? data.scores[player_id] : 0;
@@ -128,6 +147,7 @@ void mp_endgame_reset(void)
     data.end_year = 0;
     data.over = 0;
     data.winner = 0;
+    data.rome_took_province = 0;
     data.notified = 0;
     for (int p = 0; p < PLAYER_CONTEXT_MAX_PLAYERS; p++) {
         data.scores[p] = 0;
@@ -142,6 +162,7 @@ void mp_endgame_save_state(buffer *buf)
     for (int p = 0; p < PLAYER_CONTEXT_MAX_PLAYERS; p++) {
         buffer_write_i32(buf, data.scores[p]);
     }
+    buffer_write_i32(buf, data.rome_took_province);
 }
 
 void mp_endgame_load_state(buffer *buf)
@@ -153,5 +174,6 @@ void mp_endgame_load_state(buffer *buf)
     for (int p = 0; p < PLAYER_CONTEXT_MAX_PLAYERS; p++) {
         data.scores[p] = buffer_read_i32(buf);
     }
+    data.rome_took_province = buffer_read_i32(buf) ? 1 : 0; // 0 in games saved before (M10.6)
     data.notified = data.over; // a finished game loaded again does not announce its end twice
 }

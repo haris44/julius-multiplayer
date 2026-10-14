@@ -36,7 +36,10 @@ static void draw_foreground(void)
 {
     graphics_in_dialog();
     outer_panel_draw(80, 80, 30, 21);
-    text_draw_centered(translation_for(TR_MP_RESULTS_TITLE), 80, 96, 480, FONT_LARGE_BLACK, 0);
+    // a second punitive expedition, with the option of the lobby: no heir (M10.6, D-086)
+    int rome = mp_endgame_rome_took_province();
+    text_draw_centered(translation_for(rome ? TR_MP_ROME_TAKES_TITLE : TR_MP_RESULTS_TITLE), 80, 96, 480,
+        FONT_LARGE_BLACK, 0);
     int local = mp_session_local_player_id();
     // with Caesar: the laurels of each city, the winner is his heir (doc/mp/CESAR.md §4.3)
     int caesar = game_rules_end_condition() == GAME_END_CAESAR;
@@ -51,14 +54,14 @@ static void draw_foreground(void)
         if (p == local) {
             text_draw(translation_for(TR_MP_YOU), 120 + width, y, font, 0);
         }
-        width = text_draw(translation_for(caesar ? TR_MP_LAURELS_LABEL : TR_MP_SCORE), 280, y, font, 0);
+        width = text_draw(translation_for(caesar || rome ? TR_MP_LAURELS_LABEL : TR_MP_SCORE), 280, y, font, 0);
         text_draw_number(mp_endgame_score(p), 0, "", 280 + width, y, font);
         if (p == mp_endgame_winner()) {
             text_draw(translation_for(caesar ? TR_MP_HEIR : TR_MP_WINNER), 400, y, font, 0);
         }
     }
-    text_draw_multiline(translation_for(caesar ? TR_MP_CAESAR_RESULT_RULE : TR_MP_SCORE_RULE), 112, 312, 416,
-        FONT_SMALL_PLAIN, 0);
+    translation_key rule = rome ? TR_MP_ROME_TAKES_RULE : caesar ? TR_MP_CAESAR_RESULT_RULE : TR_MP_SCORE_RULE;
+    text_draw_multiline(translation_for(rule), 112, 312, 416, FONT_SMALL_PLAIN, 0);
     for (int i = 0; i < 2; i++) {
         button_border_draw(buttons[i].x, buttons[i].y, buttons[i].width, buttons[i].height, focus_button_id == i + 1);
     }
