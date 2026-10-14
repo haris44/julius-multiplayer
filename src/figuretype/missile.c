@@ -10,6 +10,7 @@
 #include "map/point.h"
 #include "sound/effect.h"
 #include "map/grid.h"
+#include "mp/battle.h"
 #include "mp/war.h"
 #include "mp/wrath.h"
 
@@ -166,6 +167,7 @@ static void missile_hit_target(figure *f, int target_id, figure_type legionary_t
         formation_update_morale_after_death(m);
         if (mp_war_any_fighting()) {
             mp_wrath_figure_killed(FIGURE_OWNER(f->id), target); // players at war (M10.4, M10.5)
+            mp_battle_figure_killed(FIGURE_OWNER(f->id), target); // losses of each side (M10.8)
         }
     }
     f->state = FIGURE_STATE_DEAD;

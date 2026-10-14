@@ -6,6 +6,7 @@
 #include "game/player_context.h"
 #include "game/time.h"
 #include "map/grid.h"
+#include "mp/battle.h"
 #include "mp/caesar.h"
 #include "mp/caesar_rules.h"
 #include "mp/territory.h"
@@ -420,6 +421,7 @@ static void legion_soldier_killed(int killer, int loser, const figure *victim)
     }
     mp_caesar_add_laurels(killer, MP_LAURELS_WARS, MP_CAESAR_TRIUMPH_LAURELS);
     data.triumphs[killer]++;
+    mp_battle_triumph(killer); // and a triumphal arch for his city (M10.8)
     announce_triumph(killer, loser);
 }
 

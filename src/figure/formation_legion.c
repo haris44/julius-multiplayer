@@ -330,7 +330,7 @@ void formation_legion_update(void)
             continue;
         }
         formation_decrease_monthly_counters(m);
-        if (city_figures_enemies() <= 0) {
+        if (city_figures_enemies() <= 0 && !mp_war_current_player_has_enemy_soldiers()) {
             formation_clear_monthly_counters(m);
         }
         for (int n = 0; n < MAX_FORMATION_FIGURES; n++) {

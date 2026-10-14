@@ -15,6 +15,7 @@
 #include "map/grid.h"
 #include "map/routing_terrain.h"
 #include "map/terrain.h"
+#include "mp/war.h"
 #include "sound/effect.h"
 
 static const int BALLISTA_FIRING_OFFSETS[] = {
@@ -105,7 +106,8 @@ void figure_ballista_action(figure *f)
 
 static void tower_sentry_pick_target(figure *f)
 {
-    if (enemy_army_total_enemy_formations() <= 0) {
+    // the soldiers of a player at war with the city are enemies too (M10.8), never so in a classic game
+    if (enemy_army_total_enemy_formations() <= 0 && !mp_war_current_player_has_enemy_soldiers()) {
         return;
     }
     if (f->action_state == FIGURE_ACTION_150_ATTACK ||

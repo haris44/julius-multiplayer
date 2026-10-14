@@ -14,6 +14,7 @@
 #include "building/building.h"
 #include "game/player_clone.h"
 #include "game/save_format.h"
+#include "mp/battle.h"
 
 #include <string.h>
 
@@ -340,6 +341,7 @@ void formation_update_monthly_morale_deployed(void)
             if (!f->is_at_fort && !f->in_distant_battle) {
                 if (f->morale <= 20 && !f->months_low_morale && !f->months_very_low_morale) {
                     change_all_morale(-10, 10);
+                    mp_battle_legion_broke(); // the legions of the players fighting this city too (M10.8)
                 }
                 if (f->morale <= 10) {
                     f->months_very_low_morale++;

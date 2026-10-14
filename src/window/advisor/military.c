@@ -103,6 +103,9 @@ static int draw_background(void)
     // multiplayer: the war with another player first (M10.4)
     uint8_t war_text[100];
     int at_war = window_mp_war_advisor_text(war_text, sizeof(war_text));
+    // and the losses of the wars with the other players, instead of the distant battles of Caesar (M10.8)
+    uint8_t losses_text[100];
+    int losses = window_mp_war_advisor_losses_text(losses_text, sizeof(losses_text));
     if (num_legions <= 0) {
         image_draw(image_group(GROUP_BULLET), bullet_x, 359);
         if (at_war) {
@@ -112,7 +115,11 @@ static int draw_background(void)
         }
 
         image_draw(image_group(GROUP_BULLET), bullet_x, 379);
-        lang_text_draw(51, distant_battle_text_id, text_x, 378, FONT_NORMAL_BLACK);
+        if (losses) {
+            text_draw(losses_text, text_x, 378, FONT_NORMAL_BLACK, 0);
+        } else {
+            lang_text_draw(51, distant_battle_text_id, text_x, 378, FONT_NORMAL_BLACK);
+        }
     } else {
         // has forts
         image_draw(image_group(GROUP_BULLET), bullet_x, 349);
@@ -128,7 +135,11 @@ static int draw_background(void)
         }
 
         image_draw(image_group(GROUP_BULLET), bullet_x, 389);
-        lang_text_draw(51, distant_battle_text_id, text_x, 388, FONT_NORMAL_BLACK);
+        if (losses) {
+            text_draw(losses_text, text_x, 388, FONT_NORMAL_BLACK, 0);
+        } else {
+            lang_text_draw(51, distant_battle_text_id, text_x, 388, FONT_NORMAL_BLACK);
+        }
     }
 
     inner_panel_draw(32, 70, 36, 17);

@@ -365,6 +365,13 @@ static translation_string all_strings[] = {
     {TR_MP_LETTER_ULTIMATUM_4, ", the main culprit of these troubles, is declared an enemy of Rome: for 12 months, a war on him fulfils my mandate."},
     {TR_MP_LETTER_PEACE_IMPOSED_1, "Governors, the time is up. I impose peace: "},
     {TR_MP_LETTER_PEACE_IMPOSED_2, " lay down their arms. Whoever had declared the war and declares it again within 12 months does so without motive, and my wrath counts double."},
+    {TR_MP_MILITARY_ENEMIES_IN_CITY, "; enemy soldiers in the city: "},
+    {TR_MP_MILITARY_LOSSES, "Losses: "},
+    {TR_MP_MILITARY_ENEMY_LOSSES, "; the enemy: "},
+    {TR_MP_MILITARY_SOLDIER, " soldier"},
+    {TR_MP_MILITARY_SOLDIERS, " soldiers"},
+    {TR_MP_MILITARY_LEGION, " legion"},
+    {TR_MP_MILITARY_LEGIONS, " legions"},
 };
 
 void translation_english(const translation_string **strings, int *num_strings)
