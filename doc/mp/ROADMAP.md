@@ -1061,15 +1061,16 @@ César revient comme arbitre de la partie. Jouable en paix et **seul** : livré 
 - [x] **M10.7** Armée trop puissante : légions au-delà de la tolérance de César.
   *Fait* (D-084) : chaque mois, max(2, population / 5 000) légions tolérées, −2 lauriers par légion de plus (avec au
   moins un soldat), seul aussi ; montré dans le conseiller impérial. Test `mp_army_tolerance`.
-- [ ] **M10.8** Moral et totaux par camp, arcs de triomphe ; combats rejoués et duels scriptés (CESAR §10.3),
+- [x] **M10.8** Moral et totaux par camp, arcs de triomphe ; combats rejoués et duels scriptés (CESAR §10.3),
   captures.
   *Fait* (D-088, `mp/battle.c`) : une légion qui cède donne du cœur aux légions de l'ennemi ; ses compteurs de combat
   tiennent contre un joueur ; les soldats ennemis sur les terres d'une cité y sont des ennemis (immigration arrêtée,
   conseillers, musique) ; les tours tirent sur eux ; pertes de chaque camp sauvegardées et montrées par le conseiller
   militaire ; un triomphe gagne un arc de triomphe, que la commande construit. Batailles scriptées des trois troupes
-  (`mp_battles`), rejouées identiques. Tests `mp_war_morale` (7 inversions), `mp_battles`. *Reste* : captures ;
-  les sons de combat propres à chaque camp ; le rapport des pertes victime / agresseur (CESAR §10.3), sans unité
-  commune, va à M11.1.
+  (`mp_battles`), rejouées identiques. Tests `mp_war_morale` (7 inversions), `mp_battles` ; captures du conseiller
+  militaire des deux joueurs en pleine bataille : `tools/serial.sh tools/mp-battle-test.sh`. *Reste* : les sons de
+  combat propres à chaque camp ; le rapport des pertes victime / agresseur (CESAR §10.3), sans unité commune, va à
+  M11.1.
 
 ## MG — Troupes et matières de guerre (D-058)
 > MG.1 à MG.4 se font seuls, à tout moment (partie seule, essais contre les envahisseurs de l'IA) ; MG.5 attend la

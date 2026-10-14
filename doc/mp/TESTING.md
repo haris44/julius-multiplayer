@@ -276,6 +276,10 @@ Bon à savoir :
 - `tools/mp-war-test.sh` : hôte en 640 × 480 et client en 1024 × 768 ; l'hôte déclare une guerre brutale depuis le
   conseiller militaire (bouton « Guerre », deux clics), le client la voit annoncée sur sa cité et propose la paix,
   l'hôte l'accepte ; captures `build/automation/war-*.png` (T5.5).
+- `tools/mp-battle-test.sh` : partie à deux chargée depuis le menu principal (`simtool battlesave` : en guerre, la
+  légion du joueur 1 se bat chez le joueur 2, des pertes des deux côtés) ; captures `build/automation/battle-*.png` du
+  conseiller militaire de chacun : sa guerre, les soldats ennemis dans sa cité, les pertes des deux camps (M10.8,
+  D-088).
 - `tools/mp-wrath-test.sh` : partie seule depuis le salon ; `addwrath` amène la jauge à l'avertissement puis à
   l'ultimatum : captures `build/automation/wrath-*.png` des lettres (avertissement, ultimatum, paix imposée), de la
   jauge du bandeau et du conseiller impérial (M10.5, D-084).

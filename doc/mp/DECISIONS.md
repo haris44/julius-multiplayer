@@ -1790,7 +1790,9 @@
   (`mp_battle` pour les soldats, `mp_wrath` pour les dégâts).
 - **Tests** : `mp_war_morale` (chaque vérification échoue quand on inverse la ligne qui la fait passer : 7 inversions),
   `mp_battles` (le tir remis à 100 fait échouer deux bornes ; sans le décompte des morts en mêlée ou par javelot, les
-  pertes ne sont plus comptées), `mp_troops_javelin` (tir à 70 en multijoueur).
+  pertes ne sont plus comptées), `mp_troops_javelin` (tir à 70 en multijoueur). Captures : `tools/mp-battle-test.sh`
+  (partie à deux en pleine bataille, conseiller militaire de chacun : « Pertes : 8 soldats ; l'ennemi : 3 soldats »
+  chez l'un, « soldats ennemis dans la cité : 8 » et « Pertes : 3 soldats ; l'ennemi : 8 soldats » chez l'autre).
 - **Constats sans suite** : un soldat qui fuit peut disparaître au premier pas (aucun chemin vers sa place au fort),
   comme dans l'original : ce n'est pas une perte infligée, elle n'est pas comptée. La commande de formation accepte la
   colonne et la tortue pour une légion sans académie, que le jeu ne propose qu'après l'académie (`mp/actions.c`). Les

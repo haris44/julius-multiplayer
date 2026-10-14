@@ -211,6 +211,7 @@ static int usage(void)
     printf("  simtool caesarwrath SAVE               Caesar's wrath: examples of CESAR 7.2, ultimatum (M10.5)\n");
     printf("  simtool armytolerance SAVE             legions beyond what Caesar tolerates cost laurels (M10.7)\n");
     printf("  simtool warmorale SAVE                 morale and totals of each side, triumphal arches (M10.8)\n");
+    printf("  simtool battlesave SAVE OUT.mpsav      writes the game of tools/mp-battle-test.sh (M10.8)\n");
     printf("  simtool battles SAVE                   scripted battles of the three troops (M10.8, MG.5;\n"
            "                                         BATTLE_TRACE=1: the soldiers alive along each fight)\n");
     printf("  simtool terrain MAP PLAYERS X Y W H [raw]  the terrain of a part of the prepared map (or of an .mpsav),\n");
@@ -9435,6 +9436,38 @@ static int command_battles(const char *file)
     return failures ? 1 : 0;
 }
 
+// the game of tools/mp-battle-test.sh (M10.8, D-088): two players at war, the legion of player 1 in the land of player
+// 2 fighting his legion, both with losses
+static int command_battlesave(const char *file, const char *out)
+{
+    int failures = 0;
+    int war_ticks = 0;
+#define CHECK(condition, text) do { int ok_ = (condition); printf("%-70s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
+    int legion1, legion2, tx, ty;
+    if (!start_war_game(file, &legion1, &legion2, &tx, &ty)) {
+        return 2;
+    }
+    CHECK(legion_stands_at(legion1, tx, ty), "(in peace, the legion of player 1 stands by the houses of player 2)");
+    city_action(0, MP_ACTION_DECLARE_WAR, 1, MP_WAR_BRUTAL, 0);
+    city_action(1, MP_ACTION_LEGION_MOVE, legion2, tx + 1, ty);
+    RUN_UNTIL(mp_battle_soldiers_lost(0) >= 2 && mp_battle_soldiers_lost(1) >= 2, 10, 6000);
+    printf("after %d ticks of war: player 1 lost %d soldiers, player 2 %d; %d soldiers of player 1 in the land of "
+        "player 2\n", war_ticks, mp_battle_soldiers_lost(0), mp_battle_soldiers_lost(1),
+        mp_battle_enemy_soldiers_in_land(1));
+    CHECK(mp_battle_soldiers_lost(0) >= 2 && mp_battle_soldiers_lost(1) >= 2 && mp_battle_enemy_soldiers_in_land(1) > 0,
+        "at war, both lost soldiers, player 1 still in the land of player 2");
+    CHECK(mp_savegame_write(out), "the game is written");
+    uint64_t written = mp_checksum_state();
+    CHECK(mp_savegame_read(out) && mp_checksum_state() == written && mp_battle_soldiers_lost(0) >= 2,
+        "and reads back the same, with the losses");
+    player_context_switch(0);
+    player_context_set_num_players(1);
+#undef CHECK
+    printf("%s\n", failures ? "FAILED: the game of mp-battle-test.sh was not written" :
+        "Written: the game of mp-battle-test.sh");
+    return failures ? 1 : 0;
+}
+
 // ---------- morale and totals of each side (M10.8, D-088) ----------
 
 static int in_city_of(int player_id, int (*value)(void))
@@ -11394,6 +11427,8 @@ int main(int argc, char **argv)
         result = command_caesarwrath(file);
     } else if (strcmp(command, "warmorale") == 0) {
         result = command_warmorale(file);
+    } else if (strcmp(command, "battlesave") == 0 && argc > 3) {
+        result = command_battlesave(file, argv[3]);
     } else if (strcmp(command, "battles") == 0) {
         result = command_battles(file);
     } else if (strcmp(command, "armytolerance") == 0) {

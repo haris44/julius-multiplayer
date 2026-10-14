@@ -1,0 +1,28 @@
+# Real game, network game of two players from the lobby (client, player 2; see tools/mp-battle-test.sh): the game
+# hosted is the one written by "simtool battlesave", at war, the legion of player 1 in the land of player 2. The
+# military advisor shows the war, the enemy soldiers in the city and the losses of both sides (M10.8, D-088).
+wait 10
+click 400 500
+wait 10
+click 400 172
+# the hosted game appears in the list within a second or two
+wait 150
+click 530 174
+wait 5
+mpwait 0
+# Caesar's letter, if any: closed
+wait 3
+key Return
+wait 2
+mpwait 20
+# the military advisor (800 x 600: the page at 80, 60)
+key 2
+wait 5
+screenshot build/automation/battle-client-advisor.png
+key Escape
+wait 3
+mpwait 100
+mpcheck
+# keep the game running a little so that the host reaches its own check
+wait 100
+quit
