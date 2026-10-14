@@ -387,6 +387,10 @@ static translation_string all_strings[] = {
     {TR_MP_ROME_TAKES_RULE, "César a dû envoyer ses légions une seconde fois : Rome reprend la province et ne fait l'héritier d'aucune cité."},
     {TR_MP_IMPERIAL_DISGRACE, "Disgrâce, lauriers des notes divisés par deux : encore "},
     {TR_MP_IMPERIAL_EXPEDITION_LAURELS, ", expédition : "},
+    {TR_MP_LEGION_ATTACK, "Attaquer"},
+    {TR_MP_LEGION_ATTACKING, "Attaque en cours"},
+    {TR_MP_LEGION_ATTACK_PICK, "Cliquez sur la cible : un bâtiment ou une case de l'ennemi"},
+    {TR_MP_LEGION_ATTACK_NO_TARGET, "Aucun bâtiment d'un ennemi en guerre à portée de cette case"},
 };
 
 void translation_french(const translation_string **strings, int *num_strings)

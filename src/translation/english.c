@@ -387,6 +387,10 @@ static translation_string all_strings[] = {
     {TR_MP_ROME_TAKES_RULE, "Caesar had to send his legions a second time: Rome takes the province back and makes no city its heir."},
     {TR_MP_IMPERIAL_DISGRACE, "Disgrace, laurels of the notes halved: "},
     {TR_MP_IMPERIAL_EXPEDITION_LAURELS, ", expedition: "},
+    {TR_MP_LEGION_ATTACK, "Attack"},
+    {TR_MP_LEGION_ATTACKING, "Attacking"},
+    {TR_MP_LEGION_ATTACK_PICK, "Click the target: a building or a tile of the enemy"},
+    {TR_MP_LEGION_ATTACK_NO_TARGET, "No building of an enemy at war within reach of this tile"},
 };
 
 void translation_english(const translation_string **strings, int *num_strings)

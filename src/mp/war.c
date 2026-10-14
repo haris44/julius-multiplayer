@@ -468,34 +468,55 @@ static int owner_of_target(int grid_offset, int *max_damage)
     return -1;
 }
 
+// the first building, wall or gatehouse of a player fighting the soldier's own next to him, in the order of the
+// directions: its tile, owner and the damage at which it collapses
+static int target_next_to(const figure *f, int *grid_offset, int *victim, int *max_damage)
+{
+    int self = owner_of(f);
+    for (int dir = 0; dir < 8; dir += 1) {
+        int offset = f->grid_offset + map_grid_direction_delta(dir);
+        if (!map_grid_is_valid_offset(offset)) {
+            continue;
+        }
+        int damage = 0;
+        int owner = owner_of_target(offset, &damage);
+        if (owner < 0 || !mp_war_is_fighting(self, owner)) {
+            continue;
+        }
+        *grid_offset = offset;
+        *victim = owner;
+        *max_damage = damage;
+        return 1;
+    }
+    return 0;
+}
+
 int mp_war_soldier_attack_buildings(figure *f)
 {
     if (!any_fighting || !is_soldier(f)) {
         return 0;
     }
     int self = owner_of(f);
-    for (int dir = 0; dir < 8; dir += 1) {
-        int grid_offset = f->grid_offset + map_grid_direction_delta(dir);
-        if (!map_grid_is_valid_offset(grid_offset)) {
-            continue;
-        }
-        int max_damage = 0;
-        int victim = owner_of_target(grid_offset, &max_damage);
-        if (victim < 0 || !mp_war_is_fighting(self, victim)) {
-            continue;
-        }
-        if (!(game_time_tick() & 3) && map_building_damage_increase(grid_offset) > max_damage) {
-            mp_wrath_building_pulled_down(self, victim); // Caesar's wrath (M10.5)
-            // the building collapses in the city of its owner: his peace rating, his walls and sentries
-            int previous = player_context_current();
-            player_context_switch(victim);
-            building_destroy_by_enemy(map_grid_offset_to_x(grid_offset), map_grid_offset_to_y(grid_offset),
-                grid_offset);
-            player_context_switch(previous);
-        }
-        return 1;
+    int grid_offset, victim, max_damage;
+    if (!target_next_to(f, &grid_offset, &victim, &max_damage)) {
+        return 0;
     }
-    return 0;
+    if (!(game_time_tick() & 3) && map_building_damage_increase(grid_offset) > max_damage) {
+        mp_wrath_building_pulled_down(self, victim); // Caesar's wrath (M10.5)
+        // the building collapses in the city of its owner: his peace rating, his walls and sentries
+        int previous = player_context_current();
+        player_context_switch(victim);
+        building_destroy_by_enemy(map_grid_offset_to_x(grid_offset), map_grid_offset_to_y(grid_offset),
+            grid_offset);
+        player_context_switch(previous);
+    }
+    return 1;
+}
+
+int mp_war_soldier_has_target_next_to(const figure *f)
+{
+    int grid_offset, victim, max_damage;
+    return any_fighting && is_soldier(f) && target_next_to(f, &grid_offset, &victim, &max_damage);
 }
 
 // ---------- caravans ----------

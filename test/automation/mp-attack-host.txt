@@ -1,0 +1,61 @@
+# Real game, network game of two players from the lobby (the host, player 1; see tools/mp-attack-test.sh). The host
+# loads the game written by "simtool attacksave" from the main menu (the two players at war, the legion of player 1 in
+# its fort, a quarter of player 2 around the tile (137, 82)), which opens the lobby with it, and hosts it. The legion
+# window (right click on the soldiers in the fort) has the button "Attack" (D-087); it arms the pick of the target on
+# the city; a click in the quarter of player 2 sends the legion, which pulls the quarter down.
+wait 10
+click 400 500
+wait 10
+# main menu: Load game; the multiplayer saved game opens the lobby, with that game chosen (T5.4)
+click 400 252
+wait 10
+text essai attack
+wait 2
+key Return
+wait 10
+lobbyselected essai attack.mpsav
+# Host; the client finds the game and joins; then the host starts it with the same button
+click 240 466
+mpplayers 2
+wait 5
+click 240 466
+mpwait 0
+# Caesar's letter, if any: closed
+wait 3
+key Return
+wait 2
+speed 500
+mpwait 50
+# the fort of player 1: its soldiers rest on the parade ground
+goto 38 131
+wait 5
+rclick 320 312
+wait 10
+screenshot build/automation/attack-host-legion.png
+# "Attack": the legion is selected, the next click on the city picks the target (a prompt says so)
+click 319 552
+wait 5
+goto 137 82
+wait 5
+screenshot build/automation/attack-host-pick.png
+click 320 312
+wait 5
+# the legion marches to the quarter of player 2 and pulls it down
+mpwait 2000
+goto 137 82
+wait 5
+screenshot build/automation/attack-host-attacking.png
+# the legion window while it attacks (right click on a soldier): "Back to the fort" and "Attacking"
+rclick 245 250
+wait 10
+screenshot build/automation/attack-host-legion-attacking.png
+key Escape
+wait 5
+mpwait 3200
+mpcheck
+# Caesar's letter (his wrath crossed 40), if any: closed
+key Return
+wait 5
+screenshot build/automation/attack-host-done.png
+wait 300
+quit

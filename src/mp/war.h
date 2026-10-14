@@ -129,6 +129,12 @@ int mp_war_current_player_has_enemy_soldiers(void);
 int mp_war_soldier_attack_buildings(figure *f);
 
 /**
+ * Whether a building, wall or gatehouse of an enemy stands next to the soldier: what mp_war_soldier_attack_buildings
+ * would attack (the order "attack" waits for it to fall, mp/assault.c); changes nothing
+ */
+int mp_war_soldier_has_target_next_to(const figure *f);
+
+/**
  * A caravan between players next to a soldier of an enemy of its seller is intercepted: the soldier's player stores
  * what his warehouses take, the rest is lost
  * @return 1 when intercepted: the caravan carries nothing any more

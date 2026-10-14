@@ -4,6 +4,7 @@
 #include "core/buffer.h"
 #include "core/log.h"
 #include "game/extra_state.h"
+#include "mp/assault.h"
 #include "mp/caesar.h"
 #include "mp/endgame.h"
 #include "game/file.h"
@@ -75,6 +76,7 @@ void mp_savegame_visit(mp_savegame_visitor visitor, void *userdata)
     visit_buffer(visitor, userdata, "mp_war", mp_war_save_state, 1024);
     visit_buffer(visitor, userdata, "mp_wrath", mp_wrath_save_state, 2048);
     visit_buffer(visitor, userdata, "mp_expedition", mp_expedition_save_state, 256);
+    visit_buffer(visitor, userdata, "mp_assault", mp_assault_save_state, 8192);
     visit_buffer(visitor, userdata, "caesar_buildings", building_save_caesar_state, MAX_BUILDINGS * 256);
     visit_buffer(visitor, userdata, "territory_grid", mp_territory_save_state, GRID_MAX_TILES);
     visit_buffer(visitor, userdata, "fog_grid", mp_fog_save_state, GRID_MAX_TILES);
@@ -314,6 +316,14 @@ static int load_pieces(void)
         mp_expedition_load_state(&expedition_buf);
     } else {
         mp_expedition_reset(); // saved before the punitive expedition (M10.6): none sent, an expedition due is sent
+    }
+    const piece *assault = find_piece("mp_assault", 0, reading.num_pieces);
+    if (assault) {
+        buffer assault_buf;
+        buffer_init(&assault_buf, (uint8_t *) assault->data, assault->size);
+        mp_assault_load_state(&assault_buf);
+    } else {
+        mp_assault_reset(); // a game saved before the order "attack" (D-087): no order
     }
     const piece *caesar = find_piece("caesar_buildings", 0, reading.num_pieces);
     if (caesar) {

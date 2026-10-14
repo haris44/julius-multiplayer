@@ -8,12 +8,14 @@
 #include "core/direction.h"
 #include "core/string.h"
 #include "figure/formation_legion.h"
+#include "game/player_context.h"
 #include "game/settings.h"
 #include "game/state.h"
 #include "graphics/button.h"
 #include "graphics/graphics.h"
 #include "graphics/image.h"
 #include "graphics/panel.h"
+#include "graphics/screen.h"
 #include "graphics/text.h"
 #include "graphics/window.h"
 #include "input/scroll.h"
@@ -33,6 +35,7 @@
 #include "window/popup_dialog.h"
 #include "building/construction_clear.h"
 #include "mp/actions.h"
+#include "mp/assault.h"
 #include "mp/missionary.h"
 #include "mp/fog.h"
 #include "mp/territory.h"
@@ -211,11 +214,38 @@ static int handle_right_click_allow_building_info(const map_tile *tile)
     return allow;
 }
 
+// multiplayer (D-087): the legion whose order "attack" waits for its target, picked by the next click on the city;
+// whether the last click was on no target
+static int legion_attack_pick;
+static int legion_attack_no_target;
+
+void widget_city_pick_legion_attack(int legion_formation_id)
+{
+    legion_attack_pick = legion_formation_id;
+    legion_attack_no_target = 0;
+}
+
+void widget_city_draw_legion_attack_prompt(void)
+{
+    // the warnings are not drawn while a legion is selected: the prompt is drawn as one of them
+    if (!legion_attack_pick || legion_attack_pick != formation_get_selected()) {
+        return;
+    }
+    const uint8_t *text = translation_for(legion_attack_no_target ? TR_MP_LEGION_ATTACK_NO_TARGET :
+        TR_MP_LEGION_ATTACK_PICK);
+    int width = text_get_width(text, FONT_NORMAL_WHITE) + 2 * BLOCK_SIZE;
+    int blocks = width / BLOCK_SIZE + 1;
+    int x = (screen_width() - 180) / 2 - blocks * BLOCK_SIZE / 2;
+    label_draw(x, 30, blocks, 1);
+    text_draw_centered(text, x, 34, blocks * BLOCK_SIZE, FONT_NORMAL_WHITE, 0);
+}
+
 static int handle_legion_click(const map_tile *tile)
 {
     if (tile->grid_offset) {
         int formation_id = formation_legion_at_grid_offset(tile->grid_offset);
         if (formation_id > 0 && !formation_get(formation_id)->in_distant_battle) {
+            legion_attack_pick = 0;
             window_city_military_show(formation_id);
             return 1;
         }
@@ -623,6 +653,18 @@ static void military_map_click(int legion_formation_id, const map_tile *tile)
     if (m->in_distant_battle || m->cursed_by_mars) {
         return;
     }
+    if (legion_attack_pick && legion_attack_pick == legion_formation_id) {
+        // the target of the order "attack" (D-087): a building or a tile of an enemy at war; else it waits for another
+        if (mp_assault_enemy_at(player_context_current_player, tile->x, tile->y) < 0) {
+            legion_attack_no_target = 1;
+            return;
+        }
+        legion_attack_pick = 0;
+        mp_action_legion_attack(legion_formation_id, tile->x, tile->y);
+        sound_speech_play_file("wavs/cohort5.wav");
+        window_city_show();
+        return;
+    }
     int other_formation_id = formation_legion_at_building(tile->grid_offset);
     mp_action_legion_move(legion_formation_id, tile->x, tile->y);
     if (!other_formation_id || other_formation_id != legion_formation_id) {
@@ -657,6 +699,7 @@ void widget_city_handle_input_military(const mouse *m, const hotkeys *h, int leg
     scroll_map(m);
     if (m->right.went_up || h->escape_pressed) {
         data.capture_input = 0;
+        legion_attack_pick = 0;
         city_warning_clear_all();
         window_city_show();
     } else {

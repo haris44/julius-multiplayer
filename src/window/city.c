@@ -133,6 +133,7 @@ static void draw_foreground_military(void)
 {
     widget_top_menu_draw(0);
     window_city_draw();
+    widget_city_draw_legion_attack_prompt(); // multiplayer only: the order "attack" waits for its target (D-087)
     if (config_get(CONFIG_UI_SHOW_MILITARY_SIDEBAR)) {
         widget_sidebar_military_draw_foreground();
     } else {

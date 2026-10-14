@@ -278,6 +278,11 @@ Bon à savoir :
 - `tools/mp-war-test.sh` : hôte en 640 × 480 et client en 1024 × 768 ; l'hôte déclare une guerre brutale depuis le
   conseiller militaire (bouton « Guerre », deux clics), le client la voit annoncée sur sa cité et propose la paix,
   l'hôte l'accepte ; captures `build/automation/war-*.png` (T5.5).
+- `tools/mp-attack-test.sh` : hôte et client en 800 × 600 ; l'hôte charge depuis le menu principal la partie écrite par
+  `simtool attacksave` (carte 1 pour 2, en guerre, la légion du joueur 1 au fort, un quartier du joueur 2, sans
+  brouillard), ouvre la fenêtre de la légion (clic droit sur ses soldats), clique « Attaquer » puis une case du
+  quartier ; captures `build/automation/attack-*.png` : bouton, choix de la cible, légion à l'œuvre et fenêtre
+  « Attaque en cours », quartier rasé chez l'hôte et chez le client (M10.2, D-087).
 - `tools/mp-wrath-test.sh` : partie seule depuis le salon ; `addwrath` amène la jauge à l'avertissement puis à
   l'ultimatum : captures `build/automation/wrath-*.png` des lettres (avertissement, ultimatum, paix imposée), de la
   jauge du bandeau et du conseiller impérial (M10.5, D-084).
@@ -306,6 +311,7 @@ coordonnées ; la barre latérale reste collée au bord droit (bouton industrie 
 | `tools/mp-menus-test.sh` | trois joueurs (`--mp-host`, cités de `brugle-lugdunum.sav`) : `windowsweep` des trois en même temps, puis de chacun seul, partie qui continue sans désynchronisation |
 | `tools/mp-resume-test.sh` | deux joueurs depuis le salon : « Sauvegarder » (un `.mpsav`), désynchronisation provoquée, « Fichier, Nouvelle partie », « Charger » qui ouvre le salon avec la partie choisie, `autosave.mpsav` listée, reprise hébergée et rejointe, sans désynchronisation |
 | `tools/mp-ui-test.sh` | salon du client avec les règles de l'hôte (carte 1, difficulté changée), menus fermes et matières premières d'un joueur des terres et d'un joueur de la côte, menu Options sans Difficulté, conseiller impérial, évaluation (pilier des lauriers), commerce et Stocks, en 640 × 480 et 1024 × 736 |
+| `tools/mp-attack-test.sh` | fenêtre de la légion (bouton « Attaquer », « Attaque en cours »), choix de la cible sur la vue militaire, légion qui rase un quartier ennemi en réseau sans désynchronisation |
 | `tools/mp-war-test.sh` | conseiller militaire (bouton « Guerre »), fenêtre « Guerre et paix » en paix, confirmation, en guerre, offre de paix reçue, paix signée, annonces sur la cité, en 640 × 480 et 1024 × 736 |
 | `tools/mp-expedition-test.sh` | option du salon de la seconde expédition, message et lettre de l'expédition, légions de César dans la cité, conseiller impérial en disgrâce, lettres d'une expédition vaincue ou repartie, écran de fin « Rome reprend la province » |
 | `caesar-advisor.txt`, `caesar-gifts.txt`, `caesar-ratings.txt` | César dans une grande cité (`rules mp`) : lettre de rang, conseiller impérial, cadeau, don, salaire, pilier des lauriers |
