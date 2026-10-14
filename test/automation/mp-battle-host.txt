@@ -1,0 +1,37 @@
+# Real game, network game of two players from the lobby (host, player 1; see tools/mp-battle-test.sh). The host loads
+# the game written by "simtool battlesave" from the main menu, which opens the lobby with it, and hosts it: the two
+# players are at war, the legion of player 1 fights the legion of player 2 in his land. The military advisor of each
+# shows his war, the enemy soldiers in his city and the losses of both sides (M10.8, D-088).
+wait 10
+click 400 500
+wait 10
+# main menu: Load game; the multiplayer saved game opens the lobby, with that game chosen (T5.4)
+click 400 252
+wait 10
+text essai battle
+wait 2
+key Return
+wait 10
+lobbyselected essai battle.mpsav
+# Host; the client finds the game and joins; then the host starts it with the same button
+click 240 466
+mpplayers 2
+wait 5
+click 240 466
+mpwait 0
+# Caesar's letter, if any: closed
+wait 3
+key Return
+wait 2
+mpwait 20
+# the military advisor (800 x 600: the page at 80, 60)
+key 2
+wait 5
+screenshot build/automation/battle-host-advisor.png
+key Escape
+wait 3
+mpwait 100
+mpcheck
+# keep the game running a little so that the client reaches its own check
+wait 100
+quit

@@ -29,7 +29,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define PROTOCOL_VERSION 31 // 3: the rules of the game travel with the welcome message; 4: territories; 5: fog;
+#define PROTOCOL_VERSION 32 // 3: the rules of the game travel with the welcome message; 4: territories; 5: fog;
                             // 6: one forest map, games alone (D-044); 7: missions at the start (D-045);
                             // 8: a caravan per resource, the empire the dearer source (D-048);
                             // 9: wide places in messages, the missionary goes to the nearest walkable tile;
@@ -55,7 +55,8 @@
                             // 28: Caesar's road comes back when a building on it disappears (D-085);
                             // 29: Caesar judges the wars: motive, price, triumphs, wrath, army (D-084);
                             // 30: Caesar's punitive expedition, the lobby rule of the second one (D-086);
-                            // 31: the order "attack" of a legion at war (D-087)
+                            // 31: the order "attack" of a legion at war (D-087);
+                            // 32: morale and losses of each side, arches of triumph, javelins every 70 ticks (D-088)
 #define TURN_TICKS 4
 #define TURN_DELAY 2
 #define HISTORY 256

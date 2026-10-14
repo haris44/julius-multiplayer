@@ -391,6 +391,13 @@ static translation_string all_strings[] = {
     {TR_MP_LEGION_ATTACKING, "Attaque en cours"},
     {TR_MP_LEGION_ATTACK_PICK, "Cliquez sur la cible : un bâtiment ou une case de l'ennemi"},
     {TR_MP_LEGION_ATTACK_NO_TARGET, "Aucun bâtiment d'un ennemi en guerre à portée de cette case"},
+    {TR_MP_MILITARY_ENEMIES_IN_CITY, " ; soldats ennemis dans la cité : "},
+    {TR_MP_MILITARY_LOSSES, "Pertes : "},
+    {TR_MP_MILITARY_ENEMY_LOSSES, " ; l'ennemi : "},
+    {TR_MP_MILITARY_SOLDIER, " soldat"},
+    {TR_MP_MILITARY_SOLDIERS, " soldats"},
+    {TR_MP_MILITARY_LEGION, " légion"},
+    {TR_MP_MILITARY_LEGIONS, " légions"},
 };
 
 void translation_french(const translation_string **strings, int *num_strings)

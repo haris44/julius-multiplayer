@@ -20,6 +20,8 @@
 #include "figuretype/trader.h"
 #include "figuretype/wall.h"
 #include "figuretype/water.h"
+#include "mp/battle.h"
+#include "mp/war.h"
 
 static void figure_nobody_action(figure *f)
 {
@@ -129,5 +131,8 @@ void figure_action_handle(void)
                 figure_delete(f);
             }
         }
+    }
+    if (mp_war_any_fighting()) {
+        mp_battle_count_enemies_in_city(); // the soldiers of the players fighting this city in its land (M10.8)
     }
 }

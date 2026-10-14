@@ -394,6 +394,11 @@ Les conditions de fin se choisissent dans le salon :
   (D-081).
 - Moral, totaux et sons de combat sont propres à chaque camp. Les arcs de triomphe, qui venaient des batailles
   lointaines, récompenseront les victoires contre un joueur.
+  **Fait en M10.8** (D-088, `mp/battle.c`) : une légion qui cède donne +10 aux légions des joueurs qui combattent son
+  propriétaire ; les compteurs de combat d'une légion tiennent tant qu'un ennemi a des soldats ; à la fin des figures
+  de chaque cité, les soldats ennemis sur ses terres comptent parmi ses ennemis (`city_figures_enemies`) ; les tours
+  tirent sur les soldats d'un joueur en guerre ; les pertes de chaque camp sont dans le morceau `mp_battle` ; un
+  triomphe gagne un arc. Pas fait : les sons de combat propres à chaque camp.
 - **Fait en première tranche** (T5.5, D-077) : `mp/war.c` tient l'état de chaque paire de joueurs (paix, préavis,
   combats) et les propositions de paix, sauvegardés dans le morceau `mp_war`. L'hostilité est ajoutée aux tests
   existants, jamais à leur place : `figure_combat_attack_figure_at`, les recherches de cible des soldats et des tours,

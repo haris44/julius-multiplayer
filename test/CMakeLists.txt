@@ -333,7 +333,8 @@ endforeach()
 # T4.14: the lobby chooses map 1, map 2 or one drawn by lot; the game keeps the map it is played on
 add_test(NAME mp_prepared_map_choice COMMAND simtool mapchoice brugle-massilia-start.sav)
 
-# MG.1 (D-058): javelin throwers of 136 hit points and 10 attack in a multiplayer game, the original table in classic
+# MG.1 (D-058): javelin throwers of 136 hit points and 10 attack in a multiplayer game, a javelin every 70 ticks
+# (MG.5, D-088), the original table in classic
 add_test(NAME mp_troops_javelin COMMAND simtool troops x)
 # MG.2 (D-058): a load of timber per javelin thrower, weapons for the legionaries, horsemen for nothing; carts bring
 # the timber, saved with the game, free in classic
@@ -470,6 +471,15 @@ add_test(NAME mp_war_attack_order COMMAND simtool warattack brugle-massilia-star
 # included; mandate against an enemy of Rome, three players; without motive, always for the declarer within 12 months of
 # the end of his war), its price paid when the fighting starts, nothing for a threat withdrawn, triumphs
 add_test(NAME mp_war_motives COMMAND simtool warmotives brugle-massilia-start.sav)
+# Morale and totals of each side (M10.8, D-088): a legion that breaks gives heart to the legions of the players fighting
+# its city; the counters of its fights stay against a player; the soldiers of the enemy in the land of a city are its
+# enemies (immigration stops); the losses of each side, saved; a triumph earns a triumphal arch that the command builds;
+# towers shoot at the soldiers of a player at war
+add_test(NAME mp_war_morale COMMAND simtool warmorale brugle-massilia-start.sav)
+# Scripted battles of the three troops of D-058 on open land (M10.8, MG.5, CESAR 10.3, D-088): the legion standing in
+# formation beats any charge, javelin throwers beat a legion marching on them and shoot down one standing without its
+# tortoise, mounted lose every fight but catch a caravan running home that legionaries never catch; replayed identically
+add_test(NAME mp_battles COMMAND simtool battles brugle-massilia-start.sav)
 # Caesar's wrath (M10.5, D-084): the examples of CESAR 7.2, the decrease, the warning, the ultimatum and the peace it
 # imposes, the main culprit an enemy of Rome, the expedition sent; resumed in the middle of an ultimatum
 add_test(NAME mp_caesar_wrath COMMAND simtool caesarwrath brugle-massilia-start.sav)

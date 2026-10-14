@@ -283,6 +283,10 @@ Bon à savoir :
   brouillard), ouvre la fenêtre de la légion (clic droit sur ses soldats), clique « Attaquer » puis une case du
   quartier ; captures `build/automation/attack-*.png` : bouton, choix de la cible, légion à l'œuvre et fenêtre
   « Attaque en cours », quartier rasé chez l'hôte et chez le client (M10.2, D-087).
+- `tools/mp-battle-test.sh` : partie à deux chargée depuis le menu principal (`simtool battlesave` : en guerre, la
+  légion du joueur 1 se bat chez le joueur 2, des pertes des deux côtés) ; captures `build/automation/battle-*.png` du
+  conseiller militaire de chacun : sa guerre, les soldats ennemis dans sa cité, les pertes des deux camps (M10.8,
+  D-088).
 - `tools/mp-wrath-test.sh` : partie seule depuis le salon ; `addwrath` amène la jauge à l'avertissement puis à
   l'ultimatum : captures `build/automation/wrath-*.png` des lettres (avertissement, ultimatum, paix imposée), de la
   jauge du bandeau et du conseiller impérial (M10.5, D-084).

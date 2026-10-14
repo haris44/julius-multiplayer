@@ -748,6 +748,9 @@
 - **Risque** à mesurer après M10.2 : des javeliniers presque aussi forts, deux fois plus rapides et qui tirent
   pourraient devenir la meilleure troupe en terrain découvert (batailles simulées : légion arrêtée, en marche, prise
   de flanc).
+  *Mesuré* (MG.5, D-088) : le risque ne se vérifie pas. Une légion postée bat les javeliniers qui la chargent, de
+  face comme de flanc ; c'est l'inverse qui manquait : ils ne battaient pas une légion en marche. Leur tir passe de
+  100 à 70 ticks en multijoueur.
 - **Pistes écartées** :
   - le blé comme fourrage des cavaliers : les fermes demandent le même pré que l'élevage de porcs, sans asymétrie
     entre joueurs ;
@@ -1860,3 +1863,109 @@
 - Pas fait : un ordre qui poursuit les soldats ennemis (l'ordre « nettoyer » existe), un curseur propre au choix de la
   cible, le bouton dans la barre militaire de Julius (option `ui_show_military_sidebar`).
 - Réseau : nouvelle commande, nouvel état de la simulation : protocole à monter à la fusion.
+
+### D-088 — Moral et totaux par camp, arcs de triomphe, batailles scriptées ; les javeliniers tirent plus vite (M10.8, MG.5, précise D-058, D-077, D-083, D-084)
+- 2026-10-14 · **adoptée provisoirement**, *à valider* (tâches M10.8 et MG.5 ; Claude a tranché)
+- **Le moral d'origine** (`figure/formation.c`, `figure/formation_legion.c`) :
+  - plafond par troupe : légionnaires 80 (100 après l'académie), javeliniers et cavaliers 60 (80) ; une légion naît à
+    50, gagne 5 par mois au fort et, dehors, perd 5 par mois après 3 mois sans combat ;
+  - un soldat tué retire 5 à 20 points selon la part de la formation qu'il représentait (5 dans une légion de 16) ;
+  - chaque jour (`formation_update_monthly_morale_deployed`, quotidienne malgré son nom), une formation à 20 ou moins
+    fuit vers son fort ; la première fois, les autres légions de sa cité perdent 10 et ses ennemis gagnent 10
+    (`change_all_morale`). Des légionnaires au plafond cèdent vers 12 morts, javeliniers et cavaliers vers 8.
+- **Ce qui n'allait pas entre deux joueurs** : moral et totaux ne connaissaient que les envahisseurs de l'IA.
+  1. Une légion qui cédait décourageait les autres légions de son joueur, mais l'armée ennemie n'en tirait rien.
+  2. Les compteurs de combat d'une légion (tirs reçus, combat récent, tir) étaient effacés deux fois par jour dès que
+     sa cité n'avait aucun envahisseur : sous les javelots d'un joueur, une légion perdait entre deux salves sa
+     formation serrée et ses places.
+  3. Les soldats d'un joueur sur les terres d'un autre n'y étaient pas des « ennemis dans la cité » : l'immigration
+     continuait ; conseillers et habitants n'en disaient rien ; pas de musique de bataille.
+  4. Les tours ne tiraient qu'en présence d'une armée de l'IA (`enemy_army_total_enemy_formations`), donc jamais sur
+     un joueur (D-077 disait le contraire).
+  5. Aucun total des pertes par camp, et les arcs de triomphe ne venaient que des batailles lointaines, absentes en
+     multijoueur.
+
+  Ce qui allait déjà : le moral perdu à chaque mort (formation de la victime), la fuite, les totaux de légions et de
+  soldats de chaque cité (par tranche).
+- **Fait** (`mp/battle.c`, appels d'une ligne ailleurs ; rien en classique, ni tant que personne ne se bat) :
+  1. une légion qui cède donne +10 aux légions des joueurs qui combattent son propriétaire (après `change_all_morale`) ;
+  2. les compteurs de combat restent tant qu'un joueur ennemi a des soldats (`formation_legion_update`) ;
+  3. à la fin des figures de chaque cité, les soldats de ses ennemis sur ses terres comptent parmi ses ennemis
+     (`city_figures_enemies`, sauvegardé avec la cité) : l'immigration s'arrête au-delà de 3, comme pour des
+     envahisseurs ; conseillers, habitants et musique en parlent ;
+  4. une sentinelle de tour cherche une cible dès qu'un joueur ennemi a des soldats (`figuretype/wall.c`) ;
+  5. pertes de chaque camp : soldats tués et légions détruites, par paire de joueurs (morceau `mp_battle` du `.mpsav`,
+     dans la somme de contrôle ; une partie plus ancienne se charge sans pertes) ;
+  6. un triomphe (D-084) gagne un arc de triomphe à la cité du vainqueur (`city_buildings_earn_triumphal_arch`, comme
+     une bataille lointaine gagnée) ; la commande de construction l'accepte alors (D-085 refuse un arc non gagné) ;
+  7. conseiller militaire : « En guerre contre le joueur 2 ; soldats ennemis dans la cité : 16 » et, à la place des
+     batailles lointaines (sans objet en multijoueur), « Pertes : 8 soldats, 1 légion ; l'ennemi : 2 soldats ».
+- **Batailles scriptées** (`mp_battles`, CESAR §10.3) : carte préparée pour 2, terrain découvert de personne entre
+  les cités, 16 soldats par camp au plafond de leur moral, par commandes seulement. La troupe du joueur 1 arrive du sud
+  et se poste face au nord ; celle du joueur 2 part à 14 cases au nord (ou à l'est : de flanc) et charge, ou se poste à
+  8 cases et tire. La colonne (`FORMATION_COLUMN`, 4 × 4, la seule que le code protège des javelots : 1 dégât) est
+  réservée par le jeu aux légions passées par l'académie. Vainqueur (le camp qui tient quand l'autre est détruit ou
+  fuit), morts du joueur 1 / du joueur 2, ticks depuis la déclaration :
+
+| Bataille | Valeurs d'origine (80 × 4, tir 100) | MG.1 (136 × 10, tir 100) | MG.5 (136 × 10, tir 70) |
+|----------|-------------------------------------|--------------------------|-------------------------|
+| légion postée ; légion qui marche dessus | légion postée, 0 / 16, 450 | idem | idem |
+| légion postée ; javeliniers qui chargent | légion, 0 / 16, 220 | légion, 0 / 16, 320 | légion, 0 / 16, 320 |
+| légion postée ; javeliniers qui chargent de flanc | légion, 0 / 16, 270 | légion, 5 / 15, 370 | légion, 7 / 11, 370 |
+| javeliniers postés ; légion qui marche (du nord) | légion, 16 / 2, 370 | légion, 14 / 9, 570 | **javeliniers**, 11 / 14, 570 |
+| javeliniers postés ; légion qui marche (de l'est) | légion, 14 / 2, 420 | légion, 9 / 11, 570 | **javeliniers**, 6 / 14, 520 |
+| légion en double ligne ; javeliniers qui tirent | javeliniers, 13 / 0, 970 | idem | javeliniers, 13 / 0, 720 |
+| légion en colonne (académie) ; mêmes tirs | personne, 6 / 0, 6 000 | idem | javeliniers, 11 / 0, 5 670 |
+| javeliniers postés ; cavaliers qui chargent | cavaliers, 15 / 1, 270 | cavaliers (tous deux fuient), 8 / 12, 470 | **javeliniers**, 7 / 15, 320 |
+| légion postée ; cavaliers qui chargent | légion, 0 / 16, 270 | idem | idem |
+| cavaliers postés ; javeliniers qui chargent | cavaliers (tous deux fuient), 11 / 11, 370 | javeliniers, 16 / 0, 270 | idem |
+| caravane du joueur 2 qui rentre à la déclaration, chassée depuis 10 cases | cavaliers 50 ticks, javeliniers 95, légionnaires jamais (1 500) | idem | idem |
+
+- **Ce qu'on en apprend** :
+  - une légion postée en formation gagne toute charge : +4 en attaque et en défense de face, et ses 16 soldats frappent
+    tout ce qui passe à côté, à deux contre un. Même de flanc (−4 en défense, pas de bonus), les javeliniers qui la
+    chargent perdent ;
+  - une légion qui marche n'a pas ses bonus ; au contact, elle s'arrête et les retrouve : seul le tir pendant
+    l'approche la punit ;
+  - le moral décide souvent l'issue : javeliniers et cavaliers cèdent deux fois plus tôt que les légionnaires ;
+  - MG.1 a donné aux javeliniers une vraie mêlée (une légion qui les charge perd 9 soldats au lieu de 2), pas assez
+    pour gagner ; le tir n'en dépend pas : 16 javeliniers abattent une légion immobile en double ligne sans perte, et
+    seule la colonne les tient en respect ;
+  - les cavaliers perdent toutes les mêlées (1,56 fois moins forts, D-058) mais rattrapent une caravane qui fuit, ce
+    que les légionnaires ne font jamais (même vitesse qu'elle) ; les javeliniers, deux fois plus rapides, aussi.
+- **MG.5** : le risque de D-058 (les javeliniers meilleure troupe en terrain découvert) **ne se vérifie pas** ; c'est
+  le rôle voulu « ils gagnent contre une légion en marche » qui n'était pas tenu. **Réglage** : en multijoueur, un
+  javelot toutes les **70** ticks au lieu de 100 (points de vie, attaque, portée et dégâts inchangés ; table d'origine
+  en classique). Mesuré sur 8 approches d'une légion (10 à 16 cases, du nord et de l'est) : les javeliniers gagnent 7
+  fois et, la huitième, les deux camps fuient (à 100 : 0 fois ; à 80 : 5 ; à 60 : 8, en écrasant la légion, 5 morts
+  contre 16). La légion postée gagne toujours les charges ; immobile sous les tirs, elle tombe plus vite (720 ticks au
+  lieu de 970) ; la colonne tient toujours plus de quatre fois plus longtemps.
+- **Bornes** (`mp_battles`, chaque bataille rejouée identique) : une légion postée écrase une légion qui marche dessus
+  (≥ 12 morts contre ≤ 4) et les javeliniers qui la chargent (≥ 12 contre ≤ 4), et les bat aussi de flanc ; les
+  javeliniers battent une légion qui marche sur eux, du nord et de l'est ; ils abattent sans perte une légion immobile
+  en double ligne en 1 000 ticks au plus, et la colonne tient au moins quatre fois plus ; les cavaliers perdent contre
+  des javeliniers et sont écrasés par une légion ; des javeliniers qui chargent des cavaliers postés gagnent ; les
+  cavaliers rattrapent la caravane en 600 ticks au plus, les légionnaires jamais ; les pertes comptées par le jeu sont
+  celles des batailles.
+- **Pas mesurable en l'état** : le « rapport des pertes victime / agresseur entre 3 et 5 » de CESAR §10.3 n'a pas
+  d'unité commune (soldats, bâtiments, caravanes, habitants) ; à définir avec M11.1, les compteurs existent
+  (`mp_battle` pour les soldats, `mp_wrath` pour les dégâts).
+- **Tests** : `mp_war_morale` (chaque vérification échoue quand on inverse la ligne qui la fait passer : 7 inversions),
+  `mp_battles` (le tir remis à 100 fait échouer deux bornes ; sans le décompte des morts en mêlée ou par javelot, les
+  pertes ne sont plus comptées), `mp_troops_javelin` (tir à 70 en multijoueur). Captures : `tools/mp-battle-test.sh`
+  (partie à deux en pleine bataille, conseiller militaire de chacun : « Pertes : 8 soldats ; l'ennemi : 3 soldats »
+  chez l'un, « soldats ennemis dans la cité : 8 » et « Pertes : 3 soldats ; l'ennemi : 8 soldats » chez l'autre).
+- **Constats sans suite** : un soldat qui fuit peut disparaître au premier pas (aucun chemin vers sa place au fort),
+  comme dans l'original : ce n'est pas une perte infligée, elle n'est pas comptée. La commande de formation accepte la
+  colonne et la tortue pour une légion sans académie, que le jeu ne propose qu'après l'académie (`mp/actions.c`). Les
+  textes du jeu disent la tortue « imperméable aux attaques à distance », mais le code protège la colonne. Les sons de
+  combat propres à chaque camp (DESIGN §7) ne sont pas faits : chacun n'entend que les coups portés par ses soldats.
+- **À valider** :
+  - +10 aux légions de l'ennemi quand une légion cède ;
+  - les soldats ennemis comptent dans la cité seulement sur ses terres, et l'immigration s'arrête au-delà de 3 ;
+  - les tours tirent sur les soldats d'un joueur en guerre ;
+  - les pertes à la place des batailles lointaines dans le conseiller militaire ;
+  - un arc de triomphe par triomphe ;
+  - le tir des javeliniers toutes les 70 ticks ; leur flanc, c'est le tir : de flanc en mêlée, ils perdent.
+- Réseau : nouveau morceau de sauvegarde et règles de simulation changées (ennemis de la cité, tir des javeliniers) :
+  protocole à monter à la fusion. Classique : inchangé (parité verte).

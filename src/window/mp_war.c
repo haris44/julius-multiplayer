@@ -13,6 +13,7 @@
 #include "graphics/window.h"
 #include "input/input.h"
 #include "mp/actions.h"
+#include "mp/battle.h"
 #include "mp/colors.h"
 #include "mp/session.h"
 #include "mp/war.h"
@@ -97,6 +98,13 @@ int window_mp_war_advisor_text(uint8_t *text, int size)
             notice = p;
         }
     }
+    int enemies = mp_battle_enemy_soldiers_in_land(local);
+    if (text[0] && enemies > 0 && string_length(text) < size - 48) {
+        // "...; enemy soldiers in the city: 16" (M10.8)
+        string_copy(translation_for(TR_MP_MILITARY_ENEMIES_IN_CITY), text + string_length(text),
+            size - string_length(text));
+        string_from_int(text + string_length(text), enemies, 0);
+    }
     if (!text[0] && notice >= 0) {
         // "Notice: fighting with player 2 in 30 days"
         string_copy(translation_for(TR_MP_MILITARY_NOTICE), text, size);
@@ -106,6 +114,42 @@ int window_mp_war_advisor_text(uint8_t *text, int size)
         string_copy(translation_for(TR_MP_WAR_DAYS), text + string_length(text), size - string_length(text));
     }
     return text[0] != 0;
+}
+
+// "8 soldiers, 1 legion" (no legion: "8 soldiers")
+static void append_losses(uint8_t *text, int size, int soldiers, int legions)
+{
+    if (string_length(text) >= size - 40) {
+        return;
+    }
+    string_from_int(text + string_length(text), soldiers, 0);
+    string_copy(translation_for(soldiers == 1 ? TR_MP_MILITARY_SOLDIER : TR_MP_MILITARY_SOLDIERS),
+        text + string_length(text), size - string_length(text));
+    if (legions > 0) {
+        string_copy((const uint8_t *) ", ", text + string_length(text), size - string_length(text));
+        string_from_int(text + string_length(text), legions, 0);
+        string_copy(translation_for(legions == 1 ? TR_MP_MILITARY_LEGION : TR_MP_MILITARY_LEGIONS),
+            text + string_length(text), size - string_length(text));
+    }
+}
+
+int window_mp_war_advisor_losses_text(uint8_t *text, int size)
+{
+    text[0] = 0;
+    if (!window_mp_war_is_available()) {
+        return 0;
+    }
+    int local = mp_session_local_player_id();
+    int lost = mp_battle_soldiers_lost(local);
+    int killed = mp_battle_enemy_soldiers_killed(local);
+    if (!lost && !killed) {
+        return 0;
+    }
+    string_copy(translation_for(TR_MP_MILITARY_LOSSES), text, size);
+    append_losses(text, size, lost, mp_battle_legions_lost(local));
+    string_copy(translation_for(TR_MP_MILITARY_ENEMY_LOSSES), text + string_length(text), size - string_length(text));
+    append_losses(text, size, killed, mp_battle_enemy_legions_destroyed(local));
+    return 1;
 }
 
 // the other player shown on a row, or -1

@@ -8,6 +8,7 @@
 #include "figure/sound.h"
 #include "game/difficulty.h"
 #include "map/figure.h"
+#include "mp/battle.h"
 #include "mp/war.h"
 #include "mp/wrath.h"
 #include "sound/effect.h"
@@ -114,6 +115,7 @@ static void hit_opponent(figure *f)
         formation_update_morale_after_death(opponent_formation);
         if (mp_war_any_fighting()) {
             mp_wrath_figure_killed(FIGURE_OWNER(f->id), opponent); // players at war (M10.4, M10.5)
+            mp_battle_figure_killed(FIGURE_OWNER(f->id), opponent); // losses of each side (M10.8)
         }
     }
 }

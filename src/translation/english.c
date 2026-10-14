@@ -391,6 +391,13 @@ static translation_string all_strings[] = {
     {TR_MP_LEGION_ATTACKING, "Attacking"},
     {TR_MP_LEGION_ATTACK_PICK, "Click the target: a building or a tile of the enemy"},
     {TR_MP_LEGION_ATTACK_NO_TARGET, "No building of an enemy at war within reach of this tile"},
+    {TR_MP_MILITARY_ENEMIES_IN_CITY, "; enemy soldiers in the city: "},
+    {TR_MP_MILITARY_LOSSES, "Losses: "},
+    {TR_MP_MILITARY_ENEMY_LOSSES, "; the enemy: "},
+    {TR_MP_MILITARY_SOLDIER, " soldier"},
+    {TR_MP_MILITARY_SOLDIERS, " soldiers"},
+    {TR_MP_MILITARY_LEGION, " legion"},
+    {TR_MP_MILITARY_LEGIONS, " legions"},
 };
 
 void translation_english(const translation_string **strings, int *num_strings)
