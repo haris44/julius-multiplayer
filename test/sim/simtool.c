@@ -3260,9 +3260,10 @@ static int command_troops(void)
     game_rules_set_multiplayer(&rules);
     javelin = figure_properties_for_type(FIGURE_FORT_JAVELIN);
     CHECK(javelin->max_damage == 136 && javelin->attack_value == 10, "multiplayer: javelin throwers 136 hit points, attack 10");
-    CHECK(javelin->missile_attack_value == 4 && javelin->missile_delay == 100 && javelin->defense_value == 0 &&
+    CHECK(javelin->missile_attack_value == 4 && javelin->defense_value == 0 &&
         javelin->missile_defense_value == 0 && javelin->category == FIGURE_CATEGORY_ARMED,
-        "multiplayer: missile (4 damage, every 100), defences and category unchanged");
+        "multiplayer: missile (4 damage), defences and category unchanged");
+    CHECK(javelin->missile_delay == 70, "multiplayer: a javelin every 70 ticks instead of 100 (MG.5, D-088)");
     const figure_properties *legionary = figure_properties_for_type(FIGURE_FORT_LEGIONARY);
     const figure_properties *mounted = figure_properties_for_type(FIGURE_FORT_MOUNTED);
     CHECK(legionary->max_damage == 150 && legionary->attack_value == 10, "multiplayer: legionaries 150 x 10 unchanged");
@@ -9180,9 +9181,9 @@ typedef struct {
     int start[2];         // soldiers of player 1 (the stander) and of player 2
     int dead[2];
     int broke[2];         // whether its morale broke: it flees home
+    int counted[2];       // losses of each player as the game counts them (mp/battle.c)
     int ticks;            // from the declaration of war to the end of the fight
     int winner;           // 0: player 1, 1: player 2, -1: none
-    int direction;        // the direction the stander faced
     uint64_t checksum;
 } battle_result;
 
@@ -9200,10 +9201,11 @@ static int battle_over(int a, int b)
 // A battle from the start of the battles: in peace, the troop of player 1 comes to the field from the south and
 // stands there, the troop of player 2 at its start; player 1 declares a brutal war and the troop of player 2 charges
 // (or stands and shoots); runs until a side has no soldier left or flees (at most 6 000 ticks), then 300 ticks more
-// for the fights in progress. Both troops at the top of their morale, as after months at their fort.
+// for the fights in progress. Both troops at the top of their morale, as after months at their fort; a legion in the
+// tight formation that stops javelins (FORMATION_COLUMN, "column" in the game) went through the academy, as the game
+// asks.
 static int play_battle(const battle_armies *a, const battle_setup *s, const char *start_file, battle_result *r)
 {
-    int war_ticks = 0;
     memset(r, 0, sizeof(*r));
     if (!mp_savegame_read(start_file)) {
         return 0;
@@ -9211,6 +9213,9 @@ static int play_battle(const battle_armies *a, const battle_setup *s, const char
     int stander = a->legion[0][s->stander];
     int mover = a->legion[1][s->mover];
     int fx = a->field_x, fy = a->field_y;
+    if (s->stander_layout == FORMATION_COLUMN || s->stander_layout == FORMATION_TORTOISE) {
+        formation_get(stander)->has_military_training = 1; // the game offers these layouts after the academy only
+    }
     formation_change_morale(formation_get(stander), 100);
     formation_change_morale(formation_get(mover), 100);
     if (s->stander_layout >= 0) {
@@ -9222,28 +9227,25 @@ static int play_battle(const battle_armies *a, const battle_setup *s, const char
         return 0;
     }
     war_run(100);
-    r->direction = formation_get(stander)->direction;
     r->start[0] = alive_soldiers(stander);
     r->start[1] = alive_soldiers(mover);
     city_action(0, MP_ACTION_DECLARE_WAR, 1, MP_WAR_BRUTAL, 0);
     if (s->charges) {
         city_action(1, MP_ACTION_LEGION_MOVE, mover, fx, fy);
     }
-    if (getenv("BATTLE_TRACE")) {
-        int last0 = -1, last1 = -1;
-        for (int t = 0; t < 6000 && !battle_over(stander, mover); t += 10) {
-            war_run(10);
-            if (alive_soldiers(stander) != last0 || alive_soldiers(mover) != last1) {
-                last0 = alive_soldiers(stander);
-                last1 = alive_soldiers(mover);
-                printf("  t=%4d alive %2d (morale %3d) / %2d (morale %3d), fighting %d / %d\n", t + 10, last0,
-                    formation_get(stander)->morale, last1, formation_get(mover)->morale, fighting_against(0, 1),
-                    fighting_against(1, 0));
-            }
+    int trace = getenv("BATTLE_TRACE") != 0;
+    int last[2] = { -1, -1 };
+    while (!battle_over(stander, mover) && r->ticks < 6000) {
+        war_run(10);
+        r->ticks += 10;
+        if (trace && (alive_soldiers(stander) != last[0] || alive_soldiers(mover) != last[1])) {
+            last[0] = alive_soldiers(stander);
+            last[1] = alive_soldiers(mover);
+            printf("  t=%4d alive %2d (morale %3d) / %2d (morale %3d), fighting %d / %d\n", r->ticks, last[0],
+                formation_get(stander)->morale, last[1], formation_get(mover)->morale, fighting_against(0, 1),
+                fighting_against(1, 0));
         }
     }
-    RUN_UNTIL(battle_over(stander, mover), 10, 6000);
-    r->ticks = war_ticks;
     // the side out of the fight first loses: destroyed, or fleeing with its morale broken
     int legions[2] = { stander, mover };
     int out[2];
@@ -9261,6 +9263,7 @@ static int play_battle(const battle_armies *a, const battle_setup *s, const char
     }
     for (int side = 0; side < 2; side++) {
         r->dead[side] = r->start[side] - alive_soldiers(legions[side]);
+        r->counted[side] = mp_battle_soldiers_lost(side);
     }
     r->checksum = mp_checksum_state();
     return 1;
@@ -9274,7 +9277,63 @@ static void print_battle(const battle_setup *s, const battle_result *r)
         r->broke[0] ? ", stander fled" : "", r->broke[1] ? ", attacker fled" : "", r->ticks);
 }
 
-// the troops of D-058 against each other on open land, from the same start every time (CESAR §10.3)
+// a troop of player 1 hunts a caravan of player 2 (M10.3, D-058): it stands south of the main road; the caravan of
+// player 2 comes along it to player 1 and war is declared when it is 5 tiles east of the troop: the caravan turns back
+// home, and the troop chases it (ordered onto it every 25 ticks, as a player clicking). Ticks until it is taken, -1 when
+// it got away within `max_ticks`, -2 when the scene could not be set
+static int hunt_caravan(const battle_armies *a, int troop, const char *start_file, int max_ticks)
+{
+    int war_ticks = 0;
+    if (!mp_savegame_read(start_file)) {
+        return -2;
+    }
+    int hunter = a->legion[0][troop];
+    int x0, y0;
+    mp_mapgen_city_center(0, &x0, &y0);
+    int hx = x0 + 25, hy = y0 + 10;
+    setup_trade(16, 0, 1);
+    if (!legion_stands_at(hunter, hx, hy)) {
+        return -2;
+    }
+    RUN_UNTIL(caravan_of(1) && caravan_of(1)->y == y0 && caravan_of(1)->x <= hx + 5, 1, 6000);
+    if (!caravan_of(1) || caravan_of(1)->x > hx + 5 || caravan_of(1)->loads_sold_or_carrying <= 0) {
+        return -2;
+    }
+    int taken = mp_war_loads_taken() + mp_war_loads_lost();
+    city_action(0, MP_ACTION_DECLARE_WAR, 1, MP_WAR_BRUTAL, 0);
+    for (int t = 0; t < max_ticks; t += 5) {
+        figure *caravan = caravan_of(1);
+        if (!caravan) {
+            return -1;
+        }
+        if (t % 25 == 0) {
+            city_action(0, MP_ACTION_LEGION_MOVE, hunter, caravan->x, caravan->y);
+        }
+        war_run(5);
+        if (mp_war_loads_taken() + mp_war_loads_lost() != taken) {
+            return t + 5;
+        }
+    }
+    return -1;
+}
+
+enum {
+    BATTLE_LEGION_MARCHES_ON_LEGION,
+    BATTLE_JAVELINS_CHARGE_LEGION,
+    BATTLE_JAVELINS_CHARGE_FLANK,
+    BATTLE_LEGION_MARCHES_ON_JAVELINS,
+    BATTLE_LEGION_MARCHES_ON_JAVELINS_EAST,
+    BATTLE_JAVELINS_SHOOT_LEGION,
+    BATTLE_JAVELINS_SHOOT_TORTOISE,
+    BATTLE_MOUNTED_CHARGE_JAVELINS,
+    BATTLE_MOUNTED_CHARGE_LEGION,
+    BATTLE_JAVELINS_CHARGE_MOUNTED,
+    NUM_BATTLES
+};
+
+// the troops of D-058 against each other on open land, 16 soldiers a side, from the same start every time (CESAR §10.3):
+// the roles of D-058 as bounds (D-088): the legion holds the ground, javelin throwers win against a legion that marches
+// on them and shoot down one that stands in the open, mounted lose every fight but hunt caravans
 static int command_battles(const char *file)
 {
     int failures = 0;
@@ -9289,40 +9348,86 @@ static int command_battles(const char *file)
         printf("Unable to save\n");
         return 2;
     }
-    printf("battlefield at (%d, %d); javelin throwers %d x %d, legionaries %d x %d, mounted %d x %d\n",
-        armies.field_x, armies.field_y,
-        figure_properties_for_type(FIGURE_FORT_JAVELIN)->max_damage,
-        figure_properties_for_type(FIGURE_FORT_JAVELIN)->attack_value,
-        figure_properties_for_type(FIGURE_FORT_LEGIONARY)->max_damage,
-        figure_properties_for_type(FIGURE_FORT_LEGIONARY)->attack_value,
-        figure_properties_for_type(FIGURE_FORT_MOUNTED)->max_damage,
+    const figure_properties *javelins = figure_properties_for_type(FIGURE_FORT_JAVELIN);
+    printf("battlefield at (%d, %d); legionaries %d x %d, javelin throwers %d x %d (a javelin every %d ticks), mounted "
+        "%d x %d\n", armies.field_x, armies.field_y, figure_properties_for_type(FIGURE_FORT_LEGIONARY)->max_damage,
+        figure_properties_for_type(FIGURE_FORT_LEGIONARY)->attack_value, javelins->max_damage, javelins->attack_value,
+        javelins->missile_delay, figure_properties_for_type(FIGURE_FORT_MOUNTED)->max_damage,
         figure_properties_for_type(FIGURE_FORT_MOUNTED)->attack_value);
-    static const battle_setup BATTLES[] = {
+    static const battle_setup BATTLES[NUM_BATTLES] = {
         { "legion standing, legion marching on it", TROOP_LEGIONARIES, -1, TROOP_LEGIONARIES, 0, -14, 1 },
         { "legion standing, javelin throwers charging it", TROOP_LEGIONARIES, -1, TROOP_JAVELINS, 0, -14, 1 },
         { "legion standing, javelin throwers charging its flank", TROOP_LEGIONARIES, -1, TROOP_JAVELINS, 14, 0, 1 },
         { "javelin throwers standing, legion marching on them", TROOP_JAVELINS, -1, TROOP_LEGIONARIES, 0, -14, 1 },
+        { "javelin throwers standing, legion marching on them from the east", TROOP_JAVELINS, -1, TROOP_LEGIONARIES,
+            14, 0, 1 },
         { "legion standing, javelin throwers shooting at 8 tiles", TROOP_LEGIONARIES, -1, TROOP_JAVELINS, 0, -8, 0 },
-        { "legion in tortoise, javelin throwers shooting at 8 tiles", TROOP_LEGIONARIES, FORMATION_COLUMN,
+        { "legion in column (academy), javelin throwers shooting at 8 tiles", TROOP_LEGIONARIES, FORMATION_COLUMN,
             TROOP_JAVELINS, 0, -8, 0 },
         { "javelin throwers standing, mounted charging them", TROOP_JAVELINS, -1, TROOP_MOUNTED, 0, -14, 1 },
         { "legion standing, mounted charging it", TROOP_LEGIONARIES, -1, TROOP_MOUNTED, 0, -14, 1 },
         { "mounted standing, javelin throwers charging them", TROOP_MOUNTED, -1, TROOP_JAVELINS, 0, -14, 1 },
     };
-    int num_battles = (int) (sizeof(BATTLES) / sizeof(BATTLES[0]));
-    battle_result results[16];
-    for (int i = 0; i < num_battles; i++) {
-        if (!play_battle(&armies, &BATTLES[i], start, &results[i])) {
+    battle_result r[NUM_BATTLES];
+    for (int i = 0; i < NUM_BATTLES; i++) {
+        if (!play_battle(&armies, &BATTLES[i], start, &r[i])) {
             return 2;
         }
-        print_battle(&BATTLES[i], &results[i]);
-        printf("    (stander facing %d)\n", results[i].direction);
+        print_battle(&BATTLES[i], &r[i]);
     }
+    // a soldier who flees may also vanish at his first step, as in the original (no way to his place at the fort):
+    // not a loss inflicted by the enemy
+    const battle_result *melee = &r[BATTLE_LEGION_MARCHES_ON_LEGION];
+    const battle_result *shot = &r[BATTLE_JAVELINS_SHOOT_LEGION];
+    CHECK(melee->counted[1] == melee->dead[1] && melee->counted[0] == melee->dead[0] && shot->counted[0] >= 8 &&
+        shot->counted[0] <= shot->dead[0] && shot->counted[1] == 0,
+        "the losses of each side are counted, in melee and by javelins");
+    const battle_result *b = &r[BATTLE_LEGION_MARCHES_ON_LEGION];
+    CHECK(b->winner == 0 && b->dead[1] >= 12 && b->dead[0] <= 4,
+        "a legion standing in formation crushes a legion marching on it");
+    b = &r[BATTLE_JAVELINS_CHARGE_LEGION];
+    CHECK(b->winner == 0 && b->dead[1] >= 12 && b->dead[0] <= 4,
+        "a standing legion beats an equal number of javelin throwers charging it");
+    b = &r[BATTLE_JAVELINS_CHARGE_FLANK];
+    CHECK(b->winner == 0 && b->dead[1] > b->dead[0], "and when they charge its flank");
+    b = &r[BATTLE_LEGION_MARCHES_ON_JAVELINS];
+    const battle_result *east = &r[BATTLE_LEGION_MARCHES_ON_JAVELINS_EAST];
+    CHECK(b->winner == 0 && b->dead[1] > b->dead[0] && east->winner == 0 && east->dead[1] > east->dead[0],
+        "javelin throwers beat a legion marching on them, from the north or from the east");
+    b = &r[BATTLE_JAVELINS_SHOOT_LEGION];
+    const battle_result *tortoise = &r[BATTLE_JAVELINS_SHOOT_TORTOISE];
+    CHECK(b->winner == 1 && b->dead[1] == 0 && b->ticks <= 1000,
+        "javelin throwers shoot down a legion standing in double line, without loss, in 1 000 ticks");
+    CHECK(tortoise->ticks >= 4 * b->ticks && tortoise->dead[1] == 0,
+        "the column of a legion of the academy holds them off at least four times longer");
+    b = &r[BATTLE_MOUNTED_CHARGE_JAVELINS];
+    CHECK(b->winner == 0 && b->dead[1] > b->dead[0], "mounted charging javelin throwers lose");
+    b = &r[BATTLE_MOUNTED_CHARGE_LEGION];
+    CHECK(b->winner == 0 && b->dead[1] >= 12 && b->dead[0] <= 4, "mounted charging a legion are crushed");
+    b = &r[BATTLE_JAVELINS_CHARGE_MOUNTED];
+    CHECK(b->winner == 1 && b->dead[0] > b->dead[1], "javelin throwers charging mounted win");
+
+    // mounted hunt caravans: a caravan that turns back at the declaration of war gets away from legionaries
+    int hunts[NUM_TROOPS];
+    for (int troop = 0; troop < NUM_TROOPS; troop++) {
+        hunts[troop] = hunt_caravan(&armies, troop, start, 1500);
+        if (hunts[troop] == -2) {
+            printf("the hunt of the %s could not be set\n", TROOP_NAMES[troop]);
+            return 2;
+        }
+        printf("%-58s %s", TROOP_NAMES[troop], hunts[troop] < 0 ? "the caravan gets away (1 500 ticks)\n" : "");
+        if (hunts[troop] >= 0) {
+            printf("take the caravan after %d ticks\n", hunts[troop]);
+        }
+    }
+    CHECK(hunts[TROOP_MOUNTED] >= 0 && hunts[TROOP_MOUNTED] <= 600 && hunts[TROOP_LEGIONARIES] < 0,
+        "mounted catch a caravan running home within 600 ticks; legionaries never do");
+
     battle_result again;
-    play_battle(&armies, &BATTLES[0], start, &again);
-    CHECK(again.checksum == results[0].checksum && again.ticks == results[0].ticks &&
-        again.dead[0] == results[0].dead[0] && again.dead[1] == results[0].dead[1],
-        "a battle played again from the same start: the same fight, the same checksum");
+    play_battle(&armies, &BATTLES[BATTLE_LEGION_MARCHES_ON_JAVELINS], start, &again);
+    b = &r[BATTLE_LEGION_MARCHES_ON_JAVELINS];
+    CHECK(again.checksum == b->checksum && again.ticks == b->ticks && again.dead[0] == b->dead[0] &&
+        again.dead[1] == b->dead[1], "a battle played again from the same start: the same fight, the same checksum");
     remove(start);
 #undef CHECK
     printf("%s\n", failures ? "DIFFERENT: the troops do not fight as designed" :
@@ -9495,7 +9600,7 @@ static int command_warmorale(const char *file)
     }
 
     // the counters of the fights (missiles, melee) stay while the enemy is a player: as against invaders, a legion
-    // shot at keeps its tortoise and its places
+    // shot at keeps its formation and its places
     if (!mp_savegame_read(start)) {
         return 2;
     }
@@ -9514,7 +9619,7 @@ static int command_warmorale(const char *file)
             lowest = formation_get(legion1)->missile_attack_timeout;
         }
     }
-    printf("javelins of player 2 shoot at the tortoise of player 1 from tick %d: its counter of missile attacks "
+    printf("javelins of player 2 shoot at the column of player 1 from tick %d: its counter of missile attacks "
         "never below %d in 400 ticks\n", first_hit, lowest);
     CHECK(first_hit < 1000 && lowest > 0,
         "a legion shot at by the javelin throwers of a player keeps its counter of missile attacks between volleys");
