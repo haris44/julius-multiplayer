@@ -26,8 +26,12 @@ le temps de céder à la pression commerciale.
   - MG.1 à MG.4 : javeliniers renforcés, bois à la caserne (D-083) ;
   - M10.4, M10.5, M10.7 : motif et prix des guerres, triomphes, colère de César, avertissement, ultimatum, ennemi de
     Rome, armée trop puissante (D-084) ;
-  - en cours à la fin de l'entrée : M10.6 (expédition punitive), ordre « attaquer » (reste de M10.2), M10.8 et MG.5.
-- Protocole 23 → 29. 255 tests.
+  - M10.6 : expédition punitive de César, disgrâce, pertes des fautifs, option du salon pour la seconde (D-086) ;
+  - M10.2 : ordre « attaquer » d'une légion (D-087) ;
+  - M10.8, MG.5 : moral et pertes de chaque camp, tours qui tirent sur les soldats ennemis, arcs de triomphe,
+    batailles en ctest ; les javeliniers tirent toutes les 70 ticks pour battre une légion en marche (D-088) ;
+  - deux trous de validation des commandes fermés : arc de triomphe non gagné, formations réservées à l'académie.
+- Protocole 23 → 32. 258 tests. M10 et MG sont cochés.
 
 **Appris**
 - Les worktrees des agents partent parfois encore de Julius amont : la consigne doit donner le commit attendu et la
@@ -39,12 +43,15 @@ le temps de céder à la pression commerciale.
 - Plusieurs fusions de `simtool.c` : quand deux branches ajoutent de gros blocs au même endroit, appliquer les ajouts
   d'une branche comme un patch sur l'autre plutôt que de résoudre les conflits entremêlés.
 
-**Prochaine étape** : fusionner M10.6, l'ordre « attaquer », M10.8 et MG.5 ; une version GitHub pour un essai de
-guerre à plusieurs.
+**Prochaine étape** : l'essai de guerre d'Alexandre à plusieurs sur la version GitHub ; ses réponses aux points à
+valider ; puis les tâches de paix de M9 et l'équilibrage (M11).
 
 **Points ouverts (à valider par Alexandre)** : D-076 (salaire du gouverneur) à garder ou défaire ; D-080 (coût d'une
 menace retirée) ; D-081 (portes, aqueducs) ; D-082 (15 cases autour du pont) ; D-083 (5 chargements de bois) ; D-084
-(motifs, triomphe à 4 morts, part du défenseur) ; D-077, D-078.
+(motifs, triomphe à 4 morts, part du défenseur) ; D-086 (expédition sans échelle de difficulté, option du salon dans
+la colonne de droite) ; D-087 (rayon de 10 cases) ; D-088 (javeliniers à 70 ticks, tours, immigration) ; D-077,
+D-078. À surveiller : un soldat de César ou d'une invasion de l'IA attaque les figures d'une autre cité sur sa case
+(combat au contact sans filtre de cité, D-086).
 
 ---
 

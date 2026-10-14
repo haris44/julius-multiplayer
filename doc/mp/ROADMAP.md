@@ -1,9 +1,8 @@
 # Feuille de route
 
 > **Jalon en cours : M10, la guerre** (2026-10-13, Alexandre : « lance le développement de l'aspect guerrier »).
-> Ordre : M10.1 (retrait d'une déclaration, D-080), puis en parallèle M10.2 (portes ennemies, aqueduc de César cassé
-> en guerre, terre de César autour du pont) et MG.1 à MG.4 (troupes), puis M10.4, M10.5 et M10.7 (motifs, colère,
-> armée trop puissante), M10.6 (expédition punitive), M10.8 et MG.5. M9 reste ouvert pour ses tâches de paix.
+> **Fait le 2026-10-14** : M10.1 à M10.8 et MG.1 à MG.5 (D-080 à D-088), en attente de l'essai d'Alexandre. Ensuite :
+> les tâches de paix restantes de M9 (M9.2 à M9.4, M9.6 à M9.9), puis M11 (équilibrage).
 >
 > **Jalon précédent : M9, César juge** (D-050, D-053, plan complet : [CESAR.md](CESAR.md)). César revient comme
 > arbitre : lauriers de la cité et de César, campagnes, demandes ; la première cité au score gagne. Jouable en paix
@@ -1019,8 +1018,8 @@ César revient comme arbitre de la partie. Jouable en paix et **seul** : livré 
 ## M10 — La guerre sous l'œil de César ([CESAR.md](CESAR.md) §7, DESIGN §7)
 > Une première tranche jouable est faite avec T5.5 (D-077) : état de guerre par paire, déclaration brutale ou
 > honorable, paix des deux, légions qui se battent et abattent les bâtiments chez l'ennemi, caravanes prises. Les
-> portes, les murs et l'aqueduc de César en guerre suivent (D-081), puis l'ordre « attaquer » (D-087). M10.1 à M10.7
-> sont faits (D-080 à D-087) ; reste M10.8 (moral par camp, arcs de triomphe, batailles simulées).
+> portes, les murs et l'aqueduc de César en guerre suivent (D-081), puis l'ordre « attaquer » (D-087). **M10 est fait**
+> (2026-10-14, D-080 à D-088), avec MG : reste l'essai d'Alexandre et ses réponses aux points « à valider ».
 - [x] **M10.1** Hostilité par propriétaire et état de guerre par paire de joueurs : déclaration (commande, annonce ;
   guerre honorable avec 3 mois de préavis, ou brutale et immédiate, D-053), paix proposée des deux côtés. En classique, la matrice actuelle exactement.
   *Fait* avec T5.5 (D-077), plus la demande d'Alexandre du 2026-10-13 (D-080) : **pendant le préavis, le déclarant

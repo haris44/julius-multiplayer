@@ -99,7 +99,12 @@ Windows sont récentes et encore peu essayées.
   déclaré peut **se rétracter** : la menace laisse à l'autre le temps de céder à la pression du commerce coupé.
   L'autre peut aussi frapper le premier par une guerre brutale. La paix se signe quand les deux la proposent.
 - En guerre, les légions se battent chez l'ennemi, abattent ses bâtiments, ses murs et ses portes, coupent l'aqueduc
-  qui l'alimente et prennent ses caravanes. Les portes d'un joueur n'arrêtent que les soldats de ses ennemis.
+  qui l'alimente et prennent ses caravanes. Les portes d'un joueur n'arrêtent que les soldats de ses ennemis, et ses
+  tours tirent sur eux.
+- L'ordre **« Attaquer »** de la fenêtre d'une légion : on désigne un bâtiment ou une case de l'ennemi ; la légion y
+  marche, puis abat un à un ses bâtiments à 10 cases autour.
+- Le conseiller militaire donne la guerre en cours, les soldats ennemis dans la cité et les pertes des deux camps.
+  Une légion ennemie détruite dans une guerre juste rapporte aussi un arc de triomphe.
 - Autour du pont de César, sur 15 cases, rien ne se bâtit (seulement des routes) : personne ne peut fermer le pont.
 - **César juge les guerres**. Le jeu détermine le motif : riposte (l'autre vous a menacé ou attaqué dans l'année),
   mandat de César (contre un « ennemi de Rome »), ou sans motif. Une guerre sans motif coûte 15 lauriers, une guerre
@@ -124,15 +129,14 @@ Windows sont récentes et encore peu essayées.
   l'expédition punitive de César aussi : ce n'est pas une invasion de l'IA.
 - « Seconde expédition de César » : par défaut, « elle frappe comme la première » ; « Rome reprend la province » :
   la partie s'arrête, sans vainqueur.
-- **Trois troupes, trois coûts** : légionnaires payés en armes, javeliniers renforcés (136 points de vie, 10 d'attaque)
-  et payés d'un chargement de bois chacun, que la caserne reçoit des entrepôts (le bois est réservé aux joueurs de la
+- **Trois troupes, trois coûts** : légionnaires payés en armes, javeliniers renforcés (136 points de vie, 10 d'attaque,
+  un tir plus rapide) et payés d'un chargement de bois chacun, que la caserne reçoit des entrepôts (le bois est réservé aux joueurs de la
   côte), cavaliers gratuits et rapides.
 - Brouillard de guerre, en option : on ne voit que ce qu'on a découvert.
 - Pause pour tout le monde (touche P). La partie se sauvegarde et se reprend depuis le salon, avec ses règles.
 
 ## À venir
 
-- **La fin de la guerre** : l'ordre « attaquer » des légions, le moral de chaque camp et les arcs de triomphe.
 - Fêtes et campagnes de César qui rapportent des lauriers, et ses demandes adressées à toute la province.
 - La hausse des prix de l'empire quand un joueur arrête le commerce.
 
