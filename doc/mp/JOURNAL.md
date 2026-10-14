@@ -31,7 +31,7 @@ le temps de céder à la pression commerciale.
   - M10.8, MG.5 : moral et pertes de chaque camp, tours qui tirent sur les soldats ennemis, arcs de triomphe,
     batailles en ctest ; les javeliniers tirent toutes les 70 ticks pour battre une légion en marche (D-088) ;
   - deux trous de validation des commandes fermés : arc de triomphe non gagné, formations réservées à l'académie.
-- Protocole 23 → 32. 258 tests. M10 et MG sont cochés.
+- Protocole 23 → 32. 259 tests. M10 et MG sont cochés.
 
 **Appris**
 - Les worktrees des agents partent parfois encore de Julius amont : la consigne doit donner le commit attendu et la
