@@ -1,0 +1,70 @@
+# Real game: Caesar's punitive expedition in a game alone from the lobby (M10.6, see tools/mp-expedition-test.sh).
+# Alone, nobody wages war: the test command addwrath brings the gauge to 100. The lobby option "Caesar's second
+# expedition: Rome takes the province back" is chosen: the first expedition strikes, the second one ends the game.
+wait 10
+click 400 500
+wait 10
+# main menu: Multiplayer; a new game, one player, map 1, the second expedition ends the game, host, start
+click 400 172
+wait 10
+click 180 170
+wait 2
+click 268 350
+wait 2
+click 338 418
+wait 2
+click 560 452
+wait 5
+mouse 400 300
+wait 5
+screenshot build/automation/expedition-lobby.png
+click 240 466
+wait 5
+click 240 466
+mpwait 0
+wait 5
+# Caesar's letter of welcome
+key Return
+wait 3
+# the gauge at 100: the next month brings the warning, the ultimatum and the expedition, after the message of the
+# original game ("A legion attacks us"), whose button goes to the legions
+addwrath 1000
+ticks 800
+wait 5
+screenshot build/automation/expedition-message.png
+click 160 245
+wait 10
+key Return
+wait 5
+key Return
+wait 5
+screenshot build/automation/expedition-letter.png
+key Return
+wait 5
+# Caesar's legions march from the arrival of the city
+ticks 150
+wait 5
+screenshot build/automation/expedition-legions.png
+# the imperial advisor: the laurels lost, the gauge at 30, the disgrace
+key 3
+wait 5
+screenshot build/automation/expedition-imperial.png
+key Escape
+wait 3
+# the letters of an expedition destroyed (20 laurels) and of one gone (display only)
+caesarletter 6 200
+wait 5
+screenshot build/automation/expedition-defeated.png
+key Return
+wait 3
+caesarletter 7 0
+wait 5
+screenshot build/automation/expedition-left.png
+key Return
+wait 3
+# a second expedition: Rome takes the province back, the game ends without winner
+addwrath 1000
+ticks 800
+wait 10
+screenshot build/automation/expedition-rome.png
+quit

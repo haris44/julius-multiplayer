@@ -18,7 +18,8 @@ typedef enum {
     MP_LOBBY_RULE_END,
     MP_LOBBY_RULE_INVASIONS,
     MP_LOBBY_RULE_FOG,
-    MP_LOBBY_RULE_MAP  /**< Prepared map of a new game: map 1, map 2, drawn by lot (T4.14) */
+    MP_LOBBY_RULE_MAP,  /**< Prepared map of a new game: map 1, map 2, drawn by lot (T4.14) */
+    MP_LOBBY_RULE_SECOND_EXPEDITION /**< A second punitive expedition: like the first, or Rome takes the province */
 } mp_lobby_rule;
 
 /**

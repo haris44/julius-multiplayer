@@ -34,6 +34,7 @@ void game_rules_default_multiplayer_settings(game_rules_settings *settings)
     settings->fog_of_war = 1;
     settings->caesar_score = MP_CAESAR_DEFAULT_SCORE;
     settings->prepared_map = GAME_MAP_1; // the lobby proposes a map drawn by lot; the tests keep map 1
+    settings->rome_takes_province = 0; // a lobby option, off by default (D-053)
 }
 
 const game_rules_settings *game_rules_multiplayer_settings(void)
@@ -104,6 +105,11 @@ int game_rules_score_years(void)
     return data.multiplayer.score_years;
 }
 
+int game_rules_rome_takes_province(void)
+{
+    return data.mode == GAME_MODE_MULTIPLAYER ? data.multiplayer.rome_takes_province : 0;
+}
+
 int game_rules_settings_caesar_score(const game_rules_settings *settings)
 {
     return settings->caesar_score > 0 ? settings->caesar_score : MP_CAESAR_DEFAULT_SCORE;
@@ -131,7 +137,8 @@ int game_rules_settings_valid(const game_rules_settings *settings)
         settings->score_years >= 0 && settings->score_years <= MAX_SCORE_YEARS &&
         is_yes_no(settings->territories) && is_yes_no(settings->fog_of_war) &&
         settings->caesar_score >= 0 && settings->caesar_score <= MAX_CAESAR_SCORE &&
-        settings->prepared_map >= GAME_MAP_1 && settings->prepared_map <= GAME_MAP_RANDOM;
+        settings->prepared_map >= GAME_MAP_1 && settings->prepared_map <= GAME_MAP_RANDOM &&
+        is_yes_no(settings->rome_takes_province);
 }
 
 void game_rules_save_state(buffer *buf)
@@ -148,6 +155,7 @@ void game_rules_save_state(buffer *buf)
     buffer_write_i32(buf, data.multiplayer.fog_of_war);
     buffer_write_i32(buf, data.multiplayer.caesar_score);
     buffer_write_i32(buf, data.multiplayer.prepared_map);
+    buffer_write_i32(buf, data.multiplayer.rome_takes_province);
 }
 
 int game_rules_read_state(buffer *buf, game_rules_settings *settings)
@@ -164,6 +172,7 @@ int game_rules_read_state(buffer *buf, game_rules_settings *settings)
     settings->fog_of_war = buffer_read_i32(buf);
     settings->caesar_score = buffer_read_i32(buf); // 0 (the default score) in games saved before
     settings->prepared_map = buffer_read_i32(buf); // 0 (map 1, the only one then) in games saved before
+    settings->rome_takes_province = buffer_read_i32(buf); // 0 (off) in games saved before (M10.6)
     return mode;
 }
 

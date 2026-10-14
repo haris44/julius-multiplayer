@@ -10,6 +10,7 @@
 #include "game/rules.h"
 #include "game/time.h"
 #include "mp/caesar_rules.h"
+#include "mp/expedition.h"
 #include "mp/session.h"
 
 #include <string.h>
@@ -368,9 +369,12 @@ void mp_caesar_update_city_month(void)
         data.gift_cooldown[p]--;
     }
     compute_notes(data.notes[p]);
+    int disgrace = mp_expedition_disgrace_months() > 0;
     for (int note = 0; note < MP_NOTE_MAX; note++) {
-        // tenths of a laurel: weight * note / 100, the remainder kept for the next months
-        int hundredths = NOTE_WEIGHTS[note] * data.notes[p][note] + data.remainders[p][note];
+        // tenths of a laurel: weight * note / 100, the remainder kept for the next months; halved while the province
+        // is in disgrace after a punitive expedition (CESAR §7.4, D-086)
+        int earned = NOTE_WEIGHTS[note] * data.notes[p][note];
+        int hundredths = (disgrace ? earned / 2 : earned) + data.remainders[p][note];
         data.laurels[p][note] += hundredths / 100;
         data.remainders[p][note] = hundredths % 100;
     }

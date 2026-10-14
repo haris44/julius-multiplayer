@@ -1698,3 +1698,102 @@
   le menu refuse pour les matières et la nourriture (D-065), mais pas l'arc de triomphe, que le menu n'offre qu'à une
   cité qui l'a gagné. Elle le refuse désormais aussi, en multijoueur (`mp/session.c`) ; `mp_caesar_road_under_gate`
   le vérifie (échoue sans le refus).
+
+### D-086 — L'expédition punitive de César : ses légions dans chaque cité, la disgrâce, les pertes des fautifs, la seconde expédition (M10.6, précise D-053, D-084)
+- 2026-10-14 · **adoptée provisoirement**, *à valider* (tâche M10.6 ; Claude a tranché les points que CESAR §7.4 laissait
+  ouverts)
+- **Module** `mp/expedition.c`, appelé une fois pour le monde après la colère du mois et avant la fin de partie
+  (`game/tick.c`). Son état (expéditions envoyées, mois de disgrâce ; par cité : état de la dernière expédition, mois
+  restants, soldats débarqués, lauriers perdus) est le morceau `mp_expedition` du `.mpsav` (version 1), donc dans la
+  somme de contrôle. Une partie plus ancienne se charge sans expédition ni disgrâce ; une expédition qu'elle notait due
+  (D-084) part le jour suivant. Rien en classique.
+- **Quand** : au bilan du mois où la jauge atteint 100 (lue avant sa baisse, D-084), le même tick, après la baisse du
+  mois : les parts sont celles que la baisse a laissées.
+- **Les légions** : les légionnaires de César de l'original (`FIGURE_ENEMY_CAESAR_LEGIONARY`, attaque 13, défense 2),
+  en colonne, débarquent au point d'arrivée de chaque cité (celui des immigrants), dans le contexte de la cité, et
+  visent ses plus beaux bâtiments : c'est le code de l'invasion de César d'origine (`start_invasion` de
+  `scenario/invasion.c`, coupé en deux pour sauter l'ajustement de la difficulté :
+  `scenario_invasion_start_caesar_expedition`), avec son message « Une légion nous attaque » et son bouton vers les
+  légions. Nombre, avec p la part d'un joueur et P celle du principal responsable (plus grande part, plus petit
+  numéro à égalité), en entiers arrondis vers le bas :
+  - cité innocente (part nulle) : **32** ;
+  - principal responsable : **96 + 48 × P / (somme des parts)** : 144 s'il porte toute la colère, 120 à parts égales
+    entre deux, 108 entre quatre ;
+  - autre responsable : **32 + (soldats du principal − 32) × p / P** : autant que le principal à part égale ;
+  - la **difficulté ne change pas** ces nombres (l'original réduit ou grossit toute invasion, celle de César comprise,
+    de 40 à 120 %) ;
+  - au plus 150 (borne de l'original, jamais atteinte), et jamais plus que les figures que la cité peut encore créer
+    (1 000 par cité ; sinon les soldats de trop écriraient dans la figure 0, commune à toutes) ; formations de
+    l'original : une jusqu'à 16 soldats, deux jusqu'à 32, trois au-delà ;
+  - **« Invasions IA : non » ne l'arrête pas** : ce n'est pas une invasion de l'IA, son chemin ne lit pas cette règle.
+- **Combat** : comme les envahisseurs de l'original, dans leur cité : ils ne cherchent leurs cibles que parmi ses
+  figures et ses bâtiments (D-027), et leurs dégâts comptent pour elle (paix, bâtiments détruits). Les règles de
+  retraite par la faveur ne s'appliquent pas (`process_caesar_invasion` reste neutralisé). Comme ceux de l'IA, un
+  soldat de César qui marche sur la case d'une figure d'une autre cité l'attaque (le combat au contact ne regarde pas la
+  cité, déjà vrai pour les invasions de l'IA) : à surveiller, même si chaque point d'arrivée est devant sa cité.
+- **Vaincue** : quand plus aucun soldat de l'expédition n'est debout dans la cité avant le terme (tués, ou enfuis parce
+  que leur moral s'effondre, ce que l'original compte aussi comme une victoire), relevé chaque jour : la cité gagne
+  **20 lauriers** (source « expédition », `MP_LAURELS_PUNISHMENT`), son joueur reçoit une lettre, tous une annonce
+  (« Joueur 1 a vaincu les légions de César »).
+- **Repartie** : au bout de **12 mois** (comptés aux bilans de mois), les légions repartent vers leur point d'arrivée,
+  comme celles de l'original qui se retirent (`formation_caesar_retreat`, redit chaque jour pour les soldats qui se
+  battaient), et disparaissent au bord de la carte : rien à gagner ; une lettre au joueur de la cité, une annonce à
+  tous.
+- **Pertes** (source « expédition ») : le principal responsable perd **25 %** de ses lauriers, un autre responsable
+  **25 % × p / P** des siens, arrondi vers le bas ; rien si ses lauriers sont nuls ou négatifs. Les innocents ne
+  perdent que la disgrâce et les dégâts.
+- **Paix** : toutes les guerres déclarées, préavis compris, prennent fin comme une paix signée (D-084 : combats arrêtés,
+  légions rentrées, déclarant lié 12 mois), avec l'annonce « paix imposée par César » ; l'ultimatum en cours prend fin
+  avec elles, sans lettre de paix imposée (celle de l'expédition le dit). À ce moment, une guerre peut être en préavis
+  ou en combat : ultimatum émis le même mois ou avant et pas encore échu, ou guerre déclarée après une paix imposée.
+  Si le délai d'un ultimatum échoit le même mois, sa paix est déjà imposée (avant les seuils).
+- **Jauge** : ramenée à **30** ; chaque part suit en proportion (× 30 / jauge, arrondie vers le bas, comme la baisse
+  mensuelle). Les étapes repartent de là : nouvel avertissement à 40, nouvel ultimatum à 70, nouvelle expédition à 100.
+- **Disgrâce** : pendant les **12 bilans de mois** suivants, les lauriers des cinq notes de chaque cité sont divisés
+  par deux (poids × note / 2, les restes gardés d'un mois à l'autre) ; le coût de l'armée trop puissante, les cadeaux
+  et le reste ne changent pas. Le conseiller impérial affiche les mois restants, et les lauriers de l'expédition.
+- **Seconde expédition** : option du salon « Seconde expédition de César : elle frappe comme la première » (par
+  défaut, D-053) ou « Rome reprend la province ». C'est une règle de la partie comme les autres
+  (`rome_takes_province`, à la fin des règles : sauvegardée, envoyée avec l'accueil et les messages du salon, montrée à
+  tous, l'hôte seul la change ; 0 dans les parties plus anciennes). Sans elle, chaque expédition frappe comme la
+  première (mêmes nombres, mêmes pertes, nouvelle disgrâce de 12 mois). Avec elle, quand une expédition est due et
+  qu'une autre est déjà partie, aucune ne part : la partie s'arrête sans vainqueur
+  (`mp_endgame_rome_takes_province`, gardé dans le morceau `mp_endgame`), l'écran de fin titre « Rome reprend la
+  province » et donne les lauriers de chacun, sans héritier. La première frappe normalement.
+- **Lettres** (français et anglais) : au débarquement, à tous (soldats dans la cité du joueur, principal responsable
+  et ses 25 %, lauriers perdus par le joueur, 12 mois de disgrâce, 20 lauriers pour qui détruit les légions) ; à la
+  cité qui les détruit ; à la cité qu'elles quittent.
+- **Seul** : sans adversaire, ni guerre ni colère (il n'y a pas de paire de joueurs) : pas d'expédition. La commande de
+  test `addwrath` peut en forcer une (captures).
+- **Salon** : la règle est sur deux lignes à droite, sous « Rejoindre » : la colonne des règles n'a plus de place, et
+  les scripts d'automatisation cliquent les règles là où elles sont.
+- **Mesuré** :
+  - carte pour 2, difficile (`mp_caesar_expedition`) : le joueur 2 mène une guerre brutale sans motif et porte toute la
+    colère : **144** soldats chez lui (3 formations de 48), **32** chez le joueur 1 (2 de 16) ; il perd 12,5 de ses 50
+    lauriers, le joueur 1 rien ; paix, jauge à 30. Les **4 légions** du joueur 1 (64 légionnaires), envoyées sur
+    elles, détruisent ses 32 soldats de César en **1 300 ticks** (un mois et demi) et en perdent 32 : +20 lauriers. Les
+    144 du joueur 2 (sa légion de 16 reste au fort) sont tous debout au bout de 12 mois, puis repartent : partis
+    **350 ticks** plus tard. Seconde expédition, option désactivée : 32 et 144 soldats de plus, 9,3 lauriers perdus sur
+    37,5 ; option activée : fin sans vainqueur ;
+  - carte pour 3, facile, parts de 60 et 40 % (58,2 et 38,8 après la baisse du mois) : **124** et **93** soldats chez
+    les responsables, **20** chez l'innocent, qui ne pouvait plus créer que 20 figures (32 sinon) ; pertes de 25 et
+    16,6 lauriers sur 100 ; personne ne les combat : toutes repartent au bout de 12 mois, parties 300 ticks plus tard ;
+  - Valentia seule, jauge forcée : 144 soldats ; lauriers des notes 35,8 sur les 12 mois de disgrâce (35,7 attendus
+    pour la moitié des notes de chaque mois), puis 14,2 en 3 mois (14,0 attendus en entier).
+- **Tests** : `mp_caesar_expedition` (ce qui précède, avec « Invasions IA : non » ; partie reprise pendant
+  l'expédition et relue deux fois : identique tick après tick sur 1 700 ticks ; partie plus ancienne ; seul ;
+  classique), `mp_caesar_wrath` (à 100, l'expédition part), `mp_lobby_rules` et `mp_lan_lobby_rules` (règle par défaut,
+  changée après « Héberger », vue par les clients), `mp_lobby_bad_rules` (une valeur hors de oui/non est refusée).
+  Chaque vérification nouvelle échoue quand on inverse la ligne qui la fait passer (33 inversions) ; seules ne s'inversent pas celles qui relèvent de l'existant (caractéristiques des
+  légionnaires de l'original, jauge immobile seul et en classique). Captures : `tools/mp-expedition-test.sh` (salon,
+  message et lettre, légions dans la cité, conseiller impérial, lettres, écran de fin).
+- **À valider** :
+  - la difficulté ne change pas le nombre de soldats (à « facile », l'original en enverrait 60 %) ;
+  - les autres responsables : soldats et pertes selon leur part rapportée à celle du principal ;
+  - des légions enfuies par leur moral comptent comme vaincues (20 lauriers) ;
+  - la disgrâce ne touche que les lauriers des notes ;
+  - les lettres « vaincue » et « repartie » ne vont qu'au joueur de la cité, une annonce aux autres ;
+  - la place de la règle dans le salon (à droite, sous « Rejoindre »).
+- Réseau : une règle de plus dans les messages du salon et de l'accueil, un morceau de plus dans l'état : protocole à
+  monter à la fusion.
+- Classique : inchangé (le découpage de `start_invasion` ne change rien : tests de parité verts).

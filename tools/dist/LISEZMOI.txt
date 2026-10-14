@@ -72,7 +72,9 @@ Le pare-feu de chaque ordinateur doit laisser passer le jeu (ports 27400 en TCP 
   l'adresse affichée chez l'hôte, puis « Rejoindre »).
 - L'hôte peut changer les règles jusqu'à « Lancer la partie ». Les autres voient ses réglages, tenus à jour, sans
   pouvoir les changer : la difficulté est la même pour tous. « Invasions IA : non » coupe toutes les attaques de
-  l'IA, Mars compris ; les révoltes de gladiateurs restent. Une partie reprise garde les règles de sa sauvegarde.
+  l'IA, Mars compris ; les révoltes de gladiateurs restent, et l'expédition punitive de César aussi. « Seconde
+  expédition de César » : par défaut, « elle frappe comme la première » ; « Rome reprend la province » : la partie
+  s'arrête, sans vainqueur. Une partie reprise garde les règles de sa sauvegarde.
 - Quand tout le monde est là, l'hôte clique sur « Lancer la partie ».
 
 En jeu : chacun a sa cité, ses finances et ses conseillers. Le bandeau en bas à gauche rappelle votre numéro de
@@ -134,7 +136,8 @@ Les règles propres au multijoueur :
 - César juge les guerres : sans motif, une guerre coûte 15 lauriers (brutale : 30), payés quand les combats
   commencent ; une riposte ou une guerre contre un « ennemi de Rome » est juste, et détruire une légion ennemie
   rapporte alors 20 lauriers. Sa colère, commune à tous (jauge dans le bandeau), monte avec les guerres : à 40 il
-  avertit, à 70 il impose la paix dans les 3 mois. Il tolère une légion par 5 000 habitants (au moins 2) ; chaque
+  avertit, à 70 il impose la paix dans les 3 mois, à 100 ses légions débarquent dans chaque cité (expédition
+  punitive) : les responsables perdent des lauriers, et toute la province est en disgrâce 12 mois. Il tolère une légion par 5 000 habitants (au moins 2) ; chaque
   légion de plus coûte 2 lauriers par mois.
 - Javeliniers renforcés : chacun coûte un chargement de bois, que la caserne reçoit de vos entrepôts.
 - Brouillard de guerre (option du salon) : on ne voit que ce qu'on a découvert.

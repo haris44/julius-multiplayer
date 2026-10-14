@@ -16,7 +16,7 @@ Caesar III.
 > in progress. The documentation is in French.*
 
 **État** : en développement. On joue en paix (zones, missionnaire, commerce entre joueurs, César qui juge) et la
-guerre entre joueurs est jouable, sous l'œil de César ; son expédition punitive reste à venir. Les versions Linux et
+guerre entre joueurs est jouable, sous l'œil de César. Les versions Linux et
 Windows sont récentes et encore peu essayées.
 
 ## La partie en bref
@@ -107,17 +107,23 @@ Windows sont récentes et encore peu essayées.
   ennemie dans une guerre juste rapporte un triomphe (20 lauriers).
 - **La colère de César**, commune à toute la province, monte avec la durée des guerres, les légions chez l'ennemi et
   les dégâts. À 40, il avertit ; à 70, ultimatum : la paix dans 3 mois, et le principal responsable devient
-  « ennemi de Rome ». Elle redescend en paix. La jauge est dans le bandeau, la part de chacun dans le conseiller
-  impérial.
+  « ennemi de Rome ». À 100, **expédition punitive** : les légions de César débarquent dans chaque cité (32 soldats
+  chez un innocent, 96 à 144 chez le principal responsable), les responsables perdent jusqu'à un quart de leurs
+  lauriers, et toute la province est en disgrâce 12 mois (lauriers des notes divisés par deux). Détruire
+  l'expédition de sa cité rapporte 20 lauriers ; sinon elle repart au bout de 12 mois. La colère redescend en paix. La
+  jauge est dans le bandeau, la part de chacun dans le conseiller impérial.
 - Même en paix, César tolère une légion par 5 000 habitants (au moins 2) ; chaque légion de plus coûte 2 lauriers
   par mois.
 
 ## Le salon et les règles
 
 - L'hôte règle la partie jusqu'au lancement : carte, difficulté (« facile » par défaut), dieux, fin de partie,
-  invasions de l'IA, brouillard de guerre. Les autres joueurs voient ses réglages, tenus à jour, sans pouvoir les
-  changer. En partie, la difficulté est la même pour tous.
-- « Invasions IA : non » coupe toutes les attaques de l'IA, Mars compris. Les révoltes de gladiateurs restent.
+  invasions de l'IA, brouillard de guerre, seconde expédition de César. Les autres joueurs voient ses réglages, tenus
+  à jour, sans pouvoir les changer. En partie, la difficulté est la même pour tous.
+- « Invasions IA : non » coupe toutes les attaques de l'IA, Mars compris. Les révoltes de gladiateurs restent, et
+  l'expédition punitive de César aussi : ce n'est pas une invasion de l'IA.
+- « Seconde expédition de César » : par défaut, « elle frappe comme la première » ; « Rome reprend la province » :
+  la partie s'arrête, sans vainqueur.
 - **Trois troupes, trois coûts** : légionnaires payés en armes, javeliniers renforcés (136 points de vie, 10 d'attaque)
   et payés d'un chargement de bois chacun, que la caserne reçoit des entrepôts (le bois est réservé aux joueurs de la
   côte), cavaliers gratuits et rapides.
@@ -126,8 +132,7 @@ Windows sont récentes et encore peu essayées.
 
 ## À venir
 
-- **La fin de la guerre** : l'expédition punitive de César quand sa colère est à son comble, l'ordre « attaquer »
-  des légions, le moral de chaque camp et les arcs de triomphe.
+- **La fin de la guerre** : l'ordre « attaquer » des légions, le moral de chaque camp et les arcs de triomphe.
 - Fêtes et campagnes de César qui rapportent des lauriers, et ses demandes adressées à toute la province.
 - La hausse des prix de l'empire quand un joueur arrête le commerce.
 

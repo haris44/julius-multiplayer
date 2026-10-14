@@ -42,6 +42,7 @@ typedef struct {
     int fog_of_war;        /**< Players see only what they discovered (doc/mp/DECISIONS.md D-038) */
     int caesar_score;      /**< Laurels that win a GAME_END_CAESAR game (0: the default score) */
     int prepared_map;      /**< game_map_choice of a new game; once it started, the map it is played on */
+    int rome_takes_province; /**< A second punitive expedition of Caesar ends the game, without winner (D-053) */
 } game_rules_settings;
 
 /**
@@ -103,6 +104,12 @@ int game_rules_score_years(void);
  * Laurels the first city must reach to win a GAME_END_CAESAR game, also the scale of the ranks in every game
  */
 int game_rules_caesar_score(void);
+
+/**
+ * Whether a second punitive expedition of Caesar ends the game without winner: Rome takes the province back (CESAR
+ * §7.4, D-053, D-086); otherwise it strikes like the first one. 0 in a classic game.
+ */
+int game_rules_rome_takes_province(void);
 
 /**
  * The score of a set of rules, with the meaning of the saved games: 0 (a game saved before the score of Caesar) is the

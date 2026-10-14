@@ -94,6 +94,8 @@ MAPGEN_PICTURE=carte.ppm ./simtool preparedmap SAVE 2 10   # ... et son image (s
 ./simtool caesarhistory SAVE                # historique mensuel des lauriers : gain, tendance, estime, sauvegarde
 ./simtool war SAVE                          # guerre entre joueurs (T5.5, D-077) : déclaration, préavis, paix, sauvegarde ;
                                             # légion chez l'adversaire, bâtiments abattus, combat, caravane prise
+./simtool caesarexpedition SAVE             # expédition punitive de César (M10.6, D-086) : soldats par cité, pertes,
+                                            # paix, disgrâce, légions vaincues ou reparties, seconde expédition, reprise
 ```
 
 Pour voir César dans une vraie cité (lettre d'un nouveau rang, conseiller impérial) :
@@ -217,7 +219,7 @@ répertoire courant (lancer depuis la racine du dépôt).
 | `lobbylists NOM` / `lobbyselected NOM` | salon : échoue s'il ne liste pas le fichier NOM / si NOM n'est pas la partie choisie (T5.4) |
 | `tradecheck` | la page du commerce a redessiné son cadre pour l'état courant de la route (T5.6) ; échoue sinon |
 | `addwrath N` | tests (M10.5) : la cité locale ajoute N dixièmes à la colère de César (change l'état de ce seul ordinateur : partie seule) |
-| `caesarletter TYPE PARAM` | tests (M10.5) : une lettre de César au joueur local (`mp_caesar_letter_type`), affichage seulement |
+| `caesarletter TYPE PARAM` | tests (M10.5) : une lettre de César au joueur local (`mp_caesar_letter_type` : 5 expédition, 6 expédition vaincue, 7 expédition repartie), affichage seulement |
 | `log TEXTE` | écrit un repère dans le journal |
 | `quit` | quitte ; c'est aussi automatique en fin de script |
 
@@ -279,6 +281,11 @@ Bon à savoir :
 - `tools/mp-wrath-test.sh` : partie seule depuis le salon ; `addwrath` amène la jauge à l'avertissement puis à
   l'ultimatum : captures `build/automation/wrath-*.png` des lettres (avertissement, ultimatum, paix imposée), de la
   jauge du bandeau et du conseiller impérial (M10.5, D-084).
+- `tools/mp-expedition-test.sh` : partie seule depuis le salon, avec l'option « Rome reprend la province » ; `addwrath`
+  amène la jauge à 100 : captures `build/automation/expedition-*.png` du salon, du message d'origine, de la lettre de
+  l'expédition, des légions de César dans la cité, du conseiller impérial (disgrâce), des lettres d'une expédition
+  vaincue et repartie, puis de l'écran de fin d'une seconde expédition (M10.6, D-086). Depuis un worktree :
+  `C3_DATA_DIR=/chemin/donnees-c3 tools/serial.sh tools/mp-expedition-test.sh`.
 - `test/automation/display.txt` : les options d'affichage (plus grande fenêtre qui tient sur l'écran).
 
 Taille de l'écran dans un script : `key F7` (640 × 480), `key F8` (800 × 600, la taille par défaut), `key F9`
@@ -300,6 +307,7 @@ coordonnées ; la barre latérale reste collée au bord droit (bouton industrie 
 | `tools/mp-resume-test.sh` | deux joueurs depuis le salon : « Sauvegarder » (un `.mpsav`), désynchronisation provoquée, « Fichier, Nouvelle partie », « Charger » qui ouvre le salon avec la partie choisie, `autosave.mpsav` listée, reprise hébergée et rejointe, sans désynchronisation |
 | `tools/mp-ui-test.sh` | salon du client avec les règles de l'hôte (carte 1, difficulté changée), menus fermes et matières premières d'un joueur des terres et d'un joueur de la côte, menu Options sans Difficulté, conseiller impérial, évaluation (pilier des lauriers), commerce et Stocks, en 640 × 480 et 1024 × 736 |
 | `tools/mp-war-test.sh` | conseiller militaire (bouton « Guerre »), fenêtre « Guerre et paix » en paix, confirmation, en guerre, offre de paix reçue, paix signée, annonces sur la cité, en 640 × 480 et 1024 × 736 |
+| `tools/mp-expedition-test.sh` | option du salon de la seconde expédition, message et lettre de l'expédition, légions de César dans la cité, conseiller impérial en disgrâce, lettres d'une expédition vaincue ou repartie, écran de fin « Rome reprend la province » |
 | `caesar-advisor.txt`, `caesar-gifts.txt`, `caesar-ratings.txt` | César dans une grande cité (`rules mp`) : lettre de rang, conseiller impérial, cadeau, don, salaire, pilier des lauriers |
 | `smoke.txt`, `run.txt`, `build-road.txt`, `display.txt` | classique : menu, chargement, boucle du jeu, route à la souris, options d'affichage |
 

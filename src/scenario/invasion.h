@@ -16,6 +16,13 @@ int scenario_invasion_start_from_mars(void);
 
 int scenario_invasion_start_from_caesar(int size);
 
+/**
+ * Multiplayer: Caesar's punitive expedition lands in the current city (M10.6, D-086), his legions of the original
+ * invasion, with exactly this number of soldiers (at most 150): the difficulty does not change it
+ * @return 1 when the army landed
+ */
+int scenario_invasion_start_caesar_expedition(int soldiers);
+
 void scenario_invasion_start_from_cheat(void);
 
 void scenario_invasion_process(void);

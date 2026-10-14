@@ -54,7 +54,10 @@ typedef enum {
     MP_CAESAR_LETTER_PROMOTION,   // param: the new rank
     MP_CAESAR_LETTER_WARNING,     // the wrath reached the warning (M10.5); param: the culprits, one bit per player
     MP_CAESAR_LETTER_ULTIMATUM,   // the wrath reached the ultimatum (M10.5); param: the main culprit, or -1
-    MP_CAESAR_LETTER_PEACE_IMPOSED // the deadline of the ultimatum (M10.5); param: the players, one bit each
+    MP_CAESAR_LETTER_PEACE_IMPOSED, // the deadline of the ultimatum (M10.5); param: the players, one bit each
+    MP_CAESAR_LETTER_EXPEDITION,   // the punitive expedition lands in every city (M10.6); param: main culprit, or -1
+    MP_CAESAR_LETTER_EXPEDITION_DEFEATED, // the city destroyed the expedition (M10.6); param: tenths of laurels won
+    MP_CAESAR_LETTER_EXPEDITION_LEFT      // the expedition left the city after its months (M10.6)
 } mp_caesar_letter_type;
 
 typedef struct {
