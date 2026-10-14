@@ -13,6 +13,7 @@
 #include "city/resource.h"
 #include "empire/city.h"
 #include "game/player_context.h"
+#include "mp/assault.h"
 #include "mp/caesar.h"
 #include "mp/missionary.h"
 #include "mp/session.h"
@@ -205,6 +206,11 @@ void mp_action_withdraw_war(int other)
     submit(MP_ACTION_WITHDRAW_WAR, other, 0);
 }
 
+void mp_action_legion_attack(int formation_id, int x, int y)
+{
+    submit3(MP_ACTION_LEGION_ATTACK, formation_id, x, y);
+}
+
 // Legion that can receive orders; the user interface made the same checks before
 static formation *legion_of(int formation_id)
 {
@@ -327,6 +333,7 @@ void mp_actions_execute(const mp_command *command)
         case MP_ACTION_LEGION_MOVE:
             m = legion_of(arg1);
             if (m && !m->cursed_by_mars && arg2 >= 0 && arg3 >= 0 && arg2 < GRID_SIZE && arg3 < GRID_SIZE) {
+                mp_assault_cancel(arg1); // another order ends its attack (D-087)
                 int other_formation_id = formation_legion_at_building(map_grid_offset(arg2, arg3));
                 if (other_formation_id && other_formation_id == arg1) {
                     formation_legion_return_home(m);
@@ -338,6 +345,7 @@ void mp_actions_execute(const mp_command *command)
         case MP_ACTION_LEGION_RETURN_HOME:
             m = legion_of(arg1);
             if (m) {
+                mp_assault_cancel(arg1);
                 formation_legion_return_home(m);
             }
             break;
@@ -385,6 +393,9 @@ void mp_actions_execute(const mp_command *command)
             break;
         case MP_ACTION_WITHDRAW_WAR:
             mp_war_withdraw(arg1);
+            break;
+        case MP_ACTION_LEGION_ATTACK:
+            mp_assault_order(arg1, arg2, arg3);
             break;
         case MP_ACTION_SEND_REQUEST:
             scenario_request_dispatch(arg1);

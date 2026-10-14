@@ -80,6 +80,7 @@
 #include "game/player_context.h"
 #include "map/data.h"
 #include "mp/actions.h"
+#include "mp/assault.h"
 #include "mp/compose.h"
 #include "mp/savegame.h"
 #include "mp/trade.h"
@@ -204,6 +205,8 @@ static int usage(void)
     printf("  simtool caesarhistory SAVE             monthly history of the laurels of each city: gain, trend, saved\n");
     printf("  simtool war SAVE                       prepared map: war between players by commands, saved; legions\n");
     printf("                                         fight in the enemy city, pull down buildings, take caravans (T5.5)\n");
+    printf("  simtool warattack SAVE                 the order \"attack\" of a legion at war (M10.2, D-087)\n");
+    printf("  simtool attacksave SAVE OUT            writes the game of tools/mp-attack-test.sh: two players at war\n");
     printf("  simtool warmotives SAVE                motives and price of a war, triumphs (M10.4)\n");
     printf("  simtool caesarwrath SAVE               Caesar's wrath: examples of CESAR 7.2, ultimatum (M10.5)\n");
     printf("  simtool armytolerance SAVE             legions beyond what Caesar tolerates cost laurels (M10.7)\n");
@@ -9062,6 +9065,465 @@ static int command_waraqueduct(const char *file)
     return failures ? 1 : 0;
 }
 
+// ---------- the order "attack" of a legion (M10.2, D-087) ----------
+
+// the area around (x, y): buildings by owner (1 to 4, C for Caesar), soldiers of player 1 (s), roads, walls, water
+static void show_attack_area(int x, int y, int r)
+{
+    for (int yy = y - r; yy <= y + r; yy++) {
+        printf("%4d ", yy);
+        for (int xx = x - r; xx <= x + r; xx++) {
+            if (!map_grid_is_inside(xx, yy, 1)) {
+                putchar(' ');
+                continue;
+            }
+            int o = map_grid_offset(xx, yy);
+            char c = '.';
+            int soldier = 0;
+            for (int id = map_figure_at(o), guard = 0; id > 0 && guard < 50; guard++) {
+                figure *f = figure_get(id);
+                soldier |= figure_is_legion(f) && FIGURE_OWNER(id) == 0;
+                id = f->next_figure_id_on_same_tile;
+            }
+            int b = map_building_at(o);
+            if (soldier) {
+                c = 's';
+            } else if (b > 0 && building_get(b)->state == BUILDING_STATE_IN_USE) {
+                c = BUILDING_IS_CAESAR(b) ? 'C' : (char) ('1' + BUILDING_OWNER(b));
+            } else if (map_terrain_is(o, TERRAIN_WALL)) {
+                c = '#';
+            } else if (map_terrain_is(o, TERRAIN_ROAD)) {
+                c = 'R';
+            } else if (map_terrain_is(o, TERRAIN_RUBBLE)) {
+                c = ',';
+            } else if (map_terrain_is(o, TERRAIN_WATER)) {
+                c = 'W';
+            } else if (map_terrain_is(o, TERRAIN_TREE | TERRAIN_ROCK)) {
+                c = 'T';
+            } else if (map_terrain_is(o, TERRAIN_AQUEDUCT)) {
+                c = 'A';
+            }
+            if (c == '.' && mp_territory_owner(o) >= 0) {
+                c = (char) ('a' + mp_territory_owner(o));
+            }
+            if (xx == x && yy == y && (c == '.' || (c >= 'a' && c <= 'd'))) {
+                c = '+';
+            }
+            putchar(c);
+        }
+        putchar('\n');
+    }
+}
+
+static int soldiers_at_rest(int formation_id)
+{
+    int count = 0;
+    int owner = FORMATION_OWNER(formation_id);
+    for (int i = owner * MAX_FIGURES + 1; i < (owner + 1) * MAX_FIGURES; i++) {
+        figure *f = figure_get(i);
+        count += f->state == FIGURE_STATE_ALIVE && f->formation_id == formation_id && figure_is_legion(f) &&
+            f->action_state == FIGURE_ACTION_80_SOLDIER_AT_REST;
+    }
+    return count;
+}
+
+// the larger of the two distances from the tile to the nearest tile of the building (as mp/assault.c)
+static int distance_to_footprint(const building *b, int x, int y)
+{
+    int size = b->size > 0 ? b->size : 1;
+    int dx = x < b->x ? b->x - x : (x >= b->x + size ? x - (b->x + size - 1) : 0);
+    int dy = y < b->y ? b->y - y : (y >= b->y + size ? y - (b->y + size - 1) : 0);
+    return dx > dy ? dx : dy;
+}
+
+// buildings of the player in use at most (`within`) or more than `distance` tiles from (x, y)
+static int buildings_around(int player_id, int x, int y, int distance, int within)
+{
+    int count = 0;
+    for (int i = player_id * MAX_BUILDINGS + 1; i < (player_id + 1) * MAX_BUILDINGS; i++) {
+        const building *b = building_get(i);
+        if (b->state == BUILDING_STATE_IN_USE) {
+            int d = distance_to_footprint(b, x, y);
+            count += within ? d <= distance : d > distance;
+        }
+    }
+    return count;
+}
+
+// the buildings of player 2 the legion of player 1 attacks: a quarter around a statue (the target), and two statues
+// far from it; *x, *y: the statue
+static int build_attack_quarter(int *x, int *y)
+{
+    int x1, y1;
+    mp_mapgen_city_center(1, &x1, &y1);
+    *x = x1 - 13;
+    *y = y1 - 8;
+    int ok = build_as(1, BUILDING_SMALL_STATUE, *x, *y, *x, *y);
+    ok &= build_as(1, BUILDING_SMALL_STATUE, *x - 4, *y - 3, *x - 4, *y - 3);
+    ok &= build_as(1, BUILDING_WELL, *x + 4, *y - 4, *x + 4, *y - 4);
+    ok &= build_as(1, BUILDING_PREFECTURE, *x - 6, *y + 3, *x - 6, *y + 3);
+    ok &= build_as(1, BUILDING_SMALL_STATUE, *x + 6, *y + 4, *x + 6, *y + 4);
+    ok &= build_as(1, BUILDING_MEDIUM_STATUE, *x - 3, *y - 7, *x - 3, *y - 7);
+    // far from it
+    ok &= build_as(1, BUILDING_SMALL_STATUE, x1 + 10, y1 - 10, x1 + 10, y1 - 10);
+    ok &= build_as(1, BUILDING_SMALL_STATUE, x1 - 5, y1 + 14, x1 - 5, y1 + 14);
+    war_run(50); // in use from the next update of the states
+    return ok;
+}
+
+typedef struct {
+    int target_x, target_y;     // the statue: the centre of the radius
+    int order_x, order_y;       // the tile picked
+    int ordered;
+    int first_building;         // the first building the legion goes to
+    int targets;                // the buildings it went to
+    int targets_outside;        // of them, outside the radius
+    int inside_before, far_before;
+    int left_inside, down_far;  // at the end: buildings of player 2 within the radius, and far ones pulled down
+    int ticks_first_down, ticks_done;
+    int soldiers_at_end, at_fort_at_end;
+    uint64_t checksum;
+} attack_result;
+
+// the legion of player 1, at war, attacks the tile picked; runs until its order ends
+static void play_attack(int legion, attack_result *r, int show)
+{
+    int far = MP_ASSAULT_RADIUS + 6;
+    r->inside_before = buildings_around(1, r->target_x, r->target_y, MP_ASSAULT_RADIUS, 1);
+    r->far_before = buildings_around(1, r->target_x, r->target_y, far, 0);
+    int all_before = buildings_of(1);
+    city_action(0, MP_ACTION_LEGION_ATTACK, legion, r->order_x, r->order_y);
+    r->ordered = mp_assault_is_active(legion) && mp_assault_enemy(legion) == 1;
+    r->first_building = mp_assault_building(legion);
+    r->targets = r->first_building ? 1 : 0;
+    r->targets_outside = 0;
+    r->ticks_first_down = 0;
+    int last = r->first_building;
+    int ticks = 0;
+    for (; ticks < 20000 && mp_assault_is_active(legion); ticks++) {
+        war_run(1);
+        if (!r->ticks_first_down && buildings_of(1) < all_before) {
+            r->ticks_first_down = ticks + 1;
+        }
+        int b = mp_assault_building(legion);
+        if (b && b != last) {
+            r->targets++;
+            r->targets_outside += distance_to_footprint(building_get(b), r->target_x, r->target_y) > MP_ASSAULT_RADIUS;
+            if (show) {
+                printf("  tick %5d: on to building %d (type %d), %d buildings of player 2 down\n", ticks + 1, b,
+                    building_get(b)->type, all_before - buildings_of(1));
+            }
+        }
+        last = b ? b : last;
+    }
+    r->ticks_done = ticks;
+    r->left_inside = buildings_around(1, r->target_x, r->target_y, MP_ASSAULT_RADIUS, 1);
+    r->down_far = r->far_before - buildings_around(1, r->target_x, r->target_y, far, 0);
+    war_run(300); // the legion stays where its order ended
+    r->soldiers_at_end = soldiers_at_standard(legion);
+    r->at_fort_at_end = formation_get(legion)->is_at_fort;
+    r->checksum = mp_checksum_state();
+}
+
+// An attack in a game of three players: the legion of player 1 fights player 2; the city of player 3, neutral, is
+// refused, that of player 2 is not
+static int attack_neutral(const char *file)
+{
+    int failures = 0;
+#define CHECK(condition, text) do { int ok_ = (condition); printf("%-76s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
+    player_context_switch(0);
+    player_context_set_num_players(1);
+    if (!start_tradegame(file, 3, 0, "warattack3")) {
+        return 1;
+    }
+    int cx[3], cy[3];
+    for (int p = 0; p < 3; p++) {
+        mp_mapgen_city_center(p, &cx[p], &cy[p]);
+    }
+    int legion = make_legion(0, BUILDING_FORT_LEGIONARIES, cx[0] - 10, cy[0] - 8, 8);
+    int ok = legion && build_as(1, BUILDING_SMALL_STATUE, cx[1] - 4, cy[1] - 4, cx[1] - 4, cy[1] - 4) &&
+        build_as(2, BUILDING_SMALL_STATUE, cx[2] - 4, cy[2] - 4, cx[2] - 4, cy[2] - 4);
+    war_run(400);
+    city_action(0, MP_ACTION_DECLARE_WAR, 1, MP_WAR_BRUTAL, 0);
+    CHECK(ok && mp_war_is_fighting(0, 1) && !mp_war_is_fighting(0, 2), "three players: 1 fights 2, 3 is neutral");
+    uint64_t before = mp_checksum_state();
+    city_action(0, MP_ACTION_LEGION_ATTACK, legion, cx[2] - 4, cy[2] - 4);
+    CHECK(!mp_assault_is_active(legion) && mp_checksum_state() == before &&
+        mp_assault_enemy_at(0, cx[2] - 4, cy[2] - 4) < 0, "a target in the city of the neutral player: refused");
+    city_action(0, MP_ACTION_LEGION_ATTACK, legion, cx[1] - 4, cy[1] - 4);
+    CHECK(mp_assault_is_active(legion) && mp_assault_enemy(legion) == 1,
+        "a target in the city of the enemy: the legion goes");
+    // player 1 fights player 3 too: at peace with player 2, his legion stays out, but its attack on player 2 ends
+    city_action(0, MP_ACTION_DECLARE_WAR, 2, MP_WAR_BRUTAL, 0);
+    war_run(100);
+    city_action(0, MP_ACTION_PROPOSE_PEACE, 1, 1, 0);
+    city_action(1, MP_ACTION_PROPOSE_PEACE, 0, 1, 0);
+    war_run(1);
+    CHECK(mp_war_status(0, 1) == MP_WAR_PEACE && mp_war_is_fighting(0, 2) && !formation_get(legion)->is_at_fort &&
+        !mp_assault_is_active(legion), "peace with the player attacked, war with another: the attack ends");
+    player_context_switch(0);
+    player_context_set_num_players(1);
+#undef CHECK
+    return failures;
+}
+
+// The order "attack" of a legion (M10.2, D-087): two players on map 1; refused at peace, during a notice, for the
+// legion of another player, on one's own city or where no building of the enemy stands within the radius. At war, the
+// legion of player 1 marches to the statue picked, pulls it down, moves on from building to building of player 2
+// within the radius until none is left; peace or another order end it; saved and read back in the middle of the
+// attack, the game goes on the same; played twice, the same checksum; refused for a neutral player; nothing in a
+// classic game
+static int command_warattack(const char *file)
+{
+    int failures = 0;
+    int war_ticks = 0;
+#define CHECK(condition, text) do { int ok_ = (condition); printf("%-76s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
+    int legion1, legion2, tx, ty;
+    if (!start_war_game(file, &legion1, &legion2, &tx, &ty)) {
+        printf("Unable to prepare the game\n");
+        return 2;
+    }
+    attack_result base;
+    memset(&base, 0, sizeof(base));
+    CHECK(build_attack_quarter(&base.target_x, &base.target_y),
+        "player 2 builds a quarter of statues, a well and a prefecture");
+    base.order_x = base.target_x;
+    base.order_y = base.target_y;
+    int x0, y0, x1, y1;
+    mp_mapgen_city_center(0, &x0, &y0);
+    mp_mapgen_city_center(1, &x1, &y1);
+    int statue = map_building_at(map_grid_offset(base.target_x, base.target_y));
+    int inside = buildings_around(1, base.target_x, base.target_y, MP_ASSAULT_RADIUS, 1);
+    int far = buildings_around(1, base.target_x, base.target_y, MP_ASSAULT_RADIUS + 6, 0);
+    printf("the statue picked at (%d, %d): %d buildings of player 2 within %d tiles, %d farther than %d, %d in all\n",
+        base.target_x, base.target_y, inside, MP_ASSAULT_RADIUS, far, MP_ASSAULT_RADIUS + 6, buildings_of(1));
+    if (getenv("SHOW_ATTACK")) {
+        show_attack_area(base.target_x, base.target_y, 22);
+    }
+    const char *start = "warattack-start.mpsav";
+    if (!mp_savegame_write(start)) {
+        printf("Unable to save\n");
+        return 2;
+    }
+
+    // ---- refused: at peace, during a notice, for another player's legion, on one's own city, on empty land ----
+    city_action(0, MP_ACTION_LEGION_ATTACK, legion1, base.target_x, base.target_y);
+    war_run(1);
+    CHECK(!mp_assault_is_active(legion1) && formation_get(legion1)->is_at_fort &&
+        mp_assault_enemy_at(0, base.target_x, base.target_y) < 0,
+        "at peace: the order is refused, the legion stays in its fort");
+    CHECK(!mp_assault_is_offered(legion1), "(and not offered in the legion window)");
+    city_action(0, MP_ACTION_DECLARE_WAR, 1, MP_WAR_HONOURABLE, 0);
+    city_action(0, MP_ACTION_LEGION_ATTACK, legion1, base.target_x, base.target_y);
+    war_run(1);
+    CHECK(mp_war_status(0, 1) == MP_WAR_NOTICE && !mp_assault_is_active(legion1) && formation_get(legion1)->is_at_fort,
+        "during the notice of an honourable war: refused");
+    if (!mp_savegame_read(start)) {
+        return 2;
+    }
+    city_action(0, MP_ACTION_DECLARE_WAR, 1, MP_WAR_BRUTAL, 0);
+    player_context_switch(0);
+    CHECK(mp_assault_is_offered(legion1), "at war: offered in the legion window");
+    uint64_t before = mp_checksum_state();
+    city_action(0, MP_ACTION_LEGION_ATTACK, legion2, base.target_x, base.target_y);
+    city_action(1, MP_ACTION_LEGION_ATTACK, legion1, base.target_x, base.target_y);
+    CHECK(!mp_assault_is_active(legion2) && !mp_assault_is_active(legion1) && mp_checksum_state() == before,
+        "the legion of another player: refused, nothing changes");
+    city_action(1, MP_ACTION_LEGION_ATTACK, legion2, base.target_x, base.target_y);
+    city_action(0, MP_ACTION_LEGION_ATTACK, legion1, x0 - 10, y0 - 4);
+    CHECK(!mp_assault_is_active(legion2) && !mp_assault_is_active(legion1) && mp_checksum_state() == before,
+        "a target in one's own city: refused");
+    // a tile of his land, south of his city, with none of his buildings within the radius
+    int empty_x = 0, empty_y = 0;
+    for (int y = y1 + 10; y <= y1 + 25 && !empty_x; y++) {
+        for (int x = x1 - 20; x <= x1 + 20 && !empty_x; x++) {
+            if (mp_territory_owner(map_grid_offset(x, y)) == 1 && !map_terrain_is(map_grid_offset(x, y), TERRAIN_NOT_CLEAR) &&
+                buildings_around(1, x, y, MP_ASSAULT_RADIUS, 1) == 0) {
+                empty_x = x;
+                empty_y = y;
+            }
+        }
+    }
+    int empty_owner = mp_territory_owner(map_grid_offset(empty_x, empty_y));
+    city_action(0, MP_ACTION_LEGION_ATTACK, legion1, empty_x, empty_y);
+    printf("land of player %d at (%d, %d), no building of his within %d tiles\n", empty_owner + 1, empty_x, empty_y,
+        MP_ASSAULT_RADIUS);
+    CHECK(empty_owner == 1 && !mp_assault_is_active(legion1) && mp_checksum_state() == before,
+        "land of the enemy with none of his buildings within the radius: refused");
+    CHECK(mp_assault_enemy_at(0, empty_x, empty_y) < 0 && mp_assault_enemy_at(0, base.target_x, base.target_y) == 1,
+        "(the pick of the target says so too)");
+
+    // ---- at war: the attack, played twice from the same start ----
+    attack_result run[2];
+    for (int i = 0; i < 2; i++) {
+        if (!mp_savegame_read(start)) {
+            return 2;
+        }
+        run[i] = base;
+        city_action(0, MP_ACTION_DECLARE_WAR, 1, MP_WAR_BRUTAL, 0);
+        play_attack(legion1, &run[i], !i);
+    }
+    attack_result *r = &run[0];
+    printf("the order: first building %d; %d buildings gone to; first building of player 2 down after %d ticks, "
+        "order done after %d ticks\n", r->first_building, r->targets, r->ticks_first_down, r->ticks_done);
+    printf("buildings of player 2 within %d tiles: %d before, %d after; farther than %d: %d of %d down\n",
+        MP_ASSAULT_RADIUS, r->inside_before, r->left_inside, MP_ASSAULT_RADIUS + 6, r->down_far, r->far_before);
+    CHECK(r->ordered && r->first_building == statue,
+        "at war, the order is given: the legion goes first to the statue picked");
+    CHECK(r->targets >= 4 && r->targets_outside == 0, "it moves on from building to building, all within the radius");
+    CHECK(r->inside_before == inside && r->left_inside == 0 && r->ticks_done < 20000,
+        "until no building of player 2 is left within the radius: the order ends");
+    CHECK(r->far_before == far && r->down_far == 0, "the buildings far from the target stand");
+    CHECK(!r->at_fort_at_end && r->soldiers_at_end == alive_soldiers(legion1) && r->soldiers_at_end > 0,
+        "the legion stays where it is, its soldiers with the standard");
+    CHECK(run[1].checksum == run[0].checksum && run[1].ticks_done == run[0].ticks_done &&
+        run[1].targets == run[0].targets, "played again from the same start: the same attack, the same checksum");
+
+    // ---- an order on a tile of his land, saved and read back in the middle of the attack ----
+    if (!mp_savegame_read(start)) {
+        return 2;
+    }
+    city_action(0, MP_ACTION_DECLARE_WAR, 1, MP_WAR_BRUTAL, 0);
+    int tile_x = base.target_x + 1, tile_y = base.target_y + 2;
+    city_action(0, MP_ACTION_LEGION_ATTACK, legion1, tile_x, tile_y);
+    CHECK(map_building_at(map_grid_offset(tile_x, tile_y)) == 0 && mp_assault_is_active(legion1) &&
+        mp_assault_building(legion1) == statue, "on a tile of his land: the legion goes to the nearest building");
+    int all = buildings_of(1);
+    RUN_UNTIL(buildings_of(1) <= all - 2, 10, 8000);
+    const char *middle = "warattack-middle.mpsav";
+    int building_at_save = mp_assault_building(legion1);
+    CHECK(mp_assault_is_active(legion1) && mp_savegame_write(middle), "(saved in the middle of the attack)");
+    static uint64_t continued[400];
+    for (int i = 0; i < 400; i++) {
+        war_run(5);
+        continued[i] = mp_checksum_state();
+    }
+    int continued_left = buildings_of(1);
+    int continued_active = mp_assault_is_active(legion1);
+    CHECK(mp_savegame_read(middle), "(read back)");
+    CHECK(mp_assault_is_active(legion1) && mp_assault_enemy(legion1) == 1 &&
+        mp_assault_building(legion1) == building_at_save, "the saved game keeps the order and its target");
+    int same = 1;
+    for (int i = 0; i < 400; i++) {
+        war_run(5);
+        same &= mp_checksum_state() == continued[i];
+    }
+    printf("2000 ticks later: %d buildings of player 2 left, order active %d (continued) / %d, %d (read back)\n",
+        continued_left, continued_active, buildings_of(1), mp_assault_is_active(legion1));
+    CHECK(same && buildings_of(1) == continued_left,
+        "the game read back goes on the same: the same checksum every 5 ticks");
+    CHECK(mp_savegame_read(middle) && mp_assault_is_active(legion1) && remove_saved_piece(middle, "mp_assault") &&
+        mp_savegame_read(middle) && !mp_assault_is_active(legion1),
+        "an older saved game, without the piece, loads without order");
+    remove(middle);
+
+    // ---- peace ends the order; the legion goes home ----
+    if (!mp_savegame_read(start)) {
+        return 2;
+    }
+    city_action(0, MP_ACTION_DECLARE_WAR, 1, MP_WAR_BRUTAL, 0);
+    city_action(0, MP_ACTION_LEGION_ATTACK, legion1, base.target_x, base.target_y);
+    all = buildings_of(1);
+    RUN_UNTIL(buildings_of(1) < all, 10, 8000);
+    city_action(0, MP_ACTION_PROPOSE_PEACE, 1, 1, 0);
+    city_action(1, MP_ACTION_PROPOSE_PEACE, 0, 1, 0);
+    war_run(1);
+    int left = buildings_of(1);
+    CHECK(mp_war_status(0, 1) == MP_WAR_PEACE && !mp_assault_is_active(legion1), "peace signed: the order ends");
+    RUN_UNTIL(soldiers_at_rest(legion1) == alive_soldiers(legion1), 50, 6000);
+    printf("the legion is back at its fort %d ticks after the peace\n", war_ticks);
+    CHECK(formation_get(legion1)->is_at_fort && soldiers_at_rest(legion1) == alive_soldiers(legion1) &&
+        buildings_of(1) == left, "the legion goes home, nothing more falls");
+
+    // ---- another order ends it ----
+    if (!mp_savegame_read(start)) {
+        return 2;
+    }
+    city_action(0, MP_ACTION_DECLARE_WAR, 1, MP_WAR_BRUTAL, 0);
+    city_action(0, MP_ACTION_LEGION_ATTACK, legion1, base.target_x, base.target_y);
+    war_run(200);
+    uint64_t with_order = mp_checksum_state();
+    mp_assault_cancel(legion1);
+    CHECK(mp_checksum_state() != with_order, "the order is in the checksum");
+    city_action(0, MP_ACTION_LEGION_ATTACK, legion1, base.target_x, base.target_y);
+    war_run(200);
+    city_action(0, MP_ACTION_LEGION_MOVE, legion1, x0 + 2, y0 - 8);
+    CHECK(!mp_assault_is_active(legion1) && formation_get(legion1)->standard_x == x0 + 2,
+        "another order (move): the attack ends, the legion goes where it is sent");
+    city_action(0, MP_ACTION_LEGION_ATTACK, legion1, base.target_x, base.target_y);
+    war_run(100);
+    city_action(0, MP_ACTION_LEGION_RETURN_HOME, legion1, 0, 0);
+    CHECK(!mp_assault_is_active(legion1) && formation_get(legion1)->is_at_fort, "back to the fort: the attack ends");
+    // no soldier left
+    war_run(600);
+    city_action(0, MP_ACTION_LEGION_ATTACK, legion1, base.target_x, base.target_y);
+    war_run(100);
+    int was_active = mp_assault_is_active(legion1);
+    for (int i = 1; i < MAX_FIGURES; i++) {
+        figure *f = figure_get(i);
+        if (f->state == FIGURE_STATE_ALIVE && f->formation_id == legion1 && figure_is_legion(f)) {
+            f->state = FIGURE_STATE_DEAD;
+        }
+    }
+    war_run(1);
+    CHECK(was_active && !mp_assault_is_active(legion1), "the legion has no soldier left: the attack ends");
+    remove(start);
+
+    // ---- a neutral player ----
+    failures += attack_neutral(file);
+
+    // ---- a classic game: nothing ----
+    player_context_switch(0);
+    player_context_set_num_players(1);
+    if (!load(file)) {
+        return 2;
+    }
+    uint64_t classic = mp_checksum_state();
+    city_action(0, MP_ACTION_LEGION_ATTACK, FORMATION_FIRST, 50, 50);
+    CHECK(!mp_assault_is_active(FORMATION_FIRST) && mp_checksum_state() == classic,
+        "a classic game: no attack, nothing changes");
+#undef CHECK
+    printf("%s\n", failures ? "DIFFERENT: the order to attack is not as designed" :
+        "Identical: the order to attack is as designed");
+    return failures ? 1 : 0;
+}
+
+// The game of tools/mp-attack-test.sh (D-087): two players on map 1 at war (brutal, declared by player 1); the legion
+// of player 1 (16 legionaries) rests in its fort; player 2 has the quarter of command_warattack
+static int command_attacksave(const char *file, const char *out)
+{
+    int failures = 0;
+#define CHECK(condition, text) do { int ok_ = (condition); printf("%-70s %s\n", text, ok_ ? "yes" : "NO"); failures += !ok_; } while (0)
+    int legion1, legion2, tx, ty, x, y;
+    if (!start_war_game(file, &legion1, &legion2, &tx, &ty)) {
+        printf("Unable to prepare the game\n");
+        return 2;
+    }
+    CHECK(build_attack_quarter(&x, &y), "player 2 builds a quarter of statues, a well and a prefecture");
+    // without the fog of war: the screenshots show the quarter of player 2 that player 1 has not explored
+    game_rules_settings rules;
+    game_rules_default_multiplayer_settings(&rules);
+    rules.ai_invasions = 0;
+    rules.fog_of_war = 0;
+    game_rules_set_multiplayer(&rules);
+    city_action(0, MP_ACTION_DECLARE_WAR, 1, MP_WAR_BRUTAL, 0);
+    war_run(100);
+    const formation *m = formation_get(legion1);
+    printf("the legion of player 1 rests at (%d, %d); the quarter of player 2 around (%d, %d)\n", m->x_home, m->y_home,
+        x, y);
+    CHECK(mp_war_is_fighting(0, 1) && m->is_at_fort && alive_soldiers(legion1) == 16,
+        "at war, the legion of player 1 in its fort with 16 soldiers");
+    CHECK(mp_savegame_write(out), "the game is written");
+    uint64_t written = mp_checksum_state();
+    CHECK(mp_savegame_read(out) && mp_checksum_state() == written, "and reads back the same");
+    player_context_switch(0);
+    player_context_set_num_players(1);
+#undef CHECK
+    printf("%s\n", failures ? "FAILED: the game of mp-attack-test.sh was not written" :
+        "Written: the game of mp-attack-test.sh");
+    return failures ? 1 : 0;
+}
+
 // the camera of a player reaches every corner of a generated map, after it went through a .mpmap file as in a game
 static int command_viewcorners(const char *file, int num_players)
 {
@@ -10720,6 +11182,10 @@ int main(int argc, char **argv)
         result = command_caesargate(file);
     } else if (strcmp(command, "waraqueduct") == 0) {
         result = command_waraqueduct(file);
+    } else if (strcmp(command, "warattack") == 0) {
+        result = command_warattack(file);
+    } else if (strcmp(command, "attacksave") == 0) {
+        result = argc > 3 ? command_attacksave(file, argv[3]) : usage();
     } else if (strcmp(command, "wargate3") == 0) {
         result = command_wargate3(file);
     } else if (strcmp(command, "warmotives") == 0) {

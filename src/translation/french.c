@@ -365,6 +365,10 @@ static translation_string all_strings[] = {
     {TR_MP_LETTER_ULTIMATUM_4, ", principal responsable de ces troubles, est déclaré ennemi de Rome : pendant 12 mois, lui faire la guerre sera remplir mon mandat."},
     {TR_MP_LETTER_PEACE_IMPOSED_1, "Gouverneurs, le délai est passé. J'impose la paix : "},
     {TR_MP_LETTER_PEACE_IMPOSED_2, " déposent les armes. Qui avait déclaré la guerre et la déclarera de nouveau dans les 12 mois le fera sans motif, et ma colère comptera double."},
+    {TR_MP_LEGION_ATTACK, "Attaquer"},
+    {TR_MP_LEGION_ATTACKING, "Attaque en cours"},
+    {TR_MP_LEGION_ATTACK_PICK, "Cliquez sur la cible : un bâtiment ou une case de l'ennemi"},
+    {TR_MP_LEGION_ATTACK_NO_TARGET, "Aucun bâtiment d'un ennemi en guerre à portée de cette case"},
 };
 
 void translation_french(const translation_string **strings, int *num_strings)

@@ -17,9 +17,12 @@
 #include "translation/translation.h"
 #include "window/city.h"
 #include "mp/actions.h"
+#include "mp/assault.h"
+#include "widget/city.h"
 
 static void button_return_to_fort(int param1, int param2);
 static void button_layout(int index, int param2);
+static void button_attack(int param1, int param2);
 
 static generic_button layout_buttons[] = {
     {19, 139, 84, 84, button_layout, button_none, 0, 0},
@@ -33,9 +36,19 @@ static generic_button return_button[] = {
     {0, 0, 288, 32, button_return_to_fort, button_none, 0, 0},
 };
 
+// multiplayer at war (D-087): the order "attack" next to "back to the fort", both narrower
+#define ORDER_BUTTON_WIDTH 180
+static generic_button return_button_narrow[] = {
+    {0, 0, ORDER_BUTTON_WIDTH, 32, button_return_to_fort, button_none, 0, 0},
+};
+static generic_button attack_button[] = {
+    {0, 0, ORDER_BUTTON_WIDTH, 32, button_attack, button_none, 0, 0},
+};
+
 static struct {
     int focus_button_id;
     int return_button_id;
+    int attack_button_id;
     building_info_context *context_for_callback;
 } data;
 
@@ -284,6 +297,34 @@ void window_building_draw_legion_info(building_info_context *c)
     }
 }
 
+// multiplayer at war (D-087): "back to the fort" on the left when the legion is out, "attack" on the right (in the
+// middle when it is at its fort)
+static int return_button_x(const building_info_context *c)
+{
+    return c->x_offset + 52;
+}
+
+static int attack_button_x(const building_info_context *c, const formation *m)
+{
+    if (m->is_at_fort) {
+        return c->x_offset + (BLOCK_SIZE * c->width_blocks - ORDER_BUTTON_WIDTH) / 2;
+    }
+    return c->x_offset + 52 + ORDER_BUTTON_WIDTH + 8;
+}
+
+static void draw_order_buttons(building_info_context *c, const formation *m)
+{
+    int y = c->y_offset + BLOCK_SIZE * c->height_blocks - 48;
+    if (!m->is_at_fort) {
+        button_border_draw(return_button_x(c), y, ORDER_BUTTON_WIDTH, 32, data.return_button_id == 1);
+        lang_text_draw_centered(138, 58, return_button_x(c), y + 9, ORDER_BUTTON_WIDTH, FONT_NORMAL_BLACK);
+    }
+    int x = attack_button_x(c, m);
+    button_border_draw(x, y, ORDER_BUTTON_WIDTH, 32, data.attack_button_id == 1);
+    text_draw_centered(translation_for(mp_assault_is_active(m->id) ? TR_MP_LEGION_ATTACKING : TR_MP_LEGION_ATTACK),
+        x, y + 9, ORDER_BUTTON_WIDTH, FONT_NORMAL_BLACK, 0);
+}
+
 void window_building_draw_legion_info_foreground(building_info_context *c)
 {
     const formation *m = formation_get(c->formation_id);
@@ -394,7 +435,9 @@ void window_building_draw_legion_info_foreground(building_info_context *c)
     lang_text_draw_multiline(138, text_id, c->x_offset + 24, c->y_offset + 252,
         BLOCK_SIZE * (c->width_blocks - 4), FONT_NORMAL_GREEN);
 
-    if (!m->is_at_fort && !m->in_distant_battle) {
+    if (mp_assault_is_offered(c->formation_id)) {
+        draw_order_buttons(c, m);
+    } else if (!m->is_at_fort && !m->in_distant_battle) {
         button_border_draw(c->x_offset + BLOCK_SIZE * (c->width_blocks - 18) / 2,
             c->y_offset + BLOCK_SIZE * c->height_blocks - 48, 288, 32, data.return_button_id == 1);
         lang_text_draw_centered(138, 58, c->x_offset + BLOCK_SIZE * (c->width_blocks - 18) / 2,
@@ -411,7 +454,20 @@ int window_building_handle_mouse_legion_info(const mouse *m, building_info_conte
             data.focus_button_id = 0;
         }
     }
-    if (!handled) {
+    if (!handled && mp_assault_is_offered(c->formation_id)) {
+        const formation *legion = formation_get(c->formation_id);
+        int y = c->y_offset + BLOCK_SIZE * c->height_blocks - 48;
+        data.return_button_id = 0;
+        if (!legion->is_at_fort) {
+            handled = generic_buttons_handle_mouse(m, return_button_x(c), y, return_button_narrow, 1,
+                &data.return_button_id);
+        }
+        if (!handled) {
+            handled = generic_buttons_handle_mouse(m, attack_button_x(c, legion), y, attack_button, 1,
+                &data.attack_button_id);
+        }
+    } else if (!handled) {
+        data.attack_button_id = 0;
         handled = generic_buttons_handle_mouse(m, c->x_offset + BLOCK_SIZE * (c->width_blocks - 18) / 2,
             c->y_offset + BLOCK_SIZE * c->height_blocks - 48, return_button, 1, &data.return_button_id);
     }
@@ -431,6 +487,17 @@ static void button_return_to_fort(int param1, int param2)
         mp_action_legion_return_home(m->id);
         window_city_show();
     }
+}
+
+// the order "attack" (D-087): the next click on the city picks the target, as the order to move
+static void button_attack(int param1, int param2)
+{
+    int formation_id = data.context_for_callback->formation_id;
+    if (!mp_assault_is_offered(formation_id)) {
+        return;
+    }
+    window_city_military_show(formation_id);
+    widget_city_pick_legion_attack(formation_id);
 }
 
 static void button_layout(int index, int param2)

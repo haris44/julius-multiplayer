@@ -34,6 +34,7 @@
 #include "game/file.h"
 #include "game/rules.h"
 #include "map/owner.h"
+#include "mp/assault.h"
 #include "mp/caesar.h"
 #include "mp/endgame.h"
 #include "game/settings.h"
@@ -248,6 +249,7 @@ void game_tick_run(void)
     player_context_switch(previous_player); // the user interface shows the local city
     mp_war_update(); // no-op while nobody is at war (T5.5)
     mp_wrath_update(); // Caesar's wrath, once for the world (M10.5): no-op in a classic game
+    mp_assault_update(); // the legions ordered to attack (M10.2, D-087): no-op in a classic game
     mp_endgame_check();
     map_owner_set_simulating(0);
 }

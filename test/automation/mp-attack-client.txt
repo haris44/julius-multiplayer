@@ -1,0 +1,27 @@
+# Real game, network game of two players from the lobby (the client, player 2; see tools/mp-attack-test.sh): the game
+# hosted is the one written by "simtool attacksave", at war. The client watches its city while the legion of player 1
+# attacks it, and checks that both games stay in step
+wait 10
+click 400 500
+wait 10
+click 400 172
+# the hosted game appears in the list within a second or two
+wait 150
+click 530 174
+wait 5
+mpwait 0
+# Caesar's letter, if any: closed
+wait 3
+key Return
+wait 2
+speed 500
+mpwait 3200
+key Return
+wait 5
+goto 137 82
+wait 5
+screenshot build/automation/attack-client-city.png
+mpcheck
+# keep the game running a little so that the host reaches its own check
+wait 400
+quit

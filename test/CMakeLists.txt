@@ -461,6 +461,11 @@ add_test(NAME mp_war_aqueduct COMMAND simtool waraqueduct brugle-massilia-start.
 # disappears (deleted by its owner, pulled down by enemy soldiers, after a save and a load) his road is back at once,
 # indestructible and walkable, and a caravan crosses it again; the same deletion twice gives the same checksum
 add_test(NAME mp_caesar_road_under_gate COMMAND simtool caesargate brugle-massilia-start.sav)
+# M10.2 (D-087): the order "attack" of a legion, refused at peace, during a notice, for the legion of another player, on
+# one's own city, on a neutral player (three players) and where no building of the enemy stands within the radius; at
+# war the legion goes to the target picked, pulls down building after building of the enemy within the radius until
+# none is left; peace or another order end it; saved and read back in the middle, played twice: the same checksum
+add_test(NAME mp_war_attack_order COMMAND simtool warattack brugle-massilia-start.sav)
 # Caesar judges the wars (M10.4, D-084): the motive set by the game (retaliation for 12 months, a withdrawn threat
 # included; mandate against an enemy of Rome, three players; without motive, always for the declarer within 12 months of
 # the end of his war), its price paid when the fighting starts, nothing for a threat withdrawn, triumphs

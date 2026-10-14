@@ -47,6 +47,7 @@ typedef enum {
     MP_ACTION_DECLARE_WAR = 32,           /**< other player, form (mp_war_kind) (T5.5) */
     MP_ACTION_PROPOSE_PEACE = 33,         /**< other player, 1 to propose or 0 to withdraw (T5.5) */
     MP_ACTION_WITHDRAW_WAR = 34,          /**< other player: the declarer withdraws an honourable war during its notice (D-080) */
+    MP_ACTION_LEGION_ATTACK = 35,         /**< formation id, x, y: the legion attacks the city of a player it fights (D-087) */
     MP_ACTION_MAX
 } mp_action_type;
 
@@ -84,6 +85,7 @@ void mp_action_change_buy_limit(int resource, int delta);
 void mp_action_declare_war(int other, int form);
 void mp_action_propose_peace(int other, int propose);
 void mp_action_withdraw_war(int other);
+void mp_action_legion_attack(int formation_id, int x, int y);
 
 /**
  * Applies an MP_COMMAND_CITY_ACTION command to the simulation
