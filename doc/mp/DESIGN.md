@@ -399,6 +399,12 @@ Les conditions de fin se choisissent dans le salon :
   envahisseur. Le soldat posté abat aussi l'aqueduc de l'ennemi et celui de César qui le relie à un réservoir de
   l'ennemi (parcours des aqueducs à la manière de `map/water_supply.c`). Tant que personne ne se bat, rien de cela
   n'est appelé.
+- **Fait en M10.2** (D-087, `mp/assault.c`) : l'ordre « attaquer » est une commande (`MP_ACTION_LEGION_ATTACK`) ; son
+  état (légion, ennemi, cible choisie, bâtiment visé) est un morceau du `.mpsav`, donc dans la somme de contrôle.
+  Chaque tick, une fois pour le monde après les cités, chaque légion qui en a un choisit, quand ses soldats n'ont plus
+  rien de l'ennemi à abattre autour d'eux, le bâtiment de l'ennemi le plus proche de son étendard dans un rayon de 10
+  cases autour de la cible, et y marche par l'ordre de déplacement d'origine ; les soldats abattent comme avant
+  (`mp_war_soldier_attack_buildings`). Rien en classique ni sans ordre.
 
 ### 7.1 Le pont de César (T4.8, D-068, *à valider* ; règles de jeu : [CESAR.md](CESAR.md) §7.6)
 

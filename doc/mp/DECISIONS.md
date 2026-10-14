@@ -1698,3 +1698,66 @@
   le menu refuse pour les matières et la nourriture (D-065), mais pas l'arc de triomphe, que le menu n'offre qu'à une
   cité qui l'a gagné. Elle le refuse désormais aussi, en multijoueur (`mp/session.c`) ; `mp_caesar_road_under_gate`
   le vérifie (échoue sans le refus).
+
+### D-087 — L'ordre « attaquer » d'une légion en guerre (M10.2, précise D-077, D-081)
+- 2026-10-14 · **adoptée provisoirement**, *à valider* (reste de M10.2, demandé par la session de coordination, sans
+  Alexandre)
+- **Interface** : bouton « Attaquer » dans la fenêtre de la légion (clic droit sur ses soldats), à côté de « Retourner
+  au fort » (seul au milieu quand elle est au fort). Il n'est offert qu'en multijoueur, quand le joueur se bat contre
+  un autre (combats, pas pendant un préavis), à une légion qui a des soldats et peut bouger. Il arme le choix de la
+  cible comme l'ordre de déplacement : la vue militaire dit « Cliquez sur la cible : un bâtiment ou une case de
+  l'ennemi » ; un clic sur un bâtiment d'un ennemi, ou sur une case de sa zone (ou une route à lui), à 10 cases au plus
+  d'un de ses bâtiments, donne l'ordre ; ailleurs elle dit « Aucun bâtiment d'un ennemi en guerre à portée de cette
+  case » et attend un autre clic ; un clic droit annule. Pendant l'attaque, le bouton dit « Attaque en cours » (un clic
+  choisit une nouvelle cible).
+- **Commande** `MP_ACTION_LEGION_ATTACK` (35 : légion, x, y). Refusée, sans rien changer : légion d'un autre joueur,
+  sans soldat, maudite par Mars, en campagne lointaine ou démoralisée ; case qui n'est pas à un joueur qu'il combat
+  (paix, préavis, joueur neutre, sa propre cité, César, personne) ; aucun bâtiment de ce joueur à 10 cases de la case,
+  ou aucun à côté duquel la légion peut se tenir.
+- **Conduite de la légion** (`mp/assault.c`, chaque tick, une fois pour le monde après les cités) :
+  - elle va à côté du bâtiment choisi, ou du plus proche de la case choisie : l'étendard (où se tient son premier
+    soldat) sur une case sans bâtiment qui le touche, joignable d'où elle est, la plus proche d'elle ;
+  - ses soldats postés abattent ce qui de l'ennemi les touche, comme avant (D-077, D-081 : bâtiments, murs, portes,
+    aqueducs), y compris juste au-delà du rayon ;
+  - quand son bâtiment est tombé et que plus rien de l'ennemi ne touche ses soldats postés, elle passe au suivant : **le
+    bâtiment de cet ennemi le plus proche de son étendard parmi ceux à 10 cases au plus de la cible choisie** (le plus
+    grand des deux écarts, `MP_ASSAULT_RADIUS`), de toute sorte, le plus petit numéro à égalité. Les envahisseurs de
+    l'original (`figure/formation_enemy.c`) choisissent dans toute la cité par une liste de priorités (greniers, sénat,
+    maisons riches…) puis par la distance ; ici le joueur a choisi le quartier, la légion le rase de proche en proche ;
+  - elle attend tant qu'un soldat marche vers l'étendard, nettoie (déploiement « nettoyer ») ou se bat ; un bâtiment
+    près duquel aucun soldat n'arrive à se tenir est laissé au bout de 2 jours (100 ticks) pour le suivant ;
+  - en chemin, elle se bat comme toute légion en guerre ; portes et murs : D-081.
+- **Fin de l'ordre** : plus aucun bâtiment de l'ennemi dans le rayon (la légion reste où elle est) ; paix avec lui,
+  signée, imposée ou par retrait (à la paix elle rentre comme les autres, D-077 ; si son joueur combat encore un tiers,
+  elle reste dehors mais n'attaque plus) ; un autre ordre du joueur (déplacement, retour au fort) ; plus de soldat
+  dehors (morts, fuite, renvoyée au fort), campagne lointaine, malédiction.
+- **Sauvegarde** : morceau `mp_assault` du `.mpsav` (version 1 : légion, ennemi, cible, bâtiment visé, attente), donc
+  dans la somme de contrôle ; une partie plus ancienne se charge sans ordre. Classique : inchangé.
+- **Mesuré** (`mp_war_attack_order`, carte préparée pour 2, légion de 16 légionnaires partie de son fort ; J2 a 7
+  bâtiments à 10 cases d'une statue — 3 statues, une grande statue, un puits, 2 préfectures — et 4 au-delà de 16) :
+  - la statue choisie tombe 1 784 ticks après l'ordre (la marche) ; la légion va ensuite à 5 autres bâtiments, un 7e
+    tombe en passant ; l'ordre finit au tick 2 350 (566 ticks pour 7 bâtiments) : plus rien dans le rayon, rien au-delà
+    de 16 cases, la légion reste sur place avec ses 16 soldats ;
+  - jouée deux fois : même somme de contrôle ; sauvegardée au milieu (2 bâtiments tombés) puis relue : même somme de
+    contrôle tous les 5 ticks pendant 2 000 ticks ;
+  - paix signée après le premier bâtiment : l'ordre finit au tick même, la légion est au fort 1 750 ticks plus tard,
+    plus rien ne tombe.
+- **Tests** : `mp_war_attack_order` (refus en paix, pendant le préavis, pour la légion d'un autre, sur sa propre cité,
+  sur une terre ennemie sans bâtiment dans le rayon, sur un joueur neutre à trois ; ordre sur la statue et sur une
+  case ; de bâtiment en bâtiment dans le rayon ; fin à la paix, à la paix avec la cible pendant une guerre avec un
+  tiers, à un autre ordre, sans soldat ; sauvegarde au milieu, partie plus ancienne, somme de contrôle, rejeu ; rien en
+  classique). 18 inversions d'une ligne : chacune fait échouer sa vérification (le refus d'une terre sans bâtiment est
+  vérifié aussi à la fenêtre ; le classique n'a jamais de guerre, sa vérification garde contre une régression). Le
+  bâtiment laissé au bout de 2 jours n'est pas couvert. Vrai jeu : `tools/mp-attack-test.sh` (partie à deux écrite par
+  `simtool attacksave`, sans brouillard ; fenêtre de la légion, choix de la cible, légion à l'œuvre, quartier rasé chez
+  les deux joueurs, sans désynchronisation).
+- **À valider** :
+  - un rayon de 10 cases autour de la cible choisie, plutôt qu'une marche sans fin dans la cité ennemie ;
+  - le bâtiment le plus proche, de toute sorte, plutôt que les priorités des envahisseurs ;
+  - à la fin de l'ordre, la légion reste sur place (elle ne rentre pas) ;
+  - la paix avec la cible arrête l'ordre même si le joueur combat encore un tiers ;
+  - on peut viser une case dans le brouillard : la simulation, connue de tous, dit s'il y a une cible (D-038 accepte
+    déjà qu'un tricheur voie à travers).
+- Pas fait : un ordre qui poursuit les soldats ennemis (l'ordre « nettoyer » existe), un curseur propre au choix de la
+  cible, le bouton dans la barre militaire de Julius (option `ui_show_military_sidebar`).
+- Réseau : nouvelle commande, nouvel état de la simulation : protocole à monter à la fusion.
