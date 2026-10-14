@@ -1056,8 +1056,15 @@ César revient comme arbitre de la partie. Jouable en paix et **seul** : livré 
   (partie reprise au milieu d'un ultimatum, identique tick après tick), captures `tools/mp-wrath-test.sh`. Restent :
   les caravanes d'une ressource demandée par César (M9.8) ; la terre de César autour du pont est un crochet à
   brancher sur `mp_territory_is_caesar_land` (D-082) à la fusion.
-- [ ] **M10.6** Expédition punitive : invasion de César dans chaque cité, disgrâce de 12 mois, pertes du fautif ;
+- [x] **M10.6** Expédition punitive : invasion de César dans chaque cité, disgrâce de 12 mois, pertes du fautif ;
   seconde expédition fatale (option, désactivée par défaut).
+  *Fait* (D-086, `mp/expedition.c`, *à valider*) : à 100, les légionnaires de César de l'original débarquent au point
+  d'arrivée de chaque cité, quelle que soit la difficulté (32 pour un innocent, 96 + 48 × sa part pour le principal
+  responsable, un autre selon sa part rapportée à celle du principal), sans égard aux « invasions IA » ; paix sur toutes
+  les guerres, jauge à 30, pertes de 25 % (au prorata pour les autres responsables), 12 mois de lauriers des notes
+  divisés par deux ; détruite : +20 lauriers, sinon elle repart au bout de 12 mois ; lettres et annonces. Option du
+  salon « Seconde expédition de César : Rome reprend la province » : la partie s'arrête sans vainqueur. Test
+  `mp_caesar_expedition` (2 et 3 joueurs, seul, reprise, classique), captures `tools/mp-expedition-test.sh`.
 - [x] **M10.7** Armée trop puissante : légions au-delà de la tolérance de César.
   *Fait* (D-084) : chaque mois, max(2, population / 5 000) légions tolérées, −2 lauriers par légion de plus (avec au
   moins un soldat), seul aussi ; montré dans le conseiller impérial. Test `mp_army_tolerance`.

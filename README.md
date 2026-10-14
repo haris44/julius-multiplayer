@@ -94,9 +94,12 @@ essayées.
 ## Le salon et les règles
 
 - L'hôte règle la partie jusqu'au lancement : carte, difficulté (« facile » par défaut), dieux, fin de partie,
-  invasions de l'IA, brouillard de guerre. Les autres joueurs voient ses réglages, tenus à jour, sans pouvoir les
-  changer. En partie, la difficulté est la même pour tous.
-- « Invasions IA : non » coupe toutes les attaques de l'IA, Mars compris. Les révoltes de gladiateurs restent.
+  invasions de l'IA, brouillard de guerre, seconde expédition de César. Les autres joueurs voient ses réglages, tenus
+  à jour, sans pouvoir les changer. En partie, la difficulté est la même pour tous.
+- « Invasions IA : non » coupe toutes les attaques de l'IA, Mars compris. Les révoltes de gladiateurs restent, et
+  l'expédition punitive de César aussi : ce n'est pas une invasion de l'IA.
+- « Seconde expédition de César » : par défaut, « elle frappe comme la première » ; « Rome reprend la province » :
+  la partie s'arrête, sans vainqueur.
 - **Trois troupes, trois coûts** : légionnaires payés en armes, javeliniers renforcés (136 points de vie, 10 d'attaque)
   et payés d'un chargement de bois chacun, que la caserne reçoit des entrepôts (le bois est réservé aux joueurs de la
   côte), cavaliers gratuits et rapides.

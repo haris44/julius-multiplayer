@@ -53,7 +53,7 @@
     (difficulté, dieux, correctifs, D-073).
   - Les règles sont écrites dans la pièce `mp_header` du `.mpsav`, avec la taille de la carte et le nombre de
     joueurs. Elles comprennent aussi la carte préparée (`prepared_map`, D-069), les invasions de l'IA, le brouillard,
-    les territoires et la fin de partie (score de César).
+    les territoires, la fin de partie (score de César) et la seconde expédition fatale (`rome_takes_province`, D-086).
 
 ## 3. Moteur multi-cités
 
@@ -212,7 +212,8 @@ réseau et à trouver par dichotomie le premier tick fautif dans les tests.
   chemin déterministe (remise à zéro de l'état caché, chargement de la carte, application des règles).
 - **Règles du salon** (D-063, D-069, D-073) :
   - les réglages affichés sont un état de l'interface (`mp/lobby`) : carte (« Carte 1 », « Carte 2 », « Carte au
-    hasard », par défaut au hasard), difficulté (« facile » par défaut), dieux, fin, invasions de l'IA, brouillard ;
+    hasard », par défaut au hasard), difficulté (« facile » par défaut), dieux, fin, invasions de l'IA, brouillard,
+    seconde expédition de César (« elle frappe comme la première » par défaut, D-086) ;
   - l'hôte peut les changer jusqu'au lancement. Chaque changement passe par `mp_lockstep_set_rules` et part chez
     les clients (message `MSG_RULES`), qui les affichent sans pouvoir les changer. « Lancer la partie » les relit
     (`mp_lobby_start_game`). Les règles partent aussi avec l'accueil (`MSG_WELCOME`) ;
@@ -257,13 +258,21 @@ réseau et à trouver par dichotomie le premier tick fautif dans les tests.
 > score, ou au rang suivant sans score). `mp_caesar` garde les lauriers de chaque cité à la fin de ses 12 derniers
 > mois (version 4), d'où le gain du mois et la tendance. Le 4e pilier de l'évaluation (`window/mp_ratings`), le sénat
 > et la barre latérale montrent les lauriers ; la faveur n'est plus affichée en multijoueur.
+>
+> Depuis D-086 (M10.6) : quand la colère atteint 100 (`mp/wrath`), `mp/expedition` envoie l'expédition punitive, une
+> fois pour le monde après la colère du mois (`game/tick.c`) : dans le contexte de chaque cité, l'invasion de César
+> d'origine (`scenario_invasion_start_caesar_expedition`, sans l'ajustement de la difficulté), puis paix sur toutes les
+> guerres, jauge à 30 et 12 mois de disgrâce, que lit `mp_caesar_update_city_month`. Son état est la pièce
+> `mp_expedition` du `.mpsav`. La seconde expédition fatale est une règle du salon (`rome_takes_province`) ; la fin
+> sans vainqueur passe par `mp_endgame_rome_takes_province`.
 
 ### 5.1 Interventions de César neutralisées (liste complète : code-map/04 §3)
 
 Désactivées quand `game_rules.mode == MP` :
 - faveur ;
 - demandes impériales ;
-- colère et invasions de César ;
+- colère et invasions de César d'origine (la colère et l'expédition punitive du multijoueur sont celles de CESAR §7,
+  D-084, D-086) ;
 - batailles lointaines et service de l'empire ;
 - changement d'empereur ;
 - rangs et promotions ;

@@ -403,7 +403,8 @@ Chaque mois, chaque guerre en cours ajoute à la jauge :
 
 Mise en œuvre (M10.5, D-084) : les seuils se lisent sur la jauge avant sa baisse du mois. Un avertissement tant que la
 jauge ne repasse pas sous 40 ; un ultimatum à la fois. Au délai, la paix est imposée à toutes les guerres déclarées,
-préavis compris, comme une paix signée. À 100, l'expédition est seulement notée comme due : elle viendra avec M10.6.
+préavis compris, comme une paix signée. À 100, l'expédition part le même mois (M10.6, D-086) ; les étapes repartent
+de la jauge à 30 qu'elle laisse.
 
 ### 7.4 L'expédition punitive
 - Les légions de César débarquent dans **chaque** cité : c'est l'invasion de César d'origine (code-map/07 §3). Ses
@@ -420,6 +421,22 @@ préavis compris, comme une paix signée. À 100, l'expédition est seulement no
 - La jauge redescend ensuite à 30.
 - **Seconde expédition dans la même partie** : elle frappe comme la première. Option du salon, désactivée par
   défaut (D-053) : « Rome reprend la province », la partie s'arrête et César ne désigne aucun vainqueur.
+- **Mise en œuvre** (M10.6, D-086, *à valider*) :
+  - l'expédition part au bilan du mois où la jauge atteint 100, après la baisse du mois ; la jauge est alors ramenée
+    à 30, chaque part en proportion ;
+  - le nombre de soldats ne dépend pas de la difficulté (l'original réduit toute invasion à 40-120 %) ; le principal
+    responsable en reçoit 96 + 48 × sa part de la colère (144 s'il la porte seul, 120 à parts égales entre deux) ; un
+    autre responsable, de 32 à autant que le principal, selon sa part rapportée à celle du principal ; jamais plus
+    que les figures que la cité peut encore créer ;
+  - un autre responsable perd 25 % × sa part / celle du principal ;
+  - les légions débarquent au point d'arrivée de chaque cité et visent ses plus beaux bâtiments, comme l'invasion
+    d'origine ; « vaincue » veut dire qu'aucun soldat ne reste debout avant le terme, tués ou mis en fuite (comme dans
+    l'original) ; au terme, elles repartent vers leur point d'arrivée, sans rien rapporter ;
+  - toutes les guerres, préavis compris, prennent fin comme une paix signée, et l'ultimatum en cours avec elles ;
+  - la disgrâce divise par deux les lauriers des cinq notes de chaque cité, pendant les 12 bilans de mois suivants ;
+    le coût de l'armée trop puissante, mensuel lui aussi, n'est pas divisé ;
+  - option du salon : « Seconde expédition de César : elle frappe comme la première » (par défaut) ou « Rome reprend
+    la province ».
 
 ### 7.5 Une armée trop puissante attire l'œil de César
 - Même en paix, César tolère environ **une légion par tranche de 5 000 habitants (au moins 2)**. Au-delà, chaque
@@ -643,7 +660,8 @@ colère, seuils. Chaque changement de réglage est noté dans DECISIONS avec la 
   - part de chacun dans la colère.
 - **Salon** :
   - mode « Jugement de César » et son score ;
-  - options : demandes de César (active), classement public (actif), seconde expédition fatale (inactive).
+  - options : demandes de César (active), classement public (actif), seconde expédition fatale (inactive ; faite,
+    D-086).
 
 ## 12. Découpage et pièges techniques
 
