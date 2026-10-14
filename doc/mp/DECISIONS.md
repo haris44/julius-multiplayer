@@ -1969,3 +1969,7 @@
   - le tir des javeliniers toutes les 70 ticks ; leur flanc, c'est le tir : de flanc en mêlée, ils perdent.
 - Réseau : nouveau morceau de sauvegarde et règles de simulation changées (ennemis de la cité, tir des javeliniers) :
   protocole à monter à la fusion. Classique : inchangé (parité verte).
+- **Corrigé à la fusion** : la commande de formation d'une légion acceptait la colonne et la tortue sans l'académie.
+  En multijoueur, elle n'accepte plus que ce que la fenêtre de la légion propose : doubles lignes et nettoyage pour
+  tous, la colonne pour les légionnaires formés à l'académie, les lignes simples pour les autres troupes
+  (`mp/actions.c`) ; `mp_war` le vérifie (échoue sans).

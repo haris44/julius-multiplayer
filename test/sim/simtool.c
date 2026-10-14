@@ -7403,6 +7403,25 @@ static int command_war(const char *file)
         printf("Unable to save\n");
         return 2;
     }
+    // a layout command from another computer: only the layouts the legion window offers (D-088)
+    formation *legion = formation_get(first.legion[0]);
+    int layout = legion->layout;
+    int trained = legion->has_military_training;
+    city_action(0, MP_ACTION_LEGION_CHANGE_LAYOUT, legion->id, FORMATION_COLUMN, 0);
+    int column_untrained = legion->layout == FORMATION_COLUMN;
+    city_action(0, MP_ACTION_LEGION_CHANGE_LAYOUT, legion->id, FORMATION_TORTOISE, 0);
+    city_action(0, MP_ACTION_LEGION_CHANGE_LAYOUT, legion->id, FORMATION_SINGLE_LINE_1, 0);
+    int others = legion->layout != layout;
+    city_action(0, MP_ACTION_LEGION_CHANGE_LAYOUT, legion->id, FORMATION_DOUBLE_LINE_2, 0);
+    int double_line = legion->layout == FORMATION_DOUBLE_LINE_2;
+    legion->has_military_training = 1;
+    city_action(0, MP_ACTION_LEGION_CHANGE_LAYOUT, legion->id, FORMATION_COLUMN, 0);
+    int column_trained = legion->layout == FORMATION_COLUMN;
+    legion->has_military_training = trained;
+    city_action(0, MP_ACTION_LEGION_CHANGE_LAYOUT, legion->id, layout, 0);
+    CHECK(legion->figure_type == FIGURE_FORT_LEGIONARY && !column_untrained && !others && double_line &&
+        column_trained && legion->layout == layout,
+        "legionaries take only the layouts of their window (the column after the academy)");
 
     // an honourable war: three months of notice, the defender may strike first
     city_action(0, MP_ACTION_DECLARE_WAR, 1, MP_WAR_HONOURABLE, 0);

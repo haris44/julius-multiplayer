@@ -13,6 +13,7 @@
 #include "city/resource.h"
 #include "empire/city.h"
 #include "game/player_context.h"
+#include "game/rules.h"
 #include "mp/assault.h"
 #include "mp/caesar.h"
 #include "mp/missionary.h"
@@ -224,6 +225,25 @@ static formation *legion_of(int formation_id)
     return m;
 }
 
+// the layouts the legion window and the military sidebar offer this legion (window/building_info.c,
+// widget/sidebar/military.c): the column for legionaries trained at the academy, single lines for the others
+static int layout_offered(const formation *m, int layout)
+{
+    switch (layout) {
+        case FORMATION_DOUBLE_LINE_1:
+        case FORMATION_DOUBLE_LINE_2:
+        case FORMATION_MOP_UP:
+            return 1;
+        case FORMATION_COLUMN:
+            return m->figure_type == FIGURE_FORT_LEGIONARY && m->has_military_training;
+        case FORMATION_SINGLE_LINE_1:
+        case FORMATION_SINGLE_LINE_2:
+            return m->figure_type != FIGURE_FORT_LEGIONARY;
+        default:
+            return 0;
+    }
+}
+
 static int valid_resource(int resource)
 {
     return resource > RESOURCE_NONE && resource < RESOURCE_MAX;
@@ -351,7 +371,8 @@ void mp_actions_execute(const mp_command *command)
             break;
         case MP_ACTION_LEGION_CHANGE_LAYOUT:
             m = legion_of(arg1);
-            if (m) {
+            // in multiplayer, only what the window offers: the command comes from another computer (D-088)
+            if (m && (!game_rules_is_multiplayer() || layout_offered(m, arg2))) {
                 formation_legion_change_layout(m, arg2);
             }
             break;
