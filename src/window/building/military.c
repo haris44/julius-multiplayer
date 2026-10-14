@@ -212,7 +212,7 @@ void window_building_draw_legion_info(building_info_context *c)
     image_draw(pole_image_id,
         c->x_offset + 16 + (40 - image_get(pole_image_id)->width) / 2, c->y_offset + 16 + icon_height + flag_height);
 
-    draw_recruit_cost(c, m, c->x_offset + 100, c->y_offset + 36);
+    draw_recruit_cost(c, m, c->x_offset + 64, c->y_offset + 36);
     // number of soldiers
     lang_text_draw(138, 23, c->x_offset + 100, c->y_offset + 60, FONT_NORMAL_BLACK);
     text_draw_number(m->num_figures, '@', " ", c->x_offset + 294, c->y_offset + 60, FONT_NORMAL_BLACK);
