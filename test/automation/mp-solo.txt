@@ -66,7 +66,7 @@ mpinfo
 key 5
 wait 5
 screenshot build/automation/mp-solo-trade.png
-click 300 111
+click 290 112
 wait 5
 screenshot build/automation/mp-solo-trade-stocks.png
 key Escape

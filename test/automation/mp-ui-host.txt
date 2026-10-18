@@ -51,30 +51,72 @@ screenshot build/automation/ui-host-imperial.png
 key 4
 wait 5
 screenshot build/automation/ui-host-ratings.png
-# the trade advisor: the tab of the player, the empire, then the stocks (T4.5, T5.6)
+# the trade advisor: the tab of the player, the empire, then the stocks (T4.5, T5.6, D-093); the mouse away from the
+# buttons, for screenshots without tooltip
 key 5
 wait 5
+mouse 320 30
+wait 2
 screenshot build/automation/ui-host-trade.png
-click 112 51
+click 108 52
 wait 5
+mouse 320 30
+wait 2
 screenshot build/automation/ui-host-empire.png
-click 328 51
+# the tooltip of the price that applies: the price of Rome and the portorium (wine, seventh row)
+mouse 520 242
+wait 20
+screenshot build/automation/ui-host-empire-tip.png
+click 312 52
 wait 5
+mouse 320 30
+wait 2
 screenshot build/automation/ui-host-stocks.png
+# the list scrolls like the original lists (the down button of the scrollbar): the last three rows
+click 600 371
+wait 5
+mouse 320 30
+wait 2
+screenshot build/automation/ui-host-stocks-scrolled.png
 # the tab of player 2: propose the route, buy marble; a month later the column "On the way" says why nothing left
-# (player 2 has no marble), in the small font, within its column (T5.7, T5.6)
-click 220 51
+# (player 2 has no marble), in the small font, within its column, and its tooltip says more (T5.7, T5.6, D-093)
+click 210 52
 wait 5
-click 510 21
+click 512 22
 wait 10
-click 490 297
+# the list back to its top (the up button of the scrollbar), then the button "I buy" of the marble row
+click 600 77
 wait 5
+click 432 362
+wait 5
+mouse 320 30
 speed 500
+# the client raises its price of marble around tick 1000: the alert waits for the city view
 mpwait 1700
 screenshot build/automation/ui-host-reasons.png
+mouse 520 362
+wait 20
+screenshot build/automation/ui-host-reasons-tip.png
+# the host raises his own price of marble to the client, who buys it: the alert of the client
+click 246 362
+wait 5
+# back to the city: the alert of the price raised by the client, as a message of the original game (D-049, D-093)
+key Escape
+wait 10
+mouse 320 200
+wait 2
+screenshot build/automation/ui-host-price-alert.png
+# the button of the trade advisor opens the tab of the seller, the row of marble in view
+click 29 453
+wait 5
+mouse 320 30
+wait 2
+screenshot build/automation/ui-host-price-alert-trade.png
 key Escape
 wait 2
+# the client sees his alert before tick 1900
+mpwait 2100
 mpcheck
 # keep the game running a little so that the client reaches its own check
-wait 200
+wait 100
 quit

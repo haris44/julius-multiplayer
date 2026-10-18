@@ -132,7 +132,7 @@ static void button_resource(int resource_index, int param2)
 static int get_tooltip_text(void)
 {
     if (window_mp_trade_is_active()) {
-        return window_mp_trade_get_tooltip_text();
+        return 0; // see get_tooltip
     }
     if (focus_button_id == 1) {
         return 106;
@@ -145,13 +145,22 @@ static int get_tooltip_text(void)
     }
 }
 
+// the multiplayer page has tooltips of its own texts
+static void get_tooltip(tooltip_context *c)
+{
+    if (window_mp_trade_is_active()) {
+        window_mp_trade_get_tooltip(c);
+    }
+}
+
 const advisor_window_type *window_advisor_trade(void)
 {
     static const advisor_window_type window = {
         draw_background,
         draw_foreground,
         handle_mouse,
-        get_tooltip_text
+        get_tooltip_text,
+        get_tooltip
     };
     return &window;
 }

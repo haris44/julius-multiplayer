@@ -30,29 +30,31 @@ mpwait 200
 # route from the button in the corner of the title, buy marble (the button "I buy" of its row)
 key 5
 wait 5
-click 590 81
+click 592 82
 wait 20
-click 570 357
+click 512 422
 wait 20
 # the tab of the second other player (player 3): propose the route, buy iron
-click 408 111
+click 392 112
 wait 10
-click 590 81
+click 592 82
 wait 20
-click 570 301
+click 512 350
 wait 10
+mouse 400 90
+wait 2
 screenshot build/automation/trade3-host-asked.png
 # the page stays open: the game runs on, and no message of the month comes over it. The first departures are at the
 # start of the next month; the caravan of player 2 is on its way a month later
 mpwait 1700
-click 300 111
+click 290 112
 wait 5
 screenshot build/automation/trade3-host-on-the-way.png
 # months later (mpwait counts the ticks from the start), the caravans of player 2 have arrived: marble to player 1
 # (the closest pair of map 1 for three players, four to five months on the road), iron to player 3 (a month more)
 mpwait 6400
 screenshot build/automation/trade3-host-delivered.png
-click 408 111
+click 392 112
 wait 5
 screenshot build/automation/trade3-host-reasons.png
 mpcheck

@@ -21,19 +21,21 @@ mpwait 200
 # marble; then the tab of the second other player: propose the route, buy iron
 key 5
 wait 5
-click 590 81
+click 592 82
 wait 20
-click 570 357
+click 512 422
 wait 20
-click 408 111
+click 392 112
 wait 10
-click 590 81
+click 592 82
 wait 20
-click 570 301
+click 512 350
 wait 10
+mouse 400 90
+wait 2
 screenshot build/automation/trade3-CLIENT-asked.png
 mpwait 6400
-click 300 111
+click 290 112
 wait 5
 screenshot build/automation/trade3-CLIENT-reasons.png
 mpcheck

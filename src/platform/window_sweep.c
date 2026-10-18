@@ -283,6 +283,7 @@ int platform_window_sweep(void (*log)(const char *message, const char *value))
             sweep(name, open_trade_tab, p);
         }
         sweep("stock tab of the trade page", open_trade_tab, -1);
+        sweep("empire tab of the trade page", open_trade_tab, -2);
     }
     for (int category = 0; category < 9; category++) {
         sweep("labor priority", open_labor_priority, category);

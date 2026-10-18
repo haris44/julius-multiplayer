@@ -31,17 +31,19 @@ mpwait 300
 key 5
 wait 5
 screenshot build/automation/trade4-player.png
-# the marble row of player 3 (third tab): + 90 times, from 200 to 1100 deniers, a four-digit price
-click 408 111
+# the marble row of player 3 (third tab): the up arrow of my price 90 times, from 200 to 1100 deniers, a four-digit price
+click 392 112
 wait 3
-# REPEAT 90 click 360 357
+# REPEAT 90 click 326 422
 wait 10
+mouse 400 90
+wait 2
 screenshot build/automation/trade4-big-price.png
 # the empire and the stocks
-click 192 111
+click 188 112
 wait 5
 screenshot build/automation/trade4-empire.png
-click 624 111
+click 596 112
 wait 5
 screenshot build/automation/trade4-stocks.png
 mpwait 600
