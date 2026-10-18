@@ -107,11 +107,9 @@ void window_building_draw_barracks(building_info_context *c)
     }
 
     if (game_rules_is_multiplayer()) {
-        // the timber for the javelin throwers, beside the weapons (D-058)
+        // the timber for the javelin throwers, beside the weapons and shown as they are (D-058)
         image_draw(image_group(GROUP_RESOURCE_ICONS) + RESOURCE_TIMBER, c->x_offset + 264, c->y_offset + 38);
-        int width = text_draw(translation_for(TR_MP_BARRACKS_TIMBER), c->x_offset + 296, c->y_offset + 44,
-            FONT_NORMAL_BLACK, 0);
-        text_draw_number(building_barracks_timber_stored(), '@', " ", c->x_offset + 296 + width, c->y_offset + 44,
+        lang_text_draw_amount(8, 10, building_barracks_timber_stored(), c->x_offset + 292, c->y_offset + 44,
             FONT_NORMAL_BLACK);
     }
 
@@ -161,25 +159,46 @@ void window_building_draw_military_academy(building_info_context *c)
     window_building_draw_employment(c, 142);
 }
 
-// What a recruit of this legion costs, and what the barracks holds (multiplayer, D-058)
-static void draw_recruit_cost(const building_info_context *c, const formation *m, int x, int y)
+// What a recruit of the fort costs, and what the barracks holds (multiplayer, D-058): the resource icon and a line,
+// as the barracks shows its weapons
+static void draw_recruit_cost(const building_info_context *c, const formation *m)
 {
     if (!game_rules_is_multiplayer()) {
         return;
     }
+    int x = c->x_offset + 64;
+    int y = c->y_offset + 50;
     if (m->figure_type == FIGURE_FORT_LEGIONARY) {
+        image_draw(image_group(GROUP_RESOURCE_ICONS) + RESOURCE_WEAPONS, x - 32, y - 6);
         x += text_draw(translation_for(TR_MP_FORT_RECRUITS_LEGIONARY), x, y, FONT_NORMAL_BLACK, 0);
         text_draw_number(building_get(city_buildings_get_barracks())->loads_stored, '@', " ", x, y, FONT_NORMAL_BLACK);
     } else if (m->figure_type == FIGURE_FORT_JAVELIN) {
         int x_start = x;
+        image_draw(image_group(GROUP_RESOURCE_ICONS) + RESOURCE_TIMBER, x - 32, y - 6);
         x += text_draw(translation_for(TR_MP_FORT_RECRUITS_JAVELIN), x, y, FONT_NORMAL_BLACK, 0);
         text_draw_number(building_barracks_timber_stored(), '@', " ", x, y, FONT_NORMAL_BLACK);
         if (building_barracks_timber_stored() <= 0 && m->num_figures < m->max_figures) {
-            text_draw(translation_for(TR_MP_FORT_JAVELIN_WAITS_TIMBER), x_start, y + 14, FONT_NORMAL_RED, 0);
+            text_draw(translation_for(TR_MP_FORT_JAVELIN_WAITS_TIMBER), x_start, y + 20, FONT_NORMAL_RED, 0);
         }
     } else {
         text_draw(translation_for(TR_MP_FORT_RECRUITS_MOUNTED), x, y, FONT_NORMAL_BLACK, 0);
     }
+}
+
+// multiplayer: what the barracks holds for the recruits of the legion (D-058), a row of the table above the others;
+// in red when the legion waits for it. Mounted soldiers need nothing.
+static void draw_legion_supply(const building_info_context *c, const formation *m)
+{
+    if (!game_rules_is_multiplayer() || m->figure_type == FIGURE_FORT_MOUNTED) {
+        return;
+    }
+    int legionary = m->figure_type == FIGURE_FORT_LEGIONARY;
+    int stored = legionary ? building_get(city_buildings_get_barracks())->loads_stored :
+        building_barracks_timber_stored();
+    text_draw(translation_for(legionary ? TR_MP_LEGION_WEAPONS_IN_BARRACKS : TR_MP_LEGION_TIMBER_IN_BARRACKS),
+        c->x_offset + 100, c->y_offset + 40, FONT_NORMAL_BLACK, 0);
+    text_draw_number(stored, '@', " ", c->x_offset + 294, c->y_offset + 40,
+        stored <= 0 && m->num_figures < m->max_figures ? FONT_NORMAL_RED : FONT_NORMAL_BLACK);
 }
 
 void window_building_draw_fort(building_info_context *c)
@@ -189,7 +208,7 @@ void window_building_draw_fort(building_info_context *c)
     outer_panel_draw(c->x_offset, c->y_offset, c->width_blocks, c->height_blocks);
     lang_text_draw_centered(89, 0, c->x_offset, c->y_offset + 10, BLOCK_SIZE * c->width_blocks, FONT_LARGE_BLACK);
     int text_id = formation_get(c->formation_id)->cursed_by_mars ? 1 : 2;
-    draw_recruit_cost(c, formation_get(c->formation_id), c->x_offset + 32, c->y_offset + 50);
+    draw_recruit_cost(c, formation_get(c->formation_id));
     window_building_draw_description_at(c, BLOCK_SIZE * c->height_blocks - 158, 89, text_id);
 }
 
@@ -225,7 +244,7 @@ void window_building_draw_legion_info(building_info_context *c)
     image_draw(pole_image_id,
         c->x_offset + 16 + (40 - image_get(pole_image_id)->width) / 2, c->y_offset + 16 + icon_height + flag_height);
 
-    draw_recruit_cost(c, m, c->x_offset + 64, c->y_offset + 36);
+    draw_legion_supply(c, m);
     // number of soldiers
     lang_text_draw(138, 23, c->x_offset + 100, c->y_offset + 60, FONT_NORMAL_BLACK);
     text_draw_number(m->num_figures, '@', " ", c->x_offset + 294, c->y_offset + 60, FONT_NORMAL_BLACK);
@@ -297,11 +316,12 @@ void window_building_draw_legion_info(building_info_context *c)
     }
 }
 
-// multiplayer at war (D-087): "back to the fort" on the left when the legion is out, "attack" on the right (in the
-// middle when it is at its fort)
+// multiplayer at war (D-087): "back to the fort" on the left when the legion is out, "attack" on the right, both in
+// the middle of the window (attack alone when the legion is at its fort)
+#define ORDER_BUTTON_GAP 8
 static int return_button_x(const building_info_context *c)
 {
-    return c->x_offset + 52;
+    return c->x_offset + (BLOCK_SIZE * c->width_blocks - 2 * ORDER_BUTTON_WIDTH - ORDER_BUTTON_GAP) / 2;
 }
 
 static int attack_button_x(const building_info_context *c, const formation *m)
@@ -309,7 +329,7 @@ static int attack_button_x(const building_info_context *c, const formation *m)
     if (m->is_at_fort) {
         return c->x_offset + (BLOCK_SIZE * c->width_blocks - ORDER_BUTTON_WIDTH) / 2;
     }
-    return c->x_offset + 52 + ORDER_BUTTON_WIDTH + 8;
+    return return_button_x(c) + ORDER_BUTTON_WIDTH + ORDER_BUTTON_GAP;
 }
 
 static void draw_order_buttons(building_info_context *c, const formation *m)

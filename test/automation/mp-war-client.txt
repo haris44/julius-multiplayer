@@ -1,7 +1,9 @@
 # Real game, war between players in a network game from the lobby (see tools/mp-war-test.sh): client, player 2, at
 # 1024 x 768, which the screen of the automation shrinks to 1024 x 736. The advisors and the window of war are 640 x 480
 # dialogs in the middle of the screen: 192 and 128 are added to their coordinates. Player 1 declares a brutal war on
-# player 2, who sees it announced on his city, then proposes peace in the window of war.
+# player 2, who sees it announced on his city, then proposes peace in the window of war. After the peace, player 1
+# declares war again and proposes peace: player 2 gets the dialog of the proposal (D-092), answers "Later", finds the
+# proposal in the military advisor and accepts it in the window of war.
 wait 10
 key F9
 wait 5
@@ -19,10 +21,10 @@ wait 3
 key Return
 wait 2
 # the threat of player 1, then its withdrawal, are announced on the city
-mpwait 190
+mpwait 290
 screenshot build/automation/war-client-threat.png
 # the war declared by player 1 is announced on the city
-mpwait 240
+mpwait 345
 screenshot build/automation/war-client-city.png
 key 2
 wait 5
@@ -30,17 +32,37 @@ click 742 152
 wait 5
 screenshot build/automation/war-client-war.png
 # propose peace
-click 735 322
+click 727 223
 wait 5
-mpwait 600
+mpwait 700
 screenshot build/automation/war-client-offer.png
 key Escape
 wait 3
 key Escape
 wait 3
 # peace signed by player 1: announced on the city
-mpwait 780
+mpwait 790
 screenshot build/automation/war-client-signed.png
-mpwait 800
+# player 1 declares war again, then proposes peace: the dialog of the proposal on the city
+mpwait 920
+screenshot build/automation/war-client-offer-dialog.png
+# "Later": the proposal stays, the military advisor tells it and the window of war offers to accept it
+click 608 334
+wait 5
+key 2
+wait 5
+screenshot build/automation/war-client-advisor-offer.png
+click 742 152
+wait 5
+screenshot build/automation/war-client-accept.png
+click 727 223
+wait 5
+key Escape
+wait 3
+key Escape
+wait 3
+mpwait 1000
+screenshot build/automation/war-client-signed-again.png
+mpwait 1100
 mpcheck
 quit

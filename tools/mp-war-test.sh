@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Two instances of the real game (no window) start a network game from the lobby: the host (640 x 480) declares a
-# brutal war on the client (1024 x 768) from the military advisor; the client sees it announced, proposes peace, the
-# host accepts it (T5.5). Screenshots in build/automation/war-*.png; both games must stay in step (mpcheck).
+# brutal war on the client (1024 x 768) from the military advisor; the client sees it announced and proposes peace; the
+# host sees the proposal in the window of war and the military advisor, and accepts it in the dialog of the city view
+# (T5.5, D-092). The host declares war again and proposes peace: the client answers "Later" to the dialog and accepts
+# in the window of war. Screenshots in build/automation/war-*.png; both games must stay in step (mpcheck).
 # Usage: tools/serial.sh tools/mp-war-test.sh
 set -uo pipefail
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
@@ -22,8 +24,10 @@ grep -h -E "mpcheck|automation\] .*(fail|timed|stopped)" build/automation/mp-war
 rm -f "$DATA_DIR"/mp-session-* "$DATA_DIR"/mp-desync-*
 mp_restore_autosave
 MISSING=0
-for shot in host-advisor host-peace host-notice host-withdraw-confirm host-withdrawn host-confirm host-war host-advisor-war host-offer host-signed client-threat client-city client-war \
-    client-offer client-signed; do
+for shot in host-advisor host-peace host-tooltip host-notice host-withdraw-confirm host-withdrawn host-confirm host-war \
+    host-advisor-war host-offer host-advisor-offer host-offer-dialog host-signed host-redeclare host-proposed \
+    client-threat client-city client-war client-offer client-signed client-offer-dialog client-advisor-offer \
+    client-accept client-signed-again; do
     [ -s "build/automation/war-$shot.png" ] || { echo "missing screenshot war-$shot.png"; MISSING=1; }
 done
 if [ $HOST_STATUS -ne 0 ] || [ $CLIENT_STATUS -ne 0 ] || [ $MISSING -ne 0 ]; then

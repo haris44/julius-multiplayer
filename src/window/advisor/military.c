@@ -58,7 +58,7 @@ static void draw_war_button(void)
 {
     if (window_mp_war_is_available()) {
         button_border_draw(480, 12, 140, 24, focus_war_button == 1);
-        text_draw_centered(translation_for(TR_MP_WAR_BUTTON), 480, 18, 140, FONT_NORMAL_BLACK, 0);
+        text_draw_centered(translation_for(TR_MP_WAR_TITLE), 480, 18, 140, FONT_NORMAL_BLACK, 0);
     }
 }
 

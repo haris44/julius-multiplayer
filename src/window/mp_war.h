@@ -11,13 +11,20 @@
 void window_mp_war_show(void);
 
 /**
+ * A proposal of peace received by the local player, not yet shown: a dialog "Player 2 offers you peace" with "Accept"
+ * (signs it, as the window does) and "Later" (it stays in the window). Shown once per proposal, when the city is shown
+ * and nothing is being built; display state of this computer only (D-092)
+ */
+void window_mp_war_show_peace_offer_pending(void);
+
+/**
  * Whether the military advisor offers the window: a multiplayer game with other players
  */
 int window_mp_war_is_available(void);
 
 /**
- * The line of the military advisor about the wars of the local player: "At war with player 2" (with the enemy
- * soldiers in his land, M10.8), or the notice of an honourable war (M10.4)
+ * The line of the military advisor about the wars of the local player: "Player 2 offers you peace" (D-092), "At war
+ * with player 2" (with the enemy soldiers in his land, M10.8), or the notice of an honourable war (M10.4)
  * @return 1 when he is at war or in a notice
  */
 int window_mp_war_advisor_text(uint8_t *text, int size);
