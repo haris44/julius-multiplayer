@@ -1,15 +1,18 @@
 #include "mp_imperial.h"
 
+#include "city/population.h"
 #include "core/image_group.h"
 #include "core/string.h"
 #include "game/player_context.h"
 #include "game/rules.h"
+#include "graphics/button.h"
+#include "graphics/generic_button.h"
 #include "graphics/graphics.h"
 #include "graphics/image.h"
 #include "graphics/panel.h"
 #include "graphics/text.h"
+#include "graphics/window.h"
 #include "mp/caesar.h"
-#include "city/population.h"
 #include "mp/caesar_rules.h"
 #include "mp/colors.h"
 #include "mp/expedition.h"
@@ -18,20 +21,55 @@
 #include "scenario/property.h"
 #include "translation/translation.h"
 
-#define NOTES_X 48
+// As the tables of the original advisors: the column headers above the inner panel, the rows 20 pixels apart
+#define HEADER_Y 80
+#define PANEL_Y 94
+#define PANEL_HEIGHT_BLOCKS 13
+#define FIRST_ROW_Y 104
+#define ROW_HEIGHT 20
+
+// left column: the notes of the city (first page), the laurels by source (second page)
+#define LEFT_X 48
 #define BAR_X 214
 #define BAR_WIDTH 100
-#define NOTE_VALUE_X 322
-#define NOTE_LAURELS_X 360
-#define RANKING_X 420
-#define RANKING_LAURELS_X 568
-#define FIRST_ROW_Y 122
-#define ROW_HEIGHT 22
+#define NOTE_VALUE_RIGHT 352
+#define SOURCE_VALUE_RIGHT 312
+
+// right column: the ranking (first page); the shares of the wrath and the army (second page), nearer the laurels by
+// source, which end sooner than the notes and their bars
+#define RIGHT_END 592
+#define PLACE_X 384
+#define NAME_X 402
+#define DETAILS_X 360
+
+// Caesar's wrath, under the notes (first page)
+#define WRATH_Y 214
+
+#define PAGE_BUTTON_X 392
+#define PAGE_BUTTON_Y 274
+#define PAGE_BUTTON_WIDTH 200
+#define PAGE_BUTTON_HEIGHT 20
 
 #define COLOR_BAR_BACKGROUND 0x303030
 #define COLOR_BAR_LOW 0xc04040
 #define COLOR_BAR_MEDIUM 0xd0b030
 #define COLOR_BAR_HIGH 0x40a040
+
+enum {
+    PAGE_SUMMARY = 0,
+    PAGE_DETAILS = 1
+};
+
+static void button_page(int param1, int param2);
+
+static generic_button page_buttons[] = {
+    {PAGE_BUTTON_X, PAGE_BUTTON_Y, PAGE_BUTTON_WIDTH, PAGE_BUTTON_HEIGHT, button_page, button_none, 0, 0},
+};
+
+static struct {
+    int page;
+    int focus_button_id;
+} data;
 
 static const translation_key NOTE_NAMES[MP_NOTE_MAX] = {
     TR_MP_NOTE_PROSPERITY, TR_MP_NOTE_TRADE, TR_MP_NOTE_HOUSING, TR_MP_NOTE_CULTURE, TR_MP_NOTE_GREATNESS
@@ -66,7 +104,21 @@ static void append_number(uint8_t *text, int size, int value)
     }
 }
 
-// "Laurels: 45 of 1000, next rank at 200", then the rule of the judgement
+static void draw_right(const uint8_t *text, int right, int y, font_t font, color_t color)
+{
+    text_draw(text, right - text_get_width(text, font), y, font, color);
+}
+
+// laurels from tenths, rounded towards zero, right-aligned: "-15"
+static void draw_laurels_right(int tenths, int right, int y, font_t font, color_t color)
+{
+    uint8_t number[16];
+    string_from_int(number, tenths / 10, 0);
+    draw_right(number, right, y, font, color);
+}
+
+// "Laurels: 45 of 1000, next rank at 200", as the original's "Emperor's favor 71"; then one line of the rule, as the
+// original's word of the emperor
 static void draw_header(int player_id)
 {
     uint8_t line[200] = { 0 };
@@ -82,15 +134,15 @@ static void draw_header(int player_id)
         append_number(line, sizeof(line), mp_caesar_rank_laurels(rank + 1));
     }
     text_draw(line, 60, 44, FONT_NORMAL_BLACK, 0);
-    uint8_t rule[400];
+    uint8_t rule[200] = { 0 };
     if (is_judged_to_the_score()) {
-        string_copy(translation_for(TR_MP_IMPERIAL_RULE_1), rule, 200);
-        string_from_int(rule + string_length(rule), game_rules_caesar_score(), 0);
-        string_copy(translation_for(TR_MP_IMPERIAL_RULE_2), rule + string_length(rule), 390 - string_length(rule));
+        append(rule, sizeof(rule), translation_for(TR_MP_IMPERIAL_RULE_1));
+        append_number(rule, sizeof(rule), game_rules_caesar_score());
+        append(rule, sizeof(rule), translation_for(TR_MP_IMPERIAL_RULE_2));
     } else {
-        string_copy(translation_for(TR_MP_IMPERIAL_RULE_ENDLESS), rule, 390);
+        append(rule, sizeof(rule), translation_for(TR_MP_IMPERIAL_RULE_ENDLESS));
     }
-    text_draw_multiline(rule, 60, 62, 544, FONT_SMALL_PLAIN, 0);
+    text_draw(rule, 60, 60, FONT_NORMAL_BLACK, 0);
 }
 
 static color_t bar_color(int note)
@@ -98,148 +150,212 @@ static color_t bar_color(int note)
     return note < 34 ? COLOR_BAR_LOW : note < 67 ? COLOR_BAR_MEDIUM : COLOR_BAR_HIGH;
 }
 
-// laurels from tenths, rounded towards zero: "-15"
-static void append_laurels(uint8_t *line, int size, int tenths)
+static void draw_bar(int x, int y, int width, int value, int max, color_t color)
 {
-    int length = string_length(line);
-    if (length >= size - 16) {
-        return;
+    graphics_fill_rect(x, y, width, 10, COLOR_BAR_BACKGROUND);
+    int filled = value <= 0 ? 0 : value >= max ? width : width * value / max;
+    if (filled > 0) {
+        graphics_fill_rect(x, y, filled, 10, color);
     }
-    if (tenths < 0) {
-        line[length++] = '-';
-        tenths = -tenths;
-    }
-    string_from_int(line + length, tenths / 10, 0);
+    graphics_draw_inset_rect(x - 1, y - 1, width + 2, 12);
 }
 
-// the laurels of the wars and of the army (M10.4, M10.7): "Wars: -15, army: -4. Legions: 3, Caesar tolerates 2: -2
-// laurels a month"
-static void draw_war_and_army(int player_id, int y)
+// "Player 2"
+static int draw_player_name(int player_id, int x, int y)
 {
-    uint8_t line[200] = { 0 };
-    append(line, sizeof(line), translation_for(TR_MP_IMPERIAL_WAR_LAURELS));
-    append_laurels(line, sizeof(line), mp_caesar_laurels_from(player_id, MP_LAURELS_WARS));
-    append(line, sizeof(line), translation_for(TR_MP_IMPERIAL_ARMY_LAURELS));
-    append_laurels(line, sizeof(line), mp_caesar_laurels_from(player_id, MP_LAURELS_ARMY));
-    int punishment = mp_caesar_laurels_from(player_id, MP_LAURELS_PUNISHMENT);
-    if (punishment) {
-        // what the punitive expedition took from the city, and what destroying it gave (M10.6)
-        append(line, sizeof(line), translation_for(TR_MP_IMPERIAL_EXPEDITION_LAURELS));
-        append_laurels(line, sizeof(line), punishment);
-    }
-    append(line, sizeof(line), (const uint8_t *) ". ");
-    int legions = mp_caesar_army_legions(player_id);
-    int population = city_population();
-    append(line, sizeof(line), translation_for(TR_MP_IMPERIAL_ARMY));
-    append_number(line, sizeof(line), legions);
-    append(line, sizeof(line), translation_for(TR_MP_IMPERIAL_ARMY_TOLERATED));
-    append_number(line, sizeof(line), mp_caesar_tolerated_legions(population));
-    int cost = mp_caesar_army_cost(legions, population);
-    if (cost) {
-        append(line, sizeof(line), (const uint8_t *) ": ");
-        append_laurels(line, sizeof(line), cost);
-        append(line, sizeof(line), translation_for(TR_MP_IMPERIAL_LAURELS_A_MONTH));
-    }
-    text_draw(line, NOTES_X, y, FONT_SMALL_PLAIN, cost ? COLOR_FONT_ORANGE : COLOR_WHITE);
+    uint8_t name[64];
+    string_copy(translation_for(TR_MP_PLAYER), name, 40);
+    string_from_int(name + string_length(name), player_id + 1, 0);
+    return text_draw(name, x, y, FONT_NORMAL_PLAIN, mp_colors_player(player_id));
 }
 
-// Caesar's wrath (M10.5), under the ranking: the gauge, each player's share of it, the enemies of Rome, the deadline
-// of an ultimatum
-static void draw_wrath(int count)
-{
-    int y = FIRST_ROW_Y + ROW_HEIGHT * count + 4;
-    uint8_t line[100] = { 0 };
-    append(line, sizeof(line), translation_for(TR_MP_IMPERIAL_WRATH));
-    append_number(line, sizeof(line), mp_caesar_wrath() / 10);
-    int wrath = mp_caesar_wrath();
-    color_t color = wrath >= MP_CAESAR_WRATH_ULTIMATUM ? COLOR_FONT_RED :
-        wrath >= MP_CAESAR_WRATH_WARNING ? COLOR_FONT_ORANGE : COLOR_WHITE;
-    text_draw(line, RANKING_X, y, FONT_NORMAL_PLAIN, color);
-    y += 18;
-    text_draw(translation_for(TR_MP_IMPERIAL_SHARES), RANKING_X, y, FONT_SMALL_PLAIN, COLOR_WHITE);
-    y += 13;
-    for (int p = 0; p < player_context_num_players(); p++) {
-        uint8_t share[64];
-        int length = string_from_int(share, p + 1, 0);
-        string_copy(translation_for(TR_MP_WRATH_PRICE), share + length, 20); // " : "
-        string_from_int(share + string_length(share), mp_caesar_belligerence(p) / 10, 0);
-        int width = text_draw(translation_for(TR_MP_PLAYER), RANKING_X, y, FONT_SMALL_PLAIN, mp_colors_player(p));
-        width += text_draw(share, RANKING_X + width, y, FONT_SMALL_PLAIN, mp_colors_player(p));
-        if (mp_wrath_is_enemy_of_rome(p)) {
-            text_draw(translation_for(TR_MP_IMPERIAL_ENEMY_OF_ROME), RANKING_X + width + 4, y, FONT_SMALL_PLAIN,
-                COLOR_FONT_RED);
-        }
-        y += 13;
-    }
-    if (mp_wrath_ultimatum_months() > 0) {
-        uint8_t ultimatum[100] = { 0 };
-        append(ultimatum, sizeof(ultimatum), translation_for(TR_MP_IMPERIAL_ULTIMATUM));
-        append_number(ultimatum, sizeof(ultimatum), mp_wrath_ultimatum_months());
-        append(ultimatum, sizeof(ultimatum), translation_for(TR_MP_IMPERIAL_MONTHS));
-        text_draw(ultimatum, RANKING_X, y, FONT_SMALL_PLAIN, COLOR_FONT_RED);
-        y += 13;
-    }
-    if (mp_expedition_disgrace_months() > 0) {
-        // after a punitive expedition (M10.6), the months the laurels of the notes stay halved
-        uint8_t disgrace[100] = { 0 };
-        append(disgrace, sizeof(disgrace), translation_for(TR_MP_IMPERIAL_DISGRACE));
-        append_number(disgrace, sizeof(disgrace), mp_expedition_disgrace_months());
-        append(disgrace, sizeof(disgrace), translation_for(TR_MP_IMPERIAL_MONTHS));
-        text_draw_multiline(disgrace, RANKING_X, y, 600 - RANKING_X, FONT_SMALL_PLAIN, COLOR_FONT_RED);
-    }
-}
-
-// the five notes, each with its bar and the laurels it brought; then the laurels of the city and of Caesar
+// the five notes, each with its bar
 static void draw_notes(int player_id)
 {
-    text_draw(translation_for(TR_MP_NOTES_TITLE), NOTES_X, 100, FONT_NORMAL_WHITE, 0);
-    text_draw(translation_for(TR_MP_NOTES_LAURELS), NOTE_LAURELS_X - 8, 102, FONT_SMALL_PLAIN, COLOR_WHITE);
     for (int note = 0; note < MP_NOTE_MAX; note++) {
         int y = FIRST_ROW_Y + ROW_HEIGHT * note;
         int value = mp_caesar_note(player_id, note);
-        text_draw(translation_for(NOTE_NAMES[note]), NOTES_X, y, FONT_NORMAL_WHITE, 0);
-        graphics_fill_rect(BAR_X, y + 2, BAR_WIDTH, 10, COLOR_BAR_BACKGROUND);
-        if (value > 0) {
-            graphics_fill_rect(BAR_X, y + 2, BAR_WIDTH * value / 100, 10, bar_color(value));
-        }
-        text_draw_number(value, 0, "", NOTE_VALUE_X, y, FONT_NORMAL_WHITE);
-        text_draw_number(mp_caesar_laurels_from(player_id, note) / 10, 0, "", NOTE_LAURELS_X, y, FONT_NORMAL_WHITE);
+        text_draw(translation_for(NOTE_NAMES[note]), LEFT_X, y, FONT_NORMAL_WHITE, 0);
+        draw_bar(BAR_X, y + 1, BAR_WIDTH, value, 100, bar_color(value));
+        uint8_t number[16];
+        string_from_int(number, value, 0);
+        draw_right(number, NOTE_VALUE_RIGHT, y, FONT_NORMAL_WHITE, 0);
     }
-    int y = FIRST_ROW_Y + ROW_HEIGHT * MP_NOTE_MAX + 8;
-    int width = text_draw(translation_for(TR_MP_CITY_LAURELS), NOTES_X, y, FONT_NORMAL_WHITE, 0);
-    text_draw_number(mp_caesar_city_laurels(player_id) / 10, 0, "", NOTES_X + width, y, FONT_NORMAL_WHITE);
-    y += ROW_HEIGHT;
-    width = text_draw(translation_for(TR_MP_CAESAR_LAURELS), NOTES_X, y, FONT_NORMAL_WHITE, 0);
-    int caesar = mp_caesar_laurels(player_id) - mp_caesar_city_laurels(player_id);
-    text_draw_number(caesar / 10, 0, "", NOTES_X + width, y, FONT_NORMAL_WHITE);
-    text_draw(translation_for(TR_MP_CAESAR_LAURELS_SOON), NOTES_X, y + 20, FONT_SMALL_PLAIN, COLOR_WHITE);
-    draw_war_and_army(player_id, y + 34);
 }
 
 // the ranking of the province, public (D-053): each player in his color, the local one marked
 static void draw_ranking(int local_player)
 {
-    text_draw(translation_for(TR_MP_RANKING), RANKING_X, 100, FONT_NORMAL_WHITE, 0);
     int players[PLAYER_CONTEXT_MAX_PLAYERS];
     int count = mp_caesar_ranking(players);
     for (int i = 0; i < count; i++) {
         int p = players[i];
         int y = FIRST_ROW_Y + ROW_HEIGHT * i;
-        uint8_t name[64];
-        int length = string_from_int(name, i + 1, 0);
-        name[length++] = '.';
-        name[length++] = ' ';
-        string_copy(translation_for(TR_MP_PLAYER), name + length, 40);
-        string_from_int(name + string_length(name), p + 1, 0);
-        int width = text_draw(name, RANKING_X, y, FONT_NORMAL_PLAIN, mp_colors_player(p));
+        uint8_t place[8];
+        int length = string_from_int(place, i + 1, 0);
+        place[length++] = '.';
+        place[length] = 0;
+        text_draw(place, PLACE_X, y, FONT_NORMAL_WHITE, 0);
+        int width = draw_player_name(p, NAME_X, y);
         if (p == local_player) {
-            // on the same line: below the name, it would cover the next player
-            text_draw(translation_for(TR_MP_YOU), RANKING_X + width + 4, y + 1, FONT_SMALL_PLAIN,
-                COLOR_FONT_LIGHT_GRAY);
+            text_draw(translation_for(TR_MP_YOU), NAME_X + width + 4, y + 1, FONT_SMALL_PLAIN, COLOR_FONT_LIGHT_GRAY);
         }
-        text_draw_number(mp_caesar_laurels(p) / 10, 0, "", RANKING_LAURELS_X, y, FONT_NORMAL_WHITE);
+        draw_laurels_right(mp_caesar_laurels(p), RIGHT_END, y, FONT_NORMAL_WHITE, 0);
     }
-    draw_wrath(count);
+}
+
+// "Enemy of Rome: Player 2, Player 3" (M10.4), or nothing
+static void append_enemies_of_rome(uint8_t *line, int size)
+{
+    int found = 0;
+    for (int p = 0; p < player_context_num_players(); p++) {
+        if (!mp_wrath_is_enemy_of_rome(p)) {
+            continue;
+        }
+        append(line, size, found ? (const uint8_t *) ", " : translation_for(TR_MP_STATS_ENEMY_OF_ROME));
+        append(line, size, translation_for(TR_MP_PLAYER));
+        append_number(line, size, p + 1);
+        found = 1;
+    }
+    if (found) {
+        append(line, size, (const uint8_t *) ".");
+    }
+}
+
+// Caesar's wrath (M10.5) under the notes, as one more row: its gauge with the steps of the warning and of the
+// ultimatum; then what threatens: the deadline of an ultimatum, the enemies of Rome, the disgrace after a punitive
+// expedition (M10.6). The shares are on the second page.
+static void draw_wrath(void)
+{
+    int wrath = mp_caesar_wrath();
+    color_t color = wrath >= MP_CAESAR_WRATH_ULTIMATUM ? COLOR_BAR_LOW :
+        wrath >= MP_CAESAR_WRATH_WARNING ? COLOR_BAR_MEDIUM : COLOR_BAR_HIGH;
+    text_draw(translation_for(TR_MP_STATS_WRATH), LEFT_X, WRATH_Y, FONT_NORMAL_WHITE, 0);
+    draw_bar(BAR_X, WRATH_Y + 1, BAR_WIDTH, wrath, MP_CAESAR_WRATH_MAX, color);
+    int warning_x = BAR_X + BAR_WIDTH * MP_CAESAR_WRATH_WARNING / MP_CAESAR_WRATH_MAX;
+    int ultimatum_x = BAR_X + BAR_WIDTH * MP_CAESAR_WRATH_ULTIMATUM / MP_CAESAR_WRATH_MAX;
+    graphics_draw_vertical_line(warning_x, WRATH_Y + 1, WRATH_Y + 10, COLOR_BLACK);
+    graphics_draw_vertical_line(ultimatum_x, WRATH_Y + 1, WRATH_Y + 10, COLOR_BLACK);
+    uint8_t number[16];
+    string_from_int(number, wrath / 10, 0);
+    if (wrath >= MP_CAESAR_WRATH_WARNING) {
+        draw_right(number, NOTE_VALUE_RIGHT, WRATH_Y, FONT_NORMAL_PLAIN,
+            wrath >= MP_CAESAR_WRATH_ULTIMATUM ? COLOR_FONT_RED : COLOR_FONT_ORANGE);
+    } else {
+        draw_right(number, NOTE_VALUE_RIGHT, WRATH_Y, FONT_NORMAL_WHITE, 0);
+    }
+
+    int y = WRATH_Y + ROW_HEIGHT + 2;
+    uint8_t line[200] = { 0 };
+    if (mp_wrath_ultimatum_months() > 0) {
+        append(line, sizeof(line), translation_for(TR_MP_IMPERIAL_ULTIMATUM));
+        append_number(line, sizeof(line), mp_wrath_ultimatum_months());
+        append(line, sizeof(line), translation_for(TR_MP_IMPERIAL_MONTHS));
+        append(line, sizeof(line), (const uint8_t *) ". ");
+    }
+    append_enemies_of_rome(line, sizeof(line));
+    if (line[0]) {
+        y += text_draw_multiline(line, LEFT_X, y, RIGHT_END - LEFT_X, FONT_NORMAL_PLAIN, COLOR_FONT_RED);
+    }
+    if (mp_expedition_disgrace_months() > 0) {
+        line[0] = 0;
+        append(line, sizeof(line), translation_for(TR_MP_IMPERIAL_DISGRACE));
+        append_number(line, sizeof(line), mp_expedition_disgrace_months());
+        append(line, sizeof(line), translation_for(TR_MP_IMPERIAL_MONTHS));
+        // left of the page button
+        text_draw_multiline(line, LEFT_X, y, PAGE_BUTTON_X - 16 - LEFT_X, FONT_NORMAL_PLAIN, COLOR_FONT_RED);
+    }
+}
+
+static void draw_summary(int player_id)
+{
+    text_draw(translation_for(TR_MP_NOTES_TITLE), LEFT_X, HEADER_Y, FONT_SMALL_PLAIN, 0);
+    text_draw(translation_for(TR_MP_RANKING), PLACE_X, HEADER_Y, FONT_SMALL_PLAIN, 0);
+    draw_right(translation_for(TR_MP_NOTES_LAURELS), RIGHT_END, HEADER_Y, FONT_SMALL_PLAIN, 0);
+    inner_panel_draw(32, PANEL_Y, 36, PANEL_HEIGHT_BLOCKS);
+    draw_notes(player_id);
+    draw_ranking(player_id);
+    draw_wrath();
+}
+
+// the laurels of the city by source, since the start: its five notes, then those of Caesar
+static void draw_sources(int player_id)
+{
+    static const struct {
+        mp_laurels_source source;
+        translation_key name;
+        int always;
+    } SOURCES[] = {
+        {MP_LAURELS_PROSPERITY, TR_MP_NOTE_PROSPERITY, 1},
+        {MP_LAURELS_TRADE, TR_MP_NOTE_TRADE, 1},
+        {MP_LAURELS_HOUSING, TR_MP_NOTE_HOUSING, 1},
+        {MP_LAURELS_CULTURE, TR_MP_NOTE_CULTURE, 1},
+        {MP_LAURELS_GREATNESS, TR_MP_NOTE_GREATNESS, 1},
+        {MP_LAURELS_GIFTS, TR_MP_STATS_GIFTS, 1},
+        {MP_LAURELS_WARS, TR_MP_STATS_WARS, 1},
+        {MP_LAURELS_ARMY, TR_MP_STATS_ARMY, 1},
+        {MP_LAURELS_PUNISHMENT, TR_MP_STATS_EXPEDITION, 0},
+    };
+    int y = FIRST_ROW_Y;
+    for (int i = 0; i < (int) (sizeof(SOURCES) / sizeof(SOURCES[0])); i++) {
+        int tenths = mp_caesar_laurels_from(player_id, SOURCES[i].source);
+        if (!SOURCES[i].always && !tenths) {
+            continue;
+        }
+        text_draw(translation_for(SOURCES[i].name), LEFT_X, y, FONT_NORMAL_WHITE, 0);
+        draw_laurels_right(tenths, SOURCE_VALUE_RIGHT, y, FONT_NORMAL_WHITE, 0);
+        y += ROW_HEIGHT;
+    }
+}
+
+// each player's share of Caesar's wrath (M10.5), and the enemies of Rome
+static void draw_shares(void)
+{
+    for (int p = 0; p < player_context_num_players(); p++) {
+        int y = FIRST_ROW_Y + ROW_HEIGHT * p;
+        int width = draw_player_name(p, DETAILS_X, y);
+        if (mp_wrath_is_enemy_of_rome(p)) {
+            text_draw(translation_for(TR_MP_IMPERIAL_ENEMY_OF_ROME), DETAILS_X + width + 6, y + 1, FONT_SMALL_PLAIN,
+                COLOR_FONT_RED);
+        }
+        draw_laurels_right(mp_caesar_belligerence(p), RIGHT_END, y, FONT_NORMAL_WHITE, 0);
+    }
+}
+
+// the legions of the city and those Caesar tolerates (M10.7)
+static void draw_army(int player_id)
+{
+    int legions = mp_caesar_army_legions(player_id);
+    int population = city_population();
+    int cost = mp_caesar_army_cost(legions, population);
+    int y = FIRST_ROW_Y + ROW_HEIGHT * PLAYER_CONTEXT_MAX_PLAYERS + 12;
+    uint8_t number[16];
+    text_draw(translation_for(TR_MP_STATS_LEGIONS), DETAILS_X, y, FONT_NORMAL_WHITE, 0);
+    string_from_int(number, legions, 0);
+    draw_right(number, RIGHT_END, y, FONT_NORMAL_WHITE, 0);
+    y += ROW_HEIGHT;
+    text_draw(translation_for(TR_MP_STATS_TOLERATED), DETAILS_X, y, FONT_NORMAL_WHITE, 0);
+    string_from_int(number, mp_caesar_tolerated_legions(population), 0);
+    draw_right(number, RIGHT_END, y, FONT_NORMAL_WHITE, 0);
+    y += ROW_HEIGHT;
+    text_draw(translation_for(TR_MP_STATS_MONTHLY_COST), DETAILS_X, y, cost ? FONT_NORMAL_PLAIN : FONT_NORMAL_WHITE,
+        cost ? COLOR_FONT_ORANGE : 0);
+    if (cost) {
+        draw_laurels_right(cost, RIGHT_END, y, FONT_NORMAL_PLAIN, COLOR_FONT_ORANGE);
+    } else {
+        draw_right(string_from_ascii("0"), RIGHT_END, y, FONT_NORMAL_WHITE, 0);
+    }
+}
+
+static void draw_details(int player_id)
+{
+    text_draw(translation_for(TR_MP_STATS_SOURCES), LEFT_X, HEADER_Y, FONT_SMALL_PLAIN, 0);
+    draw_right(translation_for(TR_MP_NOTES_LAURELS), SOURCE_VALUE_RIGHT, HEADER_Y, FONT_SMALL_PLAIN, 0);
+    text_draw(translation_for(TR_MP_IMPERIAL_SHARES), DETAILS_X, HEADER_Y, FONT_SMALL_PLAIN, 0);
+    inner_panel_draw(32, PANEL_Y, 36, PANEL_HEIGHT_BLOCKS);
+    draw_sources(player_id);
+    draw_shares();
+    draw_army(player_id);
 }
 
 void window_mp_imperial_draw_background(int height)
@@ -249,7 +365,29 @@ void window_mp_imperial_draw_background(int height)
     text_draw(scenario_player_name(), 60, 12, FONT_LARGE_BLACK, 0);
     int player_id = mp_session_local_player_id();
     draw_header(player_id);
-    inner_panel_draw(32, 90, 36, 14);
-    draw_notes(player_id);
-    draw_ranking(player_id);
+    if (data.page == PAGE_DETAILS) {
+        draw_details(player_id);
+    } else {
+        draw_summary(player_id);
+    }
+}
+
+void window_mp_imperial_draw_foreground(void)
+{
+    button_border_draw(PAGE_BUTTON_X, PAGE_BUTTON_Y, PAGE_BUTTON_WIDTH, PAGE_BUTTON_HEIGHT,
+        data.focus_button_id == 1);
+    translation_key label = data.page == PAGE_DETAILS ? TR_MP_STATS_PAGE_SUMMARY : TR_MP_STATS_PAGE_DETAILS;
+    text_draw_centered(translation_for(label), PAGE_BUTTON_X, PAGE_BUTTON_Y + 5, PAGE_BUTTON_WIDTH,
+        FONT_NORMAL_WHITE, 0);
+}
+
+int window_mp_imperial_handle_mouse(const mouse *m)
+{
+    return generic_buttons_handle_mouse(m, 0, 0, page_buttons, 1, &data.focus_button_id);
+}
+
+static void button_page(int param1, int param2)
+{
+    data.page = data.page == PAGE_DETAILS ? PAGE_SUMMARY : PAGE_DETAILS;
+    window_invalidate();
 }
