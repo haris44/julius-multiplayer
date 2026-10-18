@@ -15,10 +15,10 @@ key Return
 wait 10
 lobbyselected essai attack.mpsav
 # Host; the client finds the game and joins; then the host starts it with the same button
-click 240 466
+click 240 366
 mpplayers 2
 wait 5
-click 240 466
+click 240 366
 mpwait 0
 # Caesar's letter, if any: closed
 wait 3

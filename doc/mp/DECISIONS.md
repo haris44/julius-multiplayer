@@ -2094,3 +2094,42 @@
   - le préavis en rouge, comme la guerre ;
   - les annonces à la première personne ;
   - pas de ligne de recrues pour les cavaliers dans la fenêtre de la légion.
+
+### D-090 — Le salon, ses règles, les lettres de César et l'écran de fin à la manière de l'original (UI)
+- 2026-10-18 · **adoptée provisoirement**, **à valider** par Alexandre (« plus jolis et fidèles au jeu d'origine
+  (bouton / organisation…) ; pas trop saturées »). Dessin seulement : ni règle, ni état, ni commande ne changent.
+- **Salon** : avant, une colonne de gauche pleine (liste, joueurs, sept règles en texte cliquable, gris quand on ne
+  peut pas les changer) et la seconde expédition casée sous « Rejoindre » ; une barre de défilement qui débordait
+  sur la colonne de droite au-delà de dix parties. Après, deux colonnes symétriques comme la fenêtre des fichiers
+  d'origine : « Héberger une partie » (liste dans un panneau, barre de défilement à côté, « Joueurs : 2 » avec les
+  flèches des options d'origine, boutons « Règles de la partie » et « Héberger ») et « Rejoindre une partie »
+  (parties trouvées, adresse, « Rejoindre ») ; dessous, un panneau de texte blanc : les règles en une phrase
+  (carte, difficulté, fin, puis seulement les règles qui diffèrent de celles du salon : « sans dieux », « sans
+  invasions », « sans brouillard », « Rome reprend la province à la seconde expédition ») et l'état de la partie.
+  En hébergeant, la ligne des joueurs devient « Joueurs présents : 1 sur 2 ». Une partie rejointe cache
+  « Héberger » et « Rejoindre ». Un échec (port, hôte injoignable) s'affiche jusqu'au prochain essai ; avant, il ne
+  s'affichait pas. « Nouvelle partie (forêt) » devient « Nouvelle partie » (la carte se choisit dans les règles).
+- **Règles de la partie** (fenêtre par-dessus le salon, comme les options d'origine) : une ligne par règle,
+  « Carte : », « Difficulté : », « Dieux : », « Invasions IA : », « Brouillard de guerre : », « Fin de la partie : »,
+  « Seconde expédition : », la valeur sur une étiquette verte qui passe à la suivante (comme les options du son), les
+  noms de difficulté de la fenêtre d'origine ; OK ou clic droit ferme. Une phrase dit qui peut les changer ; chez un
+  joueur qui a rejoint, ou pour une partie reprise (D-063, D-073), les valeurs s'écrivent sans étiquette.
+- **Lettres de César** : avant, un panneau à part avec l'icône du conseiller, un texte noir signé « César » et un
+  bouton OK, sur la ville assombrie. Après, comme les messages de l'Empereur d'origine : à leur place (sur la ville,
+  pas sur la barre latérale), un titre par sujet (« Avertissement de César », « Ultimatum de César », « César impose
+  la paix », « L'expédition punitive », « Les légions de César vaincues » / « repartent », « Promotion », « Lettre de
+  César » pour l'accueil), la date et « Pour Joueur N » en tête du texte blanc, le bouton du conseiller impérial en
+  bas à gauche (il l'ouvre) et la flèche de fermeture en bas à droite ; une lettre longue agrandit la fenêtre.
+  Entrée et clic droit ferment toujours.
+- **Écran de fin** : avant, des lignes « Joueur 1 (vous) lauriers : 0 » et la règle en petit. Après, comme la
+  fenêtre de victoire d'origine : le titre, « L'héritier de César est » puis son nom en grand (« La partie est gagnée
+  par » pour la fin au score ; la phrase de Rome quand Rome reprend la province), les cités dans un panneau, la
+  meilleure d'abord, sous les colonnes « Cité » et « Lauriers », et les deux choix sur de grandes étiquettes.
+- **Menu principal** : inchangé (déjà dans l'idiome d'origine, D-031).
+- Scripts : les clics du salon de tous les scripts du vrai jeu suivent la nouvelle place des boutons (la carte, la
+  difficulté et l'expédition passent par « Règles de la partie ») ; `mp-ui-client.txt` capture aussi les règles de
+  l'hôte vues par le client (`ui-client-rules.png`).
+- *À valider* : les règles dans une fenêtre à part plutôt que dans le salon ; le résumé des règles (seulement ce qui
+  diffère) ; « Nouvelle partie » sans « (forêt) » ; les titres des lettres ; la signature « César » retirée (les
+  messages d'origine n'en ont pas).
+- Classique : inchangé.

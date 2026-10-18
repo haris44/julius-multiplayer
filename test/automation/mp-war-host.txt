@@ -12,15 +12,19 @@ wait 10
 # main menu: Multiplayer
 click 320 112
 wait 10
-# first map of the list, map 1 instead of a map drawn by lot, then Host
-click 100 110
+# first map of the list, map 1 instead of a map drawn by lot (in the rules of the game, D-090), then Host
+click 100 88
 wait 2
-click 258 358
+click 160 270
 wait 2
-click 160 406
+click 416 146
+wait 2
+click 320 382
+wait 2
+click 160 306
 mpplayers 2
 wait 30
-click 160 406
+click 160 306
 mpwait 0
 # Caesar's letter
 wait 3

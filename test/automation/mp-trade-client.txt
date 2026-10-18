@@ -6,7 +6,7 @@ wait 10
 click 400 172
 # the hosted game appears in the list within a second or two
 wait 150
-click 530 174
+click 530 148
 wait 5
 mpwait 0
 # Caesar's letter at the start of the game (doc/mp/CESAR.md §11): read, then closed

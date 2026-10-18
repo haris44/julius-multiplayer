@@ -6,14 +6,18 @@ wait 10
 # main menu: Multiplayer; a new game on map 1, hosted then started when the client is there
 click 400 172
 wait 10
-click 180 170
+click 180 148
 wait 2
-click 338 418
+click 240 330
 wait 2
-click 240 466
+click 496 206
+wait 2
+click 400 442
+wait 2
+click 240 366
 mpplayers 2
 wait 5
-click 240 466
+click 240 366
 mpwait 0
 # Caesar's letter
 wait 3
@@ -79,10 +83,10 @@ lobbyselected essai 710.mpsav
 lobbylists autosave.mpsav
 screenshot build/automation/mp-resume-lobby.png
 # Host, then Start when the client is there again
-click 240 466
+click 240 366
 mpplayers 2
 wait 5
-click 240 466
+click 240 366
 mpwait 0
 wait 3
 key Return

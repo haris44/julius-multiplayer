@@ -10,10 +10,17 @@ wait 10
 click 512 240
 # the hosted game appears in the list within a second or two
 wait 150
-click 642 242
+click 642 216
 # joined: the lobby shows the rules of the host, map 1 and its difficulty (T4.11)
 wait 20
 screenshot build/automation/ui-client-lobby.png
+# the dialog of the rules shows them without labels to click: they are those of the host (D-090); a right click
+# closes it
+click 352 398
+wait 3
+screenshot build/automation/ui-client-rules.png
+rclick 512 368
+wait 2
 mpwait 0
 # Caesar's letter
 wait 3
