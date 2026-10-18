@@ -150,6 +150,18 @@ int mp_war_announcements(void);
  */
 void mp_war_show_pending_announcements(void);
 
+/**
+ * A proposal of peace to the local player not yet shown in a dialog, and still open (display only, never saved):
+ * its proposer, now marked as shown; -1 when there is none (window/mp_war.c)
+ */
+int mp_war_take_peace_offer(void);
+
+/**
+ * Writes a text of the translations whose "%d" stand for players: the first for `first`, the second for `second`
+ * (player ids, written from 1)
+ */
+void mp_war_compose(uint8_t *text, int size, const uint8_t *pattern, int first, int second);
+
 /** Loads taken and lost by interceptions since the start of the process (tests) */
 int mp_war_loads_taken(void);
 int mp_war_loads_lost(void);

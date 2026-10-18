@@ -33,26 +33,26 @@ static void placeholders(const char *text, char *out)
     *out = 0;
 }
 
-static int check_statuses(void)
+static int check_placeholders(const char *what, int first_key, int last_key)
 {
     const translation_string *french, *english;
     int num_french, num_english;
     translation_french(&french, &num_french);
     translation_english(&english, &num_english);
     int failures = 0;
-    for (int key = TR_MP_STATUS_WAITING_PLAYERS; key <= TR_MP_STATUS_CONNECTED; key++) {
+    for (int key = first_key; key <= last_key; key++) {
         const char *fr = find(french, num_french, key);
         const char *en = find(english, num_english, key);
         char fr_marks[16], en_marks[16];
         if (!fr || !en || !*fr || !*en) {
-            printf("WRONG: status %d is not translated in French and in English\n", key);
+            printf("WRONG: %s %d is not translated in French and in English\n", what, key);
             failures++;
             continue;
         }
         placeholders(fr, fr_marks);
         placeholders(en, en_marks);
         if (strcmp(fr_marks, en_marks) != 0) {
-            printf("WRONG: status %d has \"%s\" in French and \"%s\" in English\n", key, fr_marks, en_marks);
+            printf("WRONG: %s %d has \"%s\" in French and \"%s\" in English\n", what, key, fr_marks, en_marks);
             failures++;
         }
     }
@@ -75,5 +75,8 @@ int main(void)
     check_language("Traditional Chinese", LANGUAGE_TRADITIONAL_CHINESE);
     check_language("Czech", LANGUAGE_CZECH);
     check_language("Greek", LANGUAGE_GREEK);
-    return check_statuses() ? 1 : 0;
+    int failures = check_placeholders("status", TR_MP_STATUS_WAITING_PLAYERS, TR_MP_STATUS_CONNECTED);
+    // the announcements of the war and the offer of peace carry the players as "%d" too (D-092)
+    failures += check_placeholders("text of the war", TR_MP_WAR_NEWS_BRUTAL_ON_YOU, TR_MP_MILITARY_PEACE_OFFERED);
+    return failures ? 1 : 0;
 }

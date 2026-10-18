@@ -52,6 +52,7 @@ static struct {
     int loads_lost;
     uint8_t pending[MAX_PENDING][MAX_TEXT]; // announcements not yet shown: the player was not on the city view
     int num_pending;
+    uint8_t peace_offer[MAX_PLAYERS]; // proposals of peace to the local player not yet shown in a dialog
 } display;
 
 static int is_player(int player_id)
@@ -74,6 +75,7 @@ static void update_summary(void)
 void mp_war_reset(void)
 {
     display.num_pending = 0;
+    memset(display.peace_offer, 0, sizeof(display.peace_offer));
     memset(&data, 0, sizeof(data));
     for (int a = 0; a < MAX_PLAYERS; a++) {
         for (int b = 0; b < MAX_PLAYERS; b++) {
@@ -137,6 +139,22 @@ static void append_number(uint8_t *text, int value)
     append(text, number);
 }
 
+void mp_war_compose(uint8_t *text, int size, const uint8_t *pattern, int first, int second)
+{
+    int players[2] = { first, second };
+    int used = 0;
+    int length = 0;
+    for (const uint8_t *c = pattern; *c && length < size - 12; c++) {
+        if (c[0] == '%' && c[1] == 'd' && used < 2) {
+            length += string_from_int(text + length, players[used++] + 1, 0);
+            c++;
+        } else {
+            text[length++] = *c;
+        }
+    }
+    text[length] = 0;
+}
+
 // shown as a warning when the local player is next on the city view (window/city.c): a war must not go unnoticed
 // because he was in an advisor
 static void announce(const uint8_t *text)
@@ -157,29 +175,33 @@ void mp_war_show_pending_announcements(void)
     display.num_pending = 0;
 }
 
-// "Player 1: brutal war on player 2", on every computer
-static void announce_declaration(int declarer, int target, int form)
+// An act of `self` towards `other`, told on every computer from its own point of view: "Player 1 declares war on you",
+// "You declare war on player 2", "Player 1 declares war on player 2"
+static void announce_act(int self, int other, translation_key to_you, translation_key by_you, translation_key others)
 {
-    uint8_t text[200] = { 0 };
-    append(text, translation_for(TR_MP_PLAYER));
-    append_number(text, declarer + 1);
-    append(text, translation_for(form == MP_WAR_BRUTAL ? TR_MP_WAR_ANNOUNCE_BRUTAL : TR_MP_WAR_ANNOUNCE_HONOURABLE));
-    append_number(text, target + 1);
-    if (form != MP_WAR_BRUTAL) {
-        append(text, translation_for(TR_MP_WAR_ANNOUNCE_NOTICE));
+    int local = mp_session_local_player_id();
+    uint8_t text[MAX_TEXT];
+    if (local == other) {
+        mp_war_compose(text, MAX_TEXT, translation_for(to_you), self, -1);
+    } else if (local == self) {
+        mp_war_compose(text, MAX_TEXT, translation_for(by_you), other, -1);
+    } else {
+        mp_war_compose(text, MAX_TEXT, translation_for(others), self, other);
     }
     announce(text);
 }
 
-// "Players 1 and 2: the fighting begins" / "...: peace signed", on every computer
-static void announce_pair(int a, int b, translation_key what)
+// What happens to two players: "Peace signed with player 2" for each of them, "Peace signed between players 1 and 2"
+// for the others
+static void announce_pair(int a, int b, translation_key with_you, translation_key others)
 {
-    uint8_t text[200] = { 0 };
-    append(text, translation_for(TR_MP_WAR_PLAYERS));
-    append_number(text, (a < b ? a : b) + 1);
-    append(text, translation_for(TR_MP_WAR_AND));
-    append_number(text, (a < b ? b : a) + 1);
-    append(text, translation_for(what));
+    int local = mp_session_local_player_id();
+    uint8_t text[MAX_TEXT];
+    if (local == a || local == b) {
+        mp_war_compose(text, MAX_TEXT, translation_for(with_you), local == a ? b : a, -1);
+    } else {
+        mp_war_compose(text, MAX_TEXT, translation_for(others), a < b ? a : b, a < b ? b : a);
+    }
     announce(text);
 }
 
@@ -214,7 +236,12 @@ void mp_war_declare(int target, int form)
             game_time_absolute_tick() + MP_WAR_NOTICE_TICKS);
     }
     mp_wrath_war_declared(self, target, form); // Caesar's judgement (M10.4): the motive; a brutal war is paid at once
-    announce_declaration(self, target, form);
+    if (form == MP_WAR_BRUTAL) {
+        announce_act(self, target, TR_MP_WAR_NEWS_BRUTAL_ON_YOU, TR_MP_WAR_NEWS_YOU_BRUTAL, TR_MP_WAR_NEWS_BRUTAL);
+    } else {
+        announce_act(self, target, TR_MP_WAR_NEWS_HONOURABLE_ON_YOU, TR_MP_WAR_NEWS_YOU_HONOURABLE,
+            TR_MP_WAR_NEWS_HONOURABLE);
+    }
 }
 
 // the figures of a player fighting one of the other player stop: they go on with what they did before the fight
@@ -278,17 +305,6 @@ static void make_peace(int a, int b)
     legions_go_home(b);
 }
 
-// "Player 1 offers peace to player 2" / "Player 1 withdraws his declaration of war on player 2", on every computer
-static void announce_act(int self, int other, translation_key what)
-{
-    uint8_t text[200] = { 0 };
-    append(text, translation_for(TR_MP_PLAYER));
-    append_number(text, self + 1);
-    append(text, translation_for(what));
-    append_number(text, other + 1);
-    announce(text);
-}
-
 int mp_war_may_withdraw(int declarer, int target)
 {
     return mp_war_status(declarer, target) == MP_WAR_NOTICE && data.declarer[declarer][target] == declarer;
@@ -302,7 +318,7 @@ void mp_war_withdraw(int target)
     }
     make_peace(self, target);
     mp_wrath_war_withdrawn(self, target); // Caesar's judgement (M10.4): nothing to pay, but it binds the declarer
-    announce_act(self, target, TR_MP_WAR_ANNOUNCE_WITHDRAWN);
+    announce_act(self, target, TR_MP_WAR_NEWS_WITHDRAWN_YOU, TR_MP_WAR_NEWS_YOU_WITHDRAW, TR_MP_WAR_NEWS_WITHDRAWN);
 }
 
 void mp_war_propose_peace(int other, int propose)
@@ -317,13 +333,20 @@ void mp_war_propose_peace(int other, int propose)
         return;
     }
     if (!data.peace_proposed[other][self]) {
-        announce_act(self, other, TR_MP_WAR_ANNOUNCE_PROPOSES);
+        if (other == mp_session_local_player_id()) {
+            // told to him by a dialog rather than a warning (window/mp_war.c)
+            display.announcements++;
+            display.peace_offer[self] = 1;
+        } else {
+            // (never to him here: the first key is not used)
+            announce_act(self, other, TR_MP_WAR_NEWS_PROPOSES, TR_MP_WAR_NEWS_YOU_PROPOSE, TR_MP_WAR_NEWS_PROPOSES);
+        }
         return;
     }
     // both proposed it: peace is signed
     make_peace(self, other);
     mp_wrath_peace_signed(self, other); // Caesar's judgement (M10.4): a new war within 12 months is without motive
-    announce_pair(self, other, TR_MP_WAR_ANNOUNCE_PEACE);
+    announce_pair(self, other, TR_MP_WAR_NEWS_PEACE_YOU, TR_MP_WAR_NEWS_PEACE);
 }
 
 void mp_war_update(void)
@@ -338,7 +361,7 @@ void mp_war_update(void)
                 data.status[a][b] = data.status[b][a] = MP_WAR_FIGHTING;
                 update_summary();
                 mp_wrath_fighting_started(a, b); // Caesar's judgement (M10.4): the declarer pays the price now
-                announce_pair(a, b, TR_MP_WAR_ANNOUNCE_FIGHTING);
+                announce_pair(a, b, TR_MP_WAR_NEWS_FIGHTING_YOU, TR_MP_WAR_NEWS_FIGHTING);
             }
         }
     }
@@ -353,7 +376,7 @@ void mp_war_impose_peace(int a, int b)
         return;
     }
     make_peace(a, b);
-    announce_pair(a, b, TR_MP_WAR_ANNOUNCE_IMPOSED);
+    announce_pair(a, b, TR_MP_WAR_NEWS_IMPOSED_YOU, TR_MP_WAR_NEWS_IMPOSED);
 }
 
 void mp_war_announce(const uint8_t *text)
@@ -598,6 +621,26 @@ int mp_war_intercept_caravan(figure *caravan)
 int mp_war_announcements(void)
 {
     return display.announcements;
+}
+
+int mp_war_take_peace_offer(void)
+{
+    int local = mp_session_local_player_id();
+    int proposer = -1;
+    for (int p = 0; p < MAX_PLAYERS; p++) {
+        if (!display.peace_offer[p]) {
+            continue;
+        }
+        // still open: not withdrawn, not signed
+        int open = mp_war_peace_proposed(p, local) && !mp_war_peace_proposed(local, p);
+        if (!open || proposer < 0) {
+            display.peace_offer[p] = 0;
+        }
+        if (open && proposer < 0) {
+            proposer = p;
+        }
+    }
+    return proposer;
 }
 
 int mp_war_loads_taken(void)

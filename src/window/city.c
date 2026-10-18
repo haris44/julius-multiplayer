@@ -35,6 +35,7 @@
 #include "window/file_dialog.h"
 #include "window/mp_caesar_letter.h"
 #include "window/mp_price_alert.h"
+#include "window/mp_war.h"
 
 static void draw_background(void)
 {
@@ -126,6 +127,7 @@ static void draw_foreground(void)
         window_mp_price_alert_show_pending();
         window_mp_caesar_letter_show_pending();
         mp_war_show_pending_announcements();
+        window_mp_war_show_peace_offer_pending();
     }
 }
 

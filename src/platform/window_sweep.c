@@ -30,6 +30,7 @@
 #include "window/mp_caesar_letter.h"
 #include "window/mp_results.h"
 #include "window/mp_trade.h"
+#include "window/mp_war.h"
 #include "window/overlay_menu.h"
 #include "window/popup_dialog.h"
 #include "window/resource_settings.h"
@@ -207,6 +208,13 @@ static void open_caesar_letter(int type)
     window_mp_caesar_letter_show_pending();
 }
 
+// the window "War and peace" over the military advisor: its rows and tooltips ask Caesar's judgement (D-092)
+static void open_war(int param)
+{
+    window_advisors_show_advisor(ADVISOR_MILITARY);
+    window_mp_war_show();
+}
+
 // building information: every building of a type, of every player and of Caesar, in one pass per type
 static int building_type_present(int type)
 {
@@ -305,6 +313,9 @@ int platform_window_sweep(void (*log)(const char *message, const char *value))
         while (mp_caesar_num_letters()) {
             mp_caesar_remove_first_letter();
         }
+    }
+    if (window_mp_war_is_available()) {
+        sweep("war and peace", open_war, 0);
     }
     // the overlays of the overlay menu
     static const int OVERLAYS[] = {
