@@ -5,12 +5,12 @@
 #include "core/lang.h"
 #include "core/string.h"
 #include "game/rules.h"
+#include "game/time.h"
 #include "graphics/button.h"
-#include "graphics/generic_button.h"
 #include "graphics/graphics.h"
-#include "graphics/image.h"
+#include "graphics/image_button.h"
+#include "graphics/lang_text.h"
 #include "graphics/panel.h"
-#include "graphics/screen.h"
 #include "graphics/text.h"
 #include "graphics/window.h"
 #include "input/input.h"
@@ -19,18 +19,14 @@
 #include "mp/expedition.h"
 #include "mp/session.h"
 #include "translation/translation.h"
+#include "window/advisors.h"
 #include "window/city.h"
 
 #define TEXT_SIZE 1200
 #define RANK_NAMES_GROUP 32
 
 static void button_ok(int param1, int param2);
-
-static generic_button buttons[] = {
-    {224, 376, 192, 25, button_ok, button_none, 0, 0},
-};
-
-static int focus_button_id;
+static void button_advisor(int param1, int param2);
 
 static void append(uint8_t *text, const uint8_t *part)
 {
@@ -173,11 +169,61 @@ static void compose(const mp_caesar_letter *letter, uint8_t *text)
     }
 }
 
+// the letter is drawn as the messages of the Emperor in the original game (D-090): at their place, over the city
+// and not the sidebar, with the title of its subject, the date and its recipient on top of the text, the button of
+// the imperial advisor at the bottom left and the close button at the bottom right
+#define LETTER_X 0
+#define LETTER_Y 88
+#define LETTER_WIDTH_BLOCKS 30
+#define TEXT_X (LETTER_X + 16)
+#define TEXT_WIDTH_BLOCKS 28
+#define MIN_TEXT_HEIGHT_BLOCKS 14
+
+static image_button advisor_button[] = {
+    {0, 0, 27, 27, IB_NORMAL, GROUP_MESSAGE_ADVISOR_BUTTONS, 6, button_advisor, button_none, 0, 0, 1}
+};
+static image_button close_button[] = {
+    {0, 0, 24, 24, IB_NORMAL, GROUP_CONTEXT_ICONS, 4, button_ok, button_none, 0, 0, 1}
+};
+
+static struct {
+    int y;
+    int height_blocks;
+} layout;
+
+static translation_key title_of(mp_caesar_letter_type type)
+{
+    switch (type) {
+        case MP_CAESAR_LETTER_PROMOTION: return TR_MP_LETTER_TITLE_PROMOTION;
+        case MP_CAESAR_LETTER_WARNING: return TR_MP_LETTER_TITLE_WARNING;
+        case MP_CAESAR_LETTER_ULTIMATUM: return TR_MP_LETTER_TITLE_ULTIMATUM;
+        case MP_CAESAR_LETTER_PEACE_IMPOSED: return TR_MP_LETTER_TITLE_PEACE;
+        case MP_CAESAR_LETTER_EXPEDITION: return TR_MP_LETTER_TITLE_EXPEDITION;
+        case MP_CAESAR_LETTER_EXPEDITION_DEFEATED: return TR_MP_LETTER_TITLE_EXPEDITION_DEFEATED;
+        case MP_CAESAR_LETTER_EXPEDITION_LEFT: return TR_MP_LETTER_TITLE_EXPEDITION_LEFT;
+        default: return TR_MP_LETTER_TITLE;
+    }
+}
+
+// the text starts under the line of the date, as in the messages of the original game; a long letter makes the
+// window taller rather than running out of its panel
+static void update_layout(const uint8_t *text)
+{
+    int text_height = 56 + 16 * text_measure_multiline(text, 16 * (TEXT_WIDTH_BLOCKS - 1), FONT_NORMAL_WHITE, 0);
+    int text_blocks = (text_height + 8 + 15) / 16;
+    if (text_blocks < MIN_TEXT_HEIGHT_BLOCKS) {
+        text_blocks = MIN_TEXT_HEIGHT_BLOCKS;
+    }
+    layout.height_blocks = text_blocks + 6;
+    layout.y = LETTER_Y;
+    if (layout.y + 16 * layout.height_blocks > 480) {
+        layout.y = (480 - 16 * layout.height_blocks) / 2;
+    }
+}
+
 static void draw_background(void)
 {
     window_draw_underlying_window();
-    graphics_reset_clip_rectangle();
-    graphics_shade_rect(0, 0, screen_width(), screen_height(), 0);
 }
 
 static void draw_foreground(void)
@@ -186,23 +232,36 @@ static void draw_foreground(void)
     if (!letter) {
         return;
     }
-    graphics_in_dialog();
-    outer_panel_draw(64, 48, 32, 24);
-    image_draw(image_group(GROUP_ADVISOR_ICONS) + 2, 84, 64);
-    text_draw_centered(translation_for(TR_MP_LETTER_TITLE), 64, 70, 512, FONT_LARGE_BLACK, 0);
     static uint8_t text[TEXT_SIZE];
     compose(letter, text);
-    text_draw_multiline(text, 96, 128, 448, FONT_NORMAL_BLACK, 0);
-    text_draw(translation_for(TR_MP_LETTER_SIGNATURE), 448, 336, FONT_LARGE_BLACK, 0);
-    button_border_draw(buttons[0].x, buttons[0].y, buttons[0].width, buttons[0].height, focus_button_id == 1);
-    text_draw_centered(translation_for(TR_BUTTON_OK), buttons[0].x, buttons[0].y + 7, buttons[0].width,
-        FONT_NORMAL_BLACK, 0);
+    update_layout(text);
+    graphics_in_dialog();
+    int y = layout.y;
+    int text_y = y + 48;
+    outer_panel_draw(LETTER_X, y, LETTER_WIDTH_BLOCKS, layout.height_blocks);
+    text_draw_centered(translation_for(title_of(letter->type)), LETTER_X, y + 14, 16 * LETTER_WIDTH_BLOCKS,
+        FONT_LARGE_BLACK, 0);
+    inner_panel_draw(TEXT_X, text_y, TEXT_WIDTH_BLOCKS, layout.height_blocks - 6);
+    // the date, then the recipient: the local player
+    int width = lang_text_draw(25, game_time_month(), TEXT_X + 10, text_y + 6, FONT_NORMAL_WHITE);
+    width += lang_text_draw_year(game_time_year(), TEXT_X + 12 + width, text_y + 6, FONT_NORMAL_WHITE);
+    width += lang_text_draw(63, 5, TEXT_X + width + 60, text_y + 6, FONT_NORMAL_WHITE);
+    width += text_draw(translation_for(TR_MP_PLAYER), TEXT_X + width + 60, text_y + 6, FONT_NORMAL_WHITE, 0);
+    text_draw_number(mp_session_local_player_id() + 1, 0, "", TEXT_X + width + 60, text_y + 6, FONT_NORMAL_WHITE);
+    text_draw_multiline(text, TEXT_X + 8, text_y + 56, 16 * (TEXT_WIDTH_BLOCKS - 1), FONT_NORMAL_WHITE, 0);
+    int bottom = y + 16 * layout.height_blocks;
+    image_buttons_draw(LETTER_X + 16, bottom - 40, advisor_button, 1);
+    image_buttons_draw(LETTER_X + 16 * LETTER_WIDTH_BLOCKS - 38, bottom - 36, close_button, 1);
     graphics_reset_dialog();
 }
 
 static void handle_input(const mouse *m, const hotkeys *h)
 {
-    if (generic_buttons_handle_mouse(mouse_in_dialog(m), 0, 0, buttons, 1, &focus_button_id)) {
+    const mouse *m_dialog = mouse_in_dialog(m);
+    int bottom = layout.y + 16 * layout.height_blocks;
+    if (image_buttons_handle_mouse(m_dialog, LETTER_X + 16, bottom - 40, advisor_button, 1, 0) ||
+        image_buttons_handle_mouse(m_dialog, LETTER_X + 16 * LETTER_WIDTH_BLOCKS - 38, bottom - 36,
+            close_button, 1, 0)) {
         return;
     }
     if (input_go_back_requested(m, h) || h->enter_pressed) {
@@ -216,6 +275,15 @@ static void button_ok(int param1, int param2)
     window_city_show();
 }
 
+// the imperial advisor, as the button of the original messages of the Emperor
+static void button_advisor(int param1, int param2)
+{
+    mp_caesar_remove_first_letter();
+    if (!window_advisors_show_advisor(ADVISOR_IMPERIAL)) {
+        window_city_show();
+    }
+}
+
 void window_mp_caesar_letter_show_pending(void)
 {
     if (!mp_caesar_num_letters() || !window_is(WINDOW_CITY) || building_construction_in_progress()) {
@@ -227,6 +295,5 @@ void window_mp_caesar_letter_show_pending(void)
         draw_foreground,
         handle_input
     };
-    focus_button_id = 0;
     window_show(&window);
 }

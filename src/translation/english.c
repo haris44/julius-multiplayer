@@ -419,6 +419,13 @@ static translation_string all_strings[] = {
     {TR_MP_RULES_HEIR, "Heir at "},
     {TR_MP_RULES_ENDLESS, "Endless"},
     {TR_MP_RULES_EXPEDITION_STRIKES, "Like the first one"},
+    {TR_MP_LETTER_TITLE_PROMOTION, "Promotion"},
+    {TR_MP_LETTER_TITLE_WARNING, "Warning from Caesar"},
+    {TR_MP_LETTER_TITLE_ULTIMATUM, "Ultimatum from Caesar"},
+    {TR_MP_LETTER_TITLE_PEACE, "Caesar imposes peace"},
+    {TR_MP_LETTER_TITLE_EXPEDITION, "The punitive expedition"},
+    {TR_MP_LETTER_TITLE_EXPEDITION_DEFEATED, "Caesar's legions defeated"},
+    {TR_MP_LETTER_TITLE_EXPEDITION_LEFT, "Caesar's legions leave"},
 };
 
 void translation_english(const translation_string **strings, int *num_strings)

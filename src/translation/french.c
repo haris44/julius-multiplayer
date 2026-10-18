@@ -419,6 +419,13 @@ static translation_string all_strings[] = {
     {TR_MP_RULES_HEIR, "Héritier à "},
     {TR_MP_RULES_ENDLESS, "Sans fin"},
     {TR_MP_RULES_EXPEDITION_STRIKES, "Comme la première"},
+    {TR_MP_LETTER_TITLE_PROMOTION, "Promotion"},
+    {TR_MP_LETTER_TITLE_WARNING, "Avertissement de César"},
+    {TR_MP_LETTER_TITLE_ULTIMATUM, "Ultimatum de César"},
+    {TR_MP_LETTER_TITLE_PEACE, "César impose la paix"},
+    {TR_MP_LETTER_TITLE_EXPEDITION, "L'expédition punitive"},
+    {TR_MP_LETTER_TITLE_EXPEDITION_DEFEATED, "Les légions de César vaincues"},
+    {TR_MP_LETTER_TITLE_EXPEDITION_LEFT, "Les légions de César repartent"},
 };
 
 void translation_french(const translation_string **strings, int *num_strings)
