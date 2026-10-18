@@ -6,7 +6,7 @@ wait 10
 click 400 172
 # the hosted game appears in the list within a second or two
 wait 150
-click 530 174
+click 530 148
 wait 5
 mpwait 0
 wait 3
@@ -23,7 +23,7 @@ wait 10
 click 400 172
 wait 400
 screenshot build/automation/mp-resume-client-lobby.png
-click 530 174
+click 530 148
 wait 5
 mpwait 0
 wait 3

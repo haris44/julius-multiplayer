@@ -64,17 +64,20 @@ Le pare-feu de chaque ordinateur doit laisser passer le jeu (ports 27400 en TCP 
       sudo firewall-cmd --reload
 
 - Menu principal, « Multijoueur ».
-- Celui qui héberge choisit « Nouvelle partie (forêt) » (ou une partie sauvegardée à reprendre), le nombre de
-  joueurs et les règles, puis clique sur « Héberger ». Il y a deux cartes pour 1 ou 2 joueurs, et deux pour 3 ou
-  4 : l'hôte choisit « Carte 1 », « Carte 2 » ou « Carte au hasard » (par défaut). La difficulté proposée est
-  « facile ». On peut aussi jouer seul (1 joueur) pour découvrir la carte et ses règles.
-- Les autres voient la partie apparaître dans « Parties trouvées sur le réseau » et cliquent dessus (ou tapent
+- Celui qui héberge choisit, dans la colonne « Héberger une partie », « Nouvelle partie » (ou une partie
+  sauvegardée à reprendre) et le nombre de joueurs (avec les flèches) ; le bouton « Règles de la partie » ouvre les
+  règles : un clic sur une valeur passe à la suivante, OK ferme. Puis il clique sur « Héberger ». Il y a deux
+  cartes pour 1 ou 2 joueurs, et deux pour 3 ou 4 : l'hôte choisit « Carte 1 », « Carte 2 » ou « Au hasard » (par
+  défaut). La difficulté proposée est « Facile ». On peut aussi jouer seul (1 joueur) pour découvrir la carte et
+  ses règles.
+- Les autres voient la partie apparaître dans la colonne « Rejoindre une partie » et cliquent dessus (ou tapent
   l'adresse affichée chez l'hôte, puis « Rejoindre »).
-- L'hôte peut changer les règles jusqu'à « Lancer la partie ». Les autres voient ses réglages, tenus à jour, sans
-  pouvoir les changer : la difficulté est la même pour tous. « Invasions IA : non » coupe toutes les attaques de
-  l'IA, Mars compris ; les révoltes de gladiateurs restent, et l'expédition punitive de César aussi. « Seconde
-  expédition de César » : par défaut, « elle frappe comme la première » ; « Rome reprend la province » : la partie
-  s'arrête, sans vainqueur. Une partie reprise garde les règles de sa sauvegarde.
+- L'hôte peut changer les règles jusqu'à « Lancer la partie ». Les autres voient ses réglages, résumés en bas du
+  salon et tenus à jour, sans pouvoir les changer (« Règles de la partie » les montre en entier) : la difficulté
+  est la même pour tous. « Invasions IA : Non » coupe toutes les attaques de l'IA, Mars compris ; les révoltes de
+  gladiateurs restent, et l'expédition punitive de César aussi. « Seconde expédition » : par défaut, « Comme la
+  première » ; « Rome reprend la province » : la partie s'arrête, sans vainqueur. Une partie reprise garde les
+  règles de sa sauvegarde.
 - Quand tout le monde est là, l'hôte clique sur « Lancer la partie ».
 
 En jeu : chacun a sa cité, ses finances et ses conseillers. Le bandeau en bas à gauche rappelle votre numéro de

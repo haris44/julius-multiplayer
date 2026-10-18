@@ -8,19 +8,24 @@ wait 10
 # main menu: Multiplayer
 click 320 112
 wait 10
-# a new game; map 1 instead of a map drawn by lot, and the next difficulty: the client must see these rules (T4.11)
-click 100 110
+# a new game; in the rules of the game (D-090), map 1 instead of a map drawn by lot and the next difficulty: the
+# client must see these rules (T4.11)
+click 100 88
 wait 2
-click 258 358
+click 160 270
 wait 2
-click 100 314
+click 416 146
 wait 2
-click 160 406
+click 416 176
+wait 2
+click 320 382
+wait 2
+click 160 306
 # the client joins, and takes a screenshot of the lobby with these rules before the start
 mpplayers 2
 wait 60
 screenshot build/automation/ui-host-lobby.png
-click 160 406
+click 160 306
 mpwait 0
 # Caesar's letter
 wait 3

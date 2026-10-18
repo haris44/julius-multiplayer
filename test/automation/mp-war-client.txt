@@ -11,7 +11,7 @@ wait 10
 click 512 240
 # the hosted game appears in the list within a second or two
 wait 150
-click 642 242
+click 642 216
 wait 20
 mpwait 0
 # Caesar's letter

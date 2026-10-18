@@ -7,20 +7,24 @@ wait 10
 # main menu: Multiplayer
 click 400 172
 wait 10
-# first map of the list, four players (twice +), then Host
-click 180 170
+# first map of the list, four players (twice the up arrow), map 1 in the rules of the game (D-090), then Host
+click 180 148
 wait 2
-click 300 350
+click 324 298
 wait 2
-click 300 350
+click 324 298
 wait 2
-click 338 418
+click 240 330
 wait 2
-click 240 466
+click 496 206
+wait 2
+click 400 442
+wait 2
+click 240 366
 # three clients find the game and join; then the host starts it with the same button
 mpplayers 4
 wait 5
-click 240 466
+click 240 366
 mpwait 0
 # Caesar's letter
 wait 3

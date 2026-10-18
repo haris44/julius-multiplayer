@@ -6,17 +6,21 @@ wait 10
 click 400 172
 wait 10
 # first map of the list, then Host
-click 180 170
+click 180 148
 wait 2
-# map 1: the lobby proposes a map drawn by lot (T4.14)
-click 338 418
+# the rules of the game (D-090): map 1, where the lobby proposes a map drawn by lot (T4.14)
+click 240 330
 wait 2
-click 240 466
+click 496 206
+wait 2
+click 400 442
+wait 2
+click 240 366
 # the client finds the game and joins; then the host starts it with the same button
 mpplayers 2
 wait 5
 screenshot build/automation/mp-lobby-host-waiting.png
-click 240 466
+click 240 366
 mpwait 0
 # Caesar's letter at the start of the game (doc/mp/CESAR.md §11): read, then closed
 wait 3

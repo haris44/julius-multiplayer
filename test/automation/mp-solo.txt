@@ -6,17 +6,21 @@ wait 10
 click 400 172
 wait 10
 # first entry: a new game; one player; host, then start
-click 180 170
+click 180 148
 wait 2
-click 268 350
+click 300 298
 wait 2
-# map 1: the lobby proposes a map drawn by lot (T4.14)
-click 338 418
+# the rules of the game (D-090): map 1, where the lobby proposes a map drawn by lot (T4.14)
+click 240 330
+wait 2
+click 496 206
+wait 2
+click 400 442
 wait 2
 screenshot build/automation/mp-solo-lobby.png
-click 240 466
+click 240 366
 wait 5
-click 240 466
+click 240 366
 mpwait 0
 wait 5
 # Caesar's letter: how he judges the cities (doc/mp/CESAR.md §11)

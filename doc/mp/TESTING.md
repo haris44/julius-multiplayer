@@ -301,6 +301,12 @@ Taille de l'écran dans un script : `key F7` (640 × 480), `key F8` (800 × 600,
 (1024 × 768). Les fenêtres de 640 × 480 (salon, conseillers) sont centrées : à 1024 × 736, ajouter 192 et 128 à leurs
 coordonnées ; la barre latérale reste collée au bord droit (bouton industrie : x = largeur − 32, y = 422).
 
+Le salon (D-090), en coordonnées de sa fenêtre de 640 × 480 : première ligne de la liste des parties à héberger
+(100, 88), flèches du nombre de joueurs (220, 238) pour moins et (244, 238) pour plus, « Règles de la partie »
+(160, 270), « Héberger » puis « Lancer la partie » (160, 306), première partie trouvée (450, 88), « Retour »
+(528, 444). Dans « Règles de la partie », la valeur de la ligne n (0 carte, 1 difficulté, 2 dieux, 3 invasions,
+4 brouillard, 5 fin, 6 seconde expédition) est en (416, 146 + 30 n) ; OK en (320, 382), ou un clic droit.
+
 **Qui couvre quoi** (tous lancés par `tools/serial.sh`, passe du 2026-10-07 : tous verts) :
 
 | Script | Couvre |
