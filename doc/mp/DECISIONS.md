@@ -1233,7 +1233,7 @@
 - Classique : inchangé (pas de commerce entre joueurs).
 
 ### D-076 — Les cités démarrent à la difficulté du salon ; Rome verse à chacun le salaire de son rang (T5.1, T5.2, précise D-063, D-067)
-- 2026-10-07 · **adoptée provisoirement** (retour du deuxième essai à 3 joueurs : « voir si J2/J3/J4 ne sont pas en
+- 2026-10-07 · **adoptée provisoirement** ; le salaire du rang est **remplacé par D-089** (le gouverneur choisit) (retour du deuxième essai à 3 joueurs : « voir si J2/J3/J4 ne sont pas en
   difficile », « aligner les salaires de Rome pour tous les joueurs »)
 - **Cause (T5.1)** : charger un modèle de carte (`.map`) ou une partie sauvegardée remet le jeu en mode classique
   (`game_rules_set_classic`), donc la difficulté du **réglage local de l'hôte** (« difficile » par défaut). La
@@ -1405,8 +1405,8 @@
   (commande `MP_ACTION_WITHDRAW_WAR`). La paix revient tout de suite, comme si elle était signée : propositions
   effacées, légions des deux hors de leur fort rentrées (sauf guerre avec un tiers), annonce à tous (« Joueur 1 retire
   sa déclaration de guerre au joueur 2 »).
-- **La pression** : dès la déclaration, plus aucune caravane ne part entre eux, et celles en route font demi-tour
-  (D-077). Le défenseur a 3 mois pour céder (prix, ventes, route ouverte). S'il cède, le déclarant se rétracte et le
+- **La pression** (*revu par D-089 : le commerce continue pendant le préavis*) : dès la déclaration, plus aucune
+  caravane ne part entre eux, et celles en route font demi-tour (D-077). Le défenseur a 3 mois pour céder (prix, ventes, route ouverte). S'il cède, le déclarant se rétracte et le
   commerce reprend avec la caravane suivante. Mesuré (`mp_war`) : les 8 chargements rentrés chez le vendeur sont
   livrés 3 400 ticks (un peu plus de 4 mois de jeu) après le retrait, avec une caravane par mois (D-075).
 - **Pas de retrait** d'une guerre brutale, ni une fois les combats commencés, ni par le défenseur (il peut proposer la
@@ -1973,3 +1973,22 @@
   En multijoueur, elle n'accepte plus que ce que la fenêtre de la légion propose : doubles lignes et nettoyage pour
   tous, la colonne pour les légionnaires formés à l'académie, les lignes simples pour les autres troupes
   (`mp/actions.c`) ; `mp_war` le vérifie (échoue sans).
+
+### D-089 — Le gouverneur choisit son salaire ; le commerce continue pendant le préavis (revoit D-076, D-077, D-080)
+- 2026-10-18 · **adoptée** (Alexandre, après la version de la guerre : « salaire qu'il choisit » ; « ne coupe pas le
+  commerce pendant le préavis de guerre »)
+- **Salaire** (revient à D-067) : chaque cité part du rang 0, sans salaire ni épargne (inchangé). Le gouverneur
+  choisit ensuite son salaire dans la fenêtre du conseiller impérial, **au plus celui de son rang de lauriers** : la
+  commande `MP_ACTION_SET_SALARY` refuse un rang plus haut. Un rang gagné laisse le salaire tel qu'il a été choisi ;
+  un rang perdu le ramène au plafond, au changement de mois, avant la paie. Le rang de l'original suit le rang de
+  lauriers, pour que la faveur de l'original ne trouve jamais de salaire au-dessus du rang. Tests `mp_salaries`
+  (refus au-dessus du rang, choix plus bas, paie choisie, rang perdu ou gagné ; échoue sans le plafond) et
+  `mp_caesar_gifts`. `mp_no_caesar_request_start` fixe désormais un rang de salaire plutôt qu'un montant.
+- **Commerce pendant le préavis** : une guerre honorable ne coupe plus le commerce pendant ses 3 mois de préavis ;
+  les caravanes partent et livrent comme en paix. Le commerce ne s'arrête qu'au début des combats (fin du préavis,
+  guerre brutale, ou riposte du défenseur) : plus aucune caravane ne part, et celles en route font demi-tour, sans être
+  payées. La menace (D-080) reste : le défenseur a 3 mois pour céder avant que la guerre ne commence. Test `mp_war`
+  (pendant le préavis, une caravane en route livre et est payée ; au début des combats, la suivante fait demi-tour ;
+  échoue avec l'ancienne règle).
+- Réseau : protocole 33.
+

@@ -1463,9 +1463,9 @@ static void run_caesar_game(const char *file, int ticks, int multiplayer, caesar
     if (!load(file)) {
         return;
     }
-    // an angry Caesar, and a salary
+    // an angry Caesar, and a salary (in multiplayer, a city without laurels may not keep it, D-089)
     city_ratings_change_favor(-100);
-    city_data.emperor.salary_amount = 50;
+    city_emperor_set_salary_rank(6);
     uint64_t requests = requests_state();
     int warnings = city_data.emperor.invasion.warnings_given;
     int savings = city_data.emperor.personal_savings;
@@ -6569,13 +6569,13 @@ static int play_gifts(int verify)
     city_action(0, MP_ACTION_SEND_GIFT, -1, 0, 0);
     CHECK(savings_of(0) == savings, "an unknown size of gift is refused");
 
-    // Rome pays the salary of the rank (3 at 300 laurels), whatever the command asks (D-076), to him only
+    // the governor chooses his salary under the rank of his laurels (3 at 300 laurels, D-089), for him only
     int rank_of_1 = salary_rank_of(1);
     CHECK(mp_caesar_rank(0) == 3, "player 1 is of rank 3");
     city_action(0, MP_ACTION_SET_SALARY, 5, 0, 0);
-    CHECK(salary_rank_of(0) == 3 && salary_amount_of(0) == 8, "a salary above the rank is not paid: the rank's, 8 denarii");
-    city_action(0, MP_ACTION_SET_SALARY, 0, 0, 0);
-    CHECK(salary_rank_of(0) == 3 && salary_amount_of(0) == 8, "nor a lower one: Rome pays the salary of the rank");
+    CHECK(salary_rank_of(0) == 0, "a salary above the rank is refused");
+    city_action(0, MP_ACTION_SET_SALARY, 3, 0, 0);
+    CHECK(salary_rank_of(0) == 3 && salary_amount_of(0) == 8, "the salary of his rank, 8 denarii, he may choose");
     city_action(0, MP_ACTION_SET_SALARY, 11, 0, 0);
     city_action(0, MP_ACTION_SET_SALARY, -1, 0, 0);
     CHECK(salary_rank_of(0) == 3, "no such rank, no change");
@@ -6643,8 +6643,8 @@ static void write_old_caesar_state(buffer *buf, int version)
     }
 }
 
-// T5.2 (D-076): Rome pays every player the salary of his rank, from the same table; every city starts with the same
-// rank, salary and savings; nobody chooses a salary. Three players, one of each laurels.
+// T5.2, D-089: every city starts with the same rank, salary and savings; each governor then chooses his salary, at most
+// the one of the rank of his laurels (D-067). Three players, one of each laurels.
 static int command_salaries(const char *file)
 {
     static const int LAURELS_TENTHS[3] = { 0, 1000, 3000 }; // rank 0, 1 and 3
@@ -6670,45 +6670,52 @@ static int command_salaries(const char *file)
     for (int p = 0; p < 3; p++) {
         mp_caesar_add_laurels(p, MP_LAURELS_PROSPERITY, LAURELS_TENTHS[p]);
     }
-    // nobody chooses: asking for the highest salary, or for none, changes nothing
+    // each one chooses, under the rank of his laurels: above it, the command is refused
     city_action(0, MP_ACTION_SET_SALARY, 10, 0, 0);
-    city_action(1, MP_ACTION_SET_SALARY, 10, 0, 0);
-    city_action(2, MP_ACTION_SET_SALARY, 0, 0, 0);
-    CHECK(salary_rank_of(0) == 0 && salary_rank_of(1) == 1 && salary_rank_of(2) == 3,
-        "at once, each salary is the one of the rank, whatever was asked");
+    city_action(1, MP_ACTION_SET_SALARY, 2, 0, 0);
+    int above_refused = salary_rank_of(0) == 0 && salary_rank_of(1) == 0;
+    city_action(1, MP_ACTION_SET_SALARY, 1, 0, 0);
+    city_action(2, MP_ACTION_SET_SALARY, 2, 0, 0);
+    CHECK(above_refused, "a salary above the rank of the laurels is refused");
+    CHECK(salary_rank_of(0) == 0 && salary_rank_of(1) == 1 && salary_rank_of(2) == 2,
+        "each governor chooses his salary under his rank: 0, 1 and 2 (rank 3)");
     int treasury[3];
     for (int p = 0; p < 3; p++) {
         treasury[p] = treasury_of(p);
     }
     run_to_next_month_fast();
+    static const int CHOSEN[3] = { 0, 1, 2 };
     int paid = 1, favor_untouched = 1;
     for (int p = 0; p < 3; p++) {
         int rank = mp_caesar_rank(p);
-        paid &= rank == (p == 0 ? 0 : p == 1 ? 1 : 3) && salary_rank_of(p) == rank &&
-            salary_amount_of(p) == SALARY_OF_RANK[rank] && savings_of(p) == SALARY_OF_RANK[rank];
+        paid &= rank == (p == 0 ? 0 : p == 1 ? 1 : 3) && salary_rank_of(p) == CHOSEN[p] &&
+            salary_amount_of(p) == SALARY_OF_RANK[CHOSEN[p]] && savings_of(p) == SALARY_OF_RANK[CHOSEN[p]];
         printf("player %d: rank %d, salary %d, savings %d\n", p + 1, rank, salary_amount_of(p), savings_of(p));
         player_context_switch(p);
-        // the favor of the original game finds the salary right for the rank: no penalty
+        // the rank of the original follows the laurels: the favor finds no salary above the rank
         favor_untouched &= city_emperor_rank() == rank && city_data.ratings.favor_salary_penalty == 0;
         player_context_switch(0);
     }
-    CHECK(paid, "every player is paid the salary of his rank, 0, 2 and 8 denarii");
-    CHECK(favor_untouched, "and the rank of the original follows, with no penalty of favor");
+    CHECK(paid, "every player is paid the salary he chose, 0, 2 and 5 denarii");
+    CHECK(favor_untouched, "and the rank of the original follows the laurels, with no penalty of favor");
     // the salary comes out of the treasury of the one who gets it
     int taxes_only = 1;
     for (int p = 0; p < 3; p++) {
         taxes_only &= treasury_of(p) <= treasury[p];
     }
     CHECK(taxes_only, "the salary is taken from the treasury of each player");
-    // one more month: the savings add up; a rank gained or lost changes the salary the month after
+    // a rank gained leaves the salary as chosen; a rank lost brings it down to the new rank
     mp_caesar_add_laurels(0, MP_LAURELS_PROSPERITY, 1000);
     mp_caesar_add_laurels(2, MP_LAURELS_PROSPERITY, -3000);
     run_to_next_month_fast();
-    CHECK(salary_amount_of(0) == 2 && savings_of(0) == 2 && salary_amount_of(1) == 2 && savings_of(1) == 4 &&
-        salary_amount_of(2) == 0 && savings_of(2) == 8, "a rank gained or lost changes the salary the month after");
+    CHECK(salary_amount_of(0) == 0 && savings_of(0) == 0 && salary_amount_of(1) == 2 && savings_of(1) == 4 &&
+        salary_amount_of(2) == 0 && savings_of(2) == 5,
+        "a rank gained leaves the salary as chosen, a rank lost brings it down");
+    city_action(0, MP_ACTION_SET_SALARY, 1, 0, 0);
+    CHECK(salary_rank_of(0) == 1, "with the rank gained, the higher salary can be chosen");
 #undef CHECK
-    printf("%s\n", failures ? "DIFFERENT: Rome does not pay everybody the salary of his rank" :
-        "Identical: Rome pays everybody the salary of his rank");
+    printf("%s\n", failures ? "DIFFERENT: the salaries are not chosen under the rank" :
+        "Identical: each governor chooses his salary under his rank");
     return failures ? 1 : 0;
 }
 
@@ -7466,8 +7473,7 @@ static int command_war(const char *file)
     city_action(0, MP_ACTION_WITHDRAW_WAR, 1, 0, 0);
     CHECK(mp_war_is_fighting(0, 1), "a brutal war is not withdrawn: only peace signed by both ends it");
 
-    // the declarer withdraws his declaration during the notice (D-080): the threat stopped the trade between them,
-    // the withdrawal brings it back
+    // the declarer withdraws his declaration during the notice (D-080); meanwhile they trade as in peace (D-089)
     if (!mp_savegame_read(start)) {
         return 2;
     }
@@ -7478,9 +7484,11 @@ static int command_war(const char *file)
     city_action(0, MP_ACTION_DECLARE_WAR, 1, MP_WAR_HONOURABLE, 0);
     city_action(0, MP_ACTION_LEGION_MOVE, first.legion[0], first.target_x, first.target_y);
     war_run(1);
-    CHECK(caravan_of(1) && BUILDING_OWNER(caravan_of(1)->destination_building_id) == 1,
-        "an honourable war declared: the caravan on its way turns back");
-    war_run(600);
+    CHECK(caravan_of(1) && BUILDING_OWNER(caravan_of(1)->destination_building_id) == 0,
+        "an honourable war declared: the caravan on its way goes on during the notice (D-089)");
+    RUN_UNTIL(marble_of(0) >= 16, 10, 2000);
+    CHECK(marble_of(0) == 16 && marble_of(1) == 0 && mp_war_status(0, 1) == MP_WAR_NOTICE,
+        "and delivers its 8 loads: the trade goes on before the fighting");
     city_action(1, MP_ACTION_WITHDRAW_WAR, 0, 0, 0);
     CHECK(mp_war_status(0, 1) == MP_WAR_NOTICE && !mp_war_may_withdraw(1, 0) && mp_war_may_withdraw(0, 1),
         "only the declarer may withdraw it");
@@ -7491,11 +7499,6 @@ static int command_war(const char *file)
         !mp_war_peace_proposed(1, 0) && mp_checksum_state() != before_withdrawal,
         "the declarer withdraws it during the notice: peace at once, in the checksum");
     CHECK(mp_war_announcements() == announcements + 1, "the withdrawal is announced to every player");
-    RUN_UNTIL(marble_of(0) >= 16, 10, 4000);
-    printf("the trade resumes: player 1 has %d marble, player 2 %d, %d ticks after the withdrawal\n", marble_of(0),
-        marble_of(1), war_ticks);
-    CHECK(marble_of(0) == 16 && marble_of(1) == 0 && mp_war_status(0, 1) == MP_WAR_PEACE,
-        "the trade between them resumes: the 8 loads brought home are sold again");
     RUN_UNTIL(formation_get(first.legion[0])->is_at_fort, 10, 4000);
     CHECK(formation_get(first.legion[0])->is_at_fort, "the legion sent to the border goes back to its fort");
     // once the fighting began, the declaration cannot be withdrawn any more
@@ -7602,28 +7605,38 @@ static int command_war(const char *file)
     CHECK(mp_trade_purchase_state(1, 0, RESOURCE_MARBLE) == MP_TRADE_PURCHASE_AT_WAR,
         "the trade page says the war is why nothing comes");
 
-    // a caravan on its way when an honourable war is declared: nobody fights during the notice, yet it turns back and
-    // brings its goods home; nothing is delivered nor paid
+    // an honourable war declared while a caravan travels: during the notice it delivers and is paid (D-089); the
+    // next one is on its way when the fighting begins (the defender strikes first): it turns back, nothing is paid
     if (!mp_savegame_read(start)) {
         return 2;
     }
-    setup_trade(8, 0, 1);
+    setup_trade(16, 0, 1);
     RUN_UNTIL(caravan_of(1) && caravan_of(1)->routing_path_id > 0, 10, 2000);
     war_run(500);
     caravan = caravan_of(1);
     int tiles_left = caravan ? caravan->routing_path_length - caravan->routing_path_current_tile : 0;
     seller_money = treasury_of(1);
-    int buyer_money = treasury_of(0);
     city_action(1, MP_ACTION_DECLARE_WAR, 0, MP_WAR_HONOURABLE, 0);
     war_run(1);
-    CHECK(caravan && tiles_left > 20 && caravan_of(1) && marble_of(1) == 0 &&
-        BUILDING_OWNER(caravan_of(1)->destination_building_id) == 1,
-        "an honourable war declared while a caravan travels: it turns back");
+    CHECK(caravan && tiles_left > 20 && caravan_of(1) && BUILDING_OWNER(caravan_of(1)->destination_building_id) == 0,
+        "an honourable war declared while a caravan travels: it goes on");
+    RUN_UNTIL(marble_of(0) >= 8, 10, 3000);
+    CHECK(marble_of(0) == 8 && treasury_of(1) > seller_money && mp_war_status(0, 1) == MP_WAR_NOTICE &&
+        mp_trade_purchase_state(1, 0, RESOURCE_MARBLE) != MP_TRADE_PURCHASE_AT_WAR,
+        "during the notice it delivers its 8 loads and is paid");
+    RUN_UNTIL(caravan_of(1) && caravan_of(1)->routing_path_id > 0 &&
+        caravan_of(1)->routing_path_length - caravan_of(1)->routing_path_current_tile > 20, 10, 2000);
+    seller_money = treasury_of(1);
+    int buyer_money = treasury_of(0);
+    city_action(0, MP_ACTION_DECLARE_WAR, 1, MP_WAR_BRUTAL, 0);
+    war_run(1);
+    CHECK(mp_war_is_fighting(0, 1) && caravan_of(1) && BUILDING_OWNER(caravan_of(1)->destination_building_id) == 1,
+        "the fighting begins while the next caravan travels: it turns back");
     RUN_UNTIL(!caravan_of(1), 10, 4000);
     printf("back home after %d ticks: player 1 has %d marble, player 2 %d; treasuries %+d and %+d\n", war_ticks,
         marble_of(0), marble_of(1), treasury_of(0) - buyer_money, treasury_of(1) - seller_money);
-    CHECK(!caravan_of(1) && marble_of(1) == 8 && marble_of(0) == 0 && mp_war_status(0, 1) == MP_WAR_NOTICE,
-        "its 8 loads are back in the warehouse of player 2, before the fighting");
+    CHECK(!caravan_of(1) && marble_of(1) == 8 && marble_of(0) == 8,
+        "its 8 loads are back in the warehouse of player 2");
     CHECK(treasury_of(1) < seller_money + 8 * 150 && treasury_of(0) > buyer_money - 8 * 150,
         "nothing delivered, nothing paid");
 

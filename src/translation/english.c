@@ -158,7 +158,7 @@ static translation_string all_strings[] = {
     {TR_MP_FOG_OF_WAR, "Fog of war: "},
     {TR_MP_WAR_BUTTON, "War"},
     {TR_MP_WAR_TITLE, "War and peace"},
-    {TR_MP_WAR_RULE, "Brutal war: fighting at once. Honourable war: fighting in 3 months; until then no trade between you, and you may withdraw. Peace is signed by both."},
+    {TR_MP_WAR_RULE, "Brutal war: fighting at once. Honourable war: fighting in 3 months; until then trade goes on and you may withdraw. Peace is signed by both."},
     {TR_MP_WAR_RULE_2, "At war, your soldiers fight those of the enemy, pull down his buildings and take his caravans."},
     {TR_MP_WAR_STATUS_PEACE, "At peace"},
     {TR_MP_WAR_STATUS_NOTICE, "Fighting in "},

@@ -547,8 +547,9 @@ void mp_trade_dispatch_caravans(void)
         if (!mp_trade_route_is_open(seller, buyer)) {
             continue;
         }
-        // no caravan between players at war (T5.5), nor during the notice of an honourable war: the trade page says why
-        if (mp_war_status(seller, buyer) != MP_WAR_PEACE) {
+        // no caravan between players who fight (T5.5); during the notice of an honourable war the trade goes on
+        // (D-089): the trade page says why nothing comes
+        if (mp_war_is_fighting(seller, buyer)) {
             for (int resource = RESOURCE_NONE + 1; resource < RESOURCE_MAX; resource++) {
                 if (buys[buyer][seller][resource]) {
                     set_purchase_state(seller, buyer, resource, MP_TRADE_PURCHASE_AT_WAR);
@@ -708,15 +709,16 @@ static int is_home_warehouse(building *b, map_point *road)
         map_has_road_access(b->x, b->y, b->size, road);
 }
 
-// A war between the seller and the buyer, notice included, stops their trade: a caravan on its way to the buyer
-// turns back to the warehouse it left (or another one of the seller), is not paid, and brings its goods home, where
-// they find room as any delivery. Soldiers of the enemy may still take it on its way back (T5.5, D-077).
+// When the seller and the buyer start fighting, their trade stops: a caravan on its way to the buyer turns back to the
+// warehouse it left (or another one of the seller), is not paid, and brings its goods home, where they find room as
+// any delivery. Soldiers of the enemy may still take it on its way back (T5.5, D-077). During the notice of an
+// honourable war, caravans come and go as in peace (D-089).
 // @return 0 when it has nowhere to go: the goods are lost
 static int turn_back_at_war(figure *f)
 {
     int seller = player_context_current_player;
     int buyer = BUILDING_OWNER(f->destination_building_id);
-    if (buyer == seller || mp_war_status(seller, buyer) == MP_WAR_PEACE) {
+    if (buyer == seller || !mp_war_is_fighting(seller, buyer)) {
         return 1;
     }
     map_point road;

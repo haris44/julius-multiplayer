@@ -81,8 +81,9 @@ Windows sont récentes et encore peu essayées.
 - Chaque mois, César donne des lauriers à chaque cité selon cinq notes : prospérité, commerce, habitat, culture et
   éducation, grandeur.
 - Les **cadeaux à César** rapportent aussi des lauriers : 4, 7 ou 10 selon leur taille, un seul compté par an. Ils
-  se paient sur l'épargne personnelle, que remplit le salaire du gouverneur. Tout le monde part du même salaire,
-  nul au début, puis Rome paie à chacun le salaire de son rang de lauriers.
+  se paient sur l'épargne personnelle, que remplit le salaire du gouverneur. Tout le monde part sans salaire ni
+  épargne ; chacun choisit ensuite son salaire, au plus celui de son rang de lauriers (il redescend si le rang
+  baisse).
 - La première cité qui atteint le score choisi dans le salon (1 000 lauriers par défaut) devient son héritière et
   gagne la partie.
 - Le conseiller impérial montre les notes, les lauriers, le rang, le salaire et le classement, avec les boutons du
@@ -95,9 +96,10 @@ Windows sont récentes et encore peu essayées.
 
 - Le bouton « Guerre » du conseiller militaire ouvre « Guerre et paix ». **Guerre brutale** : on se bat tout de
   suite. **Guerre honorable** : on se bat dans 3 mois.
-- Dès la déclaration, plus aucune caravane ne circule entre les deux joueurs. Pendant le préavis, celui qui a
-  déclaré peut **se rétracter** : la menace laisse à l'autre le temps de céder à la pression du commerce coupé.
-  L'autre peut aussi frapper le premier par une guerre brutale. La paix se signe quand les deux la proposent.
+- Pendant le préavis, le commerce continue, et celui qui a déclaré peut **se rétracter** : la menace laisse à l'autre
+  le temps de céder. L'autre peut aussi frapper le premier par une guerre brutale. Dès que les combats commencent,
+  plus aucune caravane ne circule entre eux, et celles en route font demi-tour. La paix se signe quand les deux la
+  proposent.
 - En guerre, les légions se battent chez l'ennemi, abattent ses bâtiments, ses murs et ses portes, coupent l'aqueduc
   qui l'alimente et prennent ses caravanes. Les portes d'un joueur n'arrêtent que les soldats de ses ennemis, et ses
   tours tirent sur eux.

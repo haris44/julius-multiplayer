@@ -130,8 +130,14 @@ void mp_caesar_limit_salary(void)
     if (!mp_caesar_is_active()) {
         return;
     }
-    // Rome pays the salary of the rank of the city, from the same table for every player (D-076)
-    city_emperor_set_paid_rank(mp_caesar_salary_rank_limit(player_context_current_player));
+    // the governor chooses his salary under the rank of his laurels (D-089, back to D-067): a rank lost brings it
+    // down to the new limit, a rank gained leaves it as chosen; the rank of the original follows the laurels, so that
+    // the favor of the original finds no salary above the rank
+    int limit = mp_caesar_salary_rank_limit(player_context_current_player);
+    city_emperor_set_player_rank(limit);
+    if (city_emperor_salary_rank() > limit) {
+        city_emperor_set_salary_rank(limit);
+    }
 }
 
 // ---------- the notes of the current city (CESAR §5) ----------

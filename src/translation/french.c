@@ -158,7 +158,7 @@ static translation_string all_strings[] = {
     {TR_MP_FOG_OF_WAR, "Brouillard de guerre : "},
     {TR_MP_WAR_BUTTON, "Guerre"},
     {TR_MP_WAR_TITLE, "Guerre et paix"},
-    {TR_MP_WAR_RULE, "Guerre brutale : combats tout de suite. Guerre honorable : combats dans 3 mois ; d'ici là, plus de commerce entre vous, et vous pouvez vous rétracter. La paix se signe à deux."},
+    {TR_MP_WAR_RULE, "Guerre brutale : combats tout de suite. Guerre honorable : combats dans 3 mois ; d'ici là, le commerce continue et vous pouvez vous rétracter. La paix se signe à deux."},
     {TR_MP_WAR_RULE_2, "En guerre, vos soldats combattent ceux de l'ennemi, abattent ses bâtiments et prennent ses caravanes."},
     {TR_MP_WAR_STATUS_PEACE, "En paix"},
     {TR_MP_WAR_STATUS_NOTICE, "Combats dans "},

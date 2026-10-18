@@ -40,6 +40,11 @@ void city_emperor_init_multiplayer(int new_city)
     city_emperor_set_paid_rank(0);
 }
 
+void city_emperor_set_player_rank(int rank)
+{
+    city_data.emperor.player_rank = rank;
+}
+
 void city_emperor_set_paid_rank(int rank)
 {
     city_data.emperor.player_rank = rank;

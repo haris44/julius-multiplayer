@@ -189,17 +189,9 @@ static void draw_foreground(void)
     button_border_draw(320, 367, 250, 20, focus_button_id == 1);
     lang_text_draw_centered(52, 2, 320, 372, 250, FONT_NORMAL_WHITE);
 
-    if (!window_mp_imperial_is_active()) {
-        // multiplayer: Rome pays everybody the salary of his rank, nothing to choose (D-076)
-        button_border_draw(70, 393, 500, 20, focus_button_id == 2);
-    }
+    button_border_draw(70, 393, 500, 20, focus_button_id == 2);
     int salary_rank = city_emperor_salary_rank();
     int salary_amount = city_emperor_salary_amount();
-    if (window_mp_imperial_is_active() && salary_rank != mp_caesar_salary_rank_limit(mp_session_local_player_id())) {
-        // Rome pays the salary of the rank, applied at the month change: show what will be paid
-        salary_rank = mp_caesar_salary_rank_limit(mp_session_local_player_id());
-        salary_amount = city_emperor_salary_for_rank(salary_rank);
-    }
     width = lang_text_draw(52, salary_rank + 4, 120, 398, FONT_NORMAL_WHITE);
     width += text_draw_number(salary_amount, '@', " ", 120 + width, 398, FONT_NORMAL_WHITE);
     lang_text_draw(52, 3, 120 + width, 398, FONT_NORMAL_WHITE);
@@ -243,9 +235,6 @@ static void button_donate_to_city(int param1, int param2)
 
 static void button_set_salary(int param1, int param2)
 {
-    if (window_mp_imperial_is_active()) {
-        return;
-    }
     window_set_salary_show();
 }
 

@@ -24,6 +24,11 @@ void city_emperor_init_multiplayer(int new_city);
  * Multiplayer (D-076): Rome pays the salary of this rank, the same table for every player, and the favor of the
  * original game finds a salary that is right for the rank
  */
+/**
+ * The rank of the original game alone, the salary unchanged (multiplayer: it follows the laurels, D-089)
+ */
+void city_emperor_set_player_rank(int rank);
+
 void city_emperor_set_paid_rank(int rank);
 
 void city_emperor_update(void);

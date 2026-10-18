@@ -11,14 +11,13 @@
  *
  * - A player declares war on another: a brutal war fights at once, an honourable war after a notice of three months
  *   (D-053). During the notice nobody fights; the defender may strike first by declaring a brutal war in turn, and
- *   the declarer may withdraw his declaration: the threat leaves the defender time to give in to the pressure of the
- *   trade stopped between them (D-080).
+ *   the declarer may withdraw his declaration: the threat leaves the defender time to give in (D-080).
  * - Peace is signed when both players proposed it; the legions of both out of their fort then go home (unless
  *   their player is still at war with another one).
  * - While two players fight, their soldiers are hostile to each other: they fight each other's soldiers and
  *   citizens (melee, javelins, towers), the soldiers standing by a building of the enemy damage it as invaders do,
  *   and a soldier next to a caravan of the enemy takes its goods. No caravan leaves between them, and one on its way
- *   between them turns back home, unpaid (mp/trade.c), from the declaration on, notice included.
+ *   between them turns back home, unpaid (mp/trade.c). During the notice, they trade as in peace (D-089).
  *
  * Nothing here exists in a classic game, nor in a multiplayer game while nobody is at war: every check below is then
  * a no-op. Caesar judges the wars in mp/wrath.c (M10.4, M10.5): motive, price, triumphs, wrath.
