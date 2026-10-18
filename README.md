@@ -94,12 +94,13 @@ Windows sont récentes et encore peu essayées.
 
 ## La guerre
 
-- Le bouton « Guerre » du conseiller militaire ouvre « Guerre et paix ». **Guerre brutale** : on se bat tout de
-  suite. **Guerre honorable** : on se bat dans 3 mois.
+- Le bouton « Guerre et paix » du conseiller militaire ouvre la page de la guerre. **Guerre brutale** : on se bat
+  tout de suite. **Guerre honorable** : on se bat dans 3 mois.
 - Pendant le préavis, le commerce continue, et celui qui a déclaré peut **se rétracter** : la menace laisse à l'autre
   le temps de céder. L'autre peut aussi frapper le premier par une guerre brutale. Dès que les combats commencent,
   plus aucune caravane ne circule entre eux, et celles en route font demi-tour. La paix se signe quand les deux la
-  proposent.
+  proposent : quand l'autre la propose, une fenêtre s'ouvre sur la cité (« Accepter » ou « Plus tard » ; l'offre
+  reste alors dans « Guerre et paix », bouton « Accepter la paix »).
 - En guerre, les légions se battent chez l'ennemi, abattent ses bâtiments, ses murs et ses portes, coupent l'aqueduc
   qui l'alimente et prennent ses caravanes. Les portes d'un joueur n'arrêtent que les soldats de ses ennemis, et ses
   tours tirent sur eux.

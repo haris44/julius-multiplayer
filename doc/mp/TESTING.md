@@ -275,9 +275,13 @@ Bon à savoir :
 - `tools/mg-barracks-test.sh` : partie seule depuis le salon ; une caserne et trois forts (légionnaires, javeliniers,
   cavaliers) par `build`, puis clic droit (deux fois la première : le premier efface les avertissements) sur chacun ;
   captures `build/automation/mg-barracks.png` et `mg-fort-*.png` : bois de la caserne, coût d'une recrue (MG.4, D-083).
-- `tools/mp-war-test.sh` : hôte en 640 × 480 et client en 1024 × 768 ; l'hôte déclare une guerre brutale depuis le
-  conseiller militaire (bouton « Guerre », deux clics), le client la voit annoncée sur sa cité et propose la paix,
-  l'hôte l'accepte ; captures `build/automation/war-*.png` (T5.5).
+- `tools/mp-war-test.sh` : hôte en 640 × 480 et client en 1024 × 768 ; l'hôte menace le client d'une guerre honorable
+  et se rétracte, puis déclare une guerre brutale depuis le conseiller militaire (bouton « Guerre et paix », deux
+  clics) ; le client la voit annoncée sur sa cité et propose la paix ; l'hôte voit l'offre dans « Guerre et paix »
+  (« Accepter la paix ») et dans le conseiller, puis l'accepte dans la fenêtre de l'offre que lui montre la vue de la
+  cité (D-092). L'hôte redéclare la guerre (colère double) et propose la paix : le client répond « Plus tard » à la
+  fenêtre, retrouve l'offre dans le conseiller et l'accepte dans « Guerre et paix ». Captures
+  `build/automation/war-*.png` (T5.5, D-092), dont `war-host-offer-dialog.png` et `war-client-offer-dialog.png`.
 - `tools/mp-attack-test.sh` : hôte et client en 800 × 600 ; l'hôte charge depuis le menu principal la partie écrite par
   `simtool attacksave` (carte 1 pour 2, en guerre, la légion du joueur 1 au fort, un quartier du joueur 2, sans
   brouillard), ouvre la fenêtre de la légion (clic droit sur ses soldats), clique « Attaquer » puis une case du
@@ -312,11 +316,11 @@ coordonnées ; la barre latérale reste collée au bord droit (bouton industrie 
 | `tools/mp-trade3-test.sh` | partie à trois chargée depuis le menu principal (`simtool tradesave`) : routes et achats par clics entre les trois joueurs, caravanes du joueur 2 parties et arrivées chez les joueurs 1 et 3, raison affichée quand rien ne part (T5.7) |
 | `tools/mp-real-test.sh` | partie en réseau sans salon (`--mp-host`), constructions et conseillers pendant le jeu |
 | `tools/mp-sweep-test.sh` | partie en réseau seule (cité de `brugle-lugdunum.sav`, ou la carte préparée avec `MP_SWEEP_ARGS=--mp-generate`) : `windowsweep`, avant et après `angrygod` |
-| `tools/mp-menus-test.sh` | trois joueurs (`--mp-host`, cités de `brugle-lugdunum.sav`) : `windowsweep` des trois en même temps, puis de chacun seul, partie qui continue sans désynchronisation |
+| `tools/mp-menus-test.sh` | trois joueurs (`--mp-host`, cités de `brugle-lugdunum.sav`) : `windowsweep` des trois en même temps, puis de chacun seul (dont « Guerre et paix », qui n'existe qu'à plusieurs), partie qui continue sans désynchronisation |
 | `tools/mp-resume-test.sh` | deux joueurs depuis le salon : « Sauvegarder » (un `.mpsav`), désynchronisation provoquée, « Fichier, Nouvelle partie », « Charger » qui ouvre le salon avec la partie choisie, `autosave.mpsav` listée, reprise hébergée et rejointe, sans désynchronisation |
 | `tools/mp-ui-test.sh` | salon du client avec les règles de l'hôte (carte 1, difficulté changée), menus fermes et matières premières d'un joueur des terres et d'un joueur de la côte, menu Options sans Difficulté, conseiller impérial, évaluation (pilier des lauriers), commerce et Stocks, en 640 × 480 et 1024 × 736 |
 | `tools/mp-attack-test.sh` | fenêtre de la légion (bouton « Attaquer », « Attaque en cours »), choix de la cible sur la vue militaire, légion qui rase un quartier ennemi en réseau sans désynchronisation |
-| `tools/mp-war-test.sh` | conseiller militaire (bouton « Guerre »), fenêtre « Guerre et paix » en paix, confirmation, en guerre, offre de paix reçue, paix signée, annonces sur la cité, en 640 × 480 et 1024 × 736 |
+| `tools/mp-war-test.sh` | conseiller militaire (bouton « Guerre et paix », offre de paix), fenêtre « Guerre et paix » en paix, infobulle, préavis, retrait, confirmation, en guerre, offre reçue (« Accepter la paix ») et envoyée, guerre redéclarée, fenêtre de l'offre de paix (« Accepter », « Plus tard »), paix signée, annonces sur la cité, en 640 × 480 et 1024 × 736 |
 | `tools/mp-expedition-test.sh` | option du salon de la seconde expédition, message et lettre de l'expédition, légions de César dans la cité, conseiller impérial en disgrâce, lettres d'une expédition vaincue ou repartie, écran de fin « Rome reprend la province » |
 | `caesar-advisor.txt`, `caesar-gifts.txt`, `caesar-ratings.txt` | César dans une grande cité (`rules mp`) : lettre de rang, conseiller impérial, cadeau, don, salaire, pilier des lauriers |
 | `smoke.txt`, `run.txt`, `build-road.txt`, `display.txt` | classique : menu, chargement, boucle du jeu, route à la souris, options d'affichage |

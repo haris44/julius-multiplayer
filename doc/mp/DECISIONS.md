@@ -1992,3 +1992,63 @@
   échoue avec l'ancienne règle).
 - Réseau : protocole 33.
 
+
+### D-092 — Les fenêtres de la guerre à la manière de l'original ; la fenêtre de l'offre de paix (interface, précise D-077, D-080, D-084, D-087, D-088)
+- 2026-10-18 · **adoptée provisoirement**, *à valider* (Alexandre : « plus jolis et fidèles au jeu d'origine (bouton /
+  organisation…) », « pas trop saturées » ; « as-tu ajouté un menu pour cesser le feu et arrêter la guerre ? »)
+- Dessin et textes seulement : simulation, commandes, sauvegarde et sommes de contrôle inchangées ; classique inchangé.
+- **« Guerre et paix »** :
+  - avant : un dialogue plein écran au titre centré, deux paragraphes de règles (5 lignes), puis pour chaque joueur
+    son état, « Déclarer la guerre : » et trois boutons, « Il propose la paix » à droite, la ligne de César dessous ;
+  - après : une page dans le cadre du conseiller militaire (40 × 26 blocs, par-dessus lui), son icône et le titre à
+    côté ; en-têtes « Joueur, Situation, Déclarer la guerre, Paix » au-dessus d'un panneau ; une ligne encadrée par
+    joueur comme les légions du conseiller : le joueur à sa couleur, « En paix » en vert, « Préavis : 46 jours » ou
+    « En guerre » en rouge (comme le conseiller en chef), les boutons à droite (Brutale ; Honorable ou Se rétracter ;
+    Proposer la paix, Retirer l'offre ou **Accepter la paix** quand l'autre l'a proposée) et une seule ligne dessous :
+    le prix de César d'une déclaration en paix, sinon l'offre reçue (en vert) ou envoyée, sinon le motif et le mois de
+    guerre ; trois puces de règles sous le panneau. Le détail passe dans des **infobulles** : la règle de chaque bouton
+    et le prix complet de César, le motif d'une guerre en survolant le joueur.
+  - « Confirmer ? » devient « Confirmer » (tenait mal dans le bouton) ; dans la ligne, « colère double (guerre
+    récente) » devient « colère double » (en entier dans l'infobulle).
+- **La fenêtre de l'offre de paix** (demandée par Alexandre) : quand un autre joueur propose la paix, la vue de la
+  cité montre, comme les dialogues de l'original (480 × 160 au milieu : titre, deux lignes, deux boutons),
+  « Proposition de paix — Le joueur 2 vous propose la paix. Les combats cessent et les légions rentrent au fort. »
+  avec **Accepter** (la commande existante `MP_ACTION_PROPOSE_PEACE` : la paix est signée) et **Plus tard** (ou
+  Échap, clic droit : l'offre reste dans « Guerre et paix ») ; Entrée accepte, comme l'OK des dialogues de
+  l'original. Une fois par offre, à la prochaine vue de la cité (pas pendant un tracé de construction, après les
+  lettres de César), fermée d'elle-même si l'offre est retirée ou la paix signée entre-temps. État d'affichage de cet
+  ordinateur seulement (`mp/war.c`, jamais sauvegardé ni lu par la simulation, comme les annonces) : le bandeau
+  « propose la paix » n'est plus montré à celui qui la reçoit (la fenêtre le remplace ; le compte des annonces ne
+  change pas). Une offre en attente dans une partie chargée n'ouvre pas la fenêtre : la page et le conseiller la
+  montrent.
+- **Conseiller militaire** : le bouton « Guerre » devient « Guerre et paix » ; sa ligne de la guerre dit d'abord
+  « Le joueur 2 vous propose la paix » quand une offre attend une réponse, puis, comme avant, la guerre en cours avec
+  les soldats ennemis, ou le préavis (D-084, D-088).
+- **Annonces sur la cité** (bandeaux), à la première personne pour les deux joueurs concernés : avant « Joueur 1 :
+  guerre brutale contre joueur 2 », « Joueurs 1 et 2 : paix signée » ; après « Le joueur 1 vous déclare une guerre
+  brutale ! », « Vous déclarez la guerre au joueur 2 : combats dans 3 mois », « Le joueur 1 retire sa déclaration de
+  guerre », « Les combats commencent avec le joueur 2 », « Paix signée avec le joueur 2 », « César impose la paix avec
+  le joueur 2 » ; les autres joueurs lisent « Le joueur 1 déclare la guerre au joueur 2 : combats dans 3 mois »,
+  « Paix signée entre les joueurs 1 et 2 » (le français « propose la paix à joueur 2 » est corrigé).
+- **Fenêtre de la légion** : avant, « Une charge d'armes par recrue. En caserne : 0 » serré sous le titre ; après, une
+  ligne du tableau comme les autres, « Armes en caserne » (légionnaires) ou « Bois en caserne » (javeliniers), la
+  valeur dans la colonne des valeurs, en rouge quand la légion attend des recrues, rien pour les cavaliers (le coût
+  complet reste dans la fenêtre du fort) ; « Retourner au fort » et « Attaquer » / « Attaque en cours » centrés
+  ensemble. Choix de la cible : « Cliquez sur un bâtiment de l'ennemi ; clic droit pour annuler ».
+- **Caserne et fort** : la caserne montrait « 0 unités » pour les armes et « Bois : 0 » ; elle montre l'icône du bois et
+  « 0 unités », comme les armes. Le fort met l'icône de la ressource devant la ligne du coût d'une recrue.
+- **Infobulles** : `tooltip_context` accepte un texte composé (`precomposed_text`, le nom du champ dans le Julius
+  d'aujourd'hui) ; les fenêtres ne pouvaient montrer que des textes du jeu d'origine.
+- **Tests** : `tools/mp-war-test.sh` (deux joueurs, 640 × 480 et 1024 × 736) passe par la fenêtre de l'offre des deux
+  côtés : l'hôte accepte par elle ; le client répond « Plus tard », retrouve l'offre dans le conseiller et l'accepte
+  dans « Guerre et paix » ; partie sans désynchronisation. `windowsweep` ouvre aussi « Guerre et paix » (à plusieurs :
+  `tools/mp-menus-test.sh`, 145 fenêtres, aucune ne change l'état). Revus aussi : `mp-attack-test.sh`,
+  `mp-battle-test.sh`, `mg-barracks-test.sh` ; « Guerre et paix » à quatre joueurs (trois lignes) par un script de
+  travail ; textes anglais relus. Les annonces nomment les joueurs par « %d », comme les messages du réseau :
+  `mp_status_translations` vérifie aussi qu'ils sont les mêmes en français et en anglais (échoue sans).
+- **À valider** :
+  - une fenêtre pour l'offre de paix reçue, plutôt qu'un bandeau ; Entrée l'accepte ;
+  - « Plus tard » ne la remontre pas : l'offre reste dans la page et le conseiller ;
+  - le préavis en rouge, comme la guerre ;
+  - les annonces à la première personne ;
+  - pas de ligne de recrues pour les cavaliers dans la fenêtre de la légion.

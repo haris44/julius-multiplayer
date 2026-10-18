@@ -127,10 +127,12 @@ Les règles propres au multijoueur :
   un joueur des terres (avec les olives) et un de la côte (avec les vignes) ; à 4, deux de chaque, les olives à un
   joueur des terres et les vignes à l'autre ; à 3, une place de la côte reste libre.
   En multijoueur, un réservoir coupé de sa source garde son eau environ 5 minutes.
-- La guerre : le bouton « Guerre » du conseiller militaire (touche 2) ouvre « Guerre et paix ». Guerre brutale :
+- La guerre : le bouton « Guerre et paix » du conseiller militaire (touche 2). Guerre brutale :
   on se bat tout de suite ; guerre honorable : dans 3 mois. Pendant le préavis, le commerce continue, celui qui a
   déclaré peut se rétracter (la menace laisse à l'autre le temps de céder), et l'autre peut frapper le premier. Dès
-  que les combats commencent, plus aucune caravane ne circule entre vous. La paix se signe quand les deux la proposent. En guerre, les légions abattent les
+  que les combats commencent, plus aucune caravane ne circule entre vous. La paix se signe quand les deux la
+  proposent : quand l'autre la propose, une fenêtre vous le dit sur la cité (« Accepter » ou « Plus tard » : l'offre
+  reste dans « Guerre et paix »). En guerre, les légions abattent les
   bâtiments, murs et portes de l'ennemi, coupent l'aqueduc qui l'alimente et prennent ses caravanes ; vos portes
   n'arrêtent que les soldats de vos ennemis, et vos tours tirent sur eux. « Attaquer », dans la fenêtre d'une
   légion : cliquez sur un bâtiment de l'ennemi ; la légion y marche et abat ses bâtiments à 10 cases autour. Le
