@@ -3,12 +3,10 @@
 #include "core/lang.h"
 #include "core/string.h"
 #include "game/player_context.h"
-#include "game/rules.h"
 #include "graphics/color.h"
 #include "graphics/lang_text.h"
 #include "graphics/text.h"
 #include "mp/caesar.h"
-#include "mp/caesar_rules.h"
 #include "mp/session.h"
 #include "translation/translation.h"
 
@@ -34,15 +32,17 @@ void window_mp_ratings_draw_pillar_text(int x, int width)
     int player_id = mp_session_local_player_id();
     text_draw_centered(translation_for(TR_MP_NOTES_LAURELS), x, 294, width, FONT_NORMAL_BLACK, 0);
     text_draw_number_centered(mp_caesar_laurels(player_id) / 10, x, 309, width - 10, FONT_LARGE_BLACK);
-    // the laurels to reach, as the goals of the other pillars; "1000 Required" is wider than the pillar box: smaller
+    // the laurels to reach, written as the goals of the other pillars ("@60 Requis"); "1000 Requis" is wider than the
+    // pillar box: smaller
     uint8_t goal[64];
-    int length = string_from_int(goal, mp_caesar_esteem_goal(player_id), 0);
+    goal[0] = '@';
+    int length = 1 + string_from_int(goal + 1, mp_caesar_esteem_goal(player_id), 0);
     goal[length++] = ' ';
     string_copy(lang_get_string(53, 5), goal + length, (int) sizeof(goal) - length);
     if (text_get_width(goal, FONT_NORMAL_BLACK) <= width - 10) {
         text_draw(goal, x + 5, 334, FONT_NORMAL_BLACK, 0);
     } else {
-        text_draw_centered(goal, x, 335, width, FONT_SMALL_PLAIN, COLOR_BLACK);
+        text_draw_centered(goal + 1, x, 335, width, FONT_SMALL_PLAIN, COLOR_BLACK);
     }
 }
 
@@ -84,29 +84,14 @@ static int place_in_province(int player_id, int *num_cities)
     return *num_cities;
 }
 
-// "Laurels: 45 of 1000" with a score; "Laurels: 45, next rank at 200" without
-static void draw_title(int player_id, int x, int y)
-{
-    uint8_t line[TEXT_SIZE] = { 0 };
-    append(line, translation_for(TR_MP_IMPERIAL_LAURELS));
-    append_number(line, mp_caesar_laurels(player_id) / 10);
-    if (game_rules_end_condition() == GAME_END_CAESAR) {
-        append(line, translation_for(TR_MP_IMPERIAL_OF));
-        append_number(line, game_rules_caesar_score());
-    } else if (mp_caesar_rank(player_id) < MP_CAESAR_NUM_RANKS - 1) {
-        append(line, translation_for(TR_MP_IMPERIAL_NEXT_RANK));
-        append_number(line, mp_caesar_esteem_goal(player_id));
-    }
-    text_draw(line, x, y, FONT_NORMAL_WHITE, 0);
-}
-
+// as the original box of a rating: its name, then two lines: the laurels gained last month and their trend, the place
+// of the city in the province, and what brings laurels when there is room for it
 void window_mp_ratings_draw_explanation(int x, int y, int width)
 {
     int player_id = mp_session_local_player_id();
-    draw_title(player_id, x, y);
+    text_draw(translation_for(TR_MP_NOTES_LAURELS), x, y, FONT_NORMAL_WHITE, 0);
 
     uint8_t text[TEXT_SIZE] = { 0 };
-    // what the city gained last month, and its trend
     if (mp_caesar_history_months(player_id) < 2) {
         append(text, translation_for(TR_MP_RATINGS_NO_HISTORY));
     } else {
@@ -118,7 +103,6 @@ void window_mp_ratings_draw_explanation(int x, int y, int width)
             default: append(text, translation_for(TR_MP_RATINGS_TREND_STEADY)); break;
         }
     }
-    // where the city stands in the province
     int num_cities;
     int place = place_in_province(player_id, &num_cities);
     if (num_cities > 1) {
@@ -130,7 +114,11 @@ void window_mp_ratings_draw_explanation(int x, int y, int width)
     } else {
         append(text, translation_for(TR_MP_RATINGS_ALONE));
     }
-    // what brings laurels
+    // the box holds two lines under the name, as the original texts
+    int length = string_length(text);
     append(text, translation_for(TR_MP_RATINGS_SOURCES));
+    if (text_measure_multiline(text, width, FONT_NORMAL_WHITE, 0) > 2) {
+        text[length] = 0;
+    }
     text_draw_multiline(text, x, y + 15, width, FONT_NORMAL_WHITE, 0);
 }
