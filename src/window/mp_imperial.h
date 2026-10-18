@@ -1,6 +1,8 @@
 #ifndef WINDOW_MP_IMPERIAL_H
 #define WINDOW_MP_IMPERIAL_H
 
+#include "input/mouse.h"
+
 /**
  * @file
  * The imperial advisor in a multiplayer game (doc/mp/CESAR.md §11): the laurels of the city and its rank, its five
@@ -18,6 +20,17 @@ int window_mp_imperial_is_active(void);
  * @param height Height of the advisor, in blocks
  */
 void window_mp_imperial_draw_background(int height);
+
+/**
+ * Draws the button of the other page
+ */
+void window_mp_imperial_draw_foreground(void);
+
+/**
+ * Handles the button of the other page
+ * @return 1 if the mouse was handled
+ */
+int window_mp_imperial_handle_mouse(const mouse *m);
 
 /**
  * Rank shown at the bottom of the advisor: the rank given by the laurels

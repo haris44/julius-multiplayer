@@ -1992,48 +1992,87 @@
   échoue avec l'ancienne règle).
 - Réseau : protocole 33.
 
-### D-093 — Le commerce dans le style du conseiller d'origine : onglets, flèches, liste qui défile, infobulles ; l'alerte de prix comme un message (T5.6, précise D-049, D-051, D-078)
-- 2026-10-18 · **adoptée provisoirement** (Alexandre : « plus jolis et fidèles au jeu d'origine (bouton /
-  organisation ...) », « pas trop saturées » ; travail sans lui)
-- **Page du commerce** (`window/mp_trade.c`) :
-  - *Avant* : 15 lignes serrées de 18 px, des « - » et « + » dans des rectangles dessinés à la main, l'onglet choisi
-    peu visible (gris foncé, texte rouge), six colonnes sur l'onglet d'un joueur (dont « Empire ») et sur l'onglet
-    Empire (dont « Portorium »).
-  - *Après* : les lignes du conseiller d'origine (icône, nom, valeurs alignées en colonnes, 24 px), les **flèches de
-    l'original** (bas, haut, comme le salaire du conseiller du travail) pour mon prix et les deux bornes, des boutons
-    à bordure de l'original (comme les ordres d'un entrepôt) pour « J'achète » et le commerce avec l'empire. Les
-    flèches font 24 px et l'original n'en a pas de plus petites : 15 lignes ne tiennent pas dans 640 × 480 avec les
-    onglets et les boutons du bas. **Douze lignes** sont visibles, la liste **défile** comme les listes de l'original
-    (barre à droite, flèches, curseur, molette), sur les trois onglets à la fois.
-  - **Onglets** posés sur le bord du tableau : celui qui est choisi est taillé dans la pierre du tableau et s'ouvre
-    dessus, les autres sont des boutons de l'original.
-  - **Moins de colonnes** : l'onglet d'un joueur perd « Empire » (le prix de l'empire passe dans l'infobulle de
-    « Son prix », le vert reste), l'onglet Empire perd « Portorium » (dans l'infobulle du prix payé ou reçu ; la ligne
-    d'aide dit 50 %).
-  - **Infobulles** : prix de l'empire, Rome et portorium, rôle des flèches et de « J'achète », chargements en route,
-    et **pourquoi rien ne vient** en une phrase (le mot court, « sans stock », reste écrit dans la colonne, en blanc).
-    Les boutons d'origine gardent leurs infobulles d'origine (bilan de l'industrie, carte, prix). Pour cela, les
-    infobulles acceptent un texte composé (`precomposed_text`) et un conseiller peut remplir la sienne lui-même
-    (`get_tooltip`, facultatif) ; le classique n'en utilise aucun.
-  - *Inchangé* : la route en un seul bouton dans le coin du titre, la ligne d'aide (état de la route tant qu'elle n'est
-    pas ouverte), les commandes, les pas (10 Dn, 4 chargements), la carte et les prix de l'empire en bas, le clic sur
-    une ressource qui ouvre sa fenêtre d'origine.
-- **Alerte de prix** (`window/mp_price_alert.c`) :
-  - *Avant* : boutons texte « Voir le commerce » et « OK » au milieu du bas.
-  - *Après* : comme les messages de l'original : titre centré, ligne d'explication, tableau dans un panneau creux
-    (vendeur, ressource, ancien et nouveau prix alignés à droite), le **bouton du conseiller au commerce** en bas à
-    gauche avec « Voir le commerce » écrit à côté (cliquable aussi), la **croix** de fermeture en bas à droite ; Entrée,
-    Échap et le clic droit ferment. Toujours de la taille de l'écran d'origine, ville grisée (D-049). « Voir le
-    commerce » ouvre l'onglet du vendeur, la ligne de la ressource en vue.
-- Mode classique : inchangé (conseiller d'origine, fenêtre de la ressource et infobulles d'origine).
-- Captures : `tools/mp-ui-test.sh` (640 × 480 et 1024 × 736 : onglets, infobulles, liste défilée, alerte chez l'hôte
-  et chez le client), `mp-trade-test.sh`, `mp-trade3-test.sh`, `mp-trade4-test.sh`, `mp-solo-test.sh` (clics mis à
-  jour). `windowsweep` ouvre aussi l'onglet Empire.
+### D-090 — Le salon, ses règles, les lettres de César et l'écran de fin à la manière de l'original (UI)
+- 2026-10-18 · **adoptée provisoirement**, **à valider** par Alexandre (« plus jolis et fidèles au jeu d'origine
+  (bouton / organisation…) ; pas trop saturées »). Dessin seulement : ni règle, ni état, ni commande ne changent.
+- **Salon** : avant, une colonne de gauche pleine (liste, joueurs, sept règles en texte cliquable, gris quand on ne
+  peut pas les changer) et la seconde expédition casée sous « Rejoindre » ; une barre de défilement qui débordait
+  sur la colonne de droite au-delà de dix parties. Après, deux colonnes symétriques comme la fenêtre des fichiers
+  d'origine : « Héberger une partie » (liste dans un panneau, barre de défilement à côté, « Joueurs : 2 » avec les
+  flèches des options d'origine, boutons « Règles de la partie » et « Héberger ») et « Rejoindre une partie »
+  (parties trouvées, adresse, « Rejoindre ») ; dessous, un panneau de texte blanc : les règles en une phrase
+  (carte, difficulté, fin, puis seulement les règles qui diffèrent de celles du salon : « sans dieux », « sans
+  invasions », « sans brouillard », « Rome reprend la province à la seconde expédition ») et l'état de la partie.
+  En hébergeant, la ligne des joueurs devient « Joueurs présents : 1 sur 2 ». Une partie rejointe cache
+  « Héberger » et « Rejoindre ». Un échec (port, hôte injoignable) s'affiche jusqu'au prochain essai ; avant, il ne
+  s'affichait pas. « Nouvelle partie (forêt) » devient « Nouvelle partie » (la carte se choisit dans les règles).
+- **Règles de la partie** (fenêtre par-dessus le salon, comme les options d'origine) : une ligne par règle,
+  « Carte : », « Difficulté : », « Dieux : », « Invasions IA : », « Brouillard de guerre : », « Fin de la partie : »,
+  « Seconde expédition : », la valeur sur une étiquette verte qui passe à la suivante (comme les options du son), les
+  noms de difficulté de la fenêtre d'origine ; OK ou clic droit ferme. Une phrase dit qui peut les changer ; chez un
+  joueur qui a rejoint, ou pour une partie reprise (D-063, D-073), les valeurs s'écrivent sans étiquette.
+- **Lettres de César** : avant, un panneau à part avec l'icône du conseiller, un texte noir signé « César » et un
+  bouton OK, sur la ville assombrie. Après, comme les messages de l'Empereur d'origine : à leur place (sur la ville,
+  pas sur la barre latérale), un titre par sujet (« Avertissement de César », « Ultimatum de César », « César impose
+  la paix », « L'expédition punitive », « Les légions de César vaincues » / « repartent », « Promotion », « Lettre de
+  César » pour l'accueil), la date et « Pour Joueur N » en tête du texte blanc, le bouton du conseiller impérial en
+  bas à gauche (il l'ouvre) et la flèche de fermeture en bas à droite ; une lettre longue agrandit la fenêtre.
+  Entrée et clic droit ferment toujours.
+- **Écran de fin** : avant, des lignes « Joueur 1 (vous) lauriers : 0 » et la règle en petit. Après, comme la
+  fenêtre de victoire d'origine : le titre, « L'héritier de César est » puis son nom en grand (« La partie est gagnée
+  par » pour la fin au score ; la phrase de Rome quand Rome reprend la province), les cités dans un panneau, la
+  meilleure d'abord, sous les colonnes « Cité » et « Lauriers », et les deux choix sur de grandes étiquettes.
+- **Menu principal** : inchangé (déjà dans l'idiome d'origine, D-031).
+- Scripts : les clics du salon de tous les scripts du vrai jeu suivent la nouvelle place des boutons (la carte, la
+  difficulté et l'expédition passent par « Règles de la partie ») ; `mp-ui-client.txt` capture aussi les règles de
+  l'hôte vues par le client (`ui-client-rules.png`).
+- *À valider* : les règles dans une fenêtre à part plutôt que dans le salon ; le résumé des règles (seulement ce qui
+  diffère) ; « Nouvelle partie » sans « (forêt) » ; les titres des lettres ; la signature « César » retirée (les
+  messages d'origine n'en ont pas).
+- Classique : inchangé.
+
+### D-091 — Les statistiques de César à la manière des conseillers d'origine : deux pages, un bandeau comme la barre du haut
+- 2026-10-18 · **adoptée provisoirement**, *à valider* (Alexandre : « plus jolis et fidèles au jeu d'origine […] pas
+  trop saturées ») · précise D-057, D-071, D-084, D-086, D-089
+- Dessin seulement : ni règle, ni état, ni commande ne change (`windowsweep` : aucune fenêtre n'écrit dans la partie).
+- **Conseiller impérial** (`window/mp_imperial.c`), à la manière des tableaux d'origine (en-têtes de colonnes en
+  petite police au-dessus du cadre, lignes à 20 pixels, nombres alignés à droite) :
+  - avant : une page de vingt lignes serrées (notes, barres et lauriers de chaque note, lauriers de la cité et de
+    César, « fêtes et campagnes : bientôt », guerres et armée, classement, colère, parts, ennemi de Rome, ultimatum) ;
+  - après, en deux pages, avec un bouton en bas à droite du cadre (comme ceux du cadeau et du don) :
+    1. « Notes et classement » : les cinq notes et leurs barres, la colère de César en sixième ligne
+       (jauge marquée à 40 et 70), le classement ; en rouge, seulement s'il y a lieu, le délai de l'ultimatum, les
+       ennemis de Rome et la disgrâce ;
+    2. « Lauriers et colère » : les lauriers par source (cinq notes, cadeaux, guerres, armée, l'expédition s'il y en a
+       une), la part de chacun dans la colère avec « ennemi de Rome », les légions de la cité, celles que César tolère
+       et leur coût par mois.
+  - en-tête comme l'original (« Estime de l'Empereur 71 », puis le mot de l'empereur) : « Lauriers : 108 sur 1000,
+    prochain rang à 200 », puis la règle en une ligne. Retirés : « Fêtes et campagnes : bientôt », les deux totaux
+    (l'en-tête donne le total, la seconde page le détail) ;
+  - le bouton du salaire retrouve l'infobulle de l'original, que D-076 avait retirée (D-089 a rouvert sa fenêtre) ;
+    la note de cette fenêtre disait encore « Rome vous verse le salaire de votre rang » (D-076) : « Choisissez votre
+    salaire, au plus celui de votre rang : les rangs plus élevés s'obtiennent avec des lauriers. ».
+  La page choisie reste d'une ouverture à l'autre (état de l'affichage, jamais sauvegardé).
+- **Évaluation, pilier des lauriers** (`window/mp_ratings.c`) : avant, la boîte du bas débordait (un titre qui
+  répétait le pilier, puis trois lignes) ; après, comme les autres piliers : « Lauriers », puis deux lignes au plus
+  (le mois dernier et la tendance, la place, et « Vos cinq notes en rapportent chaque mois. » s'il reste la place).
+  « 200 Requis » a le même retrait que sous les autres piliers.
+- **Bandeau** (`widget/mp_status.c`) : avant, un rectangle noir ; après, la barre du haut de l'original, au bas de la
+  vue de la ville et sur toute sa largeur : sa pierre, « Joueur 2 » et « héritier à 1000 lauriers » dans sa police,
+  les lauriers des joueurs dans un de ses panneaux sombres (« J1 », … dans leur couleur ; « P1 » en anglais : le « J »
+  était écrit en dur), la colère et sa jauge dans un autre, la pause dans un troisième. Faute de place : l'unité du
+  score part d'abord, puis le score, puis « Joueur N ». Avant le lancement et après un arrêt, l'état du réseau en haut,
+  dans le même panneau sombre.
+- Conseillers de la population et des finances : rien de propre au multijoueur à l'écran (les impôts passent par une
+  commande, sans autre changement), laissés tels quels.
+- Captures : `tools/mp-stats-test.sh` (grande cité sans réseau, puis partie seule depuis le salon ; 640 × 480,
+  800 × 600 et 1024 × 736 ; avant et après l'ultimatum), `tools/mp-stats4-test.sh` (quatre joueurs).
 - *À valider* :
-  - la liste qui défile (12 lignes sur 15 ; poterie, meubles et armes en bas) plutôt que des « - » et « + » dessinés
-    qui tiennent sur 15 lignes ;
-  - le prix de l'empire (onglet d'un joueur) et le portorium (onglet Empire) dans les seules infobulles ;
-  - l'alerte sans « OK », fermée par la croix de l'original.
+  - une seconde page plutôt que des infobulles : celles du jeu n'affichent que les textes d'origine, et peuvent être
+    désactivées dans les options ;
+  - le bandeau sur toute la largeur de la vue : il cache 24 pixels du bas de la ville (22 avant, sur la largeur de son
+    texte) ;
+  - la colère comme une sixième ligne sous les notes, avec ses seuils.
 
 ### D-092 — Les fenêtres de la guerre à la manière de l'original ; la fenêtre de l'offre de paix (interface, précise D-077, D-080, D-084, D-087, D-088)
 - 2026-10-18 · **adoptée provisoirement**, *à valider* (Alexandre : « plus jolis et fidèles au jeu d'origine (bouton /
@@ -2095,41 +2134,45 @@
   - les annonces à la première personne ;
   - pas de ligne de recrues pour les cavaliers dans la fenêtre de la légion.
 
-### D-090 — Le salon, ses règles, les lettres de César et l'écran de fin à la manière de l'original (UI)
-- 2026-10-18 · **adoptée provisoirement**, **à valider** par Alexandre (« plus jolis et fidèles au jeu d'origine
-  (bouton / organisation…) ; pas trop saturées »). Dessin seulement : ni règle, ni état, ni commande ne changent.
-- **Salon** : avant, une colonne de gauche pleine (liste, joueurs, sept règles en texte cliquable, gris quand on ne
-  peut pas les changer) et la seconde expédition casée sous « Rejoindre » ; une barre de défilement qui débordait
-  sur la colonne de droite au-delà de dix parties. Après, deux colonnes symétriques comme la fenêtre des fichiers
-  d'origine : « Héberger une partie » (liste dans un panneau, barre de défilement à côté, « Joueurs : 2 » avec les
-  flèches des options d'origine, boutons « Règles de la partie » et « Héberger ») et « Rejoindre une partie »
-  (parties trouvées, adresse, « Rejoindre ») ; dessous, un panneau de texte blanc : les règles en une phrase
-  (carte, difficulté, fin, puis seulement les règles qui diffèrent de celles du salon : « sans dieux », « sans
-  invasions », « sans brouillard », « Rome reprend la province à la seconde expédition ») et l'état de la partie.
-  En hébergeant, la ligne des joueurs devient « Joueurs présents : 1 sur 2 ». Une partie rejointe cache
-  « Héberger » et « Rejoindre ». Un échec (port, hôte injoignable) s'affiche jusqu'au prochain essai ; avant, il ne
-  s'affichait pas. « Nouvelle partie (forêt) » devient « Nouvelle partie » (la carte se choisit dans les règles).
-- **Règles de la partie** (fenêtre par-dessus le salon, comme les options d'origine) : une ligne par règle,
-  « Carte : », « Difficulté : », « Dieux : », « Invasions IA : », « Brouillard de guerre : », « Fin de la partie : »,
-  « Seconde expédition : », la valeur sur une étiquette verte qui passe à la suivante (comme les options du son), les
-  noms de difficulté de la fenêtre d'origine ; OK ou clic droit ferme. Une phrase dit qui peut les changer ; chez un
-  joueur qui a rejoint, ou pour une partie reprise (D-063, D-073), les valeurs s'écrivent sans étiquette.
-- **Lettres de César** : avant, un panneau à part avec l'icône du conseiller, un texte noir signé « César » et un
-  bouton OK, sur la ville assombrie. Après, comme les messages de l'Empereur d'origine : à leur place (sur la ville,
-  pas sur la barre latérale), un titre par sujet (« Avertissement de César », « Ultimatum de César », « César impose
-  la paix », « L'expédition punitive », « Les légions de César vaincues » / « repartent », « Promotion », « Lettre de
-  César » pour l'accueil), la date et « Pour Joueur N » en tête du texte blanc, le bouton du conseiller impérial en
-  bas à gauche (il l'ouvre) et la flèche de fermeture en bas à droite ; une lettre longue agrandit la fenêtre.
-  Entrée et clic droit ferment toujours.
-- **Écran de fin** : avant, des lignes « Joueur 1 (vous) lauriers : 0 » et la règle en petit. Après, comme la
-  fenêtre de victoire d'origine : le titre, « L'héritier de César est » puis son nom en grand (« La partie est gagnée
-  par » pour la fin au score ; la phrase de Rome quand Rome reprend la province), les cités dans un panneau, la
-  meilleure d'abord, sous les colonnes « Cité » et « Lauriers », et les deux choix sur de grandes étiquettes.
-- **Menu principal** : inchangé (déjà dans l'idiome d'origine, D-031).
-- Scripts : les clics du salon de tous les scripts du vrai jeu suivent la nouvelle place des boutons (la carte, la
-  difficulté et l'expédition passent par « Règles de la partie ») ; `mp-ui-client.txt` capture aussi les règles de
-  l'hôte vues par le client (`ui-client-rules.png`).
-- *À valider* : les règles dans une fenêtre à part plutôt que dans le salon ; le résumé des règles (seulement ce qui
-  diffère) ; « Nouvelle partie » sans « (forêt) » ; les titres des lettres ; la signature « César » retirée (les
-  messages d'origine n'en ont pas).
-- Classique : inchangé.
+### D-093 — Le commerce dans le style du conseiller d'origine : onglets, flèches, liste qui défile, infobulles ; l'alerte de prix comme un message (T5.6, précise D-049, D-051, D-078)
+- 2026-10-18 · **adoptée provisoirement** (Alexandre : « plus jolis et fidèles au jeu d'origine (bouton /
+  organisation ...) », « pas trop saturées » ; travail sans lui)
+- **Page du commerce** (`window/mp_trade.c`) :
+  - *Avant* : 15 lignes serrées de 18 px, des « - » et « + » dans des rectangles dessinés à la main, l'onglet choisi
+    peu visible (gris foncé, texte rouge), six colonnes sur l'onglet d'un joueur (dont « Empire ») et sur l'onglet
+    Empire (dont « Portorium »).
+  - *Après* : les lignes du conseiller d'origine (icône, nom, valeurs alignées en colonnes, 24 px), les **flèches de
+    l'original** (bas, haut, comme le salaire du conseiller du travail) pour mon prix et les deux bornes, des boutons
+    à bordure de l'original (comme les ordres d'un entrepôt) pour « J'achète » et le commerce avec l'empire. Les
+    flèches font 24 px et l'original n'en a pas de plus petites : 15 lignes ne tiennent pas dans 640 × 480 avec les
+    onglets et les boutons du bas. **Douze lignes** sont visibles, la liste **défile** comme les listes de l'original
+    (barre à droite, flèches, curseur, molette), sur les trois onglets à la fois.
+  - **Onglets** posés sur le bord du tableau : celui qui est choisi est taillé dans la pierre du tableau et s'ouvre
+    dessus, les autres sont des boutons de l'original.
+  - **Moins de colonnes** : l'onglet d'un joueur perd « Empire » (le prix de l'empire passe dans l'infobulle de
+    « Son prix », le vert reste), l'onglet Empire perd « Portorium » (dans l'infobulle du prix payé ou reçu ; la ligne
+    d'aide dit 50 %).
+  - **Infobulles** : prix de l'empire, Rome et portorium, rôle des flèches et de « J'achète », chargements en route,
+    et **pourquoi rien ne vient** en une phrase (le mot court, « sans stock », reste écrit dans la colonne, en blanc).
+    Les boutons d'origine gardent leurs infobulles d'origine (bilan de l'industrie, carte, prix). Pour cela, les
+    infobulles acceptent un texte composé (`precomposed_text`) et un conseiller peut remplir la sienne lui-même
+    (`get_tooltip`, facultatif) ; le classique n'en utilise aucun.
+  - *Inchangé* : la route en un seul bouton dans le coin du titre, la ligne d'aide (état de la route tant qu'elle n'est
+    pas ouverte), les commandes, les pas (10 Dn, 4 chargements), la carte et les prix de l'empire en bas, le clic sur
+    une ressource qui ouvre sa fenêtre d'origine.
+- **Alerte de prix** (`window/mp_price_alert.c`) :
+  - *Avant* : boutons texte « Voir le commerce » et « OK » au milieu du bas.
+  - *Après* : comme les messages de l'original : titre centré, ligne d'explication, tableau dans un panneau creux
+    (vendeur, ressource, ancien et nouveau prix alignés à droite), le **bouton du conseiller au commerce** en bas à
+    gauche avec « Voir le commerce » écrit à côté (cliquable aussi), la **croix** de fermeture en bas à droite ; Entrée,
+    Échap et le clic droit ferment. Toujours de la taille de l'écran d'origine, ville grisée (D-049). « Voir le
+    commerce » ouvre l'onglet du vendeur, la ligne de la ressource en vue.
+- Mode classique : inchangé (conseiller d'origine, fenêtre de la ressource et infobulles d'origine).
+- Captures : `tools/mp-ui-test.sh` (640 × 480 et 1024 × 736 : onglets, infobulles, liste défilée, alerte chez l'hôte
+  et chez le client), `mp-trade-test.sh`, `mp-trade3-test.sh`, `mp-trade4-test.sh`, `mp-solo-test.sh` (clics mis à
+  jour). `windowsweep` ouvre aussi l'onglet Empire.
+- *À valider* :
+  - la liste qui défile (12 lignes sur 15 ; poterie, meubles et armes en bas) plutôt que des « - » et « + » dessinés
+    qui tiennent sur 15 lignes ;
+  - le prix de l'empire (onglet d'un joueur) et le portorium (onglet Empire) dans les seules infobulles ;
+  - l'alerte sans « OK », fermée par la croix de l'original.

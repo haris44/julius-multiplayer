@@ -200,6 +200,7 @@ static void draw_foreground(void)
     lang_text_draw_centered(52, 49, 320, 346, 250, FONT_NORMAL_WHITE);
 
     if (window_mp_imperial_is_active()) {
+        window_mp_imperial_draw_foreground(); // the button of the other page (D-091)
         return; // no requests of Caesar in multiplayer (D-026)
     }
 
@@ -223,7 +224,10 @@ static void draw_foreground(void)
 
 static int handle_mouse(const mouse *m)
 {
-    // multiplayer: gift, salary and donation only (3 buttons), no requests of Caesar
+    // multiplayer: the button of the other page, then gift, salary and donation only (3 buttons), no requests of Caesar
+    if (window_mp_imperial_is_active() && window_mp_imperial_handle_mouse(m)) {
+        return 1;
+    }
     return generic_buttons_handle_mouse(m, 0, 0, imperial_buttons, window_mp_imperial_is_active() ? 3 : 8,
         &focus_button_id);
 }
@@ -290,9 +294,6 @@ static void button_request(int index, int param2)
 
 static int get_tooltip_text(void)
 {
-    if (focus_button_id == 2 && window_mp_imperial_is_active()) {
-        return 0;
-    }
     if (focus_button_id && focus_button_id <= 2) {
         return 93 + focus_button_id;
     } else if (focus_button_id == 3) {
