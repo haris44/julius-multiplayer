@@ -1992,3 +1992,45 @@
   échoue avec l'ancienne règle).
 - Réseau : protocole 33.
 
+### D-093 — Le commerce dans le style du conseiller d'origine : onglets, flèches, liste qui défile, infobulles ; l'alerte de prix comme un message (T5.6, précise D-049, D-051, D-078)
+- 2026-10-18 · **adoptée provisoirement** (Alexandre : « plus jolis et fidèles au jeu d'origine (bouton /
+  organisation ...) », « pas trop saturées » ; travail sans lui)
+- **Page du commerce** (`window/mp_trade.c`) :
+  - *Avant* : 15 lignes serrées de 18 px, des « - » et « + » dans des rectangles dessinés à la main, l'onglet choisi
+    peu visible (gris foncé, texte rouge), six colonnes sur l'onglet d'un joueur (dont « Empire ») et sur l'onglet
+    Empire (dont « Portorium »).
+  - *Après* : les lignes du conseiller d'origine (icône, nom, valeurs alignées en colonnes, 24 px), les **flèches de
+    l'original** (bas, haut, comme le salaire du conseiller du travail) pour mon prix et les deux bornes, des boutons
+    à bordure de l'original (comme les ordres d'un entrepôt) pour « J'achète » et le commerce avec l'empire. Les
+    flèches font 24 px et l'original n'en a pas de plus petites : 15 lignes ne tiennent pas dans 640 × 480 avec les
+    onglets et les boutons du bas. **Douze lignes** sont visibles, la liste **défile** comme les listes de l'original
+    (barre à droite, flèches, curseur, molette), sur les trois onglets à la fois.
+  - **Onglets** posés sur le bord du tableau : celui qui est choisi est taillé dans la pierre du tableau et s'ouvre
+    dessus, les autres sont des boutons de l'original.
+  - **Moins de colonnes** : l'onglet d'un joueur perd « Empire » (le prix de l'empire passe dans l'infobulle de
+    « Son prix », le vert reste), l'onglet Empire perd « Portorium » (dans l'infobulle du prix payé ou reçu ; la ligne
+    d'aide dit 50 %).
+  - **Infobulles** : prix de l'empire, Rome et portorium, rôle des flèches et de « J'achète », chargements en route,
+    et **pourquoi rien ne vient** en une phrase (le mot court, « sans stock », reste écrit dans la colonne, en blanc).
+    Les boutons d'origine gardent leurs infobulles d'origine (bilan de l'industrie, carte, prix). Pour cela, les
+    infobulles acceptent un texte composé (`precomposed_text`) et un conseiller peut remplir la sienne lui-même
+    (`get_tooltip`, facultatif) ; le classique n'en utilise aucun.
+  - *Inchangé* : la route en un seul bouton dans le coin du titre, la ligne d'aide (état de la route tant qu'elle n'est
+    pas ouverte), les commandes, les pas (10 Dn, 4 chargements), la carte et les prix de l'empire en bas, le clic sur
+    une ressource qui ouvre sa fenêtre d'origine.
+- **Alerte de prix** (`window/mp_price_alert.c`) :
+  - *Avant* : boutons texte « Voir le commerce » et « OK » au milieu du bas.
+  - *Après* : comme les messages de l'original : titre centré, ligne d'explication, tableau dans un panneau creux
+    (vendeur, ressource, ancien et nouveau prix alignés à droite), le **bouton du conseiller au commerce** en bas à
+    gauche avec « Voir le commerce » écrit à côté (cliquable aussi), la **croix** de fermeture en bas à droite ; Entrée,
+    Échap et le clic droit ferment. Toujours de la taille de l'écran d'origine, ville grisée (D-049). « Voir le
+    commerce » ouvre l'onglet du vendeur, la ligne de la ressource en vue.
+- Mode classique : inchangé (conseiller d'origine, fenêtre de la ressource et infobulles d'origine).
+- Captures : `tools/mp-ui-test.sh` (640 × 480 et 1024 × 736 : onglets, infobulles, liste défilée, alerte chez l'hôte
+  et chez le client), `mp-trade-test.sh`, `mp-trade3-test.sh`, `mp-trade4-test.sh`, `mp-solo-test.sh` (clics mis à
+  jour). `windowsweep` ouvre aussi l'onglet Empire.
+- *À valider* :
+  - la liste qui défile (12 lignes sur 15 ; poterie, meubles et armes en bas) plutôt que des « - » et « + » dessinés
+    qui tiennent sur 15 lignes ;
+  - le prix de l'empire (onglet d'un joueur) et le portorium (onglet Empire) dans les seules infobulles ;
+  - l'alerte sans « OK », fermée par la croix de l'original.
