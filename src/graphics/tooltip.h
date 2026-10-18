@@ -3,6 +3,8 @@
 
 #include "input/mouse.h"
 
+#include <stdint.h>
+
 #define TOOLTIP_MAX_EXTRA_VALUES 5
 
 typedef enum {
@@ -24,6 +26,7 @@ typedef struct {
     int high_priority;
     int text_group;
     int text_id;
+    const uint8_t *precomposed_text; /**< multiplayer windows: a text of their own instead of text_group/text_id */
     int has_numeric_prefix;
     int numeric_prefix;
     int num_extra_texts;
