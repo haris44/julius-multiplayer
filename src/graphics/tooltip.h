@@ -3,6 +3,8 @@
 
 #include "input/mouse.h"
 
+#include <stdint.h>
+
 #define TOOLTIP_MAX_EXTRA_VALUES 5
 
 typedef enum {
@@ -30,6 +32,7 @@ typedef struct {
     tooltip_extra_text_type extra_text_type;
     int extra_text_groups[TOOLTIP_MAX_EXTRA_VALUES];
     int extra_text_ids[TOOLTIP_MAX_EXTRA_VALUES];
+    const uint8_t *precomposed_text; // shown instead of the text of the group and id (multiplayer texts)
 } tooltip_context;
 
 void tooltip_invalidate(void);

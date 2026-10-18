@@ -2,7 +2,8 @@
 # Two instances of the real game (no window) start a network game from the lobby, the host at 640 x 480 and the
 # client at 1024 x 768, and take screenshots of the windows changed by T4 (build/automation/ui-*.png): the lobby of
 # the client with the rules of the host, the build menus of each place (farms, raw materials), the Options menu, the
-# imperial advisor, the ratings with the laurels pillar, the trade advisor and its stock tab.
+# imperial advisor, the ratings with the laurels pillar, the trade advisor (its tabs, tooltips, the list scrolled) and
+# the alert of a price change on both sides.
 # Usage: tools/mp-ui-test.sh
 set -uo pipefail
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
@@ -23,8 +24,10 @@ grep -h -E "mpcheck|automation\] .*(fail|timed|stopped)" build/automation/mp-ui-
 rm -f "$DATA_DIR"/mp-session-* "$DATA_DIR"/mp-desync-*
 mp_restore_autosave
 MISSING=0
-for shot in host-lobby host-city host-farms host-raw host-imperial host-ratings host-stocks host-reasons \
-    client-lobby client-farms client-raw client-options client-ratings client-trade client-reasons; do
+for shot in host-lobby host-city host-farms host-raw host-imperial host-ratings host-trade host-empire host-empire-tip \
+    host-stocks host-stocks-scrolled host-reasons host-reasons-tip host-price-alert host-price-alert-trade \
+    client-lobby client-farms client-raw client-options client-ratings client-trade client-reasons \
+    client-price-alert; do
     [ -s "build/automation/ui-$shot.png" ] || { echo "missing screenshot ui-$shot.png"; MISSING=1; }
 done
 if [ $HOST_STATUS -ne 0 ] || [ $CLIENT_STATUS -ne 0 ] || [ $MISSING -ne 0 ]; then

@@ -252,8 +252,8 @@ Bon à savoir :
 - `tools/mp-lobby-test.sh` : hôte et client depuis le salon, 400 ticks sans désynchronisation.
 - `tools/mp-trade-test.sh` : idem, puis l'hôte ouvre le conseiller au commerce, page commune à l'empire et aux
   joueurs (`build/automation/trade-window.png`) ; le client achète le marbre (`trade-client-buys.png`), l'hôte en
-  monte le prix et le client voit l'alerte plein écran (`price-alert.png`, puis `price-alert-trade.png` après « Voir
-  le commerce »). La commande `tradecheck` après la proposition de la route échoue si la page ne redessine pas son
+  monte le prix et le client voit l'alerte plein écran (`price-alert.png`, puis `price-alert-trade.png` après le
+  bouton du conseiller, « Voir le commerce ») ; `trade-stocks-scrolled.png` : la liste défilée (D-093). La commande `tradecheck` après la proposition de la route échoue si la page ne redessine pas son
   cadre quand l'état de la route change (vérifié : sans le correctif, elle échoue) ; `trade-route-waiting.png` est la
   capture à regarder pour ce défaut (bouton « Proposer la route » sans « Retirer la proposition » dessous, une seule
   ligne d'aide).
@@ -271,7 +271,10 @@ Bon à savoir :
   delivered »), et les autres achats sans rien à vendre. Captures `trade3-*.png` : achats, marbre en route, livré,
   raisons dans la colonne « En route » (T5.7, T5.6).
 - `tools/mp-ui-test.sh` : hôte en 640 × 480 et client en 1024 × 768 (l'écran factice le ramène à 1024 × 736),
-  depuis le salon ; captures `build/automation/ui-*.png` des fenêtres revues par T4 (voir le tableau ci-dessous).
+  depuis le salon ; captures `build/automation/ui-*.png` des fenêtres revues par T4 (voir le tableau ci-dessous) et
+  du commerce de D-093 : onglets, infobulles (`ui-host-empire-tip.png`, `ui-host-reasons-tip.png`), liste défilée,
+  alerte de prix de chaque côté (`ui-host-price-alert.png`, `ui-client-price-alert.png`). Avant une capture, la souris
+  quitte les boutons (`mouse`) : sinon leur infobulle s'affiche au bout de 10 images.
 - `tools/mg-barracks-test.sh` : partie seule depuis le salon ; une caserne et trois forts (légionnaires, javeliniers,
   cavaliers) par `build`, puis clic droit (deux fois la première : le premier efface les avertissements) sur chacun ;
   captures `build/automation/mg-barracks.png` et `mg-fort-*.png` : bois de la caserne, coût d'une recrue (MG.4, D-083).
@@ -307,14 +310,14 @@ coordonnées ; la barre latérale reste collée au bord droit (bouton industrie 
 |--------|--------|
 | `tools/mp-solo-test.sh` | salon à 1 joueur (règles, carte), lettre de César, mission et zone, missionnaire, pont, bandeau des lauriers, conseiller impérial et page du commerce seule (onglet Stocks) en 800 × 600 |
 | `tools/mp-lobby-test.sh` | salon hôte et client (partie trouvée, salle d'attente), partie à deux sans désynchronisation |
-| `tools/mp-trade-test.sh` | page du commerce (onglet d'un joueur, route proposée, onglet Empire avec prix de Rome et portorium, onglet Stocks avec une limite), achat, alerte de prix |
+| `tools/mp-trade-test.sh` | page du commerce (onglet d'un joueur, route proposée, onglet Empire avec prix de Rome et l'infobulle du portorium, onglet Stocks avec une limite, liste défilée), achat, alerte de prix et son bouton du conseiller |
 | `tools/mp-trade4-test.sh` | page du commerce à quatre joueurs (cinq onglets) et prix à quatre chiffres, sans texte superposé |
 | `tools/mp-trade3-test.sh` | partie à trois chargée depuis le menu principal (`simtool tradesave`) : routes et achats par clics entre les trois joueurs, caravanes du joueur 2 parties et arrivées chez les joueurs 1 et 3, raison affichée quand rien ne part (T5.7) |
 | `tools/mp-real-test.sh` | partie en réseau sans salon (`--mp-host`), constructions et conseillers pendant le jeu |
 | `tools/mp-sweep-test.sh` | partie en réseau seule (cité de `brugle-lugdunum.sav`, ou la carte préparée avec `MP_SWEEP_ARGS=--mp-generate`) : `windowsweep`, avant et après `angrygod` |
 | `tools/mp-menus-test.sh` | trois joueurs (`--mp-host`, cités de `brugle-lugdunum.sav`) : `windowsweep` des trois en même temps, puis de chacun seul, partie qui continue sans désynchronisation |
 | `tools/mp-resume-test.sh` | deux joueurs depuis le salon : « Sauvegarder » (un `.mpsav`), désynchronisation provoquée, « Fichier, Nouvelle partie », « Charger » qui ouvre le salon avec la partie choisie, `autosave.mpsav` listée, reprise hébergée et rejointe, sans désynchronisation |
-| `tools/mp-ui-test.sh` | salon du client avec les règles de l'hôte (carte 1, difficulté changée), menus fermes et matières premières d'un joueur des terres et d'un joueur de la côte, menu Options sans Difficulté, conseiller impérial, évaluation (pilier des lauriers), commerce et Stocks, en 640 × 480 et 1024 × 736 |
+| `tools/mp-ui-test.sh` | salon du client avec les règles de l'hôte (carte 1, difficulté changée), menus fermes et matières premières d'un joueur des terres et d'un joueur de la côte, menu Options sans Difficulté, conseiller impérial, évaluation (pilier des lauriers), commerce (trois onglets, infobulles du portorium et de la raison, liste défilée) et alerte de prix chez l'hôte et chez le client, en 640 × 480 et 1024 × 736 |
 | `tools/mp-attack-test.sh` | fenêtre de la légion (bouton « Attaquer », « Attaque en cours »), choix de la cible sur la vue militaire, légion qui rase un quartier ennemi en réseau sans désynchronisation |
 | `tools/mp-war-test.sh` | conseiller militaire (bouton « Guerre »), fenêtre « Guerre et paix » en paix, confirmation, en guerre, offre de paix reçue, paix signée, annonces sur la cité, en 640 × 480 et 1024 × 736 |
 | `tools/mp-expedition-test.sh` | option du salon de la seconde expédition, message et lettre de l'expédition, légions de César dans la cité, conseiller impérial en disgrâce, lettres d'une expédition vaincue ou repartie, écran de fin « Rome reprend la province » |

@@ -247,6 +247,8 @@ static void get_tooltip(tooltip_context *c)
     if (text_id) {
         c->text_id = text_id;
         c->type = TOOLTIP_BUTTON;
+    } else if (current_advisor_window->get_tooltip) {
+        current_advisor_window->get_tooltip(c);
     }
 }
 
