@@ -5,6 +5,45 @@
 
 ---
 
+## 2026-10-18 — Salaire choisi, commerce pendant le préavis, interfaces à la manière de l'original (D-089 à D-093)
+
+**Demandes d'Alexandre** : « salaire qu'il choisit » (réponse à D-076) ; « as-tu ajouté un menu pour cesser le feu et
+arrêter la guerre ? » ; « ne coupe pas le commerce pendant le préavis de guerre » ; « améliore l'interface des menus de
+statistiques et du choix du jeu, plus jolie et fidèle au jeu d'origine (boutons, organisation), pas trop saturée ».
+
+**Fait**
+- D-089 : le gouverneur choisit son salaire, au plus celui de son rang de lauriers (retour à D-067) ; le commerce
+  continue pendant le préavis d'une guerre honorable et ne s'arrête qu'au début des combats. Protocole 33.
+- Quatre agents d'interface en parallèle, chacun avec captures avant et après, en 640×480 et 1024×768, en français
+  et en anglais :
+  - D-090 : salon en deux colonnes, règles dans une fenêtre à part, lettres de César et écran de fin comme les
+    messages et la victoire de l'original ;
+  - D-091 : conseiller impérial en deux pages, pilier des lauriers, bandeau comme la barre du haut ;
+  - D-092 : « Guerre et paix » dans le cadre du conseiller militaire, annonces écrites du point de vue de chacun, et la
+    fenêtre de l'offre de paix (« Accepter » / « Plus tard ») : la réponse à la question du cessez-le-feu ;
+  - D-093 : page du commerce comme le conseiller d'origine (flèches, liste qui défile, infobulles), alerte de prix
+    comme un message.
+- Fusionnés un par un ; 259 tests et les 18 scripts du vrai jeu verts sur master.
+
+**Appris**
+- Deux branches avaient ajouté le même champ à `tooltip_context` : git a gardé les deux lignes sans conflit. Après une
+  fusion, relire les en-têtes partagés, pas seulement les fichiers en conflit.
+- Le salon bouge des boutons que 22 scripts cliquent : la branche qui le déplace met à jour les scripts, et ceux
+  ajoutés en parallèle par une autre branche doivent être corrigés à la fusion.
+- Le disque est tombé à 2 à 4 Go libres, à cause d'autres usages que le projet : supprimer les worktrees des agents
+  dès leur fusion.
+- `donnees-c3/autosave.mpsav` vient de tests : deux agents ont lancé le vrai jeu une fois sans la garde, malgré la
+  consigne.
+
+**Prochaine étape** : l'essai d'Alexandre de la version GitHub, puis ses réponses aux points à valider.
+
+**Points ouverts (à valider)** : D-090 (règles dans une fenêtre à part, résumé des seules règles changées, signature
+« César » retirée des lettres) ; D-091 (seconde page plutôt qu'infobulles, bandeau sur toute la largeur) ; D-092
+(fenêtre plutôt que bandeau pour l'offre de paix, « Plus tard » ne la remontre pas) ; D-093 (liste qui défile à
+640×480, prix de l'empire en infobulle) ; et ceux de l'entrée précédente.
+
+---
+
 ## 2026-10-13 et 14 — Deuxième essai à trois (T5), puis la guerre (M10, MG)
 
 **Demandes d'Alexandre** : le backlog de son deuxième essai à trois Mac (TEST_2.md, T5.1 à T5.8) ; « les joueurs qui
