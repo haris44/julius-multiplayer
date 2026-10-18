@@ -295,6 +295,14 @@ Bon à savoir :
   l'expédition, des légions de César dans la cité, du conseiller impérial (disgrâce), des lettres d'une expédition
   vaincue et repartie, puis de l'écran de fin d'une seconde expédition (M10.6, D-086). Depuis un worktree :
   `C3_DATA_DIR=/chemin/donnees-c3 tools/serial.sh tools/mp-expedition-test.sh`.
+- `tools/mp-stats-test.sh` : les statistiques de César (D-091). D'abord `valentia57.sav` sous les règles du
+  multijoueur, sans réseau (`caesar-stats.txt`) : conseiller impérial et sa page « Lauriers et colère », évaluation et
+  pilier des lauriers, en 640 × 480, 800 × 600 et 1024 × 736, avant et après l'ultimatum (`addwrath`) ; puis une partie
+  seule depuis le salon (`mp-stats-solo.txt`) : le bandeau aux trois tailles, avec la colère, et le conseiller
+  impérial. Captures `build/automation/stats-*.png`.
+- `tools/mp-stats4-test.sh` : partie à quatre depuis le salon, l'hôte en 640 × 480, un client en 1024 × 736, deux en
+  800 × 600 ; deux mois plus tard, captures `build/automation/stats4-*.png` du bandeau (quatre joueurs, rien sous la
+  barre latérale), du classement du conseiller impérial et du pilier des lauriers (D-091).
 - `test/automation/display.txt` : les options d'affichage (plus grande fenêtre qui tient sur l'écran).
 
 Taille de l'écran dans un script : `key F7` (640 × 480), `key F8` (800 × 600, la taille par défaut), `key F9`
@@ -318,6 +326,7 @@ coordonnées ; la barre latérale reste collée au bord droit (bouton industrie 
 | `tools/mp-attack-test.sh` | fenêtre de la légion (bouton « Attaquer », « Attaque en cours »), choix de la cible sur la vue militaire, légion qui rase un quartier ennemi en réseau sans désynchronisation |
 | `tools/mp-war-test.sh` | conseiller militaire (bouton « Guerre »), fenêtre « Guerre et paix » en paix, confirmation, en guerre, offre de paix reçue, paix signée, annonces sur la cité, en 640 × 480 et 1024 × 736 |
 | `tools/mp-expedition-test.sh` | option du salon de la seconde expédition, message et lettre de l'expédition, légions de César dans la cité, conseiller impérial en disgrâce, lettres d'une expédition vaincue ou repartie, écran de fin « Rome reprend la province » |
+| `tools/mp-stats-test.sh`, `tools/mp-stats4-test.sh` | conseiller impérial (deux pages, colère, ultimatum, ennemi de Rome), pilier des lauriers, bandeau à 1 et 4 joueurs, en 640 × 480, 800 × 600 et 1024 × 736 |
 | `caesar-advisor.txt`, `caesar-gifts.txt`, `caesar-ratings.txt` | César dans une grande cité (`rules mp`) : lettre de rang, conseiller impérial, cadeau, don, salaire, pilier des lauriers |
 | `smoke.txt`, `run.txt`, `build-road.txt`, `display.txt` | classique : menu, chargement, boucle du jeu, route à la souris, options d'affichage |
 

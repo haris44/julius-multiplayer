@@ -1,0 +1,70 @@
+# Real game: the statistics of Caesar in a game alone from the lobby (D-091, see tools/mp-stats-test.sh): the banner
+# of the laurels at 800 x 600, 640 x 480 and 1024 x 768, then Caesar's wrath at the ultimatum (test command addwrath:
+# this computer only, the game is alone) in the banner and in the imperial advisor, both pages.
+wait 10
+click 400 500
+wait 10
+# main menu: Multiplayer; a new game, one player, map 1, host, start
+click 400 172
+wait 10
+click 180 170
+wait 2
+click 268 350
+wait 2
+click 338 418
+wait 2
+click 240 466
+wait 5
+click 240 466
+mpwait 0
+wait 5
+# Caesar's letter of welcome
+key Return
+wait 3
+mouse 300 300
+wait 3
+screenshot build/automation/stats-solo-800-banner.png
+# 75 points: the next month brings the warning and the ultimatum, the player an enemy of Rome
+addwrath 750
+ticks 800
+wait 5
+key Return
+wait 3
+key Return
+wait 3
+mouse 300 300
+wait 3
+screenshot build/automation/stats-solo-800-wrath.png
+key F7
+wait 5
+mouse 200 200
+wait 3
+screenshot build/automation/stats-solo-640-banner.png
+key 3
+wait 5
+screenshot build/automation/stats-solo-640-imperial.png
+# the second page: laurels by source, shares of the wrath, army
+click 492 284
+wait 5
+screenshot build/automation/stats-solo-640-details.png
+# back to the first page
+click 492 284
+wait 5
+key Escape
+wait 3
+key F9
+wait 5
+mouse 400 300
+wait 3
+screenshot build/automation/stats-solo-1024-banner.png
+key 3
+wait 5
+screenshot build/automation/stats-solo-1024-imperial.png
+click 684 412
+wait 5
+screenshot build/automation/stats-solo-1024-details.png
+click 684 412
+wait 5
+key Escape
+wait 3
+quit

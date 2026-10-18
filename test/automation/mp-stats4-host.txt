@@ -1,0 +1,50 @@
+# Real game, network game of four players from the lobby (host, at 640 x 480): the statistics of Caesar with four
+# players (D-091, see tools/mp-stats4-test.sh): the banner of the laurels, the imperial advisor and its ranking, the
+# ratings with the laurels pillar. The lobby is a 640 x 480 dialog: at this size, its coordinates are those of the
+# screen.
+wait 10
+key F7
+wait 5
+click 320 440
+wait 10
+# main menu: Multiplayer
+click 320 112
+wait 10
+# a new game, four players (twice +), map 1, then Host
+click 100 110
+wait 2
+click 220 290
+wait 2
+click 220 290
+wait 2
+click 258 358
+wait 2
+click 160 406
+# three clients find the game and join; then the host starts it with the same button
+mpplayers 4
+wait 5
+click 160 406
+mpwait 0
+# Caesar's letter
+wait 3
+key Return
+wait 2
+speed 300
+# two monthly records: the laurels gained last month and their trend
+mpwait 1700
+screenshot build/automation/stats4-640-city.png
+key 3
+wait 5
+screenshot build/automation/stats4-640-imperial.png
+key 4
+wait 5
+click 495 320
+wait 5
+screenshot build/automation/stats4-640-laurels.png
+key Escape
+wait 3
+mpwait 1900
+mpcheck
+# keep the game running a little so that the clients reach their own check
+wait 200
+quit

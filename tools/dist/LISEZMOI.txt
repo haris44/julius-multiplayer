@@ -77,14 +77,15 @@ Le pare-feu de chaque ordinateur doit laisser passer le jeu (ports 27400 en TCP 
   s'arrête, sans vainqueur. Une partie reprise garde les règles de sa sauvegarde.
 - Quand tout le monde est là, l'hôte clique sur « Lancer la partie ».
 
-En jeu : chacun a sa cité, ses finances et ses conseillers. Le bandeau en bas à gauche rappelle votre numéro de
-joueur et les lauriers de chacun. La touche P met la partie en pause pour tout le monde, et « Fichier,
+En jeu : chacun a sa cité, ses finances et ses conseillers. Le bandeau en bas de la ville rappelle votre numéro
+de joueur, les lauriers de chacun et la colère de César. La touche P met la partie en pause pour tout le monde, et « Fichier,
 Enregistrer » sauvegarde la partie pour la reprendre plus tard depuis le salon.
 
 César juge les cités. Chaque mois, il donne à chacune des lauriers selon cinq notes : prospérité, commerce,
 habitat, culture et éducation, grandeur. La première cité qui atteint le score choisi dans le salon (1 000
 lauriers par défaut) devient son héritière et gagne la partie. Le conseiller impérial (touche 3) montre vos notes,
-vos lauriers, votre rang et le classement ; César vous écrit à chaque nouveau rang. On y envoie aussi des cadeaux
+vos lauriers, votre rang, le classement et la colère de César ; son bouton « Lauriers et colère » détaille vos
+lauriers par source, la part de chacun dans la colère et votre armée. César vous écrit à chaque nouveau rang. On y envoie aussi des cadeaux
 à César : ils rapportent 4, 7 ou 10 lauriers selon leur taille, un seul compté par an. Ils se paient sur votre
 épargne personnelle, que remplit votre salaire ; le salaire ne peut pas dépasser votre rang. Dans l'évaluation de
 la cité (touche 4), le quatrième pilier montre vos lauriers : sa hauteur dit où vous en êtes du score, et un clic

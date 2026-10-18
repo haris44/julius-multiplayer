@@ -1,0 +1,85 @@
+# The statistics of Caesar in a developed city (D-091, see tools/mp-stats-test.sh): the imperial advisor and its
+# second page, the ratings with the laurels pillar, at 640 x 480, 1024 x 768 and 800 x 600, before and after Caesar's
+# wrath reaches the ultimatum. The test commands addwrath changes this computer only: the game is not networked
+# (rules mp).
+wait 10
+load test/data/valentia57.sav
+rules mp
+wait 5
+# about fifteen months: more than 100 laurels, the second rank, a history of the laurels
+ticks 12500
+wait 3
+# the message of the game first (a right click closes it), then the letter of the new rank
+rclick 400 300
+wait 3
+key Return
+wait 3
+# 640 x 480: the advisors fill the screen
+key F7
+wait 5
+key 3
+wait 5
+screenshot build/automation/stats-640-imperial.png
+# the second page: the laurels by source, the shares of the wrath, the army
+click 492 284
+wait 5
+screenshot build/automation/stats-640-details.png
+click 492 284
+wait 5
+key 4
+wait 5
+screenshot build/automation/stats-640-ratings.png
+click 495 320
+wait 5
+screenshot build/automation/stats-640-laurels.png
+key Escape
+wait 3
+# Caesar's wrath at the ultimatum: the enemy of Rome, the deadline
+addwrath 750
+ticks 800
+wait 5
+rclick 300 200
+wait 3
+key Return
+wait 3
+key Return
+wait 3
+key Return
+wait 3
+key 3
+wait 5
+screenshot build/automation/stats-640-imperial-wrath.png
+click 492 284
+wait 5
+screenshot build/automation/stats-640-details-wrath.png
+click 492 284
+wait 5
+key Escape
+wait 3
+# 1024 x 768 (shrunk to 1024 x 736): the advisors in the middle, at 192, 128
+key F9
+wait 5
+key 3
+wait 5
+screenshot build/automation/stats-1024-imperial.png
+click 684 412
+wait 5
+screenshot build/automation/stats-1024-details.png
+click 684 412
+wait 5
+key 4
+wait 5
+click 687 448
+wait 5
+screenshot build/automation/stats-1024-laurels.png
+key Escape
+wait 3
+# 800 x 600: the advisors at 80, 60
+key F8
+wait 5
+key 3
+wait 5
+screenshot build/automation/stats-800-imperial.png
+key Escape
+wait 3
+quit

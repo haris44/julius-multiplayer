@@ -1992,3 +1992,45 @@
   échoue avec l'ancienne règle).
 - Réseau : protocole 33.
 
+### D-091 — Les statistiques de César à la manière des conseillers d'origine : deux pages, un bandeau comme la barre du haut
+- 2026-10-18 · **adoptée provisoirement**, *à valider* (Alexandre : « plus jolis et fidèles au jeu d'origine […] pas
+  trop saturées ») · précise D-057, D-071, D-084, D-086, D-089
+- Dessin seulement : ni règle, ni état, ni commande ne change (`windowsweep` : aucune fenêtre n'écrit dans la partie).
+- **Conseiller impérial** (`window/mp_imperial.c`), à la manière des tableaux d'origine (en-têtes de colonnes en
+  petite police au-dessus du cadre, lignes à 20 pixels, nombres alignés à droite) :
+  - avant : une page de vingt lignes serrées (notes, barres et lauriers de chaque note, lauriers de la cité et de
+    César, « fêtes et campagnes : bientôt », guerres et armée, classement, colère, parts, ennemi de Rome, ultimatum) ;
+  - après, en deux pages, avec un bouton en bas à droite du cadre (comme ceux du cadeau et du don) :
+    1. « Notes et classement » : les cinq notes et leurs barres, la colère de César en sixième ligne
+       (jauge marquée à 40 et 70), le classement ; en rouge, seulement s'il y a lieu, le délai de l'ultimatum, les
+       ennemis de Rome et la disgrâce ;
+    2. « Lauriers et colère » : les lauriers par source (cinq notes, cadeaux, guerres, armée, l'expédition s'il y en a
+       une), la part de chacun dans la colère avec « ennemi de Rome », les légions de la cité, celles que César tolère
+       et leur coût par mois.
+  - en-tête comme l'original (« Estime de l'Empereur 71 », puis le mot de l'empereur) : « Lauriers : 108 sur 1000,
+    prochain rang à 200 », puis la règle en une ligne. Retirés : « Fêtes et campagnes : bientôt », les deux totaux
+    (l'en-tête donne le total, la seconde page le détail) ;
+  - le bouton du salaire retrouve l'infobulle de l'original, que D-076 avait retirée (D-089 a rouvert sa fenêtre) ;
+    la note de cette fenêtre disait encore « Rome vous verse le salaire de votre rang » (D-076) : « Choisissez votre
+    salaire, au plus celui de votre rang : les rangs plus élevés s'obtiennent avec des lauriers. ».
+  La page choisie reste d'une ouverture à l'autre (état de l'affichage, jamais sauvegardé).
+- **Évaluation, pilier des lauriers** (`window/mp_ratings.c`) : avant, la boîte du bas débordait (un titre qui
+  répétait le pilier, puis trois lignes) ; après, comme les autres piliers : « Lauriers », puis deux lignes au plus
+  (le mois dernier et la tendance, la place, et « Vos cinq notes en rapportent chaque mois. » s'il reste la place).
+  « 200 Requis » a le même retrait que sous les autres piliers.
+- **Bandeau** (`widget/mp_status.c`) : avant, un rectangle noir ; après, la barre du haut de l'original, au bas de la
+  vue de la ville et sur toute sa largeur : sa pierre, « Joueur 2 » et « héritier à 1000 lauriers » dans sa police,
+  les lauriers des joueurs dans un de ses panneaux sombres (« J1 », … dans leur couleur ; « P1 » en anglais : le « J »
+  était écrit en dur), la colère et sa jauge dans un autre, la pause dans un troisième. Faute de place : l'unité du
+  score part d'abord, puis le score, puis « Joueur N ». Avant le lancement et après un arrêt, l'état du réseau en haut,
+  dans le même panneau sombre.
+- Conseillers de la population et des finances : rien de propre au multijoueur à l'écran (les impôts passent par une
+  commande, sans autre changement), laissés tels quels.
+- Captures : `tools/mp-stats-test.sh` (grande cité sans réseau, puis partie seule depuis le salon ; 640 × 480,
+  800 × 600 et 1024 × 736 ; avant et après l'ultimatum), `tools/mp-stats4-test.sh` (quatre joueurs).
+- *À valider* :
+  - une seconde page plutôt que des infobulles : celles du jeu n'affichent que les textes d'origine, et peuvent être
+    désactivées dans les options ;
+  - le bandeau sur toute la largeur de la vue : il cache 24 pixels du bas de la ville (22 avant, sur la largeur de son
+    texte) ;
+  - la colère comme une sixième ligne sous les notes, avec ses seuils.

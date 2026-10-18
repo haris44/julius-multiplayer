@@ -1,0 +1,25 @@
+# Real game, network game of four players from the lobby (a client, at 800 x 600; see tools/mp-stats4-test.sh, which
+# runs two of them, the second one without the screenshots): the banner and the imperial advisor
+wait 10
+click 400 500
+wait 10
+click 400 172
+# the hosted game appears in the list within a second or two
+wait 150
+click 530 174
+wait 5
+mpwait 0
+wait 3
+key Return
+wait 2
+speed 300
+mpwait 1700
+screenshot build/automation/stats4-800-city.png
+key 3
+wait 5
+screenshot build/automation/stats4-800-imperial.png
+key Escape
+wait 3
+mpwait 1900
+mpcheck
+quit

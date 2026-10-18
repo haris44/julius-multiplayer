@@ -87,7 +87,8 @@ Windows sont récentes et encore peu essayées.
 - La première cité qui atteint le score choisi dans le salon (1 000 lauriers par défaut) devient son héritière et
   gagne la partie.
 - Le conseiller impérial montre les notes, les lauriers, le rang, le salaire et le classement, avec les boutons du
-  cadeau et du don à la cité. César écrit à chaque nouveau rang.
+  cadeau et du don à la cité ; sa seconde page, « Lauriers et colère », donne les lauriers par source, la part de
+  chacun dans la colère de César et l'armée tolérée. César écrit à chaque nouveau rang.
 - Dans l'évaluation de la cité, le quatrième pilier est celui des **lauriers** : sa hauteur dit où l'on en est du
   score. Un clic donne les lauriers du mois dernier, la tendance et la place dans la province. L'ancienne faveur de
   César n'est plus affichée.
@@ -118,7 +119,7 @@ Windows sont récentes et encore peu essayées.
   chez un innocent, 96 à 144 chez le principal responsable), les responsables perdent jusqu'à un quart de leurs
   lauriers, et toute la province est en disgrâce 12 mois (lauriers des notes divisés par deux). Détruire
   l'expédition de sa cité rapporte 20 lauriers ; sinon elle repart au bout de 12 mois. La colère redescend en paix. La
-  jauge est dans le bandeau, la part de chacun dans le conseiller impérial.
+  jauge est dans le bandeau et le conseiller impérial, la part de chacun sur sa page « Lauriers et colère ».
 - Même en paix, César tolère une légion par 5 000 habitants (au moins 2) ; chaque légion de plus coûte 2 lauriers
   par mois.
 
