@@ -426,6 +426,10 @@ static translation_string all_strings[] = {
     {TR_MP_LETTER_TITLE_EXPEDITION, "The punitive expedition"},
     {TR_MP_LETTER_TITLE_EXPEDITION_DEFEATED, "Caesar's legions defeated"},
     {TR_MP_LETTER_TITLE_EXPEDITION_LEFT, "Caesar's legions leave"},
+    {TR_MP_RESULTS_HEIR_IS, "Caesar's heir is"},
+    {TR_MP_RESULTS_WINNER_IS, "The game is won by"},
+    {TR_MP_RESULTS_CITY, "City"},
+    {TR_MP_RESULTS_SCORE, "Score"},
 };
 
 void translation_english(const translation_string **strings, int *num_strings)

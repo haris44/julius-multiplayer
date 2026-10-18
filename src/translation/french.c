@@ -426,6 +426,10 @@ static translation_string all_strings[] = {
     {TR_MP_LETTER_TITLE_EXPEDITION, "L'expédition punitive"},
     {TR_MP_LETTER_TITLE_EXPEDITION_DEFEATED, "Les légions de César vaincues"},
     {TR_MP_LETTER_TITLE_EXPEDITION_LEFT, "Les légions de César repartent"},
+    {TR_MP_RESULTS_HEIR_IS, "L'héritier de César est"},
+    {TR_MP_RESULTS_WINNER_IS, "La partie est gagnée par"},
+    {TR_MP_RESULTS_CITY, "Cité"},
+    {TR_MP_RESULTS_SCORE, "Score"},
 };
 
 void translation_french(const translation_string **strings, int *num_strings)
